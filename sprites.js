@@ -986,8 +986,8 @@ const SPRITE_PRESETS = {
     broly: { label: "Broly", appearance: { race: "Saiyajin", build: "gigante", hairStyle: "broly", hairColor: "#213018", eyeType: "bravo", irisColor: "#1a2a1a", mouthType: "serio", outerShirt: "none", innerShirt: "nenhuma", pants: "larga", shoes: "descalco", gloves: "pulseiras", primaryColor: "#8a6a2a", secondaryColor: "#c9a13a", accentColor: "#e8c04a", kiColor: "#7dff7a" } }
 };
 
-// Aparências das opções antigas continuam funcionando; o mapeamento abaixo dá as 4 primeiras do jogo.
-const SPRITE_DEFAULT_KEYS = { goku_adult: "goku", vegeta: "vegeta", piccolo: "piccolo", freeza_1: "freeza" };
+// Personagem inicial do jogo (chave no Database) -> modelo do construtor que o gera (ver DEFAULT_CHARACTERS em database.js).
+const SPRITE_DEFAULT_KEYS = { goku_adult: "goku", vegeta: "vegeta", piccolo: "piccolo", freeza_1: "freeza", trunks: "trunks", gohan: "gohan", kaioshin: "kaioshin", gogeta: "fusao", bardock: "bardock", android17: "android17", android18: "android18", majin_buu: "majin", raditz: "raditz", broly: "broly" };
 
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {

@@ -2139,7 +2139,10 @@ function loadCharacterData() {
                 });
             }
 
-            if (validCount > 0) return;
+            if (validCount > 0) {
+                seedNewDefaultCharacters();
+                return;
+            }
         }
     } catch (e) {
         console.warn("Erro ao carregar database:", e);
@@ -2148,44 +2151,76 @@ function loadCharacterData() {
     loadDefaultCharacters();
 }
 
-function loadDefaultCharacters() {
-    // Personagens iniciais: montados com o construtor (sprites.js), então já nascem com animações fluidas
-    // (voo, ataque, parry, carregar, transformar) e visual com volume, em vez de um único quadro estático.
-    const defaults = {
-        goku_adult: { name: "GOKU", presetKey: "goku", align: "HERÓI", aura: "gelo", spec: "KAMEHAMEHA" },
-        vegeta: { name: "VEGETA", presetKey: "vegeta", align: "ANTI-HERÓI", aura: "amarelo", spec: "FINAL FLASH" },
-        piccolo: { name: "PICCOLO", presetKey: "piccolo", align: "HERÓI", aura: "verde", spec: "MAKAN KOSAPPO" },
-        freeza_1: { name: "FREEZA (FINAL)", presetKey: "freeza", align: "VILÃO", aura: "roxo", spec: "DEATH BEAM" }
-    };
+// Personagens iniciais: um para cada modelo da lista "COMEÇAR A PARTIR DE..." do construtor (SPRITE_PRESETS em
+// sprites.js), montados com o próprio construtor — já nascem com animações fluidas (voo, ataque, parry, carregar,
+// transformar). O construtor continua funcionando igual para criar personagens novos a partir desses modelos.
+const DEFAULT_CHARACTERS = {
+    goku_adult: { name: "GOKU", presetKey: "goku", align: "HERÓI", aura: "gelo", spec: "KAMEHAMEHA" },
+    vegeta: { name: "VEGETA", presetKey: "vegeta", align: "ANTI-HERÓI", aura: "amarelo", spec: "FINAL FLASH" },
+    piccolo: { name: "PICCOLO", presetKey: "piccolo", align: "HERÓI", aura: "verde", spec: "MAKAN KOSAPPO" },
+    freeza_1: { name: "FREEZA (FINAL)", presetKey: "freeza", align: "VILÃO", aura: "roxo", spec: "DEATH BEAM" },
+    trunks: { name: "TRUNKS", presetKey: "trunks", align: "HERÓI", aura: "azul", spec: "BURNING ATTACK", useKiColor: true },
+    gohan: { name: "GOHAN", presetKey: "gohan", align: "HERÓI", aura: "gelo", spec: "MASENKO", useKiColor: true },
+    kaioshin: { name: "SUPREMO SR. KAIO", presetKey: "kaioshin", align: "HERÓI", aura: "rosa", spec: "KIAI SAGRADO", useKiColor: true },
+    gogeta: { name: "GOGETA", presetKey: "fusao", align: "HERÓI", aura: "amarelo", spec: "BIG BANG KAMEHAMEHA", useKiColor: true },
+    bardock: { name: "BARDOCK", presetKey: "bardock", align: "ANTI-HERÓI", aura: "azul", spec: "RIOT JAVELIN", useKiColor: true },
+    android17: { name: "ANDROIDE 17", presetKey: "android17", align: "ANTI-HERÓI", aura: "verde", spec: "POWER BLITZ", useKiColor: true },
+    android18: { name: "ANDROIDE 18", presetKey: "android18", align: "ANTI-HERÓI", aura: "azul", spec: "DESTRUCTO DISC", useKiColor: true },
+    majin_buu: { name: "MAJIN BUU", presetKey: "majin", align: "VILÃO", aura: "rosa", spec: "CHOCOLATE BEAM", useKiColor: true },
+    raditz: { name: "RADITZ", presetKey: "raditz", align: "VILÃO", aura: "roxo", spec: "DOUBLE SUNDAY", useKiColor: true },
+    broly: { name: "BROLY", presetKey: "broly", align: "VILÃO", aura: "verde", spec: "ERASER CANNON", useKiColor: true }
+};
+// Os 4 que já vinham nas versões antigas: perfis antigos já os receberam (se o jogador apagou algum, não volta).
+const ORIGINAL_DEFAULT_CHARACTER_KEYS = ["goku_adult", "vegeta", "piccolo", "freeza_1"];
 
-    for (let k in defaults) {
-        if (characterDB[k]) continue;
-        let d = defaults[k];
-        let appearance = SPRITE_PRESETS[d.presetKey].appearance;
-        let svg = generateSpriteFrameUrl(appearance, "idle", 0);
-        let { animations, fpsSettings } = buildProceduralAnimations(appearance);
-        loadImageSecure(svg, (img) => {
-            if (characterDB[k]) return;
-            characterDB[k] = {
-                name: d.name,
-                imageObj: img,
-                defaultUrl: svg,
-                animations,
-                fpsSettings,
-                alignment: d.align,
-                aura: d.aura,
-                special: d.spec,
-                scale: 1,
-                frameWidth: 32,
-                frameHeight: 32,
-                totalFrames: 1,
-                projColor: "#00ffff",
-                projSize: "normal",
-                builderAppearance: appearance,
-                bgRemoval: { mode: "none" }
-            };
-        });
+function createDefaultCharacter(k) {
+    const d = DEFAULT_CHARACTERS[k];
+    const appearance = SPRITE_PRESETS[d.presetKey].appearance;
+    const svg = generateSpriteFrameUrl(appearance, "idle", 0);
+    const { animations, fpsSettings } = buildProceduralAnimations(appearance);
+    characterDB[k] = {
+        name: d.name,
+        imageObj: null,
+        defaultUrl: svg,
+        animations,
+        fpsSettings,
+        alignment: d.align,
+        aura: d.aura,
+        special: d.spec,
+        scale: 1,
+        frameWidth: 32,
+        frameHeight: 32,
+        totalFrames: 1,
+        projColor: (d.useKiColor && appearance.kiColor) || "#00ffff",
+        projSize: "normal",
+        builderAppearance: appearance,
+        bgRemoval: { mode: "none" }
+    };
+    loadImageSecure(svg, (img) => {
+        if (characterDB[k]) characterDB[k].imageObj = img;
+    });
+}
+
+function loadDefaultCharacters() {
+    for (const k in DEFAULT_CHARACTERS) {
+        if (!characterDB[k]) createDefaultCharacter(k);
     }
+    writeStorage("saiyan_defaults_seeded", JSON.stringify(Object.keys(DEFAULT_CHARACTERS)));
+}
+
+// Perfil que já tinha personagens salvos: acrescenta, UMA vez, os personagens iniciais que ele ainda não recebeu
+// (ex.: os modelos novos do construtor). Um personagem inicial que o jogador apagar depois não volta sozinho.
+function seedNewDefaultCharacters() {
+    let seeded = readJsonStorage("saiyan_defaults_seeded", null);
+    if (!Array.isArray(seeded)) seeded = ORIGINAL_DEFAULT_CHARACTER_KEYS.slice();
+    let added = false;
+    for (const k in DEFAULT_CHARACTERS) {
+        if (seeded.includes(k)) continue;
+        if (!characterDB[k]) { createDefaultCharacter(k); added = true; }
+        seeded.push(k);
+    }
+    writeStorage("saiyan_defaults_seeded", JSON.stringify(seeded));
+    if (added) saveCharacterData();
 }
 
 function saveCharacterData() {

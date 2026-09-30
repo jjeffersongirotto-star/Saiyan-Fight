@@ -53,8 +53,33 @@ const MENU_LAYOUT = {
     }
 };
 // Botões que se repetem em grade/lista: a posição de cada um vem de uma função, também usada nos dois lados.
+// Tela PERSONAGENS: 5 cartões por fileira; com mais de 2 fileiras a lista rola (roda do mouse, arrastar o dedo
+// ou o controle), igual ao Database. CHARACTERS_GRID_TOP = onde a lista começa (abaixo das abas HERÓIS/VILÕES).
+const CHARACTERS_GRID_TOP = 80;
+let charactersScrollY = 0;
+const charactersTouchScroll = { active: false, touchId: null, startY: 0, startScrollY: 0, dragged: false };
 function getCharacterCardRect(i) {
-    return rect(40 + (i % 5) * (UI.GRID_CARD_WIDTH + 12), 80 + Math.floor(i / 5) * (UI.GRID_CARD_HEIGHT + 10), UI.GRID_CARD_WIDTH, UI.GRID_CARD_HEIGHT);
+    return rect(40 + (i % 5) * (UI.GRID_CARD_WIDTH + 12), CHARACTERS_GRID_TOP + Math.floor(i / 5) * (UI.GRID_CARD_HEIGHT + 10) - charactersScrollY, UI.GRID_CARD_WIDTH, UI.GRID_CARD_HEIGHT);
+}
+function getCharactersMaxScroll() {
+    const rows = Math.ceil(getFilteredCharacters().length / 5);
+    const contentBottom = CHARACTERS_GRID_TOP + rows * (UI.GRID_CARD_HEIGHT + 10) - 10;
+    return Math.max(0, contentBottom + 8 - canvas.height);
+}
+function setCharactersScroll(value) {
+    charactersScrollY = Math.max(0, Math.min(getCharactersMaxScroll(), value));
+}
+// Controle: se o cartão focado ficou fora da área visível, rola a lista até ele.
+function revealPadFocusInCharacters() {
+    if (gameState !== "characters" || !padNav.focus) return;
+    const half = UI.GRID_CARD_HEIGHT / 2;
+    let delta = 0;
+    if (padNav.focus.y - half < CHARACTERS_GRID_TOP) delta = padNav.focus.y - half - CHARACTERS_GRID_TOP;
+    else if (padNav.focus.y + half > canvas.height - 4) delta = padNav.focus.y + half - (canvas.height - 4);
+    if (!delta) return;
+    const before = charactersScrollY;
+    setCharactersScroll(charactersScrollY + delta);
+    padNav.focus.y -= charactersScrollY - before;
 }
 function getStageCardRect(i) {
     return rect(40 + (i % 4) * 190, 68 + Math.floor(i / 4) * 104, 175, 90);
@@ -1302,6 +1327,7 @@ function movePadFocus(dx, dy) {
     if (best) {
         padNav.focus = { x: best.x + best.w / 2, y: best.y + best.h / 2 };
         revealPadFocusInDatabase();
+        revealPadFocusInCharacters();
     }
 }
 
@@ -1640,6 +1666,11 @@ canvas.onclick = (e) => {
 window.addEventListener("mouseup", () => { if (menuPointerPress && menuPointerPress.id === "mouse") menuPointerPress = null; });
 
 canvas.onwheel = (e) => {
+    if (gameState === "characters") {
+        e.preventDefault();
+        setCharactersScroll(charactersScrollY + e.deltaY * 0.8);
+        return;
+    }
     if (gameState === "database") {
         e.preventDefault();
         const maxScroll = getDatabaseMaxScroll();
@@ -1744,6 +1775,9 @@ canvas.addEventListener("touchstart", (e) => {
     }
 
     if (gameState !== "playing" && gameState !== "tutorial") {
+        if (gameState === "characters") {
+            Object.assign(charactersTouchScroll, { active: true, touchId: firstTouch.identifier, startY: firstPoint.y, startScrollY: charactersScrollY, dragged: false });
+        }
         startPointerPress(firstPoint.x, firstPoint.y, firstTouch.identifier, () => handleMenuClick(firstPoint.x, firstPoint.y));
         return;
     }
@@ -1840,6 +1874,20 @@ canvas.addEventListener("touchmove", (e) => {
         return;
     }
 
+    if (gameState === "characters" && charactersTouchScroll.active) {
+        const touch = Array.from(e.touches).find(t => t.identifier === charactersTouchScroll.touchId);
+        if (touch) {
+            const c = getCanvasCoords(touch.clientX, touch.clientY);
+            const dy = c.y - charactersTouchScroll.startY;
+            if (!charactersTouchScroll.dragged && Math.abs(dy) > DATABASE_DRAG_THRESHOLD && getCharactersMaxScroll() > 0) {
+                charactersTouchScroll.dragged = true;
+                menuPointerPress = null;   // virou arraste: não é mais um toque no cartão
+            }
+            if (charactersTouchScroll.dragged) setCharactersScroll(charactersTouchScroll.startScrollY - dy);
+        }
+        return;
+    }
+
     if (gameState === "achievements" && achievementsTouchScroll.active) {
         const touch = Array.from(e.touches).find(t => t.identifier === achievementsTouchScroll.touchId);
         if (touch) {
@@ -1899,6 +1947,7 @@ canvas.addEventListener("touchend", (e) => {
     e.preventDefault();
     controlsTestTouches = Array.from(e.touches).map(t => getCanvasCoords(t.clientX, t.clientY));
     releaseTouchPress(e);
+    if (charactersTouchScroll.active && !Array.from(e.touches).some(t => t.identifier === charactersTouchScroll.touchId)) charactersTouchScroll.active = false;
     const stillDown = Array.from(e.touches).map(t => t.identifier);
     Object.keys(hudPressHeld).forEach(id => {
         if (stillDown.includes(Number(id))) return;
@@ -2187,7 +2236,7 @@ function handleMenuClick(x, y) {
 
     if (gameState === "menu") {
         if (hitRect(x, y, MENU_LAYOUT.main.play)) setGameState("mode_select", "ESCOLHA O MODO DE JOGO");
-        else if (hitRect(x, y, MENU_LAYOUT.main.characters)) setGameState("characters", "SELEÇÃO DE PERSONAGENS");
+        else if (hitRect(x, y, MENU_LAYOUT.main.characters)) { charactersScrollY = 0; setGameState("characters", "SELEÇÃO DE PERSONAGENS"); }
         else if (hitRect(x, y, MENU_LAYOUT.main.stages)) setGameState("stages", "ESCOLHA A ARENA DE BATALHA");
         else if (hitRect(x, y, MENU_LAYOUT.main.options)) {
             optionsReturnState = "menu";
@@ -2228,11 +2277,11 @@ function handleMenuClick(x, y) {
     else if (gameState === "characters") {
         let chars = getFilteredCharacters();
         
-        if (hitRect(x, y, MENU_LAYOUT.characters.tabHeroes)) currentTab = "HERÓIS";
-        else if (hitRect(x, y, MENU_LAYOUT.characters.tabVillains)) currentTab = "VILÕES";
+        if (hitRect(x, y, MENU_LAYOUT.characters.tabHeroes)) { currentTab = "HERÓIS"; charactersScrollY = 0; }
+        else if (hitRect(x, y, MENU_LAYOUT.characters.tabVillains)) { currentTab = "VILÕES"; charactersScrollY = 0; }
 
         chars.forEach((key, i) => {
-            if (hitRect(x, y, getCharacterCardRect(i))) {
+            if (y >= CHARACTERS_GRID_TOP - 4 && hitRect(x, y, getCharacterCardRect(i))) {
                 if (currentTab === "HERÓIS") {
                     selectedCharacter = key;
                     saveSelectedCharacters();
@@ -3672,8 +3721,15 @@ function render() {
         drawBtnAt(MENU_LAYOUT.characters.tabVillains, "VILÕES", currentTab === "VILÕES" ? "#ffff00" : "#00ffff");
 
         let chars = getFilteredCharacters();
+        setCharactersScroll(charactersScrollY);   // mantém dentro do limite (ex.: depois de apagar personagens)
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, CHARACTERS_GRID_TOP - 6, canvas.width, canvas.height - (CHARACTERS_GRID_TOP - 6));
+        ctx.clip();
         chars.forEach((key, i) => {
             const card = getCharacterCardRect(i), cx = card.x, cy = card.y;
+            // fora da área visível: só registra o alvo (o controle consegue ir até ele e a lista rola sozinha)
+            if (cy + card.h < CHARACTERS_GRID_TOP - 6 || cy > canvas.height) { registerMenuTarget(cx, cy, card.w, card.h); return; }
 
             let isSel = (currentTab === "HERÓIS" && selectedCharacter === key) || (currentTab === "VILÕES" && selectedBoss === key);
 
@@ -3712,6 +3768,19 @@ function render() {
             ctx.fillText(cItem ? cItem.name : key, cx + UI.GRID_CARD_WIDTH / 2, cy + 70);
             endButtonPress(pressed);
         });
+        ctx.restore();
+
+        const maxScroll = getCharactersMaxScroll();
+        if (maxScroll > 0) {
+            // barra de rolagem à direita, mostrando que tem mais personagens para baixo
+            const trackY = CHARACTERS_GRID_TOP, trackH = canvas.height - CHARACTERS_GRID_TOP - 8;
+            const thumbH = Math.max(24, trackH * trackH / (trackH + maxScroll));
+            const thumbY = trackY + (trackH - thumbH) * (charactersScrollY / maxScroll);
+            ctx.fillStyle = "rgba(255, 255, 255, 0.12)";
+            ctx.fillRect(canvas.width - 14, trackY, 5, trackH);
+            ctx.fillStyle = "#e85d04";
+            ctx.fillRect(canvas.width - 14, thumbY, 5, thumbH);
+        }
 
         drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
     }
