@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo de Batalha DBZ</title>
+    <style>
+        :root {
+            --bg-color: #121214;
+            --panel-bg: #1e1e24;
+            --text-color: #ffffff;
+            --cyan: #00e5ff;
+            --yellow: #ffcc00;
+            --accent: #0070f3;
+            --border-color: #333;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;   /* centraliza o jogo na vertical quando a janela é maior que ele */
+            min-height: 100vh;
+            min-height: 100dvh;
+            overflow-x: hidden;
+        }
+
+        #game-container {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+
+        /* Tela cheia (real ou "falsa" quando o navegador não permite): o contêiner ocupa a tela toda em preto e o
+           tamanho do canvas é calculado em JS (fitCanvasToViewport) mantendo a proporção 800x350 => barras pretas,
+           sem esticar a imagem. */
+        #game-container.is-fullscreen {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            margin: 0;
+            padding: 0;
+            z-index: 200;
+            justify-content: center;
+            background: #000;
+        }
+
+        #game-container.is-fullscreen canvas#game {
+            border: 0;
+            box-shadow: none;
+        }
+
+        /* Rotação "falsa" por CSS: quando o app/navegador não deixa girar a tela de verdade (comum dentro de
+           janelas incorporadas, como a do app do Claude), isso gira o jogo visualmente 90° sem depender de
+           nenhuma permissão do sistema — o celular continua físicamente em pé, só o conteúdo vira. */
+        #game-container.forced-landscape {
+            position: fixed;
+            top: 0;
+            left: 100%;
+            width: 100vh;
+            width: 100dvh;
+            height: 100vw;
+            margin: 0;
+            padding: 0;
+            transform-origin: 0 0;
+            transform: rotate(90deg);
+            z-index: 200;
+            justify-content: center;
+            background: #000;
+        }
+
+        #game-container.forced-landscape canvas#game {
+            border: 0;
+            box-shadow: none;
+        }
+
+
+        canvas#game {
+            background-color: #000;
+            border: 2px solid var(--border-color);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+            image-rendering: pixelated;
+            touch-action: none;
+            user-select: none;
+            max-width: 100% !important;
+            height: auto !important;
+            aspect-ratio: 800 / 350;
+        }
+
+        #mobile-orientation-hint {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 250;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: rgba(3, 7, 18, 0.96);
+            text-align: center;
+        }
+
+        #mobile-orientation-hint .orientation-card {
+            width: min(360px, 100%);
+            padding: 22px;
+            border: 2px solid var(--cyan);
+            border-radius: 10px;
+            background: #111827;
+            box-shadow: 0 0 24px rgba(0, 229, 255, 0.25);
+        }
+
+        #mobile-orientation-hint strong {
+            display: block;
+            margin-bottom: 10px;
+            color: var(--cyan);
+            font-size: 18px;
+        }
+
+        #mobile-orientation-hint p {
+            margin: 0 0 16px;
+            color: #cbd5e1;
+            font-size: 13px;
+        }
+
+        @media (max-width: 540px) {
+            body {
+                padding: 8px;
+            }
+
+            #instrucao-texto {
+                max-width: 100%;
+                font-size: 12px;
+            }
+        }
+
+        @media (max-width: 768px) and (orientation: landscape) {
+            #mobile-orientation-hint {
+                display: none !important;
+            }
+        }
+
+        #instrucao-texto {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #aaa;
+            text-align: center;
+        }
+
+        /* MODAIS */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            padding: 10px;
+        }
+
+        .modal-content {
+            background: var(--panel-bg);
+            border: 2px solid var(--cyan);
+            border-radius: 8px;
+            padding: 20px;
+            width: 850px;
+            max-width: 96vw;
+            max-height: 92vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            color: var(--cyan);
+            font-size: 18px;
+        }
+
+        .pad-focus {
+            outline: 3px solid #ffd23f !important;
+            outline-offset: 2px;
+            box-shadow: 0 0 10px rgba(255, 210, 63, 0.6);
+        }
+
+        .pad-focus.pad-adjust {
+            outline-color: #22c55e !important;
+            box-shadow: 0 0 10px rgba(34, 197, 94, 0.7);
+        }
+
+        .close-btn {
+            background: transparent;
+            border: none;
+            color: #ff0055;
+            font-size: 22px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 5px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            background: #111;
+            border: 1px solid var(--border-color);
+            border-bottom: none;
+            color: #888;
+            padding: 8px 14px;
+            cursor: pointer;
+            border-radius: 4px 4px 0 0;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .tab-btn.active {
+            background: var(--panel-bg);
+            color: var(--cyan);
+            border-color: var(--cyan);
+        }
+
+        .tab-content {
+            display: none;
+            width: 100%;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .form-group label {
+            font-size: 12px;
+            color: #ccc;
+        }
+
+        .form-group input, .form-group select {
+            background: #111;
+            border: 1px solid var(--border-color);
+            color: #fff;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            width: 100%;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .btn {
+            background: var(--cyan);
+            color: #000;
+            border: none;
+            padding: 8px 16px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: opacity 0.2s;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .preview-box {
+            display: flex;
+            gap: 18px;
+            align-items: flex-start;
+            background: #111;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            border: 1px solid var(--border-color);
+            min-height: 150px;
+        }
+
+        .preview-image-wrap {
+            width: 150px;
+            min-width: 150px;
+            height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #111;
+            border: 1px dashed #334155;
+            border-radius: 6px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .preview-fields {
+            flex: 1;
+            min-width: 220px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        canvas.prev-canvas {
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            image-rendering: pixelated;
+        }
+
+        .sprite-sheet-editor {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            color: #dbeafe;
+        }
+
+        .sprite-source-box {
+            border: 1px solid #263552;
+            border-radius: 10px;
+            padding: 10px;
+            background: #080d1e;
+            text-align: left;
+        }
+
+        .sprite-dropzone {
+            min-height: 112px;
+            border: 2px dashed #9b6b00;
+            border-radius: 9px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            color: #cbd5e1;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s, transform 0.2s;
+        }
+
+        .sprite-dropzone:hover,
+        .sprite-dropzone.drag-over {
+            border-color: #fbbf24;
+            background: rgba(245, 158, 11, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .sprite-dropzone-icon {
+            width: 25px;
+            height: 20px;
+            border: 3px solid #fbbf24;
+            border-radius: 3px;
+            position: relative;
+        }
+
+        .sprite-dropzone-icon::before {
+            content: "";
+            position: absolute;
+            width: 5px;
+            height: 5px;
+            border: 2px solid #fbbf24;
+            border-radius: 50%;
+            top: 2px;
+            right: 3px;
+        }
+
+        .sprite-dropzone-icon::after {
+            content: "";
+            position: absolute;
+            width: 13px;
+            height: 8px;
+            border-left: 3px solid #fbbf24;
+            border-top: 3px solid #fbbf24;
+            transform: rotate(42deg);
+            left: 3px;
+            bottom: 0;
+        }
+
+        .sprite-dropzone strong {
+            color: #f8fafc;
+            font-size: 13px;
+            letter-spacing: 0.3px;
+        }
+
+        .sprite-dropzone span {
+            color: #64748b;
+            font-size: 10px;
+        }
+
+        .sprite-url-box {
+            padding: 10px 2px 2px;
+        }
+
+        .sprite-url-label {
+            display: block;
+            color: #facc15;
+            font-size: 11px;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        .sprite-source-row,
+        .sprite-control-row,
+        .sprite-movement-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: end;
+        }
+
+        .sprite-source-row input[type="text"] {
+            flex: 1 1 300px;
+        }
+
+        .sprite-source-row .btn,
+        .sprite-control-row .btn {
+            min-height: 32px;
+        }
+
+        .sprite-map-wrap {
+            border: 1px solid #263552;
+            border-radius: 8px;
+            background: #020617;
+            padding: 8px;
+            overflow: auto;
+            max-height: 430px;
+        }
+
+        .sprite-editor-field-title {
+            color: #facc15;
+            font-size: 13px;
+            font-weight: bold;
+            text-align: center;
+            letter-spacing: 0.5px;
+            margin-top: 4px;
+            margin-bottom: -4px;
+        }
+
+        .sprite-map-canvas-layer {
+            position: relative;
+            width: max-content;
+            height: max-content;
+            padding-right: 24px;
+        }
+
+        #sprite-sheet-map {
+            display: block;
+            max-width: none;
+            image-rendering: pixelated;
+            cursor: crosshair;
+            touch-action: none;
+            transform-origin: top left;
+        }
+
+        #sprite-sheet-labels {
+            position: absolute;
+            top: 0;
+            left: 0;
+            max-width: none;
+            pointer-events: none;
+            transform-origin: top left;
+        }
+
+        .sprite-sheet-status {
+            min-height: 16px;
+            color: #94a3b8;
+            font-size: 11px;
+        }
+
+        .sprite-movement-row .btn {
+            flex: 1 1 105px;
+            background: #1e293b;
+            color: #cbd5e1;
+            border: 1px solid #273650;
+        }
+
+        .sprite-movement-row .btn.active {
+            background: #f59e0b;
+            color: #111827;
+            border-color: #fbbf24;
+        }
+
+        .sprite-spacing-controls {
+            align-items: end;
+        }
+
+        .sprite-spacing-controls .form-group {
+            min-width: 150px;
+            margin-bottom: 0;
+        }
+
+        .sprite-assigned-frames {
+            display: flex;
+            gap: 6px;
+            min-height: 54px;
+            padding: 6px;
+            border: 1px solid #263552;
+            background: #0b1224;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+
+        .sprite-assigned-frames img {
+            width: 44px;
+            height: 44px;
+            object-fit: contain;
+            image-rendering: pixelated;
+            border: 1px solid #475569;
+            background: #020617;
+        }
+
+        .sprite-assigned-frame {
+            position: relative;
+            width: 48px;
+            height: 48px;
+            cursor: grab;
+        }
+
+        .sprite-assigned-frame:active {
+            cursor: grabbing;
+        }
+
+        .sprite-assigned-frame.drag-over {
+            outline: 2px solid #facc15;
+            outline-offset: 2px;
+        }
+
+        .sprite-assigned-frame.preview-selected {
+            outline: 2px solid #22d3ee;
+            outline-offset: 2px;
+        }
+
+        .sprite-assigned-frame-number {
+            position: absolute;
+            top: 1px;
+            left: 1px;
+            min-width: 16px;
+            height: 16px;
+            padding: 0 3px;
+            background: rgba(0, 0, 0, 0.85);
+            color: #ffffff;
+            font: bold 10px/16px monospace;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .sprite-assigned-empty {
+            color: #64748b;
+            font-size: 11px;
+            align-self: center;
+        }
+
+        .sprite-preview-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border: 1px solid #263552;
+            border-radius: 8px;
+            background: #020617;
+            padding: 8px;
+        }
+
+        #sprite-motion-preview {
+            width: 120px;
+            height: 120px;
+            background: #000;
+            image-rendering: pixelated;
+            border: 1px solid #334155;
+        }
+
+        .sprite-preview-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            color: #67e8f9;
+            font-size: 11px;
+        }
+
+        .sprite-preview-actions input {
+            width: 72px;
+            color-scheme: dark;
+            background: #111 !important;
+            border: 1px solid #334155;
+            color: #fff !important;
+            padding: 5px;
+        }
+
+        #sprite-active-fps {
+            color-scheme: dark;
+            background-color: #111 !important;
+            color: #ffffff !important;
+            border: 1px solid #334155 !important;
+        }
+
+        @media (max-width: 700px) {
+            body {
+                padding: 6px;
+            }
+
+            .modal {
+                align-items: flex-start;
+                overflow-y: auto;
+                padding: 6px;
+            }
+
+            .modal-content {
+                width: 100%;
+                max-width: 100%;
+                max-height: calc(100vh - 12px);
+                padding: 12px;
+            }
+
+            .preview-box {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .preview-image-wrap {
+                width: min(150px, 42vw);
+                min-width: 0;
+                height: min(150px, 42vw);
+                align-self: center;
+            }
+
+            .preview-fields {
+                width: 100%;
+                min-width: 0;
+            }
+
+            .form-row,
+            .sprite-source-row,
+            .sprite-control-row {
+                gap: 6px;
+            }
+
+            .form-row .form-group,
+            .sprite-control-row .form-group {
+                min-width: min(145px, 100%);
+                flex: 1 1 145px;
+            }
+
+            .sprite-source-row input[type="text"] {
+                min-width: 0;
+                flex-basis: 100%;
+            }
+
+            .sprite-source-row .btn,
+            .sprite-control-row .btn {
+                flex: 1 1 145px;
+            }
+
+            .sprite-map-wrap {
+                max-height: min(58vh, 430px);
+            }
+
+            .sprite-movement-row .btn {
+                flex: 1 1 112px;
+                min-width: 0;
+                padding: 8px 6px;
+                font-size: 11px;
+            }
+
+            .sprite-preview-box {
+                flex-wrap: wrap;
+            }
+
+            .sprite-preview-actions {
+                flex: 1 1 150px;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .modal-header h2 {
+                font-size: 15px;
+            }
+
+            .tab-btn {
+                flex: 1 1 130px;
+                padding: 8px 6px;
+                font-size: 11px;
+            }
+
+            .sprite-dropzone {
+                min-height: 92px;
+            }
+
+            .sprite-movement-row .btn {
+                flex-basis: 96px;
+                font-size: 10px;
+            }
+
+            .btn {
+                padding: 8px 10px;
+                font-size: 11px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <canvas id="game" width="800" height="350" role="application" aria-label="Área de jogo: batalha em canvas contra o vilão. Use as teclas de movimento e ação configuradas para jogar."></canvas>
+        <div id="mobile-orientation-hint" aria-live="polite">
+            <div class="orientation-card">
+                <strong>GIRE O CELULAR</strong>
+                <p>Para jogar melhor, ative a tela deitada.</p>
+                <button type="button" class="btn" onclick="activateMobileLandscape()">ATIVAR TELA DEITADA</button>
+            </div>
+        </div>
+
+    <!-- INPUT DE ARQUIVO ESCONDIDO -->
+    <input type="file" id="file-input" accept="image/*" style="display: none;">
+    <input type="file" id="database-file-input" accept="application/json,.json" style="display: none;">
+
+    <!-- MODAL EDITOR DE PERSONAGEM -->
+    <div id="modal-editor" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">EDITAR PERSONAGEM</h2>
+                <div id="editor-pad-hint" style="display:none; flex:1; text-align:center; font-size:11px; color:#94a3b8;">CONTROLE: ↑↓←→ navegar · CRUZ confirmar/ajustar · BOLA voltar/fechar · L1/R1 abas · OPTIONS salvar</div>
+                <button class="close-btn" onclick="closeModal()" aria-label="Fechar editor de personagem">&times;</button>
+            </div>
+
+            <!-- NAVEGAÇÃO DE ABAS -->
+            <div class="tabs">
+                <button id="tab-btn-basico" class="tab-btn active" onclick="switchEditorTab('basico')">DADOS</button>
+                <button id="tab-btn-animacoes" class="tab-btn" onclick="switchEditorTab('animacoes')">ANIMAÇÕES DOS MOVIMENTOS</button>
+                <button id="tab-btn-construtor" class="tab-btn" onclick="switchEditorTab('construtor')">CONSTRUTOR DE PERSONAGEM</button>
+            </div>
+
+            <!-- ABA 1: DADOS DO PERSONAGEM -->
+            <div id="tab-content-basico" class="tab-content" style="display: block;">
+                <div class="preview-box">
+                    <div class="preview-image-wrap">
+                        <canvas id="preview-canvas" class="prev-canvas" width="100" height="100"></canvas>
+                    </div>
+
+                    <div class="preview-fields">
+                        <div class="form-row">
+                            <div class="form-group" style="flex: 1; min-width: 240px;">
+                                <label for="char-name">Nome do Personagem</label>
+                                <input type="text" id="char-name" placeholder="Ex: GOKU">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="char-alignment">Alinhamento</label>
+                                <select id="char-alignment">
+                                    <option value="HERÓI">HERÓI</option>
+                                    <option value="ANTI-HERÓI">ANTI-HERÓI</option>
+                                    <option value="VILÃO">VILÃO</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="char-aura">Cor da Aura</label>
+                                <select id="char-aura">
+                                    <option value="gelo">Gelo / Branca</option>
+                                    <option value="amarelo">Amarela (SSJ)</option>
+                                    <option value="vermelho">Vermelha (Kaioken)</option>
+                                    <option value="rosa">Rosa (SSJ Rosé)</option>
+                                    <option value="azul">Azul (SSJ Blue)</option>
+                                    <option value="verde">Verde (Broly)</option>
+                                    <option value="preto">Preta (Sombria)</option>
+                                    <option value="roxo">Roxa (Destruição)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="char-special">Ataque Especial</label>
+                                <input type="text" id="char-special" value="KAMEHAMEHA">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="char-proj-color">Cor do Projétil</label>
+                                <input type="color" id="char-proj-color" value="#00ffff">
+                            </div>
+                            <div class="form-group">
+                                <label for="char-proj-size">Tamanho Projétil</label>
+                                <select id="char-proj-size">
+                                    <option value="small">Pequeno</option>
+                                    <option value="normal" selected>Normal</option>
+                                    <option value="large">Grande</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="char-scale">Escala do Personagem</label>
+                                <input type="number" id="char-scale" step="0.1" value="1.0">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="char-fw">Largura Quadro (px)</label>
+                                <input type="number" id="char-fw" value="32">
+                            </div>
+                            <div class="form-group">
+                                <label for="char-fh">Altura Quadro (px)</label>
+                                <input type="number" id="char-fh" value="32">
+                            </div>
+                            <div class="form-group">
+                                <label for="char-frames">Total de Quadros</label>
+                                <input type="number" id="char-frames" value="1">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="char-bg-mode">Fundo da Imagem</label>
+                                <select id="char-bg-mode" onchange="updateModalPreview()">
+                                    <option value="auto">Apagar branco (automático)</option>
+                                    <option value="color">Apagar a cor escolhida</option>
+                                    <option value="none">Não apagar nada</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="char-bg-color">Cor do Fundo a Apagar</label>
+                                <input type="color" id="char-bg-color" value="#ffffff" oninput="updateModalPreview()">
+                            </div>
+                            <div class="form-group">
+                                <label for="char-bg-tol">Tolerância da Cor (%)</label>
+                                <input type="number" id="char-bg-tol" min="0" max="60" step="1" value="8" oninput="updateModalPreview()">
+                            </div>
+                            <div class="form-group">
+                                <label>&nbsp;</label>
+                                <button type="button" class="btn" onclick="pickBgColorFromCorner()">PEGAR COR DO CANTO</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ABA 3: SUB-ANIMAÇÕES ASSOCIADAS AOS CONTROLES -->
+            <div id="tab-content-animacoes" class="tab-content">
+                <div class="sprite-sheet-editor">
+                    <div class="sprite-source-box">
+                        <div id="sprite-sheet-dropzone" class="sprite-dropzone" role="button" tabindex="0" onclick="triggerSpriteSheetFileInput()" onkeydown="handleSpriteSheetDropzoneKeydown(event)" ondragover="handleSpriteSheetDragOver(event)" ondragleave="handleSpriteSheetDragLeave(event)" ondrop="handleSpriteSheetDrop(event)">
+                            <span class="sprite-dropzone-icon" aria-hidden="true"></span>
+                            <strong>CLIQUE OU ARRASTE A SPRITE SHEET</strong>
+                            <span>O recorte será calculado pela grade abaixo</span>
+                        </div>
+                        <div class="sprite-url-box">
+                            <label class="sprite-url-label" for="sprite-sheet-url">CARREGAR O SPRITE VIA URL BASE64 OU WEB URL</label>
+                            <div class="sprite-source-row">
+                                <input type="text" id="sprite-sheet-url" placeholder="Cole aqui o link da imagem ou data:image/...;base64,..." onkeydown="handleSpriteSheetUrlKeydown(event)">
+                                <button type="button" class="btn" onclick="processSpriteSheetUrl()">CARREGAR URL</button>
+                            </div>
+                        </div>
+                        <div id="sprite-sheet-status" class="sprite-sheet-status">Nenhuma sprite sheet carregada.</div>
+                    </div>
+
+                    <div class="sprite-control-row">
+                        <div class="form-group">
+                            <label for="sprite-frame-width">LARGURA DO QUADRO (PX)</label>
+                            <input type="number" id="sprite-frame-width" value="32" min="1" oninput="updateSpriteSheetMap()">
+                        </div>
+                        <div class="form-group">
+                            <label for="sprite-frame-height">ALTURA DO QUADRO (PX)</label>
+                            <input type="number" id="sprite-frame-height" value="32" min="1" oninput="updateSpriteSheetMap()">
+                        </div>
+                        <div class="form-group">
+                            <label for="sprite-total-frames">TOTAL DE QUADROS</label>
+                            <input type="number" id="sprite-total-frames" value="1" min="1" oninput="updateSpriteSheetMap()">
+                        </div>
+                        <div class="form-group">
+                            <label for="sprite-animation-frames">QUADROS DO MOVIMENTO</label>
+                            <input type="number" id="sprite-animation-frames" value="4" min="1" max="30" onchange="limitSpriteAnimationFrames(); updateSpriteSheetMap()">
+                        </div>
+                    </div>
+
+                    <div class="sprite-editor-field-title">CAMPO DE EDIÇÃO</div>
+                    <div class="sprite-map-wrap">
+                        <div class="sprite-map-canvas-layer">
+                            <canvas id="sprite-sheet-map" width="320" height="160"></canvas>
+                            <canvas id="sprite-sheet-labels" width="320" height="160" aria-hidden="true"></canvas>
+                        </div>
+                    </div>
+                    <div id="sprite-sheet-selection" class="sprite-sheet-status">Arraste sobre a grade para selecionar. A imagem permanece fixa. Use a alça amarela no canto do quadro ativo para movê-lo e a alça à esquerda da primeira linha para mover o grupo verticalmente. As alças laterais ajustam somente a largura.</div>
+
+                    <div class="sprite-control-row sprite-spacing-controls">
+                        <div class="form-group">
+                            <label for="sprite-spacing-x">DISTÂNCIA HORIZONTAL (PX)</label>
+                            <input type="number" id="sprite-spacing-x" value="0" step="1" oninput="applySelectedFrameSpacing()">
+                        </div>
+                        <div class="form-group">
+                            <label for="sprite-spacing-y">DISTÂNCIA VERTICAL (PX)</label>
+                            <input type="number" id="sprite-spacing-y" value="0" step="1" oninput="applySelectedFrameSpacing()">
+                        </div>
+                    </div>
+
+                    <div class="sprite-movement-row" id="sprite-movement-row">
+                        <button type="button" class="btn active" data-sprite-action="idle" onclick="setActiveSpriteMovement('idle')">PARADO</button>
+                        <button type="button" class="btn" data-sprite-action="run" onclick="setActiveSpriteMovement('run')">DIREITA</button>
+                        <button type="button" class="btn" data-sprite-action="flyLeft" onclick="setActiveSpriteMovement('flyLeft')">ESQUERDA</button>
+                        <button type="button" class="btn" data-sprite-action="flyDown" onclick="setActiveSpriteMovement('flyDown')">BAIXO</button>
+                        <button type="button" class="btn" data-sprite-action="flyUp" onclick="setActiveSpriteMovement('flyUp')">CIMA</button>
+                        <button type="button" class="btn" data-sprite-action="flyUpRight" onclick="setActiveSpriteMovement('flyUpRight')">CIMA + DIREITA</button>
+                        <button type="button" class="btn" data-sprite-action="flyUpLeft" onclick="setActiveSpriteMovement('flyUpLeft')">CIMA + ESQUERDA</button>
+                        <button type="button" class="btn" data-sprite-action="flyDownRight" onclick="setActiveSpriteMovement('flyDownRight')">BAIXO + DIREITA</button>
+                        <button type="button" class="btn" data-sprite-action="flyDownLeft" onclick="setActiveSpriteMovement('flyDownLeft')">BAIXO + ESQUERDA</button>
+                        <button type="button" class="btn" data-sprite-action="attackKi" onclick="setActiveSpriteMovement('attackKi')">ATAQUE</button>
+                        <button type="button" class="btn" data-sprite-action="chargeKi" onclick="setActiveSpriteMovement('chargeKi')">CARREGAR</button>
+                        <button type="button" class="btn" data-sprite-action="parry" onclick="setActiveSpriteMovement('parry')">PARRY</button>
+                        <button type="button" class="btn" data-sprite-action="transform" onclick="setActiveSpriteMovement('transform')">TRANSFORMAR</button>
+                    </div>
+
+                    <div class="sprite-preview-box">
+                        <canvas id="sprite-motion-preview" width="160" height="160"></canvas>
+                        <div class="sprite-preview-actions">
+                            <strong id="sprite-motion-preview-label">PRÉVIA: IDLE</strong>
+                            <label for="sprite-active-fps">FPS</label>
+                            <input type="number" id="sprite-active-fps" value="12" min="1" max="60" style="background:#111 !important; color:#fff !important; border:1px solid #333 !important; color-scheme:dark;" oninput="updateActiveSpriteFps()">
+                            <button type="button" class="btn" onclick="toggleSpriteMotionPreview()">PLAY / PAUSE</button>
+                        </div>
+                    </div>
+
+                    <div class="sprite-control-row">
+                        <button type="button" class="btn" onclick="assignSelectedSpriteFrame()">ADICIONAR QUADRO AO MOVIMENTO</button>
+                        <button type="button" class="btn" onclick="invertSelectedSpriteFrame()">INVERTER FRAME DA PRÉVIA</button>
+                        <button type="button" class="btn" style="background:#7f1d1d;color:#fff;" onclick="clearActiveSpriteFrames()">LIMPAR MOVIMENTO</button>
+                    </div>
+
+                    <div class="sprite-control-row">
+                        <div class="form-group">
+                            <label>DUPLICAR MOVIMENTO INVERTIDO PARA</label>
+                            <select id="sprite-mirror-target">
+                                <option value="flyRight">DIREITA</option>
+                                <option value="flyLeft" selected>ESQUERDA</option>
+                                <option value="flyUp">CIMA</option>
+                                <option value="flyDown">BAIXO</option>
+                                <option value="flyUpRight">CIMA + DIREITA</option>
+                                <option value="flyUpLeft">CIMA + ESQUERDA</option>
+                                <option value="flyDownRight">BAIXO + DIREITA</option>
+                                <option value="flyDownLeft">BAIXO + ESQUERDA</option>
+                                <option value="parry">PARRY</option>
+                                <option value="attackKi">ATAQUE</option>
+                                <option value="chargeKi">CARREGAR</option>
+                                <option value="transform">TRANSFORMAR</option>
+                            </select>
+                        </div>
+                        <button type="button" class="btn" onclick="duplicateMovement()">DUPLICAR</button>
+                        <button type="button" class="btn" onclick="duplicateMovementMirrored()">DUPLICAR INVERTIDO</button>
+                        <button type="button" class="btn" onclick="cloneSelectedPreviewFrame()">CLONAR</button>
+                        <button type="button" class="btn" style="background:#7f1d1d;color:#fff;" onclick="deleteSelectedPreviewFrame()">APAGAR FRAME</button>
+                    </div>
+
+                    <div id="sprite-assigned-frames" class="sprite-assigned-frames">
+                        <span class="sprite-assigned-empty">Nenhum quadro atribuído ao movimento.</span>
+                    </div>
+                    <button type="button" class="btn" onclick="saveSelectedFramesToPreview()">SALVAR FRAMES NA PRÉVIA</button>
+                </div>
+            </div>
+
+            <!-- ABA 3: CONSTRUTOR — monta um personagem do zero combinando partes (cabelo, roupa, cauda, asas, arma nas costas, acessórios) -->
+            <div id="tab-content-construtor" class="tab-content">
+                <div class="preview-box">
+                    <div class="preview-image-wrap">
+                        <canvas id="build-preview-canvas" class="prev-canvas" width="100" height="100"></canvas>
+                    </div>
+                    <div class="preview-fields">
+                        <div class="form-row">
+                            <div class="form-group" style="flex:1; min-width:260px;">
+                                <label for="build-preset">COMEÇAR A PARTIR DE...</label>
+                                <select id="build-preset" onchange="applyBuilderPreset()">
+                                    <option value="">— personalizado (do zero) —</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="build-pose">PRÉVIA DA POSE</label>
+                                <select id="build-pose" onchange="refreshBuilderPreview()">
+                                    <option value="idle">PARADO</option>
+                                    <option value="flyRight">VOANDO</option>
+                                    <option value="attackKi">ATAQUE</option>
+                                    <option value="parry">PARRY</option>
+                                    <option value="chargeKi">CARREGAR</option>
+                                    <option value="transform">TRANSFORMAR (SSJ)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <p style="font-size:11px; color:#9fb3d8; margin:0 0 6px;">Escolha as partes do personagem. A prévia ao lado é gerada na hora — não é preciso enviar nenhuma imagem.</p>
+                    </div>
+                </div>
+
+                <div class="sprite-control-row">
+                    <div class="form-group"><label for="build-race">RAÇA</label>
+                        <select id="build-race" onchange="refreshBuilderPreview()">
+                            <option value="Saiyajin">Saiyajin</option><option value="Humano">Humano</option>
+                            <option value="Namekuseijin">Namekuseijin</option><option value="Raça Freeza">Raça Freeza</option>
+                            <option value="Majin">Majin</option><option value="Android">Android</option>
+                            <option value="Kaioshin">Kaioshin (Supremo Kai)</option><option value="Alienígena">Alienígena genérico</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label for="build-build">PORTE FÍSICO</label>
+                        <select id="build-build" onchange="refreshBuilderPreview()">
+                            <option value="normal">Normal</option><option value="magro">Magro</option>
+                            <option value="musculoso">Musculoso</option><option value="gigante">Gigante</option><option value="jovem">Jovem/Criança</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label for="build-skin">COR DA PELE (vazio = da raça)</label>
+                        <input type="color" id="build-skin" value="#f3c29a" oninput="refreshBuilderPreview()">
+                        <label style="font-weight:normal; margin-top:4px;"><input type="checkbox" id="build-skin-auto" checked onchange="refreshBuilderPreview()"> usar cor padrão da raça</label>
+                    </div>
+                </div>
+
+                <div class="sprite-control-row">
+                    <div class="form-group"><label for="build-hair-style">CABELO</label>
+                        <select id="build-hair-style" onchange="refreshBuilderPreview()">
+                            <option value="careca">Careca / sem cabelo</option>
+                            <option value="goku">Espetado (Goku)</option><option value="vegeta">Chamas (Vegeta)</option>
+                            <option value="gohan">Repicado (Gohan)</option><option value="bardock">Longo p/trás (Bardock)</option>
+                            <option value="raditz">Longo solto (Raditz)</option><option value="broly">Selvagem (Broly)</option>
+                            <option value="gotenks">3 picos (Gotenks)</option>
+                            <option value="trunks_futuro">Liso c/franja (Trunks Futuro)</option><option value="trunks_kid">Liso curto (Trunks Criança)</option>
+                            <option value="android17">Liso longo (Andr. 17)</option><option value="android18">Curto loiro (Andr. 18)</option>
+                            <option value="kaioshin_moicano">Moicano (Kaioshin)</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label for="build-hair-color">COR DO CABELO</label><input type="color" id="build-hair-color" value="#16110f" oninput="refreshBuilderPreview()"></div>
+                    <div class="form-group"><label for="build-eye-type">FORMATO DOS OLHOS</label>
+                        <select id="build-eye-type" onchange="refreshBuilderPreview()">
+                            <option value="normal">Normal</option><option value="gentil">Gentil (grande)</option><option value="serio">Sério</option>
+                            <option value="bravo">Bravo/franzido</option><option value="wide">Arregalado</option>
+                            <option value="freeza">Sem sobrancelha (tipo Freeza)</option><option value="android">Android</option><option value="fechado">Fechados</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label for="build-iris-color">COR DA ÍRIS</label><input type="color" id="build-iris-color" value="#1a1210" oninput="refreshBuilderPreview()"></div>
+                    <div class="form-group"><label for="build-sclera-color">COR DO OLHO (fundo)</label><input type="color" id="build-sclera-color" value="#ffffff" oninput="refreshBuilderPreview()"></div>
+                </div>
+
+                <div class="sprite-control-row">
+                    <div class="form-group"><label for="build-ear-type">ORELHAS</label>
+                        <select id="build-ear-type" onchange="refreshBuilderPreview()"><option value="normal">Normais</option><option value="pontuda">Pontudas (Namekuseijin/Kaioshin)</option><option value="nenhuma">Nenhuma</option></select>
+                    </div>
+                    <div class="form-group"><label for="build-mouth-type">BOCA / EXPRESSÃO</label>
+                        <select id="build-mouth-type" onchange="refreshBuilderPreview()"><option value="smile">Sorridente</option><option value="serio">Séria</option><option value="grito">Gritando</option><option value="maligno">Maligna</option></select>
+                    </div>
+                    <div class="form-group"><label for="build-scar">CICATRIZ</label>
+                        <select id="build-scar" onchange="refreshBuilderPreview()"><option value="none">Nenhuma</option><option value="olho">No olho</option><option value="bochecha">Na bochecha</option></select>
+                    </div>
+                </div>
+
+                <div class="sprite-control-row">
+                    <div class="form-group"><label for="build-accessory">PARTE ALIENÍGENA / ACESSÓRIO DA CABEÇA</label>
+                        <select id="build-accessory" onchange="refreshBuilderPreview()">
+                            <option value="none">Nenhum</option><option value="antenas">Antenas (Namekuseijin)</option>
+                            <option value="chifres">Chifres</option><option value="majin_antena">Antena Majin</option>
+                            <option value="potara">Brincos Potara (fusão Kaioshin)</option><option value="scouter">Scouter</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label for="build-hat">TOUCA / FAIXA</label>
+                        <select id="build-hat" onchange="refreshBuilderPreview()"><option value="none">Nenhuma</option><option value="turbante">Turbante (Piccolo)</option><option value="faixa">Faixa na testa</option></select>
+                    </div>
+                    <div class="form-group"><label for="build-symbol">SÍMBOLO NO PEITO</label>
+                        <select id="build-symbol" onchange="refreshBuilderPreview()">
+                            <option value="none">Nenhum</option><option value="kame">Kame (tartaruga)</option><option value="kai">Kai</option>
+                            <option value="cc">Corporação Cápsula</option><option value="redribbon">Exército Red Ribbon</option><option value="saiyajin">Símbolo Saiyajin</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="sprite-control-row">
+                    <div class="form-group"><label for="build-outer-shirt">ROUPA (TORSO)</label>
+                        <select id="build-outer-shirt" onchange="refreshBuilderPreview()">
+                            <option value="none">Sem roupa de cima (torso à mostra)</option>
+                            <option value="kimono">Quimono/Gi tradicional</option>
+                            <option value="armadura_saiyajin">Armadura Saiyajin</option>
+                            <option value="jaqueta_trunks">Jaqueta do Trunks do Futuro</option>
+                            <option value="colete_fusao">Colete da Fusão (Gogeta/Vegetto)</option>
+                            <option value="roupa_kaioshin">Roupa dos Supremos Kaio</option>
+                            <option value="gi_piccolo">Gi do Piccolo</option>
+                            <option value="armadura_freeza">Armadura orgânica (Freeza)</option>
+                            <option value="traje_android">Traje de Androide</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label for="build-inner-shirt">CAMISA POR BAIXO</label>
+                        <select id="build-inner-shirt" onchange="refreshBuilderPreview()"><option value="regata">Regata</option><option value="malha">Malha justa</option><option value="nenhuma">Nenhuma (pele à mostra)</option></select>
+                    </div>
+                    <div class="form-group"><label for="build-pants">CALÇA</label>
+                        <select id="build-pants" onchange="refreshBuilderPreview()"><option value="larga">Larga</option><option value="justa">Justa</option><option value="nenhuma">Nenhuma</option></select>
+                    </div>
+                </div>
+
+                <div class="sprite-control-row">
+                    <div class="form-group"><label for="build-shoes">CALÇADO</label>
+                        <select id="build-shoes" onchange="refreshBuilderPreview()">
+                            <option value="botas_artes">Botas de artes marciais</option><option value="botas_saiyajin">Botas brancas Saiyajin</option>
+                            <option value="botas_trunks">Botas marrons (Trunks)</option><option value="botas_kaioshin">Sandálias (Kaioshin)</option>
+                            <option value="botas_marrons">Botas simples</option><option value="descalco">Descalço</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label for="build-gloves">LUVAS</label>
+                        <select id="build-gloves" onchange="refreshBuilderPreview()"><option value="pulseiras">Pulseiras</option><option value="luvas_saiyajin">Luvas brancas Saiyajin</option><option value="luvas_pretas">Luvas pretas</option><option value="nenhuma">Nenhuma</option></select>
+                    </div>
+                    <div class="form-group"><label for="build-cape">CAPA / OMBREIRAS</label>
+                        <select id="build-cape" onchange="refreshBuilderPreview()"><option value="none">Nenhuma</option><option value="capa">Capa</option><option value="ombreiras">Ombreiras</option><option value="capa_ombreiras">Capa + ombreiras</option></select>
+                    </div>
+                    <div class="form-group"><label for="build-cape-color">COR DA CAPA</label><input type="color" id="build-cape-color" value="#ffffff" oninput="refreshBuilderPreview()"></div>
+                </div>
+
+                <div class="sprite-control-row">
+                    <div class="form-group"><label for="build-tail">CAUDA</label>
+                        <select id="build-tail" onchange="refreshBuilderPreview()"><option value="none">Nenhuma</option><option value="saiyajin">Cauda de Saiyajin</option><option value="cinto_saiyajin">Cauda enrolada (cinto)</option><option value="freeza">Cauda tipo Freeza</option></select>
+                    </div>
+                    <div class="form-group"><label for="build-wings">ASAS</label>
+                        <select id="build-wings" onchange="refreshBuilderPreview()"><option value="none">Nenhuma</option><option value="morcego">Asas de morcego</option><option value="anjo">Asas de anjo</option></select>
+                    </div>
+                    <div class="form-group"><label for="build-back-weapon">ARMA NAS COSTAS</label>
+                        <select id="build-back-weapon" onchange="refreshBuilderPreview()"><option value="none">Nenhuma</option><option value="espada_trunks">Espada do Trunks</option><option value="bastao">Bastão sagrado</option></select>
+                    </div>
+                </div>
+
+                <div class="sprite-control-row">
+                    <div class="form-group"><label for="build-primary-color">COR PRIMÁRIA DA ROUPA</label><input type="color" id="build-primary-color" value="#f26a0f" oninput="refreshBuilderPreview()"></div>
+                    <div class="form-group"><label for="build-secondary-color">COR SECUNDÁRIA DA ROUPA</label><input type="color" id="build-secondary-color" value="#1f4fbf" oninput="refreshBuilderPreview()"></div>
+                    <div class="form-group"><label for="build-accent-color">COR DE DETALHE</label><input type="color" id="build-accent-color" value="#ffd23f" oninput="refreshBuilderPreview()"></div>
+                    <div class="form-group"><label for="build-ki-color">COR DO KI / AURA</label><input type="color" id="build-ki-color" value="#5be3ff" oninput="refreshBuilderPreview()"></div>
+                </div>
+
+                <div style="display:flex; gap:10px; margin-top:10px; align-items:center; flex-wrap:wrap;">
+                    <button type="button" class="btn" style="background:#0d6b3a;" onclick="applyBuilderToCharacter()">USAR ESTE PERSONAGEM (gera as animações)</button>
+                    <span id="build-status" style="font-size:11px; color:#9fb3d8;">As animações do personagem serão geradas automaticamente — nenhum desenho é necessário.</span>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+                <button class="btn" style="background: #333; color: #fff;" onclick="closeModal()">CANCELAR</button>
+                <button class="btn" onclick="saveCharacterFromModal()">SALVAR PERSONAGEM</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE UPDATES -->
+    <div id="modal-updates" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-updates-title">
+        <div class="modal-content" style="width: 500px; max-width: 90vw;">
+            <div class="modal-header">
+                <h2 id="modal-updates-title">UPDATES</h2>
+                <button class="close-btn" onclick="closeUpdatesModal()" aria-label="Fechar janela de novidades">&times;</button>
+            </div>
+            <p style="margin: 0 0 12px; color: #ccc; font-size: 14px;">
+                Novidades e correções do jogo.
+            </p>
+            <ul style="margin: 0 0 18px; color: #ddd; line-height: 1.8; padding-left: 18px;">
+                <li>Correções estruturais em persistência e seleção de personagens.</li>
+                <li>Ajuste no fluxo de transformação para evitar duplicação de regras.</li>
+                <li>Padronização de menus e estado das janelas do sistema.</li>
+            </ul>
+            <div style="display: flex; justify-content: flex-end;">
+                <button class="btn" onclick="closeUpdatesModal()">FECHAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE ALERTAS E CONFIRMAÇÕES DO SISTEMA -->
+    <div id="modal-alert" class="modal" role="alertdialog" aria-modal="true" aria-labelledby="modal-alert-title" aria-describedby="modal-alert-msg">
+        <div class="modal-content" style="width: 380px; text-align: center;">
+            <h2 id="modal-alert-title" style="color: var(--cyan); margin-top: 0;">ALERTA</h2>
+            <p id="modal-alert-msg" style="margin: 15px 0; font-size: 14px; color: #ccc;"></p>
+            <div id="modal-alert-btns" style="display: flex; justify-content: center; gap: 10px;">
+                <button class="btn" onclick="closeSystemAlert()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    </div>
+
+    <script src="storage.js"></script>
+    <script src="audio.js"></script>
+    <script src="progress.js"></script>
+    <script src="game-logic-core.js"></script>
+    <script src="sprites.js"></script>
+    <script src="database.js"></script>
+    <script src="gameplay.js"></script>
+    <script src="menu.js"></script>
+</body>
+</html>

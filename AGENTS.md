@@ -1,0 +1,73 @@
+# AGENTS.md
+
+## Project snapshot
+This workspace is a small browser game built with plain HTML, CSS, and JavaScript. There is no framework or bundler; the only tooling is dependency-free Node scripts (`node --test` for pure logic and `node build-single.js` for the single-file copy). The game is centered on a single canvas UI and stores settings in `localStorage`.
+
+The character editor uses a sprite-sheet workflow. The legacy multi-card animation editor was removed; do not reintroduce it. Animation frames are selected, numbered, reordered, cloned, deleted, mirrored, duplicated between movements, and saved in the character database.
+
+## Key files
+- [index.html](index.html): canvas, styles, modal editor UI, and DOM structure.
+- [storage.js](storage.js): generic `localStorage` helpers (`readStorage`, `writeStorage`, `readJsonStorage`). Load first; everything else depends on it.
+- [audio.js](audio.js): Web Audio API synth — `initAudio`, `startBGM`/`stopBGM`, `playSound`. No external audio assets.
+- [progress.js](progress.js): achievements and the local score ranking (`unlockAchievement`, `saveRankingScore`). Depends on storage.js; calls `playSound` from audio.js at runtime.
+- [game-logic-core.js](game-logic-core.js): pure functions with no DOM/canvas dependency (`getWaveParams`, `getDominantMoveAction`, hitbox math, boss attack-pattern selection). Dual-loads as a browser `<script>` and as a Node module — this is what `tests/` exercises with `node --test`. Keep it free of `document`/`canvas`/global game state so it stays testable.
+- [database.js](database.js): character database, default appearance, sprites/customization data, the sprite-sheet editor, and modal/settings glue code.
+- [gameplay.js](gameplay.js): battle loop, player/boss state, collisions, transforms, waves, particles, and core game mechanics. Game-object arrays and timers live in the single `world` object (`world.obstacles`, `world.saibamans`, etc.) instead of separate globals — add new per-run state as a `world.*` property rather than a new bare `let`.
+- [sprites.js](sprites.js): procedural 2D sprite engine with cel-shaded volume (shading/highlights), built from combinable parts — hair, clothes, tail, wings, back weapon, accessories (see `SPRITE_PRESETS`). Generates fluid per-frame poses for every animation state (`idle`, `flyRight`, `attackKi`, `parry`, `transform`...). Used by `loadDefaultCharacters` (starting roster) and the editor's CONSTRUTOR tab (database.js) to build characters from scratch. No DOM dependency — runs under Node for tests.
+- [tests/harness.js](tests/harness.js): reusable Node `vm` harness — loads the game's scripts into a minimal simulated DOM/canvas (no real browser). Use it (or extend it) to verify touch, gamepad, menu, and state logic cheaply; keep feature-specific scenarios in their own small scripts that `require("./harness.js")` rather than growing this file into a dumping ground of one-off assertions.
+- [jogo-arquivo-unico.html](jogo-arquivo-unico.html): cópia empacotada (todos os `.js` embutidos, na mesma ordem do `index.html`). Not edited by hand: after changing one or more `.js` files or `index.html` in a work session, run `node build-single.js` once at the end (and `node build-single.js --check` to confirm) rather than after each individual file edit.
+- [menu.js](menu.js): menu interactions, input handling, touch controls, HUD editor, and canvas click/render events.
+
+Script load order in `index.html` matters: `storage.js` → `audio.js` → `progress.js` → `game-logic-core.js` → `sprites.js` → `database.js` → `gameplay.js` → `menu.js`. (`game-logic-core.js` is pure and dependency-free, so it loads before `database.js`, which already calls `getDefaultTouchHudLayout` and `getAnalogVector` at load time. `sprites.js` is the procedural sprite engine — it generates every character's animation frames from combinable parts; `database.js` uses it in `loadDefaultCharacters` and the character builder.) These are classic (non-module) scripts sharing one global scope, so `let`/`const` declared in an earlier file are visible in later ones, but a function from a later file must not be *called* during an earlier file's top-level code.
+
+The active animation states are `idle`, `flyRight`, `flyLeft`, `flyUp`, `flyDown`, the four diagonal states, `parry`, `attackKi`, `chargeKi`, and `transform`.
+
+## Working conventions
+- Scale verification effort to the change: a one-line constant, string, comment, or CSS-only color/spacing tweak needs a syntax check and a quick sanity look, not a full browser/responsive pass. Logic, state, or rendering changes still need real verification — see below.
+- All responses and communication with the user must be in Portuguese.
+- Keep changes small and localized to the file that owns the behavior. Do not move logic across files without a clear reason.
+- Respect the existing naming style in Portuguese and the project’s custom state variables (`gameState`, `selectedCharacter`, `touchHudLayout`, `world`, etc.).
+- The game is intentionally static; avoid introducing frameworks, bundlers, or package dependencies unless the task explicitly requires them.
+- When editing gameplay behavior that changes logic, state, or rendering, verify the change (in a browser, or with `tests/harness.js` for input/state — see the verification-scaling rule above and "Run and validation" below).
+- New pure logic (no DOM/canvas/localStorage) belongs in `game-logic-core.js` with a matching test in `tests/`, so it can be checked with `node --test` before ever opening a browser.
+- Keep the canvas logical resolution at `800x350`; responsive behavior is implemented by CSS/viewport scaling, not by changing the game coordinate system.
+- Fullscreen uses `#game-container`; modals and file inputs must remain descendants of that element so they work in fullscreen.
+- Modals (`#modal-editor`, `#modal-updates`, `#modal-alert`) carry `role="dialog"`/`aria-modal` and use `focusModal`/`restoreFocusAfterModal` (in database.js) for focus management, plus a global Escape handler. Keep using those helpers for any new modal instead of toggling `style.display` directly.
+- The sprite-sheet image remains fixed. Edit frame rectangles instead of adding image panning behavior.
+- Preserve frame rectangle positions when changing global frame width/height or spacing. Only selected frames should be moved or spaced.
+- FPS changes in the preview are live. Preview frame selection and reorder operations must not mutate the source sprite sheet.
+
+## Run and validation
+- Open [index.html](index.html) directly in a browser for quick checks, or serve the folder locally with a simple static server if browser restrictions require it.
+- For touch, gamepad, menu, or state-machine logic, `node tests/harness.js .` (or a small script built on it) is usually cheaper and faster than a real browser — it runs the actual game code against a simulated DOM/canvas. Reach for a real browser when the thing being verified is visual (layout, animation, colors, sprite rendering) rather than logical.
+- A typical local verification command is:
+  - `python -m http.server` from this folder, then open the served page in the browser.
+- `game-logic-core.js` has automated coverage: run `node --test tests/game-logic-core.test.js` (Node ≥ 18, no dependencies) after touching wave params, movement-direction logic, hitbox math, or boss attack patterns. This does not replace manual browser verification for anything touching the DOM/canvas/state machines.
+- For responsive checks, test the viewport(s) relevant to the change (desktop, ~`375x667`, or fullscreen) and confirm the specific area touched (canvas bounds, modal width, scroll behavior, editor controls, or Database editing). A full pass across all three viewports and all five areas is only required for layout-wide changes (e.g. CSS affecting `#game-container` or the modal shell).
+- Browser-side syntax validation can use `new Function(source)` for each JavaScript file when a Node runtime is unavailable; with Node available, `node --check <file>.js` is faster and catches the same class of errors.
+
+## Common pitfalls
+- `localStorage` access can fail in some environments; keep writes guarded and avoid breaking the game if storage is unavailable.
+- Several systems (audio, UI modals, touch controls, and editor state) depend on global variables and DOM IDs. Prefer matching the existing names instead of introducing new global patterns.
+- The canvas and the HTML modal/editor UI are tightly coupled; changes to IDs, event handlers, or global state should be checked against both the markup and the script files.
+- The animation editor is intentionally stateful: `tempAnimations`, `savedSpriteMotionPreviewFrames`, `selectedSpriteSheetFrames`, and `spriteFrameRects` must remain synchronized. When a change affects one of them, check its direct dependents (see call sites) rather than re-auditing all four by default.
+- Avoid creating `Image` objects inside the render loop. Use the existing image caches for gameplay, Database cards, and preview frames.
+- `player`, `player2`, `score`, `waveNumber`, and `gameState` are still plain globals (not part of `world`) — they're referenced across all three gameplay/menu/database files too pervasively to regroup safely without full browser regression testing. Don't fold them into `world` in a small patch; that's a deliberate, larger refactor for its own PR.
+
+## Preferred edit strategy
+- Update UI markup in [index.html](index.html) when the change is visual or adds controls.
+- Update generic persistence in [storage.js](storage.js); achievement/ranking rules in [progress.js](progress.js); sound/music in [audio.js](audio.js).
+- Update gameplay logic in [gameplay.js](gameplay.js) for movement, combat, waves, collisions, and particle effects. New per-run object arrays or timers go on `world`.
+- Update pure/testable helpers in [game-logic-core.js](game-logic-core.js) and add/adjust a test in `tests/`.
+- Update menu/input behavior in [menu.js](menu.js) for mouse, keyboard, touch, and HUD interactions.
+- Update character defaults, sprite editor, and data storage in [database.js](database.js) when adding new traits, presets, or customization entries.
+
+## Scope for AI agents
+Agents should avoid large refactors or broad re-architectures. This project is small and feature-driven, so incremental, targeted edits are preferred. (The storage/audio/progress split and the `world` state grouping were deliberate, narrowly-scoped exceptions done with full syntax checks and, where logic was pure enough, automated tests — not a precedent for open-ended restructuring.)
+
+## Before you finish
+Quick checklist, gathered from the rules above — skip any line whose condition doesn't apply to this change:
+- Touched any `.js` file or `index.html`? Run `node build-single.js` once (see Key files above), then `node build-single.js --check`.
+- Touched wave params, movement-direction logic, hitbox math, or boss attack patterns in `game-logic-core.js`? Run `node --test tests/game-logic-core.test.js`.
+- Touched gameplay/input/menu/state logic (not just text/color/comments)? Verify it — `node tests/harness.js .` for input/state, a real browser for anything visual.
+- Touched layout-wide CSS (`#game-container`, the modal shell) rather than one isolated area? Do the full responsive pass (desktop, `375x667`, fullscreen). Otherwise just check the specific area you touched.
