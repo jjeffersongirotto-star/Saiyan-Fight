@@ -1,7 +1,7 @@
 # AGENTS.md
 
 ## Project snapshot
-This workspace is a small browser game built with plain HTML, CSS, and JavaScript. There is no framework or bundler; the only tooling is dependency-free Node scripts (`node --test` for pure logic and `node build-single.js` for the single-file copy). The game is centered on a single canvas UI and stores settings in `localStorage`.
+This workspace is a small browser game built with plain HTML, CSS, and JavaScript. There is no framework or bundler; the only tooling is dependency-free Node tests (`node --test` for pure logic and `tests/harness.js` for simulated DOM/state checks). Changes are made directly in the GitHub repository and the game is played through the site's own link, so no downloadable copy or single-file bundle is produced. The game is centered on a single canvas UI and stores settings in `localStorage`.
 
 The character editor uses a sprite-sheet workflow. The legacy multi-card animation editor was removed; do not reintroduce it. Animation frames are selected, numbered, reordered, cloned, deleted, mirrored, duplicated between movements, and saved in the character database.
 
@@ -15,7 +15,6 @@ The character editor uses a sprite-sheet workflow. The legacy multi-card animati
 - [gameplay.js](gameplay.js): battle loop, player/boss state, collisions, transforms, waves, particles, and core game mechanics. Game-object arrays and timers live in the single `world` object (`world.obstacles`, `world.saibamans`, etc.) instead of separate globals — add new per-run state as a `world.*` property rather than a new bare `let`.
 - [sprites.js](sprites.js): procedural 2D sprite engine with cel-shaded volume (shading/highlights), built from combinable parts — hair, clothes, tail, wings, back weapon, accessories (see `SPRITE_PRESETS`). Generates fluid per-frame poses for every animation state (`idle`, `flyRight`, `attackKi`, `parry`, `transform`...). Used by `loadDefaultCharacters` (starting roster) and the editor's CONSTRUTOR tab (database.js) to build characters from scratch. No DOM dependency — runs under Node for tests.
 - [tests/harness.js](tests/harness.js): reusable Node `vm` harness — loads the game's scripts into a minimal simulated DOM/canvas (no real browser). Use it (or extend it) to verify touch, gamepad, menu, and state logic cheaply; keep feature-specific scenarios in their own small scripts that `require("./harness.js")` rather than growing this file into a dumping ground of one-off assertions.
-- [jogo-arquivo-unico.html](jogo-arquivo-unico.html): cópia empacotada (todos os `.js` embutidos, na mesma ordem do `index.html`). Not edited by hand: after changing one or more `.js` files or `index.html` in a work session, run `node build-single.js` once at the end (and `node build-single.js --check` to confirm) rather than after each individual file edit.
 - [menu.js](menu.js): menu interactions, input handling, touch controls, HUD editor, and canvas click/render events.
 
 Script load order in `index.html` matters: `storage.js` → `audio.js` → `progress.js` → `game-logic-core.js` → `sprites.js` → `database.js` → `gameplay.js` → `menu.js`. (`game-logic-core.js` is pure and dependency-free, so it loads before `database.js`, which already calls `getDefaultTouchHudLayout` and `getAnalogVector` at load time. `sprites.js` is the procedural sprite engine — it generates every character's animation frames from combinable parts; `database.js` uses it in `loadDefaultCharacters` and the character builder.) These are classic (non-module) scripts sharing one global scope, so `let`/`const` declared in an earlier file are visible in later ones, but a function from a later file must not be *called* during an earlier file's top-level code.
@@ -67,7 +66,7 @@ Agents should avoid large refactors or broad re-architectures. This project is s
 
 ## Before you finish
 Quick checklist, gathered from the rules above — skip any line whose condition doesn't apply to this change:
-- Touched any `.js` file or `index.html`? Run `node build-single.js` once (see Key files above), then `node build-single.js --check`.
+- Do not hand the user downloadable copies of the files or a single-file HTML bundle; commit and push the changes to the GitHub branch instead.
 - Touched wave params, movement-direction logic, hitbox math, or boss attack patterns in `game-logic-core.js`? Run `node --test tests/game-logic-core.test.js`.
 - Touched gameplay/input/menu/state logic (not just text/color/comments)? Verify it — `node tests/harness.js .` for input/state, a real browser for anything visual.
 - Touched layout-wide CSS (`#game-container`, the modal shell) rather than one isolated area? Do the full responsive pass (desktop, `375x667`, fullscreen). Otherwise just check the specific area you touched.
