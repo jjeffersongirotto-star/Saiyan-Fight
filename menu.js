@@ -2318,6 +2318,13 @@ function handleMenuClick(x, y) {
                 if (keys.length <= 1) return showSystemAlert("AVISO", "DEVE HAVER PELO MENOS UM PERSONAGEM!");
                 showSystemConfirm("EXCLUIR", `REMOVER ${characterDB[k].name}?`, () => {
                     delete characterDB[k];
+                    // Se o apagado era o escolhido (herói ou vilão), escolhe outro que ainda existe — senão a
+                    // partida começava com um personagem inexistente (aparecia só um retângulo colorido).
+                    const remaining = Object.keys(characterDB);
+                    const pick = (aligns) => remaining.find(key => aligns.includes(characterDB[key].alignment)) || remaining[0];
+                    if (selectedCharacter === k) selectedCharacter = pick(["HERÓI", "ANTI-HERÓI"]);
+                    if (selectedBoss === k) selectedBoss = pick(["VILÃO", "ANTI-HERÓI"]);
+                    saveSelectedCharacters();
                     saveCharacterData();
                 });
             }
@@ -3329,7 +3336,7 @@ function render() {
 
     ctx.save();
     if (shakeTime > 0) {
-        shakeTime--;
+        shakeTime -= deltaTime * 60;
         let offsetX = (Math.random() - 0.5) * shakeIntensity;
         let offsetY = (Math.random() - 0.5) * shakeIntensity;
         ctx.translate(offsetX, offsetY);

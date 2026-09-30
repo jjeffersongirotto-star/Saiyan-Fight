@@ -2184,13 +2184,6 @@ function saveCharacterFromModal() {
                 transform: Array.from(tempAnimations.transform)
             };
 
-            const animKeys = ["flyUp", "flyDown", "flyRight", "flyLeft", "flyUpRight", "flyUpLeft", "flyDownRight", "flyDownLeft", "parry", "attackKi", "chargeKi", "transform"];
-            animKeys.forEach(k => {
-                for (let i = 0; i < 3; i++) {
-                    if (!animData[k][i]) animData[k][i] = animData.idle[0] || finalUrl;
-                }
-            });
-
             let fpsData = {};
             SUB_ANIM_KEYS.forEach(k => {
                 fpsData[k] = tempFps[k] || 12;
@@ -2212,6 +2205,7 @@ function saveCharacterFromModal() {
             });
 
             const wasNewCharacter = !editingKey;
+            const previousCharacter = characterDB[key];
             characterDB[key] = {
                 name: name,
                 imageObj: null,
@@ -2231,6 +2225,13 @@ function saveCharacterFromModal() {
                 totalFrames: charFrames ? parseInt(charFrames.value, 10) || 1 : 1,
                 bgRemoval: getBgRemovalFromForm()
             };
+            if (!saveCharacterData()) {
+                // Não coube no armazenamento do navegador: desfaz na memória também, para o jogo não mostrar
+                // um personagem que vai sumir ao reabrir. O editor continua aberto, sem perder o trabalho.
+                if (previousCharacter) characterDB[key] = previousCharacter;
+                else delete characterDB[key];
+                return showSystemAlert("SEM ESPAÇO", "O NAVEGADOR NÃO TEM ESPAÇO PARA SALVAR ESTE PERSONAGEM. USE MENOS QUADROS OU IMAGENS MENORES, OU EXCLUA OUTRO PERSONAGEM.");
+            }
             if (wasNewCharacter) {
                 bumpStat("customCharactersCreated", 1);
                 unlockAchievement("builder_first");
@@ -2240,7 +2241,6 @@ function saveCharacterFromModal() {
                     if (builderLastAppearance.backWeapon && builderLastAppearance.backWeapon !== "none") unlockAchievement("builder_weapon");
                 }
             }
-            saveCharacterData();
             closeModal();
             showSystemAlert("SUCESSO", `PERSONAGEM ${name} SALVO!`);
         } else {
@@ -2352,10 +2352,11 @@ function saveCharacterData() {
             if (rest.builderAppearance) delete rest.animations;
             exportData[k] = rest;
         }
-        writeStorage("saiyan_db_v8_8bit", JSON.stringify(exportData));
+        return writeStorage("saiyan_db_v8_8bit", JSON.stringify(exportData));
     } catch (e) {
         console.warn("Erro ao salvar database:", e);
         showSystemAlert("ERRO", "NÃO FOI POSSÍVEL SALVAR OS PERSONAGENS!");
+        return false;
     }
 }
 
