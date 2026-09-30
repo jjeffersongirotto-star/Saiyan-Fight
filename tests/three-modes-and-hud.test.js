@@ -12,6 +12,9 @@ const h = createHarness(__dirname + "/..", 800);
 const { run, check, summary } = h;
 
 function killBoss() {
+    // Tira os saibamans do caminho: às vezes um nascia bem onde o chefe entra na tela, o golpe acertava o
+    // saibaman primeiro e o chefe não morria — o teste falhava de vez em quando (15 ondas em vez de 16).
+    run("world.saibamans = []");
     run("player2.hp = 1; world.obstacles.push({ x: player2.x + 5, y: player2.y + 5, radius: 20, vx: 0, vy: 0, fromPlayer: true, color: '#0ff', damage: 5 })");
     run("update(1/60)");
 }

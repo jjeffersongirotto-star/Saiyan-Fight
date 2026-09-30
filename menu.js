@@ -423,16 +423,8 @@ function getBindingDisplayName(binding) {
     return binding || "NENHUMA";
 }
 
-function drawBtn(x, y, w, h, text, color = "#00ffff", font = "bold 12px 'Courier New', monospace") {
-    registerMenuTarget(x, y, w, h);
-    let hov = inRect(mouseX, mouseY, x, y, w, h);
-
-    ctx.save();
-    const radius = 2;
-    const gradient = ctx.createLinearGradient(x, y, x, y + h);
-    gradient.addColorStop(0, hov ? "#ffb703" : "#123765");
-    gradient.addColorStop(1, hov ? "#e85d04" : "#071d3a");
-
+// Traça (sem pintar) um retângulo de cantos arredondados; quem chama decide fill/stroke.
+function traceRoundedRect(x, y, w, h, radius) {
     ctx.beginPath();
     ctx.moveTo(x + radius, y);
     ctx.lineTo(x + w - radius, y);
@@ -444,6 +436,19 @@ function drawBtn(x, y, w, h, text, color = "#00ffff", font = "bold 12px 'Courier
     ctx.lineTo(x, y + radius);
     ctx.quadraticCurveTo(x, y, x + radius, y);
     ctx.closePath();
+}
+
+function drawBtn(x, y, w, h, text, color = "#00ffff", font = "bold 12px 'Courier New', monospace") {
+    registerMenuTarget(x, y, w, h);
+    let hov = inRect(mouseX, mouseY, x, y, w, h);
+
+    ctx.save();
+    const radius = 2;
+    const gradient = ctx.createLinearGradient(x, y, x, y + h);
+    gradient.addColorStop(0, hov ? "#ffb703" : "#123765");
+    gradient.addColorStop(1, hov ? "#e85d04" : "#071d3a");
+
+    traceRoundedRect(x, y, w, h, radius);
 
     ctx.shadowColor = hov ? "rgba(255, 183, 3, 0.7)" : "rgba(0, 0, 0, 0.35)";
     ctx.shadowBlur = hov ? 18 : 10;
@@ -466,44 +471,6 @@ function drawBtn(x, y, w, h, text, color = "#00ffff", font = "bold 12px 'Courier
     ctx.restore();
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
-}
-
-function drawModernPanel(x, y, w, h, title = "", subtitle = "") {
-    ctx.save();
-    const radius = 22;
-
-    ctx.fillStyle = "rgba(15, 23, 42, 0.78)";
-    ctx.strokeStyle = "rgba(148, 163, 184, 0.28)";
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(x + radius, y);
-    ctx.lineTo(x + w - radius, y);
-    ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
-    ctx.lineTo(x + w, y + h - radius);
-    ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
-    ctx.lineTo(x + radius, y + h);
-    ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
-    ctx.lineTo(x, y + radius);
-    ctx.quadraticCurveTo(x, y, x + radius, y);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-
-    if (title) {
-        ctx.fillStyle = "#e2e8f0";
-        ctx.font = "bold 22px 'Trebuchet MS', sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText(title, x + w / 2, y + 32);
-    }
-
-    if (subtitle) {
-        ctx.fillStyle = "#93c5fd";
-        ctx.font = "12px 'Segoe UI', sans-serif";
-        ctx.fillText(subtitle, x + w / 2, y + 52);
-    }
-
-    ctx.restore();
-    ctx.textAlign = "left";
 }
 
 function drawDragonBallMenuBackdrop(isMenu = false) {
@@ -1605,16 +1572,8 @@ canvas.addEventListener("touchstart", (e) => {
         const hudKey = getHudButtonAt(c.x, c.y);
 
         if (hudKey) {
-            if (hudKey === "attack") triggerAction("attack", player, false);
-            else if (hudKey === "parry") tryReflect();
-            else if (hudKey === "special") triggerSpecialAttack(false);
-            else if (hudKey === "charge") touchChargeId = touch.identifier;
-            else if (hudKey === "transform") {
-                if (!transformPlayer(player, false) && !player.isSSJ) {
-                    addFloatingText({ text: "KI INSUFICIENTE (80)", x: player.x + player.w / 2, y: player.y - 10, alpha: 1, color: "#ffcc00" });
-                }
-            }
-            if (gameState === "tutorial" && ["attack", "parry", "special", "transform"].includes(hudKey)) markTutorialActionDone(hudKey);
+            if (hudKey === "charge") touchChargeId = touch.identifier;
+            else triggerAction(hudKey, player, false);
             continue;
         }
 
@@ -1643,9 +1602,8 @@ canvas.addEventListener("touchstart", (e) => {
         // Duplo toque numa área livre da tela (fora do analógico e dos botões) = parry
         if (mobileDoubleTapParry) {
             if (now - lastTouchTime < 300) {
-                tryReflect();
+                triggerAction("parry", player, false);
                 lastTouchTime = 0;
-                if (gameState === "tutorial") markTutorialActionDone("parry");
             } else {
                 lastTouchTime = now;
             }
@@ -1941,14 +1899,7 @@ function drawTutorialScreen() {
     ctx.fillStyle = "rgba(4, 8, 20, 0.88)";
     ctx.strokeStyle = tutorialPhase === "effect" ? "#4ade80" : "#3a5a8a";
     ctx.lineWidth = 1.5;
-    const r = 8;
-    ctx.beginPath();
-    ctx.moveTo(ui.bubbleX + r, ui.bubbleY);
-    ctx.arcTo(ui.bubbleX + ui.bubbleW, ui.bubbleY, ui.bubbleX + ui.bubbleW, ui.bubbleY + ui.bubbleH, r);
-    ctx.arcTo(ui.bubbleX + ui.bubbleW, ui.bubbleY + ui.bubbleH, ui.bubbleX, ui.bubbleY + ui.bubbleH, r);
-    ctx.arcTo(ui.bubbleX, ui.bubbleY + ui.bubbleH, ui.bubbleX, ui.bubbleY, r);
-    ctx.arcTo(ui.bubbleX, ui.bubbleY, ui.bubbleX + ui.bubbleW, ui.bubbleY, r);
-    ctx.closePath();
+    traceRoundedRect(ui.bubbleX, ui.bubbleY, ui.bubbleW, ui.bubbleH, 8);
     ctx.fill();
     ctx.stroke();
 
@@ -1994,7 +1945,13 @@ function triggerAction(actionName, targetPlayer, isP2 = false) {
         if (world.beamOwner === "clash" && world.beamActive > 0) { registerClashMash(isP2); return; }
         fireKiBarrage(targetPlayer, isP2);
     }
-    else if (actionName === "transform") transformPlayer(targetPlayer, isP2);
+    else if (actionName === "transform") {
+        // Sem ki suficiente avisa em qualquer controle (toque, teclado, mouse ou controle), não só no toque.
+        const alreadyTransformed = isP2 ? targetPlayer.isTransformed : targetPlayer.isSSJ;
+        if (!transformPlayer(targetPlayer, isP2) && !alreadyTransformed) {
+            addFloatingText({ text: "KI INSUFICIENTE (80)", x: targetPlayer.x + targetPlayer.w / 2, y: targetPlayer.y - 10, alpha: 1, color: "#ffcc00" });
+        }
+    }
     else if (actionName === "parry") tryReflect(targetPlayer, isP2);
     else if (actionName === "special") triggerSpecialAttack(isP2);
     if (gameState === "tutorial" && !isP2) markTutorialActionDone(actionName);
@@ -2747,15 +2704,11 @@ function drawPlayerEntity(p, charData, isBoss = false) {
         hit: { dx: 0, dy: 0, scale: 1.04 }
     };
     const shift = actionShift[animationState] || actionShift.idle;
+    const drawW = p.w * shift.scale;
+    const drawH = p.h * shift.scale;
+    const drawX = renderX + (p.w - drawW) / 2 + shift.dx;
+    const drawY = renderY + (p.h - drawH) / 2 + shift.dy;
     if (isDrawableSource(animationFrame)) {
-        const zoom = shift.scale;
-        const offsetX = shift.dx;
-        const offsetY = shift.dy;
-        const drawW = p.w * zoom;
-        const drawH = p.h * zoom;
-        const drawX = renderX + (p.w - drawW) / 2 + offsetX;
-        const drawY = renderY + (p.h - drawH) / 2 + offsetY;
-
         ctx.drawImage(animationFrame, drawX, drawY, drawW, drawH);
     } else if (charData && charData.imageObj && charData.imageObj.complete && charData.imageObj.naturalWidth !== 0) {
         let img = getCutoutSource(charData.imageObj, charData.bgRemoval);
@@ -2767,13 +2720,6 @@ function drawPlayerEntity(p, charData, isBoss = false) {
 
         let currentFrame = Math.floor(p.animTimer) % totalF;
         let sx = currentFrame * fw;
-        const zoom = shift.scale;
-        const offsetX = shift.dx;
-        const offsetY = shift.dy;
-        const drawW = p.w * zoom;
-        const drawH = p.h * zoom;
-        const drawX = renderX + (p.w - drawW) / 2 + offsetX;
-        const drawY = renderY + (p.h - drawH) / 2 + offsetY;
 
         ctx.drawImage(img, sx, 0, fw, fh, drawX, drawY, drawW, drawH);
     } else {
