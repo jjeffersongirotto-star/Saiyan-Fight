@@ -201,7 +201,6 @@ let tempFps = {};
 let spriteSheetImage = null;
 let selectedSpriteSheetFrame = null;
 let selectedSpriteSheetFrames = new Set();
-let mirroredSpriteSheetFrames = new Set();
 let activeSpriteSheetFrames = null;
 let spriteFrameRects = {};
 let lastSpriteSheetGridSignature = null;
@@ -629,11 +628,9 @@ function generateDbzSpriteSvg(appearance) {
     return `data:image/svg+xml;utf8,${encodeURIComponent(svgContent)}`;
 }
 
-function makeSvg8Bit(type) {
-    if (type === 'vegeta') return generateDbzSpriteSvg({ hairStyle: "vegeta", primaryColor: "#0033aa", secondaryColor: "#ffffff" });
-    if (type === 'piccolo') return generateDbzSpriteSvg({ race: "Namekuseijin", accessory: "antenas", earType: "pontuda", primaryColor: "#8800aa", secondaryColor: "#ffcc00" });
-    if (type === 'freeza') return generateDbzSpriteSvg({ race: "Raça Freeza", earType: "freeza_placa", primaryColor: "#ffffff", secondaryColor: "#aa00aa" });
-    return generateDbzSpriteSvg({ hairStyle: "goku", primaryColor: "#ff6600", secondaryColor: "#0033cc" });
+// Imagem reserva (usada quando um personagem ainda não tem quadros ou a imagem dele não carrega).
+function getFallbackSpriteSvg() {
+    return generateDbzSpriteSvg(DEFAULT_APPEARANCE);
 }
 
 function triggerScreenShake(intensity = 6, duration = 12) {
@@ -645,7 +642,7 @@ function triggerScreenShake(intensity = 6, duration = 12) {
 function loadImageSecure(src, callback) {
     if (!src) {
         let fallbackImg = new Image();
-        fallbackImg.src = makeSvg8Bit('goku');
+        fallbackImg.src = getFallbackSpriteSvg();
         callback(fallbackImg, true);
         return;
     }
@@ -672,7 +669,7 @@ function loadImageSecure(src, callback) {
             cleanUp();
             img = null;
             let fallbackImg = new Image();
-            fallbackImg.src = makeSvg8Bit('goku');
+            fallbackImg.src = getFallbackSpriteSvg();
             callback(fallbackImg, true);
         }
     }, IMAGE_LOAD_TIMEOUT);
@@ -691,7 +688,7 @@ function loadImageSecure(src, callback) {
             cleanUp();
             img = null;
             let fallbackImg = new Image();
-            fallbackImg.src = makeSvg8Bit('goku');
+            fallbackImg.src = getFallbackSpriteSvg();
             callback(fallbackImg, true);
         }
     };
@@ -747,7 +744,6 @@ function setSpriteSheetImage(img, source) {
     spriteSheetImage = img;
     selectedSpriteSheetFrame = null;
     selectedSpriteSheetFrames = new Set();
-    mirroredSpriteSheetFrames = new Set();
     activeSpriteSheetFrames = null;
     spriteFrameRects = {};
     lastSpriteSheetGridSignature = null;
@@ -1318,15 +1314,7 @@ function extractSpriteSheetFrame(frameIndex) {
     frameCanvas.height = Math.max(1, Math.round(rect.h));
     const frameCtx = frameCanvas.getContext("2d");
     frameCtx.imageSmoothingEnabled = false;
-    if (mirroredSpriteSheetFrames.has(frameIndex)) {
-        frameCtx.save();
-        frameCtx.translate(frameCanvas.width, 0);
-        frameCtx.scale(-1, 1);
-        frameCtx.drawImage(spriteSheetImage, rect.x, rect.y, rect.w, rect.h, 0, 0, frameCanvas.width, frameCanvas.height);
-        frameCtx.restore();
-    } else {
-        frameCtx.drawImage(spriteSheetImage, rect.x, rect.y, rect.w, rect.h, 0, 0, frameCanvas.width, frameCanvas.height);
-    }
+    frameCtx.drawImage(spriteSheetImage, rect.x, rect.y, rect.w, rect.h, 0, 0, frameCanvas.width, frameCanvas.height);
     return frameCanvas.toDataURL("image/png");
 }
 
@@ -1527,21 +1515,7 @@ function appendFramesToActiveMovement(sources) {
 
 function assignSelectedSpriteFrame() {
     if (selectedSpriteSheetFrames.size === 0) {
-        return showSystemAlert("SELECIONE UM QUADRO", "CLIQUE EM UM QUADRO DA SPRITE SHEET ANTES DE ADICIONAR.");
-    }
-
-    const sources = Array.from(selectedSpriteSheetFrames)
-        .sort((first, second) => first - second)
-        .map(frame => extractSpriteSheetFrame(frame))
-        .filter(Boolean);
-    appendFramesToActiveMovement(sources);
-    renderSpriteAssignedFrames();
-    renderSpriteMotionPreview();
-}
-
-function saveSelectedFramesToPreview() {
-    if (selectedSpriteSheetFrames.size === 0) {
-        return showSystemAlert("SELECIONE QUADROS", "SELECIONE UM OU MAIS QUADROS ANTES DE SALVAR NA PRÉVIA.");
+        return showSystemAlert("SELECIONE UM QUADRO", "CLIQUE EM UM OU MAIS QUADROS DA SPRITE SHEET ANTES DE ADICIONAR.");
     }
 
     const sources = Array.from(selectedSpriteSheetFrames)
@@ -1551,14 +1525,14 @@ function saveSelectedFramesToPreview() {
     if (!sources.length) return;
 
     appendFramesToActiveMovement(sources);
+    // a prévia já pula para o primeiro quadro recém-adicionado
     spriteMotionPreviewFrame = Math.max(0, getSpriteMotionPreviewFrames().length - sources.length);
     renderSpriteAssignedFrames();
     renderSpriteMotionPreview();
 }
 
 function clearActiveSpriteFrames() {
-    if (activeSpriteMovement === "idle") tempAnimations.idle = [];
-    else tempAnimations[activeSpriteMovement] = [];
+    tempAnimations[activeSpriteMovement] = [];
     delete savedSpriteMotionPreviewFrames[activeSpriteMovement];
     renderSpriteAssignedFrames();
     renderSpriteMotionPreview();
@@ -1761,10 +1735,6 @@ if (fileInput) {
                 const result = ev.target.result;
                 tempBase64 = result;
                 loadedUrlImageObj = null;
-                const charUrl = document.getElementById('char-url');
-                const fileStatus = document.getElementById('file-status');
-                if (charUrl) charUrl.value = "";
-                if (fileStatus) fileStatus.innerText = "✓ Sprite sheet local pronta!";
 
                 const img = new Image();
                 img.onload = () => {
@@ -1783,84 +1753,6 @@ if (fileInput) {
     };
 }
 
-function handleUrlKeydown(e) {
-    if (e.key === "Enter") {
-        e.preventDefault();
-        processUrlImage();
-    }
-}
-
-function processUrlImage() {
-    const charUrl = document.getElementById('char-url');
-    const fileStatus = document.getElementById('file-status');
-    let url = charUrl ? charUrl.value.trim() : "";
-    if (!url) return;
-
-    tempBase64 = null;
-    loadedFileImageObj = null;
-    if (fileStatus) fileStatus.innerText = "⏳ Processando URL...";
-    
-    let img = new Image();
-    if (!url.startsWith("data:")) img.crossOrigin = "Anonymous";
-
-    let timeoutHandle = setTimeout(() => {
-        img.onload = null;
-        img.onerror = null;
-        img = null;
-        if (fileStatus) fileStatus.innerText = "✗ URL expirou (timeout)";
-    }, IMAGE_LOAD_TIMEOUT);
-
-    img.onload = () => {
-        clearTimeout(timeoutHandle);
-        loadedUrlImageObj = img;
-        setSpriteSheetImage(img, url);
-        let fwEl = document.getElementById('char-fw');
-        let fhEl = document.getElementById('char-fh');
-        if (fwEl && (!fwEl.value || parseInt(fwEl.value, 10) === 0)) fwEl.value = img.naturalWidth || 32;
-        if (fhEl && (!fhEl.value || parseInt(fhEl.value, 10) === 0)) fhEl.value = img.naturalHeight || 32;
-        if (fileStatus) fileStatus.innerText = "✓ Imagem carregada!";
-        updateModalPreview();
-    };
-
-    img.onerror = () => {
-        clearTimeout(timeoutHandle);
-        loadedUrlImageObj = null;
-        showSystemAlert("ERRO", "NÃO FOI POSSÍVEL CARREGAR A IMAGEM DO LINK!");
-        if (fileStatus) fileStatus.innerText = "✗ Erro ao carregar URL";
-    };
-
-    img.src = url;
-}
-
-function getAppearanceFromForm() {
-    const getVal = (id, fallback) => {
-        const el = document.getElementById(id);
-        return el ? el.value : fallback;
-    };
-
-    return {
-        race: getVal('dbz-race', DEFAULT_APPEARANCE.race),
-        hairStyle: getVal('dbz-hair-style', DEFAULT_APPEARANCE.hairStyle),
-        hairColor: getVal('dbz-hair-color', DEFAULT_APPEARANCE.hairColor),
-        eyeType: getVal('dbz-eye-type', DEFAULT_APPEARANCE.eyeType),
-        irisColor: getVal('dbz-iris-color', DEFAULT_APPEARANCE.irisColor),
-        scleraColor: getVal('dbz-sclera-color', DEFAULT_APPEARANCE.scleraColor),
-        earType: getVal('dbz-ear-type', DEFAULT_APPEARANCE.earType),
-        mouthType: getVal('dbz-mouth-type', DEFAULT_APPEARANCE.mouthType),
-        accessory: getVal('dbz-accessory', DEFAULT_APPEARANCE.accessory),
-        innerShirt: getVal('dbz-inner-shirt', DEFAULT_APPEARANCE.innerShirt),
-        outerShirt: getVal('dbz-outer-shirt', DEFAULT_APPEARANCE.outerShirt),
-        pants: getVal('dbz-pants', DEFAULT_APPEARANCE.pants),
-        shoes: getVal('dbz-shoes', DEFAULT_APPEARANCE.shoes),
-        primaryColor: getVal('dbz-primary-color', DEFAULT_APPEARANCE.primaryColor),
-        secondaryColor: getVal('dbz-secondary-color', DEFAULT_APPEARANCE.secondaryColor),
-        tail: getVal('dbz-tail', DEFAULT_APPEARANCE.tail),
-        wings: getVal('dbz-wings', DEFAULT_APPEARANCE.wings),
-        backWeapon: getVal('dbz-back-weapon', DEFAULT_APPEARANCE.backWeapon)
-    };
-}
-
-// ---- Recorte de fundo (editor de personagem) ----
 function getBgRemovalFromForm() {
     const mode = document.getElementById("char-bg-mode");
     const color = document.getElementById("char-bg-color");
@@ -1932,8 +1824,6 @@ function updateModalPreview() {
         return;
     }
 
-    let dbzSvg = generateDbzSpriteSvg(getAppearanceFromForm());
-
     if (loadedUrlImageObj) {
         renderImageToPreview(loadedUrlImageObj);
         return;
@@ -1944,8 +1834,7 @@ function updateModalPreview() {
         return;
     }
 
-    let url = idleFrames[0] || tempBase64 || dbzSvg;
-    loadImageSecure(url, (img) => {
+    loadImageSecure(getFallbackSpriteSvg(), (img) => {
         if (img) renderImageToPreview(img);
     });
 }
@@ -1985,33 +1874,6 @@ function renderImageToPreview(img) {
     }
 }
 
-function setFormFromAppearance(app) {
-    const data = Object.assign({}, DEFAULT_APPEARANCE, app || {});
-    const setVal = (id, val) => {
-        const el = document.getElementById(id);
-        if (el) el.value = val;
-    };
-
-    setVal('dbz-race', data.race);
-    setVal('dbz-hair-style', data.hairStyle);
-    setVal('dbz-hair-color', data.hairColor);
-    setVal('dbz-eye-type', data.eyeType);
-    setVal('dbz-iris-color', data.irisColor);
-    setVal('dbz-sclera-color', data.scleraColor);
-    setVal('dbz-ear-type', data.earType);
-    setVal('dbz-mouth-type', data.mouthType);
-    setVal('dbz-accessory', data.accessory);
-    setVal('dbz-inner-shirt', data.innerShirt);
-    setVal('dbz-outer-shirt', data.outerShirt);
-    setVal('dbz-pants', data.pants);
-    setVal('dbz-shoes', data.shoes);
-    setVal('dbz-primary-color', data.primaryColor);
-    setVal('dbz-secondary-color', data.secondaryColor);
-    setVal('dbz-tail', data.tail);
-    setVal('dbz-wings', data.wings);
-    setVal('dbz-back-weapon', data.backWeapon);
-}
-
 function openModal(key = null) {
     editingKey = key;
     tempBase64 = null;
@@ -2048,7 +1910,6 @@ function openModal(key = null) {
         name: "", aura: "gelo", alignment: "HERÓI", special: "KAMEHAMEHA",
         frameWidth: 32, frameHeight: 32, totalFrames: 1, scale: 1,
         defaultUrl: "", projColor: "#00ffff", projSize: "normal",
-        appearance: DEFAULT_APPEARANCE,
         animations: {},
         fpsSettings: {}
     };
@@ -2073,10 +1934,8 @@ function openModal(key = null) {
         });
     }
 
-    const fileStatus = document.getElementById('file-status');
     const modalTitle = document.getElementById('modal-title');
     const charName = document.getElementById('char-name');
-    const charUrl = document.getElementById('char-url');
     const charAura = document.getElementById('char-aura');
     const charAlign = document.getElementById('char-alignment');
     const charSpec = document.getElementById('char-special');
@@ -2087,10 +1946,8 @@ function openModal(key = null) {
     const charFh = document.getElementById('char-fh');
     const charFrames = document.getElementById('char-frames');
 
-    if (fileStatus) fileStatus.innerText = "Nenhum arquivo local";
     if (modalTitle) modalTitle.innerText = key ? "EDITAR PERSONAGEM" : "CRIAR PERSONAGEM";
     if (charName) charName.value = char.name;
-    if (charUrl) charUrl.value = (char.defaultUrl && char.defaultUrl.startsWith("http")) ? char.defaultUrl : "";
     if (charAura) charAura.value = char.aura;
     if (charAlign) charAlign.value = char.alignment;
     if (charSpec) charSpec.value = char.special || "KAMEHAMEHA";
@@ -2108,7 +1965,6 @@ function openModal(key = null) {
     if (spriteHeight) spriteHeight.value = char.frameHeight || 32;
     if (spriteTotal) spriteTotal.value = char.totalFrames || 1;
     
-    setFormFromAppearance(char.appearance);
     setFormFromBgRemoval(char.bgRemoval);
     populateBuilderPresetOptions();
     builderLastAppearance = char.builderAppearance || null;
@@ -2158,16 +2014,11 @@ function saveCharacterFromModal() {
     }
 
     let key = editingKey || ("char_" + Date.now());
-    let appearanceData = getAppearanceFromForm();
-    let generatedSvg = generateDbzSpriteSvg(appearanceData);
-
-    const charUrl = document.getElementById('char-url');
-    let urlVal = charUrl ? charUrl.value.trim() : "";
     const idleFrames = tempAnimations.idle || [];
-    let finalUrl = idleFrames[0] || urlVal || tempBase64 || generatedSvg;
+    let finalUrl = idleFrames[0] || tempBase64 || getFallbackSpriteSvg();
 
-    loadImageSecure(finalUrl, (img, isFallback) => {
-        if (img && !(urlVal && isFallback)) {
+    loadImageSecure(finalUrl, (img) => {
+        if (img) {
             let animData = {
                 idle: idleFrames.length ? Array.from(idleFrames) : [finalUrl],
                 flyUp: Array.from(tempAnimations.flyUp),
@@ -2212,7 +2063,6 @@ function saveCharacterFromModal() {
                 defaultUrl: animData.idle[0] || finalUrl,
                 animations: animData,
                 fpsSettings: fpsData,
-                appearance: appearanceData,
                 builderAppearance: isPureBuilderOutput ? builderLastAppearance : null,
                 alignment: charAlign ? charAlign.value : "HERÓI",
                 aura: charAura ? charAura.value : "gelo",
@@ -2331,7 +2181,6 @@ function loadDefaultCharacters() {
                 totalFrames: 1,
                 projColor: "#00ffff",
                 projSize: "normal",
-                appearance: DEFAULT_APPEARANCE,
                 builderAppearance: appearance,
                 bgRemoval: { mode: "none" }
             };
