@@ -14,6 +14,10 @@ run("isTouchDevice = true; startTutorial(); tutorialStepIndex = 1; setupTutorial
 const uiWaiting = run("getTutorialUiLayout()");
 const sairCenter = [uiWaiting.sair.x + uiWaiting.sair.w / 2, uiWaiting.sair.y + uiWaiting.sair.h / 2];
 fire("touchstart", [touch(1, sairCenter[0], sairCenter[1])], [touch(1, sairCenter[0], sairCenter[1])]);
+// como um botão físico: encostar o dedo só "afunda" o botão; a ação acontece ao soltar
+check("só encostar o dedo no SAIR ainda não sai do tutorial (o botão está afundado)", run("gameState") === "tutorial");
+fire("touchend", [], [touch(1, sairCenter[0], sairCenter[1])]);
+run("flushButtonActions()");   // a ação acontece depois de o botão subir de volta
 check("tocar de verdade no botão SAIR volta pro menu (antes não respondia no celular)", run("gameState") === "menu");
 
 // ---------- toque de verdade no botão PULAR ----------
@@ -22,6 +26,8 @@ const uiWaiting2 = run("getTutorialUiLayout()");
 const pularCenter = [uiWaiting2.pular.x + uiWaiting2.pular.w / 2, uiWaiting2.pular.y + uiWaiting2.pular.h / 2];
 check("começa no passo 1 (movimento)", run("tutorialStepIndex") === 0);
 fire("touchstart", [touch(2, pularCenter[0], pularCenter[1])], [touch(2, pularCenter[0], pularCenter[1])]);
+fire("touchend", [], [touch(2, pularCenter[0], pularCenter[1])]);
+run("flushButtonActions()");   // a ação acontece depois de o botão subir de volta
 check("tocar de verdade no botão PULAR avança o passo (antes não respondia no celular)", run("tutorialStepIndex") === 1);
 
 // ---------- toque de verdade no botão VOLTAR AO MENU (tela de conclusão) ----------
@@ -30,6 +36,8 @@ const uiFinished = run("getTutorialUiLayout()");
 check("layout de 'finished' calcula o botão VOLTAR AO MENU", uiFinished.finished === true && uiFinished.voltar.w > 0);
 const voltarCenter = [uiFinished.voltar.x + uiFinished.voltar.w / 2, uiFinished.voltar.y + uiFinished.voltar.h / 2];
 fire("touchstart", [touch(3, voltarCenter[0], voltarCenter[1])], [touch(3, voltarCenter[0], voltarCenter[1])]);
+fire("touchend", [], [touch(3, voltarCenter[0], voltarCenter[1])]);
+run("flushButtonActions()");   // a ação acontece depois de o botão subir de volta
 check("tocar de verdade em VOLTAR AO MENU funciona (era o bug relatado)", run("gameState") === "menu");
 
 // ---------- o balão se ajusta ao texto (não é mais uma faixa fixa cobrindo a tela) ----------
