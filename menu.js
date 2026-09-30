@@ -499,31 +499,62 @@ function getBindingDisplayName(binding) {
 }
 
 // ==================== EFEITO DE BOTÃO APERTADO ====================
-// Enquanto o dedo/mouse segura um botão, ele "afunda" como um botão físico: desce um pouco, encolhe levemente,
-// escurece e perde a sombra. No menu, a ação acontece ao SOLTAR (como um botão de verdade; arrastar o dedo para
-// fora antes de soltar cancela). Botões de ação imediata (os da partida, controle) usam um "flash" curto para o
-// afundado aparecer mesmo num toque rápido. Tudo só vale na tela em que o toque começou — se a tela mudou, um
-// botão da tela nova no mesmo lugar não aparece apertado por engano.
-const BUTTON_PRESS_FLASH_MS = 120;
+// Botões se comportam como botões físicos: enquanto o dedo/mouse segura, o botão "afunda" (desce, encolhe,
+// escurece e perde a sombra); ao soltar ele SOBE DE VOLTA ao lugar numa animação curta e, no menu, só então a
+// ação acontece — assim dá para ver o botão voltando antes de a tela mudar. Arrastar o dedo para fora antes de
+// soltar cancela. Os botões da partida (ATAQUE etc.) agem na hora do toque e só fazem a animação na tela. Tudo só
+// vale na tela em que o toque começou: se a tela mudou, um botão da tela nova no mesmo lugar não aparece apertado.
+const BUTTON_RELEASE_MS = 110;         // quanto tempo o botão leva para subir de volta ao soltar
 const BUTTON_PRESS_CANCEL_DIST = 14;   // arrastou mais que isso (em px do jogo) antes de soltar = cancelou
 let menuPointerPress = null;           // { x, y, startX, startY, state, id, onRelease } — ponteiro segurando agora
-let buttonPressFlash = null;           // { x, y, state, until }
+let buttonRelease = null;              // { x, y, state, start } — botão que acabou de ser solto, subindo de volta
+let pendingButtonActions = [];         // ações de menu esperando o botão terminar de subir: { at, state, fn }
 const hudPressHeld = {};               // id do dedo -> botão da partida (ATAQUE, ESPECIAL...) que ele está segurando
-const hudPressFlashUntil = {};         // botão da partida -> até quando mostrar afundado depois de um toque rápido
+const hudReleaseStart = {};            // botão da partida -> quando foi solto (para a animação de subir)
 
-function isRectPressed(x, y, w, h) {
-    const p = menuPointerPress;
-    if (p && p.state === gameState && inRect(p.x, p.y, x, y, w, h)) return true;
-    const f = buttonPressFlash;
-    return !!(f && f.state === gameState && performance.now() < f.until && inRect(f.x, f.y, x, y, w, h));
+// 0 = solto, 1 = totalmente afundado; no meio = subindo de volta depois de soltar.
+function releaseProgressAmount(start) {
+    const t = (performance.now() - start) / BUTTON_RELEASE_MS;
+    return t >= 1 ? 0 : 1 - t * t;   // começa a subir devagar e termina rápido, como uma mola
 }
 
-function flashButtonPress(x, y) {
-    buttonPressFlash = { x, y, state: gameState, until: performance.now() + BUTTON_PRESS_FLASH_MS };
+function getPressAmount(x, y, w, h) {
+    const p = menuPointerPress;
+    if (p && p.state === gameState && inRect(p.x, p.y, x, y, w, h)) return 1;
+    const r = buttonRelease;
+    if (r && r.state === gameState && inRect(r.x, r.y, x, y, w, h)) return releaseProgressAmount(r.start);
+    return 0;
+}
+
+function isRectPressed(x, y, w, h) {
+    return getPressAmount(x, y, w, h) > 0;
+}
+
+// Solta o botão em (x, y): ele começa a subir de volta ao lugar.
+function releaseButtonAt(x, y) {
+    buttonRelease = { x, y, state: gameState, start: performance.now() };
+}
+
+// Ação de menu que só acontece depois do botão terminar de subir (se a tela não tiver mudado nesse meio-tempo).
+function scheduleButtonAction(fn) {
+    pendingButtonActions.push({ at: performance.now() + BUTTON_RELEASE_MS, state: gameState, fn });
+}
+
+// Chamado a cada quadro (render). force = true executa tudo que está esperando (usado pelos testes).
+function runDueButtonActions(force = false) {
+    if (!pendingButtonActions.length) return;
+    const now = performance.now();
+    const due = pendingButtonActions.filter(a => force || now >= a.at);
+    pendingButtonActions = pendingButtonActions.filter(a => !due.includes(a));
+    due.forEach(a => { if (a.state === gameState) a.fn(); });
+}
+
+function flushButtonActions() {
+    runDueButtonActions(true);
 }
 
 function startPointerPress(x, y, id, onRelease) {
-    buttonPressFlash = null;   // um toque novo substitui o "afundado" que ainda sobrava do anterior
+    buttonRelease = null;   // um toque novo substitui a animação que ainda sobrava do anterior
     menuPointerPress = { x, y, startX: x, startY: y, state: gameState, id, onRelease };
 }
 
@@ -535,19 +566,22 @@ function applyPressTransform(cx, cy, scale = 0.94, drop = 2) {
     ctx.translate(-cx, -cy);
 }
 
-// Envolve o desenho de um botão/cartão: se estiver apertado, o que for desenhado até endButtonPress sai afundado.
+// Envolve o desenho de um botão/cartão: o que for desenhado até endButtonPress sai afundado na medida certa
+// (todo afundado enquanto segura, voltando aos poucos ao soltar). Devolve o quanto está afundado (0 = nada).
 function beginButtonPress(x, y, w, h) {
-    if (!isRectPressed(x, y, w, h)) return false;
-    applyPressTransform(x + w / 2, y + h / 2);
-    return true;
+    const amount = getPressAmount(x, y, w, h);
+    if (amount <= 0) return 0;
+    applyPressTransform(x + w / 2, y + h / 2, 1 - 0.06 * amount, 2 * amount);
+    return amount;
 }
 
 function endButtonPress(applied) {
     if (applied) ctx.restore();
 }
 
-function isHudKeyPressed(key) {
-    return Object.values(hudPressHeld).includes(key) || performance.now() < (hudPressFlashUntil[key] || 0);
+function getHudPressAmount(key) {
+    if (Object.values(hudPressHeld).includes(key)) return 1;
+    return hudReleaseStart[key] ? releaseProgressAmount(hudReleaseStart[key]) : 0;
 }
 
 // Traça (sem pintar) um retângulo de cantos arredondados; quem chama decide fill/stroke.
@@ -568,7 +602,8 @@ function traceRoundedRect(x, y, w, h, radius) {
 function drawBtn(x, y, w, h, text, color = "#00ffff", font = "bold 12px 'Courier New', monospace") {
     registerMenuTarget(x, y, w, h);
     let hov = inRect(mouseX, mouseY, x, y, w, h);
-    const pressed = beginButtonPress(x, y, w, h);
+    const pressAmount = beginButtonPress(x, y, w, h);
+    const pressed = pressAmount > 0.5;
 
     ctx.save();
     const radius = 2;
@@ -598,7 +633,7 @@ function drawBtn(x, y, w, h, text, color = "#00ffff", font = "bold 12px 'Courier
     ctx.fillText(text, x + w / 2, y + h / 2 + 1);
 
     ctx.restore();
-    endButtonPress(pressed);
+    endButtonPress(pressAmount);
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
 }
@@ -1308,7 +1343,7 @@ function revealPadFocusInDatabase() {
 
 function padNavBack() {
     const back = menuTargetsPrev.find(isMenuBackTarget);
-    if (back) { flashButtonPress(back.x + back.w / 2, back.y + back.h / 2); handleMenuClick(back.x + back.w / 2, back.y + back.h / 2); }
+    if (back) { releaseButtonAt(back.x + back.w / 2, back.y + back.h / 2); scheduleButtonAction(() => handleMenuClick(back.x + back.w / 2, back.y + back.h / 2)); }
     else if (gameState === "paused") requestResume();
     else if (gameState === "gameover") handleMenuClick(400, 175);
 }
@@ -1379,7 +1414,7 @@ function pollGamepadMenu(dt) {
     if (confirm && !padNav.prevConfirm) {
         padNav.visible = true;
         const target = resolvePadFocus();
-        if (target) { flashButtonPress(target.x + target.w / 2, target.y + target.h / 2); handleMenuClick(target.x + target.w / 2, target.y + target.h / 2); }
+        if (target) { releaseButtonAt(target.x + target.w / 2, target.y + target.h / 2); scheduleButtonAction(() => handleMenuClick(target.x + target.w / 2, target.y + target.h / 2)); }
         else if (gameState === "gameover") handleMenuClick(400, 175); // game over não tem botões: CRUZ = "clique em qualquer lugar"
     }
     if (back && !padNav.prevBack) {
@@ -1578,8 +1613,7 @@ canvas.onmouseup = (e) => {
     let mBtnCode = getMouseBindingName(e.button);
     mouseButtonsPressed[mBtnCode] = false;
     if (menuPointerPress && menuPointerPress.id === "mouse") {
-        // um clique rápido ainda mostra o afundado por um instante (em botões que continuam na tela)
-        flashButtonPress(menuPointerPress.x, menuPointerPress.y);
+        releaseButtonAt(menuPointerPress.x, menuPointerPress.y);   // sobe de volta ao lugar
         menuPointerPress = null;
     }
 
@@ -1598,7 +1632,7 @@ canvas.onclick = (e) => {
     }
 
     if (gameState !== "playing") {
-        handleMenuClick(point.x, point.y);
+        scheduleButtonAction(() => handleMenuClick(point.x, point.y));   // depois de o botão voltar ao lugar
     }
 };
 
@@ -1629,8 +1663,10 @@ function releaseTouchPress(e) {
     if (press.state !== gameState) return;
     const c = getCanvasCoords(ended.clientX, ended.clientY);
     if (Math.hypot(c.x - press.startX, c.y - press.startY) > BUTTON_PRESS_CANCEL_DIST) return;   // arrastou para fora: cancela
-    flashButtonPress(press.startX, press.startY);
-    if (press.onRelease) press.onRelease();
+    releaseButtonAt(press.startX, press.startY);
+    if (!press.onRelease) return;
+    if (press.immediate) press.onRelease();
+    else scheduleButtonAction(press.onRelease);
 }
 
 canvas.addEventListener("touchstart", (e) => {
@@ -1650,6 +1686,7 @@ canvas.addEventListener("touchstart", (e) => {
     const fullscreenRect = getFullscreenButtonRect();
     if (inRect(firstPoint.x, firstPoint.y, fullscreenRect.x, fullscreenRect.y, fullscreenRect.w, fullscreenRect.h)) {
         startPointerPress(firstPoint.x, firstPoint.y, firstTouch.identifier, () => toggleFullscreen());
+        menuPointerPress.immediate = true;
         return;
     }
 
@@ -1736,7 +1773,6 @@ canvas.addEventListener("touchstart", (e) => {
         if (hudKey) {
             // botões da partida agem NA HORA (velocidade importa); o afundado aparece enquanto o dedo segura
             hudPressHeld[touch.identifier] = hudKey;
-            hudPressFlashUntil[hudKey] = performance.now() + BUTTON_PRESS_FLASH_MS;
             if (hudKey === "charge") touchChargeId = touch.identifier;
             else triggerAction(hudKey, player, false);
             continue;
@@ -1864,7 +1900,11 @@ canvas.addEventListener("touchend", (e) => {
     controlsTestTouches = Array.from(e.touches).map(t => getCanvasCoords(t.clientX, t.clientY));
     releaseTouchPress(e);
     const stillDown = Array.from(e.touches).map(t => t.identifier);
-    Object.keys(hudPressHeld).forEach(id => { if (!stillDown.includes(Number(id))) delete hudPressHeld[id]; });
+    Object.keys(hudPressHeld).forEach(id => {
+        if (stillDown.includes(Number(id))) return;
+        hudReleaseStart[hudPressHeld[id]] = performance.now();   // soltou: o botão sobe de volta
+        delete hudPressHeld[id];
+    });
 
     if (gameState === "options_hud") {
         hudEditorDragging = false;
@@ -3395,8 +3435,9 @@ function drawTouchHUD() {
         const centerX = btnRect.x + btnRect.w / 2;
         const centerY = btnRect.y + btnRect.h / 2;
         const radius = Math.min(btnRect.w, btnRect.h) * 0.48;
-        const hudPressed = !isEditing && isHudKeyPressed(key);
-        if (hudPressed) applyPressTransform(centerX, centerY, 0.86, 2);
+        const hudPressAmount = isEditing ? 0 : getHudPressAmount(key);
+        const hudPressed = hudPressAmount > 0;
+        if (hudPressed) applyPressTransform(centerX, centerY, 1 - 0.14 * hudPressAmount, 2 * hudPressAmount);
 
         ctx.globalAlpha = Math.min(1, btn.opacity) * (transformDim ? 0.55 : 1);
         ctx.fillStyle = highlight ? "rgba(255, 190, 40, 0.2)" : "rgba(5, 22, 48, 0.18)";
@@ -3404,7 +3445,7 @@ function drawTouchHUD() {
         ctx.lineWidth = highlight ? 3 : 2;
         ctx.shadowColor = highlight ? "rgba(255, 190, 40, 0.45)" : "rgba(0, 210, 255, 0.2)";
         ctx.shadowBlur = highlight ? 12 : 7;
-        if (hudPressed) {
+        if (hudPressAmount > 0.5) {
             // apertado: o círculo "enche" e perde a sombra, como um botão afundado
             ctx.fillStyle = highlight ? "rgba(255, 190, 40, 0.45)" : "rgba(94, 225, 255, 0.38)";
             ctx.shadowBlur = 0;
@@ -3430,6 +3471,7 @@ function drawTouchHUD() {
 function render() {
     let now = performance.now();
     deltaTime = Math.min((now - lastFrameTime) / 1000, 0.1);
+    runDueButtonActions();
     lastFrameTime = now;
 
     // alvos de menu do quadro anterior (usados pela navegação com controle); o quadro atual recomeça vazio
