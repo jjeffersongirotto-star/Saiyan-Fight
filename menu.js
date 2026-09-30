@@ -193,6 +193,7 @@ function drawModeButton(x, y, w, h, label, unlocked, color) {
         drawBtn(x, y, w, h, label, color, "bold 11px 'Courier New', monospace");
         return;
     }
+    const pressed = beginButtonPress(x, y, w, h);
     ctx.save();
     ctx.fillStyle = "rgba(20, 20, 30, 0.7)";
     ctx.fillRect(x, y, w, h);
@@ -207,6 +208,7 @@ function drawModeButton(x, y, w, h, label, unlocked, color) {
     ctx.font = "8px 'Courier New', monospace";
     ctx.fillText("BLOQUEADO", x + w / 2, y + h / 2 + 10);
     ctx.restore();
+    endButtonPress(pressed);
 }
 
 function getStageMapNodes() {
@@ -337,6 +339,7 @@ function drawFullscreenButton() {
     const centerGap = isActive ? 3.5 : 4;
     const arrowHead = isActive ? 3.5 : 4;
 
+    const pressed = beginButtonPress(rect.x, rect.y, rect.w, rect.h);
     ctx.save();
     ctx.globalAlpha = hovered ? 1 : 0.8;
     ctx.strokeStyle = hovered ? "#fff0a6" : "rgba(148, 220, 255, 0.95)";
@@ -374,6 +377,7 @@ function drawFullscreenButton() {
         ctx.stroke();
     });
     ctx.restore();
+    endButtonPress(pressed);
 }
 
 document.addEventListener("fullscreenchange", syncFullscreenState);
@@ -494,6 +498,58 @@ function getBindingDisplayName(binding) {
     return binding || "NENHUMA";
 }
 
+// ==================== EFEITO DE BOTÃO APERTADO ====================
+// Enquanto o dedo/mouse segura um botão, ele "afunda" como um botão físico: desce um pouco, encolhe levemente,
+// escurece e perde a sombra. No menu, a ação acontece ao SOLTAR (como um botão de verdade; arrastar o dedo para
+// fora antes de soltar cancela). Botões de ação imediata (os da partida, controle) usam um "flash" curto para o
+// afundado aparecer mesmo num toque rápido. Tudo só vale na tela em que o toque começou — se a tela mudou, um
+// botão da tela nova no mesmo lugar não aparece apertado por engano.
+const BUTTON_PRESS_FLASH_MS = 120;
+const BUTTON_PRESS_CANCEL_DIST = 14;   // arrastou mais que isso (em px do jogo) antes de soltar = cancelou
+let menuPointerPress = null;           // { x, y, startX, startY, state, id, onRelease } — ponteiro segurando agora
+let buttonPressFlash = null;           // { x, y, state, until }
+const hudPressHeld = {};               // id do dedo -> botão da partida (ATAQUE, ESPECIAL...) que ele está segurando
+const hudPressFlashUntil = {};         // botão da partida -> até quando mostrar afundado depois de um toque rápido
+
+function isRectPressed(x, y, w, h) {
+    const p = menuPointerPress;
+    if (p && p.state === gameState && inRect(p.x, p.y, x, y, w, h)) return true;
+    const f = buttonPressFlash;
+    return !!(f && f.state === gameState && performance.now() < f.until && inRect(f.x, f.y, x, y, w, h));
+}
+
+function flashButtonPress(x, y) {
+    buttonPressFlash = { x, y, state: gameState, until: performance.now() + BUTTON_PRESS_FLASH_MS };
+}
+
+function startPointerPress(x, y, id, onRelease) {
+    buttonPressFlash = null;   // um toque novo substitui o "afundado" que ainda sobrava do anterior
+    menuPointerPress = { x, y, startX: x, startY: y, state: gameState, id, onRelease };
+}
+
+// Aplica a transformação de "afundado" ao redor do centro (cx, cy); desfazer com ctx.restore().
+function applyPressTransform(cx, cy, scale = 0.94, drop = 2) {
+    ctx.save();
+    ctx.translate(cx, cy + drop);
+    ctx.scale(scale, scale);
+    ctx.translate(-cx, -cy);
+}
+
+// Envolve o desenho de um botão/cartão: se estiver apertado, o que for desenhado até endButtonPress sai afundado.
+function beginButtonPress(x, y, w, h) {
+    if (!isRectPressed(x, y, w, h)) return false;
+    applyPressTransform(x + w / 2, y + h / 2);
+    return true;
+}
+
+function endButtonPress(applied) {
+    if (applied) ctx.restore();
+}
+
+function isHudKeyPressed(key) {
+    return Object.values(hudPressHeld).includes(key) || performance.now() < (hudPressFlashUntil[key] || 0);
+}
+
 // Traça (sem pintar) um retângulo de cantos arredondados; quem chama decide fill/stroke.
 function traceRoundedRect(x, y, w, h, radius) {
     ctx.beginPath();
@@ -512,18 +568,20 @@ function traceRoundedRect(x, y, w, h, radius) {
 function drawBtn(x, y, w, h, text, color = "#00ffff", font = "bold 12px 'Courier New', monospace") {
     registerMenuTarget(x, y, w, h);
     let hov = inRect(mouseX, mouseY, x, y, w, h);
+    const pressed = beginButtonPress(x, y, w, h);
 
     ctx.save();
     const radius = 2;
     const gradient = ctx.createLinearGradient(x, y, x, y + h);
-    gradient.addColorStop(0, hov ? "#ffb703" : "#123765");
-    gradient.addColorStop(1, hov ? "#e85d04" : "#071d3a");
+    gradient.addColorStop(0, pressed ? "#e85d04" : hov ? "#ffb703" : "#123765");
+    gradient.addColorStop(1, pressed ? "#9a3412" : hov ? "#e85d04" : "#071d3a");
 
     traceRoundedRect(x, y, w, h, radius);
 
-    ctx.shadowColor = hov ? "rgba(255, 183, 3, 0.7)" : "rgba(0, 0, 0, 0.35)";
-    ctx.shadowBlur = hov ? 18 : 10;
-    ctx.shadowOffsetY = 4;
+    // apertado: quase sem sombra, como se tivesse encostado no "chão"
+    ctx.shadowColor = pressed ? "rgba(0, 0, 0, 0.5)" : hov ? "rgba(255, 183, 3, 0.7)" : "rgba(0, 0, 0, 0.35)";
+    ctx.shadowBlur = pressed ? 3 : hov ? 18 : 10;
+    ctx.shadowOffsetY = pressed ? 1 : 4;
     ctx.fillStyle = gradient;
     ctx.fill();
     ctx.shadowColor = "transparent";
@@ -540,6 +598,7 @@ function drawBtn(x, y, w, h, text, color = "#00ffff", font = "bold 12px 'Courier
     ctx.fillText(text, x + w / 2, y + h / 2 + 1);
 
     ctx.restore();
+    endButtonPress(pressed);
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
 }
@@ -681,6 +740,11 @@ function getHudEditorBarRects() {
         sizeMinus: { x: 352, y, w: 30, h }, sizePlus: { x: 386, y, w: 30, h },
         opacityMinus: { x: 532, y, w: 30, h }, opacityPlus: { x: 566, y, w: 30, h }
     };
+}
+
+function isHudEditorBarHit(x, y) {
+    if (!hudEditorSelectedBtn || !touchHudLayout[hudEditorSelectedBtn]) return false;
+    return Object.values(getHudEditorBarRects()).some(r => inRect(x, y, r.x, r.y, r.w, r.h));
 }
 
 // Retorna true se o clique/toque caiu num botão da barra (e já aplica o ajuste).
@@ -1244,7 +1308,7 @@ function revealPadFocusInDatabase() {
 
 function padNavBack() {
     const back = menuTargetsPrev.find(isMenuBackTarget);
-    if (back) handleMenuClick(back.x + back.w / 2, back.y + back.h / 2);
+    if (back) { flashButtonPress(back.x + back.w / 2, back.y + back.h / 2); handleMenuClick(back.x + back.w / 2, back.y + back.h / 2); }
     else if (gameState === "paused") requestResume();
     else if (gameState === "gameover") handleMenuClick(400, 175);
 }
@@ -1315,7 +1379,7 @@ function pollGamepadMenu(dt) {
     if (confirm && !padNav.prevConfirm) {
         padNav.visible = true;
         const target = resolvePadFocus();
-        if (target) handleMenuClick(target.x + target.w / 2, target.y + target.h / 2);
+        if (target) { flashButtonPress(target.x + target.w / 2, target.y + target.h / 2); handleMenuClick(target.x + target.w / 2, target.y + target.h / 2); }
         else if (gameState === "gameover") handleMenuClick(400, 175); // game over não tem botões: CRUZ = "clique em qualquer lugar"
     }
     if (back && !padNav.prevBack) {
@@ -1463,6 +1527,7 @@ canvas.onmousemove = (e) => {
     const c = getCanvasCoords(e.clientX, e.clientY);
     mouseX = c.x;
     mouseY = c.y;
+    if (menuPointerPress && menuPointerPress.id === "mouse") { menuPointerPress.x = c.x; menuPointerPress.y = c.y; }
 
     if (gameState === "options_hud" && hudEditorDragging && hudEditorSelectedBtn) {
         const btn = touchHudLayout[hudEditorSelectedBtn];
@@ -1487,6 +1552,7 @@ canvas.onmousedown = (e) => {
     }
 
     mouseButtonsPressed[mBtnCode] = true;
+    if (e.button === 0) startPointerPress(c.x, c.y, "mouse", null);   // só o visual; o clique (onclick) já age ao soltar
 
     if (gameState === "playing" || gameState === "tutorial") {
         for (let act in keyBindings.p1) {
@@ -1511,6 +1577,11 @@ canvas.onmousedown = (e) => {
 canvas.onmouseup = (e) => {
     let mBtnCode = getMouseBindingName(e.button);
     mouseButtonsPressed[mBtnCode] = false;
+    if (menuPointerPress && menuPointerPress.id === "mouse") {
+        // um clique rápido ainda mostra o afundado por um instante (em botões que continuam na tela)
+        flashButtonPress(menuPointerPress.x, menuPointerPress.y);
+        menuPointerPress = null;
+    }
 
     if (gameState === "options_hud") {
         hudEditorDragging = false;
@@ -1531,6 +1602,9 @@ canvas.onclick = (e) => {
     }
 };
 
+// soltou o mouse fora do jogo: o botão não pode ficar "preso" afundado
+window.addEventListener("mouseup", () => { if (menuPointerPress && menuPointerPress.id === "mouse") menuPointerPress = null; });
+
 canvas.onwheel = (e) => {
     if (gameState === "database") {
         e.preventDefault();
@@ -1544,6 +1618,20 @@ canvas.onwheel = (e) => {
         achievementsScrollY = Math.max(0, Math.min(achievementsScrollY + e.deltaY * 0.8, maxScroll));
     }
 };
+
+// Dedo saiu do botão apertado: ele "sobe" e, se o dedo não foi arrastado para longe, a ação acontece.
+function releaseTouchPress(e) {
+    const press = menuPointerPress;
+    if (!press || press.id === "mouse") return;
+    const ended = Array.from(e.changedTouches).find(t => t.identifier === press.id);
+    if (!ended) return;
+    menuPointerPress = null;
+    if (press.state !== gameState) return;
+    const c = getCanvasCoords(ended.clientX, ended.clientY);
+    if (Math.hypot(c.x - press.startX, c.y - press.startY) > BUTTON_PRESS_CANCEL_DIST) return;   // arrastou para fora: cancela
+    flashButtonPress(press.startX, press.startY);
+    if (press.onRelease) press.onRelease();
+}
 
 canvas.addEventListener("touchstart", (e) => {
     e.preventDefault();
@@ -1561,25 +1649,26 @@ canvas.addEventListener("touchstart", (e) => {
     const firstPoint = getCanvasCoords(firstTouch.clientX, firstTouch.clientY);
     const fullscreenRect = getFullscreenButtonRect();
     if (inRect(firstPoint.x, firstPoint.y, fullscreenRect.x, fullscreenRect.y, fullscreenRect.w, fullscreenRect.h)) {
-        toggleFullscreen();
+        startPointerPress(firstPoint.x, firstPoint.y, firstTouch.identifier, () => toggleFullscreen());
         return;
     }
 
     // Botões próprios do tutorial (PULAR/SAIR/VOLTAR): tratados aqui, ANTES de cair na lógica de toque do
     // jogo — sem isso, o toque nunca chamava handleMenuClick nessas telas e os botões pareciam não responder.
+    // Afundam ao encostar e agem ao soltar (handleMenuClick já sabe tratar os três).
     if (gameState === "tutorial") {
         const ui = getTutorialUiLayout();
-        if (ui.finished && inRect(firstPoint.x, firstPoint.y, ui.voltar.x, ui.voltar.y, ui.voltar.w, ui.voltar.h)) {
-            setGameState("menu");
+        const onTutorialBtn = ui.finished
+            ? inRect(firstPoint.x, firstPoint.y, ui.voltar.x, ui.voltar.y, ui.voltar.w, ui.voltar.h)
+            : inRect(firstPoint.x, firstPoint.y, ui.pular.x, ui.pular.y, ui.pular.w, ui.pular.h) || inRect(firstPoint.x, firstPoint.y, ui.sair.x, ui.sair.y, ui.sair.w, ui.sair.h);
+        if (onTutorialBtn) {
+            startPointerPress(firstPoint.x, firstPoint.y, firstTouch.identifier, () => handleMenuClick(firstPoint.x, firstPoint.y));
             return;
-        }
-        if (!ui.finished) {
-            if (inRect(firstPoint.x, firstPoint.y, ui.pular.x, ui.pular.y, ui.pular.w, ui.pular.h)) { advanceTutorialStep(); return; }
-            if (inRect(firstPoint.x, firstPoint.y, ui.sair.x, ui.sair.y, ui.sair.w, ui.sair.h)) { setGameState("menu"); return; }
         }
     }
 
     if (gameState === "database") {
+        startPointerPress(firstPoint.x, firstPoint.y, firstTouch.identifier, null);   // só o visual: o toque é decidido no touchend abaixo
         databaseTouchScroll.active = true;
         databaseTouchScroll.touchId = firstTouch.identifier;
         databaseTouchScroll.startY = firstPoint.y;
@@ -1589,6 +1678,7 @@ canvas.addEventListener("touchstart", (e) => {
     }
 
     if (gameState === "achievements") {
+        startPointerPress(firstPoint.x, firstPoint.y, firstTouch.identifier, null);
         achievementsTouchScroll.active = true;
         achievementsTouchScroll.touchId = firstTouch.identifier;
         achievementsTouchScroll.startY = firstPoint.y;
@@ -1598,11 +1688,10 @@ canvas.addEventListener("touchstart", (e) => {
     }
 
     if (gameState === "options_hud") {
-        if (hitRect(firstPoint.x, firstPoint.y, MENU_LAYOUT.optionsHud.save) || hitRect(firstPoint.x, firstPoint.y, MENU_LAYOUT.optionsHud.reset)) {
-            handleMenuClick(firstPoint.x, firstPoint.y);
+        if (hitRect(firstPoint.x, firstPoint.y, MENU_LAYOUT.optionsHud.save) || hitRect(firstPoint.x, firstPoint.y, MENU_LAYOUT.optionsHud.reset) || isHudEditorBarHit(firstPoint.x, firstPoint.y)) {
+            startPointerPress(firstPoint.x, firstPoint.y, firstTouch.identifier, () => handleMenuClick(firstPoint.x, firstPoint.y));
             return;
         }
-        if (handleHudEditorBarClick(firstPoint.x, firstPoint.y)) return;
 
         for (let key in touchHudLayout) {
             const btnRect = getHudButtonRect(key);
@@ -1618,7 +1707,7 @@ canvas.addEventListener("touchstart", (e) => {
     }
 
     if (gameState !== "playing" && gameState !== "tutorial") {
-        handleMenuClick(firstPoint.x, firstPoint.y);
+        startPointerPress(firstPoint.x, firstPoint.y, firstTouch.identifier, () => handleMenuClick(firstPoint.x, firstPoint.y));
         return;
     }
 
@@ -1631,18 +1720,23 @@ canvas.addEventListener("touchstart", (e) => {
 
         const pauseRect = getPauseButtonRect();
         if (inRect(c.x, c.y, pauseRect.x, pauseRect.y, pauseRect.w, pauseRect.h)) {
-            if (gameState === "tutorial") {
-                const step = getCurrentTutorialStep();
-                if (step && step.key === "pause") markTutorialActionDone("pause");
-            } else {
-                pauseGame();
-            }
+            startPointerPress(c.x, c.y, touch.identifier, () => {
+                if (gameState === "tutorial") {
+                    const step = getCurrentTutorialStep();
+                    if (step && step.key === "pause") markTutorialActionDone("pause");
+                } else {
+                    pauseGame();
+                }
+            });
             return;
         }
 
         const hudKey = getHudButtonAt(c.x, c.y);
 
         if (hudKey) {
+            // botões da partida agem NA HORA (velocidade importa); o afundado aparece enquanto o dedo segura
+            hudPressHeld[touch.identifier] = hudKey;
+            hudPressFlashUntil[hudKey] = performance.now() + BUTTON_PRESS_FLASH_MS;
             if (hudKey === "charge") touchChargeId = touch.identifier;
             else triggerAction(hudKey, player, false);
             continue;
@@ -1686,12 +1780,21 @@ canvas.addEventListener("touchmove", (e) => {
     e.preventDefault();
     controlsTestTouches = Array.from(e.touches).map(t => getCanvasCoords(t.clientX, t.clientY));
 
+    if (menuPointerPress && menuPointerPress.id !== "mouse") {
+        const pressTouch = Array.from(e.touches).find(t => t.identifier === menuPointerPress.id);
+        if (pressTouch) {
+            const c = getCanvasCoords(pressTouch.clientX, pressTouch.clientY);
+            menuPointerPress.x = c.x;
+            menuPointerPress.y = c.y;
+        }
+    }
+
     if (gameState === "database" && databaseTouchScroll.active) {
         const touch = Array.from(e.touches).find(t => t.identifier === databaseTouchScroll.touchId);
         if (touch) {
             const c = getCanvasCoords(touch.clientX, touch.clientY);
             const dy = c.y - databaseTouchScroll.startY;
-            if (!databaseTouchScroll.dragged && Math.abs(dy) > DATABASE_DRAG_THRESHOLD) databaseTouchScroll.dragged = true;
+            if (!databaseTouchScroll.dragged && Math.abs(dy) > DATABASE_DRAG_THRESHOLD) { databaseTouchScroll.dragged = true; menuPointerPress = null; }
             if (databaseTouchScroll.dragged) {
                 // o conteúdo acompanha o dedo (arrastar para cima revela as linhas de baixo)
                 const maxScroll = getDatabaseMaxScroll();
@@ -1706,7 +1809,7 @@ canvas.addEventListener("touchmove", (e) => {
         if (touch) {
             const c = getCanvasCoords(touch.clientX, touch.clientY);
             const dy = c.y - achievementsTouchScroll.startY;
-            if (!achievementsTouchScroll.dragged && Math.abs(dy) > DATABASE_DRAG_THRESHOLD) achievementsTouchScroll.dragged = true;
+            if (!achievementsTouchScroll.dragged && Math.abs(dy) > DATABASE_DRAG_THRESHOLD) { achievementsTouchScroll.dragged = true; menuPointerPress = null; }
             if (achievementsTouchScroll.dragged) {
                 const maxScroll = getAchievementsMaxScroll();
                 achievementsScrollY = Math.max(0, Math.min(maxScroll, achievementsTouchScroll.startScrollY - dy));
@@ -1759,6 +1862,9 @@ canvas.addEventListener("touchmove", (e) => {
 canvas.addEventListener("touchend", (e) => {
     e.preventDefault();
     controlsTestTouches = Array.from(e.touches).map(t => getCanvasCoords(t.clientX, t.clientY));
+    releaseTouchPress(e);
+    const stillDown = Array.from(e.touches).map(t => t.identifier);
+    Object.keys(hudPressHeld).forEach(id => { if (!stillDown.includes(Number(id))) delete hudPressHeld[id]; });
 
     if (gameState === "options_hud") {
         hudEditorDragging = false;
@@ -1812,6 +1918,8 @@ canvas.addEventListener("touchend", (e) => {
 
 canvas.addEventListener("touchcancel", (e) => {
     e.preventDefault();
+    menuPointerPress = null;
+    Object.keys(hudPressHeld).forEach(id => delete hudPressHeld[id]);
     databaseTouchScroll.active = false;
     databaseTouchScroll.touchId = null;
     achievementsTouchScroll.active = false;
@@ -3240,6 +3348,7 @@ function drawAutofireHint() {
 
 function drawPauseButton() {
     const r = getPauseButtonRect();
+    const pressed = beginButtonPress(r.x, r.y, r.w, r.h);
     ctx.save();
     ctx.globalAlpha = 0.85;
     ctx.fillStyle = "rgba(5, 22, 48, 0.45)";
@@ -3253,6 +3362,7 @@ function drawPauseButton() {
     ctx.fillRect(r.x + r.w / 2 - 7, r.y + 7, 5, r.h - 14);
     ctx.fillRect(r.x + r.w / 2 + 2, r.y + 7, 5, r.h - 14);
     ctx.restore();
+    endButtonPress(pressed);
 }
 
 function drawTouchHUD() {
@@ -3285,6 +3395,8 @@ function drawTouchHUD() {
         const centerX = btnRect.x + btnRect.w / 2;
         const centerY = btnRect.y + btnRect.h / 2;
         const radius = Math.min(btnRect.w, btnRect.h) * 0.48;
+        const hudPressed = !isEditing && isHudKeyPressed(key);
+        if (hudPressed) applyPressTransform(centerX, centerY, 0.86, 2);
 
         ctx.globalAlpha = Math.min(1, btn.opacity) * (transformDim ? 0.55 : 1);
         ctx.fillStyle = highlight ? "rgba(255, 190, 40, 0.2)" : "rgba(5, 22, 48, 0.18)";
@@ -3292,6 +3404,11 @@ function drawTouchHUD() {
         ctx.lineWidth = highlight ? 3 : 2;
         ctx.shadowColor = highlight ? "rgba(255, 190, 40, 0.45)" : "rgba(0, 210, 255, 0.2)";
         ctx.shadowBlur = highlight ? 12 : 7;
+        if (hudPressed) {
+            // apertado: o círculo "enche" e perde a sombra, como um botão afundado
+            ctx.fillStyle = highlight ? "rgba(255, 190, 40, 0.45)" : "rgba(94, 225, 255, 0.38)";
+            ctx.shadowBlur = 0;
+        }
         ctx.beginPath();
         ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
         ctx.fill();
@@ -3303,6 +3420,7 @@ function drawTouchHUD() {
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(hudLabels[key] || key.toUpperCase(), centerX, centerY + 1);
+        if (hudPressed) ctx.restore();
     }
     ctx.restore();
     ctx.textBaseline = "alphabetic";
@@ -3518,6 +3636,7 @@ function render() {
             let isSel = (currentTab === "HERÓIS" && selectedCharacter === key) || (currentTab === "VILÕES" && selectedBoss === key);
 
             registerMenuTarget(cx, cy, UI.GRID_CARD_WIDTH, UI.GRID_CARD_HEIGHT);
+            const pressed = beginButtonPress(cx, cy, UI.GRID_CARD_WIDTH, UI.GRID_CARD_HEIGHT);
             ctx.fillStyle = isSel ? "#174f78" : "rgba(6, 23, 52, 0.9)";
             ctx.fillRect(cx, cy, UI.GRID_CARD_WIDTH, UI.GRID_CARD_HEIGHT);
             ctx.strokeStyle = isSel ? "#ffd23f" : "#e85d04";
@@ -3549,6 +3668,7 @@ function render() {
             ctx.font = "bold 10px monospace";
             ctx.textAlign = "center";
             ctx.fillText(cItem ? cItem.name : key, cx + UI.GRID_CARD_WIDTH / 2, cy + 70);
+            endButtonPress(pressed);
         });
 
         drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
@@ -3571,6 +3691,7 @@ function render() {
             const unlocked = isStageUnlockedByProgress(stg.id, stageProgress);
 
             registerMenuTarget(sx, sy, 175, 90);
+            const pressed = beginButtonPress(sx, sy, 175, 90);
             let isSel = selectedStage === stg.id && unlocked;
             ctx.fillStyle = isSel ? "#1a3a5a" : unlocked ? "#111125" : "#0a0a12";
             ctx.fillRect(sx, sy, 175, 90);
@@ -3608,6 +3729,7 @@ function render() {
                 ctx.font = "bold 8px monospace";
                 ctx.fillText("BLOQUEADA", lockX, sy + 84);
             }
+            endButtonPress(pressed);
         });
 
         if (stageLockedHintTimer > 0) {
@@ -3671,7 +3793,9 @@ function render() {
         ctx.fillText(profileName, 400, 68);
 
         const drawToggleRow = (label, x, active, color) => {
-            registerMenuTarget(x, MENU_LAYOUT.optionsPc.toggles[0].y, MENU_LAYOUT.optionsPc.toggles[0].w, MENU_LAYOUT.optionsPc.toggles[0].h);
+            const row = MENU_LAYOUT.optionsPc.toggles[0];
+            registerMenuTarget(x, row.y, row.w, row.h);
+            const pressed = beginButtonPress(x, row.y, row.w, row.h);
             ctx.save();
             ctx.fillStyle = "#e2e8f0";
             ctx.font = "bold 14px 'Courier New', monospace";
@@ -3714,6 +3838,7 @@ function render() {
             ctx.arc(x + (active ? 123 : 91), 328, 8, 0, Math.PI * 2);
             ctx.fill();
             ctx.restore();
+            endButtonPress(pressed);
         };
 
         drawBtnAt(MENU_LAYOUT.optionsPc.profileP1, "CONTROLE 1", activeControlProfile === "p1" ? "#fbbf24" : "#7dd3fc");
@@ -3847,6 +3972,7 @@ function render() {
             STAGE_PROGRESSION.forEach((stg, i) => {
                 const tab = getRankingStageTabRect(i), px = tab.x, py = tab.y;
                 registerMenuTarget(px, py, tab.w, tab.h);
+                const pressed = beginButtonPress(px, py, tab.w, tab.h);
                 const isSel = rankingSelectedStage === stg.id;
                 ctx.fillStyle = isSel ? "rgba(255,255,0,0.18)" : "rgba(255,255,255,0.06)";
                 ctx.fillRect(px, py, 84, 30);
@@ -3858,6 +3984,7 @@ function render() {
                 ctx.font = "bold 8px monospace";
                 ctx.textAlign = "left";
                 ctx.fillText(stg.name.slice(0, 12), px + 30, py + 18, 50);
+                endButtonPress(pressed);
             });
 
             const stageInfo = STAGE_PROGRESSION.find(s => s.id === rankingSelectedStage);
@@ -4111,6 +4238,7 @@ function render() {
 
         nodes.forEach((node, i) => {
             registerMenuTarget(node.x - STAGE_MAP_NODE_R, node.y - STAGE_MAP_NODE_R, STAGE_MAP_NODE_R * 2, STAGE_MAP_NODE_R * 2);
+            const pressed = !stageChoicePendingId && beginButtonPress(node.x - STAGE_MAP_NODE_R, node.y - STAGE_MAP_NODE_R, STAGE_MAP_NODE_R * 2, STAGE_MAP_NODE_R * 2);
             const isSel = selectedStage === node.id;
             const theme = STAGE_THEME_COLOR[node.id] || "#8899aa";
 
@@ -4158,6 +4286,7 @@ function render() {
                     ctx.fillText(`RECORDE: ONDA ${node.record}`, node.x, node.y + STAGE_MAP_NODE_R + 41);
                 }
             }
+            endButtonPress(pressed);
         });
 
         // Overlay: sempre aparece ao clicar numa fase liberada — escolhe o modo: NORMAL (sempre disponível),
