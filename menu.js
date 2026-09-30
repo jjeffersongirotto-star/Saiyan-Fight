@@ -21,8 +21,7 @@ const MENU_LAYOUT = {
     modeSelect: { single: rect(175, 176, 200, 58), coop: rect(425, 176, 200, 58) },
     paused: { resume: rect(300, 110, 200, 35), options: rect(300, 160, 200, 35), exit: rect(300, 210, 200, 35) },
     characters: { tabHeroes: rect(250, 45, 140, 25), tabVillains: rect(410, 45, 140, 25) },
-    optionsMain: { controls: rect(220, 120, 360, 42), audio: rect(220, 180, 360, 42), language: rect(220, 240, 360, 42) },
-    optionsLanguage: { portuguese: rect(220, 145, 360, 42) },
+    optionsMain: { controls: rect(220, 145, 360, 42), audio: rect(220, 205, 360, 42) },
     optionsControls: { pc: rect(180, 144, 220, 46), touch: rect(420, 144, 220, 46), gamepad: rect(180, 204, 220, 46), test: rect(420, 204, 220, 46) },
     optionsGamepad: { reset: rect(570, 82, 120, 28), test: rect(570, 122, 120, 28) },
     optionsPc: {
@@ -293,6 +292,20 @@ function getAchievementsMaxScroll(layout) {
     return Math.max(0, contentHeight - layout.viewportHeight);
 }
 let databaseImageCache = {};
+
+// Imagem do personagem para os cartões (PERSONAGENS e DATABASE): a já carregada ou uma guardada no cache — nunca
+// cria uma Image nova a cada quadro enquanto a imagem do personagem ainda está carregando.
+function getCharacterCardImage(cItem) {
+    if (!cItem) return null;
+    if (cItem.imageObj) return cItem.imageObj;
+    if (!cItem.defaultUrl) return null;
+    if (!databaseImageCache[cItem.defaultUrl]) {
+        const img = new Image();
+        img.src = cItem.defaultUrl;
+        databaseImageCache[cItem.defaultUrl] = img;
+    }
+    return databaseImageCache[cItem.defaultUrl];
+}
 const DATABASE_COLUMNS = 4;
 const FULLSCREEN_BUTTON = { w: 44, h: 28, margin: 8 };
 
@@ -1552,21 +1565,21 @@ function getPauseButtonRect() {
     return { x: Math.round((canvas.width - PAUSE_BUTTON.w) / 2), y: 8, w: PAUSE_BUTTON.w, h: PAUSE_BUTTON.h };
 }
 
-function pauseGame(message = "JOGO PAUSADO", auto = false) {
+function pauseGame(auto = false) {
     if (gameState !== "playing") return;
     keysPressed = {};
     mouseButtonsPressed = {};
     resetTouchInputState();
     autoPaused = auto;
     resumeCountdown = 0;
-    setGameState("paused", message);
+    setGameState("paused");
 }
 
 // Retomar: no celular e depois de pausa automática faz contagem 3-2-1 (dá tempo de reposicionar os dedos).
 function requestResume() {
     if (gameState !== "paused" || resumeCountdown > 0) return;
     if (autoPaused || isTouchDevice) resumeCountdown = 3;
-    else setGameState("playing", "BATALHA EM ANDAMENTO");
+    else setGameState("playing");
 }
 
 function getHudButtonAt(x, y) {
@@ -2081,7 +2094,7 @@ function autoPauseGame() {
     keysPressed = {};
     mouseButtonsPressed = {};
     resetTouchInputState();
-    pauseGame("PAUSADO AUTOMATICAMENTE", true);
+    pauseGame(true);
 }
 window.addEventListener("blur", autoPauseGame);
 window.addEventListener("pagehide", autoPauseGame);
@@ -2235,16 +2248,16 @@ function handleMenuClick(x, y) {
     playSound("menu");
 
     if (gameState === "menu") {
-        if (hitRect(x, y, MENU_LAYOUT.main.play)) setGameState("mode_select", "ESCOLHA O MODO DE JOGO");
-        else if (hitRect(x, y, MENU_LAYOUT.main.characters)) { charactersScrollY = 0; setGameState("characters", "SELEÇÃO DE PERSONAGENS"); }
-        else if (hitRect(x, y, MENU_LAYOUT.main.stages)) setGameState("stages", "ESCOLHA A ARENA DE BATALHA");
+        if (hitRect(x, y, MENU_LAYOUT.main.play)) setGameState("mode_select");
+        else if (hitRect(x, y, MENU_LAYOUT.main.characters)) { charactersScrollY = 0; setGameState("characters"); }
+        else if (hitRect(x, y, MENU_LAYOUT.main.stages)) setGameState("stages");
         else if (hitRect(x, y, MENU_LAYOUT.main.options)) {
             optionsReturnState = "menu";
-            setGameState("options_main", "OPÇÕES DO JOGO");
+            setGameState("options_main");
         }
-        else if (hitRect(x, y, MENU_LAYOUT.main.ranking)) setGameState("ranking", "MELHORES PONTUAÇÕES LOCAL");
-        else if (hitRect(x, y, MENU_LAYOUT.main.database)) setGameState("database", "GERENCIADOR DE PERSONAGENS");
-        else if (hitRect(x, y, MENU_LAYOUT.main.achievements)) { achievementsScrollY = 0; setGameState("achievements", "CONQUISTAS"); }
+        else if (hitRect(x, y, MENU_LAYOUT.main.ranking)) setGameState("ranking");
+        else if (hitRect(x, y, MENU_LAYOUT.main.database)) setGameState("database");
+        else if (hitRect(x, y, MENU_LAYOUT.main.achievements)) { achievementsScrollY = 0; setGameState("achievements"); }
         else if (hitRect(x, y, MENU_LAYOUT.main.tutorial)) startTutorial();
         else if (hitRect(x, y, MENU_LAYOUT.main.updates)) openUpdatesModal();
     }
@@ -2252,7 +2265,7 @@ function handleMenuClick(x, y) {
         if (hitRect(x, y, MENU_LAYOUT.modeSelect.single)) {
             gameMode = "singleplayer";
             saveSettings();
-            setGameState("stage_map", "ESCOLHA A FASE");
+            setGameState("stage_map");
         }
         else if (hitRect(x, y, MENU_LAYOUT.modeSelect.coop)) {
             gameMode = "coop";
@@ -2265,9 +2278,9 @@ function handleMenuClick(x, y) {
         if (resumeCountdown > 0) return;
         if (hitRect(x, y, MENU_LAYOUT.paused.options)) {
             optionsReturnState = "paused";
-            setGameState("options_main", "OPÇÕES DE CONTROLE E SOM");
+            setGameState("options_main");
         }
-        else if (hitRect(x, y, MENU_LAYOUT.paused.exit)) setGameState("menu", "MENU PRINCIPAL");
+        else if (hitRect(x, y, MENU_LAYOUT.paused.exit)) setGameState("menu");
         // CONTINUAR, ou (depois de pausa automática) toque/clique em qualquer outro lugar
         else if (hitRect(x, y, MENU_LAYOUT.paused.resume) || autoPaused) requestResume();
     }
@@ -2311,36 +2324,27 @@ function handleMenuClick(x, y) {
         if (hitRect(x, y, MENU_LAYOUT.back)) setGameState("menu");
     }
     else if (gameState === "options_main") {
-        if (hitRect(x, y, MENU_LAYOUT.optionsMain.controls)) setGameState("options_controls", "CONFIGURAÇÃO DE CONTROLES");
-        else if (hitRect(x, y, MENU_LAYOUT.optionsMain.audio)) setGameState("options_audio", "AJUSTES DE ÁUDIO");
-        else if (hitRect(x, y, MENU_LAYOUT.optionsMain.language)) setGameState("options_language", "IDIOMA DO JOGO");
+        if (hitRect(x, y, MENU_LAYOUT.optionsMain.controls)) setGameState("options_controls");
+        else if (hitRect(x, y, MENU_LAYOUT.optionsMain.audio)) setGameState("options_audio");
         else if (hitRect(x, y, MENU_LAYOUT.back)) setGameState(optionsReturnState);
-    }
-    else if (gameState === "options_language") {
-        if (hitRect(x, y, MENU_LAYOUT.optionsLanguage.portuguese)) {
-            selectedLanguage = "pt-BR";
-            saveSettings();
-        } else if (hitRect(x, y, MENU_LAYOUT.back)) {
-            setGameState("options_main");
-        }
     }
     else if (gameState === "options_controls") {
         if (hitRect(x, y, MENU_LAYOUT.optionsControls.pc)) {
-            setGameState("options_pc", "CONFIGURAÇÃO PC");
+            setGameState("options_pc");
             return;
         }
         else if (hitRect(x, y, MENU_LAYOUT.optionsControls.touch)) {
-            setGameState("options_touch", "CONFIGURAÇÃO TOUCH / MOBILE");
+            setGameState("options_touch");
             return;
         }
         else if (hitRect(x, y, MENU_LAYOUT.optionsControls.gamepad)) {
             padCapture = null;
-            setGameState("options_gamepad", "CONTROLE PS5 / DUALSENSE");
+            setGameState("options_gamepad");
             return;
         }
         else if (hitRect(x, y, MENU_LAYOUT.optionsControls.test)) {
             controlsTestTouches = [];
-            setGameState("controls_test", "TESTE DE CONTROLES");
+            setGameState("controls_test");
             return;
         }
 
@@ -2360,7 +2364,7 @@ function handleMenuClick(x, y) {
         }
         else if (hitRect(x, y, MENU_LAYOUT.optionsGamepad.test)) {
             controlsTestTouches = [];
-            setGameState("controls_test", "TESTE DE CONTROLES");
+            setGameState("controls_test");
         }
     }
     else if (gameState === "controls_test") {
@@ -2400,7 +2404,7 @@ function handleMenuClick(x, y) {
             vibrate(60);
         }
         else if (hitRect(x, y, MENU_LAYOUT.optionsTouch.autoFire)) { touchAutoFire = !touchAutoFire; saveControls(); }
-        else if (hitRect(x, y, MENU_LAYOUT.optionsTouch.hud)) setGameState("options_hud", "ARRASTE OS BOTÕES PARA REORGANIZAR A HUD");
+        else if (hitRect(x, y, MENU_LAYOUT.optionsTouch.hud)) setGameState("options_hud");
         else if (hitRect(x, y, MENU_LAYOUT.back)) setGameState("options_main");
     }
     else if (gameState === "options_hud") {
@@ -3595,7 +3599,7 @@ function render() {
                 if (resumeCountdown <= 0) {
                     resumeCountdown = 0;
                     autoPaused = false;
-                    setGameState("playing", "BATALHA EM ANDAMENTO");
+                    setGameState("playing");
                 } else {
                     ctx.fillStyle = "#fff0a6";
                     ctx.font = "bold 72px 'Courier New', monospace";
@@ -3742,11 +3746,7 @@ function render() {
             ctx.strokeRect(cx, cy, UI.GRID_CARD_WIDTH, UI.GRID_CARD_HEIGHT);
 
             let cItem = characterDB[key];
-            let spriteImg = cItem && cItem.imageObj ? cItem.imageObj : null;
-            if (!spriteImg && cItem && cItem.defaultUrl) {
-                spriteImg = new Image();
-                spriteImg.src = cItem.defaultUrl;
-            }
+            let spriteImg = getCharacterCardImage(cItem);
 
             spriteImg = getCutoutSource(spriteImg, cItem && cItem.bgRemoval);
             if (isDrawableSource(spriteImg)) {
@@ -3860,18 +3860,7 @@ function render() {
 
         drawBtnAt(MENU_LAYOUT.optionsMain.controls, "CONTROLES", "#7dd3fc");
         drawBtnAt(MENU_LAYOUT.optionsMain.audio, "CONFIGURAÇÃO DE ÁUDIO", "#c4b5fd");
-        drawBtnAt(MENU_LAYOUT.optionsMain.language, "IDIOMA", "#fde68a");
 
-        drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
-    }
-    else if (gameState === "options_language") {
-        drawDragonBallMenuBackdrop(false);
-        drawDragonBallPanel(170, 70, 460, 220, "IDIOMA DO JOGO", "IDIOMA ATUAL");
-        drawBtnAt(MENU_LAYOUT.optionsLanguage.portuguese, "PORTUGUÊS", selectedLanguage === "pt-BR" ? "#fbbf24" : "#7dd3fc");
-        ctx.fillStyle = "#cbd5e1";
-        ctx.font = "11px monospace";
-        ctx.textAlign = "center";
-        ctx.fillText("NOVOS IDIOMAS SERÃO ADICIONADOS FUTURAMENTE", canvas.width / 2, 220);
         drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
     }
     else if (gameState === "options_controls") {
@@ -4494,15 +4483,7 @@ function render() {
             ctx.strokeStyle = "#00ffff";
             ctx.strokeRect(cx, cy, layout.cardWidth, layout.cardHeight);
 
-            let spriteImg = cItem && cItem.imageObj ? cItem.imageObj : null;
-            if (!spriteImg && cItem && cItem.defaultUrl) {
-                spriteImg = databaseImageCache[cItem.defaultUrl];
-                if (!spriteImg) {
-                    spriteImg = new Image();
-                    spriteImg.src = cItem.defaultUrl;
-                    databaseImageCache[cItem.defaultUrl] = spriteImg;
-                }
-            }
+            let spriteImg = getCharacterCardImage(cItem);
 
             const geo = getDatabaseCardGeometry(layout, cx, cy);
 

@@ -176,11 +176,6 @@ function removeBackgroundColor(data, width, height, rgb, tolerance = 12) {
     return { changed: removed > 0, removed };
 }
 
-// Caso especial: fundo branco (threshold 243 = tolerância 12 por canal).
-function removeWhiteBackground(data, width, height, threshold = 243) {
-    return removeBackgroundColor(data, width, height, [255, 255, 255], 255 - threshold);
-}
-
 // ---- Configuração de recorte por personagem: { mode: "auto"|"color"|"none", color: "#rrggbb", tolerance: 0-60 (%) } ----
 function colorHexToRgb(hex) {
     let h = String(hex || "").trim().replace(/^#/, "");
@@ -347,32 +342,6 @@ function stepNumberValue(value, step, min, max, dir) {
     return Number(next.toFixed(decimals));
 }
 
-// ---- Rotação de chefe por arena (preparação) ----
-// Elenco "correto" de vilões por arena, seguindo a cronologia dos animes — guardado aqui para o futuro, mas
-// AINDA NÃO ativo: getBossForArena sempre devolve o chefe que o jogador escolheu, sem trocar sozinho. Quando
-// a sequência estiver definida e balanceada, o call site (respawnBoss, em gameplay.js) já está pronto: basta
-// esse retorno passar a usar getArenaBossRoster em vez de currentBossKey.
-const ARENA_BOSS_ROSTER = {
-    terra: ["vegeta", "piccolo"],
-    kaio: ["raditz", "bardock"],
-    namek: ["freeza"],
-    namek_explosao: ["freeza"],
-    freeza_ship: ["freeza"],
-    time_room: ["android17", "android18"],
-    cell_games: ["freeza"],           // até existir um preset do Cell, usa o disponível
-    kaioshin: ["majin"],
-    babidi: ["majin"]
-};
-
-function getArenaBossRoster(stageId) {
-    return ARENA_BOSS_ROSTER[stageId] || [];
-}
-
-// Por enquanto sempre devolve o chefe atual (currentBossKey) — ver nota acima.
-function getBossForArena(stageId, currentBossKey) {
-    return currentBossKey;
-}
-
 // ---- Progressão de arenas (fases) ----
 // Ordem cronológica das sagas + a partir de qual "recorde de onda" cada uma libera. A primeira sempre começa
 // liberada. currentAndBeyond: usado pela tela de seleção para saber a partir de que onda o jogador já viu tudo.
@@ -420,10 +389,6 @@ function isStageUnlockedByProgress(stageId, progressMap) {
     return !!prevProgress.normalDone;
 }
 
-function getUnlockedStageIdsByProgress(progressMap) {
-    return STAGE_PROGRESSION.filter(s => isStageUnlockedByProgress(s.id, progressMap)).map(s => s.id);
-}
-
 // O modo SEM LIMITE de uma fase só libera depois que ELA MESMA (não a anterior) já teve NORMAL e DIFÍCIL completados.
 function isUnlimitedModeUnlocked(stageId, progressMap) {
     const p = (progressMap && progressMap[stageId]) || {};
@@ -436,25 +401,6 @@ function isHardModeUnlocked(stageId, progressMap) {
     return !!p.normalDone;
 }
 
-
-// ---- Física do parry: reflexo coerente com o ângulo de impacto ----
-// d = velocidade de entrada, n = normal da superfície de reflexo (normalizada). r = d - 2(d·n)n — reflexo
-// vetorial padrão: bate no meio -> volta quase reto; bate na borda -> sai mais de lado.
-function reflectVelocity(vx, vy, nx, ny) {
-    const len = Math.hypot(nx, ny) || 1;
-    const ux = nx / len, uy = ny / len;
-    const dot = vx * ux + vy * uy;
-    return { vx: vx - 2 * dot * ux, vy: vy - 2 * dot * uy };
-}
-
-// Normal do "escudo" de parry no ponto de impacto: da posição do jogador até o projétil, normalizada.
-// Se o projétil está exatamente em cima do jogador (dist 0), usa uma normal padrão (reflete para trás).
-function getParryNormal(targetCx, targetCy, hitX, hitY) {
-    const dx = hitX - targetCx, dy = hitY - targetCy;
-    const dist = Math.hypot(dx, dy);
-    if (dist < 0.01) return { nx: 1, ny: 0 };
-    return { nx: dx / dist, ny: dy / dist };
-}
 
 // ---- Combo de parry ----
 // Bônus de ki por sequência de rebatimentos sem tomar dano. Degraus, não uma curva contínua — fica claro
@@ -556,12 +502,8 @@ if (typeof module !== "undefined" && module.exports) {
         getNextPaletteColor,
         stepNumberValue,
         stripSvgWhiteBackground,
-        removeWhiteBackground,
         NORMAL_ATTACK_DAMAGE,
         WAVE_DIFFICULTY_CAP,
-        ARENA_BOSS_ROSTER,
-        getArenaBossRoster,
-        getBossForArena,
         STAGE_PROGRESSION,
         STAGE_MODE_WAVE_COUNT,
         NORMAL_MODE_WAVES,
@@ -569,11 +511,8 @@ if (typeof module !== "undefined" && module.exports) {
         getModeWaveSequence,
         getRealWaveForModeStep,
         isStageUnlockedByProgress,
-        getUnlockedStageIdsByProgress,
         isUnlimitedModeUnlocked,
         isHardModeUnlocked,
-        reflectVelocity,
-        getParryNormal,
         getParryComboBonus,
         POWER_BUFF_ATTACK_BONUS,
         getBuffedAttackDamage,

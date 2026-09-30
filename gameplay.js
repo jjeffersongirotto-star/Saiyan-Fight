@@ -172,7 +172,7 @@ function startTutorial() {
     tutorialStepIndex = 0;
     tutorialReflectsBefore = totalReflects;
     setupTutorialStep();
-    setGameState("tutorial", "TUTORIAL");
+    setGameState("tutorial");
 }
 
 function advanceTutorialStep() {
@@ -322,7 +322,7 @@ function getCharacterAnimationFrame(charKey, actionState, animTimer) {
 
 // Devolve a imagem sem a cor de fundo (canvas transparente), calculada uma vez por imagem + configuração.
 // bgOpts = character.bgRemoval ({mode: auto|color|none, color, tolerance}); sem config = "auto" (apaga o branco).
-// SVG do jogo já vem sem fundo (ver generateDbzSpriteSvg/stripSvgWhiteBackground). Se a imagem não puder ser lida
+// SVG do jogo já vem sem fundo (ver stripSvgWhiteBackground). Se a imagem não puder ser lida
 // (ex.: origem externa bloqueada pelo navegador) ou não tiver a cor de fundo nas bordas, usa a original.
 const spriteCutoutCache = new WeakMap();
 function getCutoutSource(img, bgOpts) {
@@ -528,7 +528,7 @@ function startGame() {
     player2.isDying = false;
 
     initScenario();
-    setGameState("playing", "BATALHA INICIADA! ESPAÇO PARA PARRY NO MOMENTO CERTO.");
+    setGameState("playing");
 }
 
 function onBossDeath() {
@@ -575,7 +575,7 @@ function resolveStageVictory() {
         justUnlockedUnlimited: !wasHardDone && progress.hardDone && progress.normalDone
     };
     playSound("powerup");
-    setGameState("stage_victory", "VITÓRIA!");
+    setGameState("stage_victory");
 }
 
 // Chamado a cada chefe derrotado no modo história (fora do co-op): decide se a fase continua (chefe volta mais
@@ -605,10 +605,6 @@ function respawnBoss() {
         maxWaveReached = waveNumber;
         writeStorage("saiyan_max_wave", maxWaveReached);
     }
-    // Rotação de chefe por arena: preparada em game-logic-core.js (ARENA_BOSS_ROSTER), mas ainda inativa —
-    // getBossForArena hoje sempre devolve o mesmo chefe escolhido no menu. Ativar no futuro é só trocar essa
-    // função para usar getArenaBossRoster(selectedStage) em vez de currentBossKey.
-    selectedBoss = getBossForArena(selectedStage, selectedBoss);
     let waveParams = getWaveParams(waveNumber);
     player2.maxHp = waveParams.bossHp;
     player2.hp = player2.maxHp;
@@ -867,7 +863,7 @@ function attemptZenkaiRevival() {
     return true;
 }
 
-// Mesmo perdendo sem dominar a fase (sem completar as 10 vitórias seguidas), o jogador vê o que fez na
+// Mesmo perdendo antes de completar o modo da fase, o jogador vê o que fez na
 // tentativa — ataques, rebatidas, itens, golpes recebidos — e o jogo avisa se bateu recorde (da fase ou geral).
 function triggerGameOver() {
     const prevGeneralList = readJsonStorage("saiyan_ranking", []);
@@ -893,7 +889,7 @@ function triggerGameOver() {
         isNewStageRecord: gameMode === "singleplayer" && score > prevStageBest,
         isNewGeneralRecord: score > prevGeneralBest
     };
-    setGameState("gameover", "GAME OVER! CLIQUE PARA REINICIAR");
+    setGameState("gameover");
 }
 
 // Especial: causa o TRIPLO do dano de antes (getSpecialDamage). isP2 = true só existe no co-op local:

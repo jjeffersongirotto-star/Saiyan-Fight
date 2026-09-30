@@ -23,11 +23,8 @@ const {
     stepNumberValue,
     getScrollToRevealRow,
     stripSvgWhiteBackground,
-    removeWhiteBackground,
     NORMAL_ATTACK_DAMAGE,
     WAVE_DIFFICULTY_CAP,
-    getArenaBossRoster,
-    getBossForArena,
     STAGE_PROGRESSION,
     getStageBossDefeats,
     STAGE_MODE_WAVE_COUNT,
@@ -36,11 +33,8 @@ const {
     getModeWaveSequence,
     getRealWaveForModeStep,
     isStageUnlockedByProgress,
-    getUnlockedStageIdsByProgress,
     isUnlimitedModeUnlocked,
     isHardModeUnlocked,
-    reflectVelocity,
-    getParryNormal,
     getParryComboBonus,
     getBuffedAttackDamage,
     getSuperAttackDamage,
@@ -255,8 +249,10 @@ function makeImage(w, h, painter) {
 }
 const WHITE = [255, 255, 255, 255], RED = [200, 0, 0, 255], BLACK = [0, 0, 0, 255];
 const alphaAt = (data, w, x, y) => data[(y * w + x) * 4 + 3];
+// Fundo branco com a tolerância que o jogo usa no modo "auto" (ver getCutoutSource em gameplay.js).
+const removeWhite = (data, w, h) => removeBackgroundColor(data, w, h, [255, 255, 255], 12);
 
-test("removeWhiteBackground: apaga só o branco ligado à borda; branco de dentro do personagem fica", () => {
+test("removeBackgroundColor (fundo branco): apaga só o branco ligado à borda; branco de dentro do personagem fica", () => {
     // 20x20 branco; personagem vermelho 8..15 com contorno preto e um "olho" branco fechado no meio
     const w = 20;
     const data = makeImage(w, w, (x, y) => {
@@ -267,7 +263,7 @@ test("removeWhiteBackground: apaga só o branco ligado à borda; branco de dentr
         }
         return WHITE;
     });
-    const r = removeWhiteBackground(data, w, w);
+    const r = removeWhite(data, w, w);
     assert.equal(r.changed, true);
     assert.equal(alphaAt(data, w, 0, 0), 0, "canto virou transparente");
     assert.equal(alphaAt(data, w, 19, 10), 0);
@@ -276,19 +272,19 @@ test("removeWhiteBackground: apaga só o branco ligado à borda; branco de dentr
     assert.equal(alphaAt(data, w, 5, 5), 255, "contorno preservado");
 });
 
-test("removeWhiteBackground: não mexe em imagem já transparente nem em fundo que não é branco", () => {
+test("removeBackgroundColor (fundo branco): não mexe em imagem já transparente nem em fundo que não é branco", () => {
     const w = 10;
     const transparent = makeImage(w, w, (x, y) => (x > 3 && x < 7 && y > 3 && y < 7 ? RED : [0, 0, 0, 0]));
-    assert.equal(removeWhiteBackground(transparent, w, w).changed, false);
+    assert.equal(removeWhite(transparent, w, w).changed, false);
     const blue = makeImage(w, w, (x, y) => (x > 3 && x < 7 && y > 3 && y < 7 ? WHITE : [0, 0, 255, 255]));
-    assert.equal(removeWhiteBackground(blue, w, w).changed, false);
+    assert.equal(removeWhite(blue, w, w).changed, false);
     assert.equal(alphaAt(blue, w, 5, 5), 255, "branco do personagem em fundo azul fica");
 });
 
-test("removeWhiteBackground: cinza claro do personagem (ex.: pele do Freeza #f0f0f0) não é apagado", () => {
+test("removeBackgroundColor (fundo branco): cinza claro do personagem (ex.: pele do Freeza #f0f0f0) não é apagado", () => {
     const w = 12;
     const data = makeImage(w, w, (x, y) => (x >= 3 && x <= 8 && y >= 3 && y <= 8 ? [240, 240, 240, 255] : WHITE));
-    removeWhiteBackground(data, w, w);
+    removeWhite(data, w, w);
     assert.equal(alphaAt(data, w, 5, 5), 255);
     assert.equal(alphaAt(data, w, 0, 0), 0);
 });
@@ -465,13 +461,6 @@ test("getWaveParams: cresce até o teto e trava depois (dificuldade some de esta
     assert.ok(getWaveParams(WAVE_DIFFICULTY_CAP).speedMult > getWaveParams(1).speedMult, "ainda cresce ANTES do teto");
 });
 
-test("getBossForArena: por enquanto sempre devolve o chefe atual (elenco ainda não ativo)", () => {
-    assert.equal(getBossForArena("namek", "piccolo"), "piccolo");
-    assert.equal(getBossForArena("kaio", "vegeta"), "vegeta");
-    assert.ok(getArenaBossRoster("namek").includes("freeza"), "o elenco já existe, só não é usado ainda");
-    assert.deepEqual(getArenaBossRoster("arena_inexistente"), []);
-});
-
 test("progressão de arenas: 8 fases, na ordem certa (Cell penúltima, Supremo Kaioh última)", () => {
     assert.equal(STAGE_PROGRESSION.length, 8);
     assert.equal(STAGE_PROGRESSION[0].id, "terra");
@@ -493,13 +482,14 @@ test("getModeWaveSequence / getRealWaveForModeStep: NORMAL usa 1-5, DIFÍCIL pul
     assert.equal(getRealWaveForModeStep("hard", 99), 10, "passar do índice não quebra — trava na última onda da sequência");
 });
 
-test("isStageUnlockedByProgress / getUnlockedStageIdsByProgress: completar o NORMAL da anterior já libera a próxima", () => {
-    assert.deepEqual(getUnlockedStageIdsByProgress({}), ["terra"], "do zero, só a 1ª fase está liberada");
+test("isStageUnlockedByProgress: completar o NORMAL da anterior já libera a próxima", () => {
+    const unlockedIds = (progress) => STAGE_PROGRESSION.filter(s => isStageUnlockedByProgress(s.id, progress)).map(s => s.id);
+    assert.deepEqual(unlockedIds({}), ["terra"], "do zero, só a 1ª fase está liberada");
     assert.equal(isStageUnlockedByProgress("kaio", {}), false);
     assert.equal(isStageUnlockedByProgress("kaio", { terra: { normalDone: true, hardDone: false } }), true, "completar o NORMAL já basta — não precisa do difícil");
     assert.equal(isStageUnlockedByProgress("namek", { terra: { normalDone: true, hardDone: true } }), false, "pular fase não vale — precisa completar kaio também");
     const allNormal = {}; STAGE_PROGRESSION.forEach(s => { allNormal[s.id] = { normalDone: true, hardDone: false }; });
-    assert.equal(getUnlockedStageIdsByProgress(allNormal).length, STAGE_PROGRESSION.length, "com o normal de todas completado, todas liberam");
+    assert.equal(unlockedIds(allNormal).length, STAGE_PROGRESSION.length, "com o normal de todas completado, todas liberam");
 });
 
 test("isHardModeUnlocked / isUnlimitedModeUnlocked: DIFÍCIL pede o normal DESSA fase; SEM LIMITE pede os dois", () => {
@@ -508,24 +498,6 @@ test("isHardModeUnlocked / isUnlimitedModeUnlocked: DIFÍCIL pede o normal DESSA
     assert.equal(isUnlimitedModeUnlocked("terra", { terra: { normalDone: true, hardDone: false } }), false, "só o normal ainda não libera o sem limite");
     assert.equal(isUnlimitedModeUnlocked("terra", { terra: { normalDone: true, hardDone: true } }), true, "os dois completados libera o sem limite");
     assert.equal(isHardModeUnlocked("terra", { kaio: { normalDone: true, hardDone: true } }), false, "progresso de OUTRA fase não libera nada aqui");
-});
-
-test("reflectVelocity: bate no meio volta reto; bate na borda sai de lado (física coerente)", () => {
-    const straight = reflectVelocity(-5, 0, 1, 0);
-    assert.ok(Math.abs(straight.vx - 5) < 1e-9 && Math.abs(straight.vy) < 1e-9, "normal de frente: só inverte vx");
-    const angled = reflectVelocity(-5, 0, 0.7071, 0.7071);
-    assert.ok(Math.abs(angled.vy) > 4, "normal em 45° com tiro horizontal: sai quase todo na vertical");
-    assert.ok(Math.abs(angled.vx) < 0.5, "e quase nada sobra na horizontal (reflexo de espelho)");
-    assert.ok(Math.abs(Math.hypot(angled.vx, angled.vy) - Math.hypot(-5, 0)) < 1e-6, "reflexo preserva a velocidade (não ganha nem perde energia)");
-});
-
-test("getParryNormal: aponta do centro do jogador para o ponto de impacto", () => {
-    const top = getParryNormal(100, 100, 100, 70);
-    assert.ok(top.ny < -0.9 && Math.abs(top.nx) < 0.2, "impacto acima -> normal para cima");
-    const side = getParryNormal(100, 100, 140, 100);
-    assert.ok(side.nx > 0.9, "impacto do lado direito -> normal para a direita");
-    const center = getParryNormal(50, 50, 50, 50);
-    assert.equal(Math.hypot(center.nx, center.ny), 1, "impacto exatamente no centro ainda devolve uma normal válida (não NaN)");
 });
 
 test("getParryComboBonus: bônus de ki cresce em degraus com a sequência de parries", () => {
