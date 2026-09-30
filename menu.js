@@ -3481,7 +3481,7 @@ function render() {
     else if (gameState === "menu") {
         drawDragonBallMenuBackdrop(true);
 
-        drawDragonBallPanel(150, 35, 500, 270, "DRAGON BALL: BATTLE FLIGHT", "A BATALHA COMEÇA AGORA");
+        drawDragonBallPanel(150, 35, 500, 270, "SAIYAN FIGHT", "A BATALHA COMEÇA AGORA");
 
         drawBtn(190, 95, 180, 36, "JOGAR", "#fff0a6");
         drawBtn(430, 95, 180, 36, "PERSONAGENS", "#fff0a6");
