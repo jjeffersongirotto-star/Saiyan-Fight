@@ -4,6 +4,77 @@ function inRect(x, y, rx, ry, rw, rh) {
     return x >= rx && x <= rx + rw && y >= ry && y <= ry + rh;
 }
 
+// ==================== LAYOUT DOS MENUS ====================
+// Posição de cada botão dos menus num lugar só: o desenho (render, via drawBtnAt) e o clique (handleMenuClick,
+// via hitRect) leem daqui. Antes cada posição era escrita duas vezes — bastava mudar uma e esquecer a outra para
+// o botão ficar desalinhado (clicar num lugar e acontecer outra coisa). Mudou um botão de lugar? Mude só aqui.
+const rect = (x, y, w, h) => ({ x, y, w, h });
+const MENU_LAYOUT = {
+    back: rect(20, 20, 42, 32),
+    main: {
+        play: rect(190, 95, 180, 36), characters: rect(430, 95, 180, 36),
+        stages: rect(190, 150, 180, 36), options: rect(430, 150, 180, 36),
+        ranking: rect(190, 205, 180, 36), database: rect(430, 205, 180, 36),
+        achievements: rect(190, 260, 180, 36), tutorial: rect(430, 260, 180, 36),
+        updates: rect(20, 305, 120, 26)
+    },
+    modeSelect: { single: rect(175, 176, 200, 58), coop: rect(425, 176, 200, 58) },
+    paused: { resume: rect(300, 110, 200, 35), options: rect(300, 160, 200, 35), exit: rect(300, 210, 200, 35) },
+    characters: { tabHeroes: rect(250, 45, 140, 25), tabVillains: rect(410, 45, 140, 25) },
+    optionsMain: { controls: rect(220, 120, 360, 42), audio: rect(220, 180, 360, 42), language: rect(220, 240, 360, 42) },
+    optionsLanguage: { portuguese: rect(220, 145, 360, 42) },
+    optionsControls: { pc: rect(180, 144, 220, 46), touch: rect(420, 144, 220, 46), gamepad: rect(180, 204, 220, 46), test: rect(420, 204, 220, 46) },
+    optionsGamepad: { reset: rect(570, 82, 120, 28), test: rect(570, 122, 120, 28) },
+    optionsPc: {
+        profileP1: rect(130, 78, 150, 32), profileP2: rect(520, 78, 150, 32),
+        keyboard: rect(130, 114, 150, 28), mouse: rect(520, 114, 150, 28),
+        toggles: [
+            { key: "auto", label: "AUTOMÁTICO", ...rect(120, 314, 150, 28) },
+            { key: "pc", label: "PC", ...rect(325, 314, 150, 28) },
+            { key: "touch", label: "TOUCH", ...rect(530, 314, 150, 28) }
+        ]
+    },
+    optionsTouch: {
+        analog: rect(170, 106, 180, 34), swipe: rect(450, 106, 180, 34),
+        doubleTap: rect(200, 148, 400, 34), vibration: rect(200, 190, 400, 34),
+        autoFire: rect(200, 232, 400, 34), hud: rect(200, 274, 400, 34)
+    },
+    optionsHud: { save: rect(20, 20, 100, 30), reset: rect(130, 20, 100, 30) },
+    optionsAudio: {
+        sfxMinus: rect(560, 105, 34, 34), sfxPlus: rect(604, 105, 34, 34),
+        bgmMinus: rect(560, 160, 34, 34), bgmPlus: rect(604, 160, 34, 34),
+        mute: rect(250, 205, 300, 38)
+    },
+    ranking: { tabGeneral: rect(220, 52, 170, 30), tabStage: rect(410, 52, 170, 30) },
+    stageVictory: { continue: rect(canvas.width / 2 - 90, 300, 180, 34) },
+    stageMap: {
+        normal: rect(canvas.width / 2 - 270, 140, 170, 60), hard: rect(canvas.width / 2 - 85, 140, 170, 60),
+        unlimited: rect(canvas.width / 2 + 100, 140, 170, 60), cancel: rect(canvas.width / 2 - 70, 224, 140, 30)
+    }
+};
+// Botões que se repetem em grade/lista: a posição de cada um vem de uma função, também usada nos dois lados.
+function getCharacterCardRect(i) {
+    return rect(40 + (i % 5) * (UI.GRID_CARD_WIDTH + 12), 80 + Math.floor(i / 5) * (UI.GRID_CARD_HEIGHT + 10), UI.GRID_CARD_WIDTH, UI.GRID_CARD_HEIGHT);
+}
+function getStageCardRect(i) {
+    return rect(40 + (i % 4) * 190, 68 + Math.floor(i / 4) * 104, 175, 90);
+}
+function getPcKeyRect(idx) {
+    return rect(idx % 2 === 0 ? 280 : 560, PC_KEY_ROW_Y0 + Math.floor(idx / 2) * PC_KEY_ROW_STEP, 110, 24);
+}
+function getGamepadBindingRect(i) {
+    return rect(330, 82 + i * 36, 210, 28);
+}
+function getRankingStageTabRect(i) {
+    return rect(40 + (i % 8) * 92, 90, 84, 30);
+}
+function hitRect(x, y, r) {
+    return inRect(x, y, r.x, r.y, r.w, r.h);
+}
+function drawBtnAt(r, text, color, font) {
+    drawBtn(r.x, r.y, r.w, r.h, text, color, font);
+}
+
 // isTouchDevice agora é declarada em database.js (precisa existir antes do initSettings).
 let touchAnalog = { active: false, touchId: null, startX: 0, startY: 0, curX: 0, curY: 0, vx: 0, vy: 0 };
 let touchChargeId = null;        // id do dedo que está segurando o botão CARREGAR (null = ninguém)
@@ -881,10 +952,10 @@ function drawPadGlyph(index, cx, cy, s, color) {
 function drawGamepadOptions() {
     drawDragonBallMenuBackdrop(false);
     drawDragonBallPanel(90, 15, 620, 333, "CONTROLE PS5 / DUALSENSE", "Escolha uma ação e aperte o botão desejado (o TOUCHPAD também vale)");
-    drawBtn(20, 20, 42, 32, "←", "#e2e8f0", "bold 20px monospace");
+    drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
 
     PAD_ACTIONS.forEach((action, i) => {
-        const y = 82 + i * 36;
+        const bindRect = getGamepadBindingRect(i), y = bindRect.y;
         ctx.fillStyle = "#ffffff";
         ctx.font = "bold 13px monospace";
         ctx.textAlign = "left";
@@ -892,11 +963,11 @@ function drawGamepadOptions() {
         const list = padBindings[action];
         if (list[0] >= 0 && list[0] <= 3) drawPadGlyph(list[0], 300, y + 14, 8, PAD_FACE_COLORS[list[0]]);
         const isCapturing = padCapture && padCapture.action === action;
-        drawBtn(330, y, 210, 28, isCapturing ? "APERTE UM BOTÃO..." : describePadBinding(list), isCapturing ? "#fbbf24" : "#00ffff", "bold 11px 'Courier New', monospace");
+        drawBtnAt(bindRect, isCapturing ? "APERTE UM BOTÃO..." : describePadBinding(list), isCapturing ? "#fbbf24" : "#00ffff", "bold 11px 'Courier New', monospace");
     });
 
-    drawBtn(570, 82, 120, 28, "PADRÃO PS5", "#a7f3d0", "bold 11px 'Courier New', monospace");
-    drawBtn(570, 122, 120, 28, "TESTAR", "#93c5fd", "bold 11px 'Courier New', monospace");
+    drawBtnAt(MENU_LAYOUT.optionsGamepad.reset, "PADRÃO PS5", "#a7f3d0", "bold 11px 'Courier New', monospace");
+    drawBtnAt(MENU_LAYOUT.optionsGamepad.test, "TESTAR", "#93c5fd", "bold 11px 'Courier New', monospace");
 
     const pads = getConnectedGamepads();
     const isPs5 = pads.some(pad => /dualsense|054c/i.test(String(pad.id || "")));
@@ -1072,7 +1143,7 @@ function drawControlsTest() {
         ctx.restore();
     });
 
-    drawBtn(20, 20, 42, 32, "←", "#e2e8f0", "bold 20px monospace");
+    drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
 }
 
 // Sair da tela de teste com START do controle (pollGamepads só cuida de pausa dentro da partida).
@@ -1088,7 +1159,7 @@ function pollControlsTestExit() {
 // (direcional/analógico), A confirma (clica no centro do alvo) e B volta (botão "←", ou continuar/menu conforme a tela).
 let menuTargets = [];
 let menuTargetsPrev = [];
-const MENU_BACK_RECT = { x: 20, y: 20, w: 42, h: 32 };
+const MENU_BACK_RECT = MENU_LAYOUT.back;
 const padNav = { focus: null, state: null, polledState: null, visible: false, held: {}, holdTime: {}, prevConfirm: false, prevBack: false };
 
 function registerMenuTarget(x, y, w, h) {
@@ -1527,7 +1598,7 @@ canvas.addEventListener("touchstart", (e) => {
     }
 
     if (gameState === "options_hud") {
-        if (inRect(firstPoint.x, firstPoint.y, 20, 20, 100, 30) || inRect(firstPoint.x, firstPoint.y, 130, 20, 100, 30)) {
+        if (hitRect(firstPoint.x, firstPoint.y, MENU_LAYOUT.optionsHud.save) || hitRect(firstPoint.x, firstPoint.y, MENU_LAYOUT.optionsHud.reset)) {
             handleMenuClick(firstPoint.x, firstPoint.y);
             return;
         }
@@ -1967,41 +2038,41 @@ function handleMenuClick(x, y) {
     playSound("menu");
 
     if (gameState === "menu") {
-        if (inRect(x, y, 190, 95, 180, 36)) setGameState("mode_select", "ESCOLHA O MODO DE JOGO");
-        else if (inRect(x, y, 430, 95, 180, 36)) setGameState("characters", "SELEÇÃO DE PERSONAGENS");
-        else if (inRect(x, y, 190, 150, 180, 36)) setGameState("stages", "ESCOLHA A ARENA DE BATALHA");
-        else if (inRect(x, y, 430, 150, 180, 36)) {
+        if (hitRect(x, y, MENU_LAYOUT.main.play)) setGameState("mode_select", "ESCOLHA O MODO DE JOGO");
+        else if (hitRect(x, y, MENU_LAYOUT.main.characters)) setGameState("characters", "SELEÇÃO DE PERSONAGENS");
+        else if (hitRect(x, y, MENU_LAYOUT.main.stages)) setGameState("stages", "ESCOLHA A ARENA DE BATALHA");
+        else if (hitRect(x, y, MENU_LAYOUT.main.options)) {
             optionsReturnState = "menu";
             setGameState("options_main", "OPÇÕES DO JOGO");
         }
-        else if (inRect(x, y, 190, 205, 180, 36)) setGameState("ranking", "MELHORES PONTUAÇÕES LOCAL");
-        else if (inRect(x, y, 430, 205, 180, 36)) setGameState("database", "GERENCIADOR DE PERSONAGENS");
-        else if (inRect(x, y, 190, 260, 180, 36)) { achievementsScrollY = 0; setGameState("achievements", "CONQUISTAS"); }
-        else if (inRect(x, y, 430, 260, 180, 36)) startTutorial();
-        else if (inRect(x, y, 20, 305, 120, 25)) openUpdatesModal();
+        else if (hitRect(x, y, MENU_LAYOUT.main.ranking)) setGameState("ranking", "MELHORES PONTUAÇÕES LOCAL");
+        else if (hitRect(x, y, MENU_LAYOUT.main.database)) setGameState("database", "GERENCIADOR DE PERSONAGENS");
+        else if (hitRect(x, y, MENU_LAYOUT.main.achievements)) { achievementsScrollY = 0; setGameState("achievements", "CONQUISTAS"); }
+        else if (hitRect(x, y, MENU_LAYOUT.main.tutorial)) startTutorial();
+        else if (hitRect(x, y, MENU_LAYOUT.main.updates)) openUpdatesModal();
     }
     else if (gameState === "mode_select") {
-        if (inRect(x, y, 175, 176, 200, 58)) {
+        if (hitRect(x, y, MENU_LAYOUT.modeSelect.single)) {
             gameMode = "singleplayer";
             saveSettings();
             setGameState("stage_map", "ESCOLHA A FASE");
         }
-        else if (inRect(x, y, 425, 176, 200, 58)) {
+        else if (hitRect(x, y, MENU_LAYOUT.modeSelect.coop)) {
             gameMode = "coop";
             saveSettings();
             startGame();
         }
-        else if (inRect(x, y, 20, 20, 42, 32)) setGameState("menu");
+        else if (hitRect(x, y, MENU_LAYOUT.back)) setGameState("menu");
     }
     else if (gameState === "paused") {
         if (resumeCountdown > 0) return;
-        if (inRect(x, y, 300, 160, 200, 35)) {
+        if (hitRect(x, y, MENU_LAYOUT.paused.options)) {
             optionsReturnState = "paused";
             setGameState("options_main", "OPÇÕES DE CONTROLE E SOM");
         }
-        else if (inRect(x, y, 300, 210, 200, 35)) setGameState("menu", "MENU PRINCIPAL");
+        else if (hitRect(x, y, MENU_LAYOUT.paused.exit)) setGameState("menu", "MENU PRINCIPAL");
         // CONTINUAR, ou (depois de pausa automática) toque/clique em qualquer outro lugar
-        else if (inRect(x, y, 300, 110, 200, 35) || autoPaused) requestResume();
+        else if (hitRect(x, y, MENU_LAYOUT.paused.resume) || autoPaused) requestResume();
     }
     else if (gameState === "gameover") {
         setGameState("menu");
@@ -2009,16 +2080,11 @@ function handleMenuClick(x, y) {
     else if (gameState === "characters") {
         let chars = getFilteredCharacters();
         
-        if (inRect(x, y, 250, 45, 140, 25)) currentTab = "HERÓIS";
-        else if (inRect(x, y, 410, 45, 140, 25)) currentTab = "VILÕES";
+        if (hitRect(x, y, MENU_LAYOUT.characters.tabHeroes)) currentTab = "HERÓIS";
+        else if (hitRect(x, y, MENU_LAYOUT.characters.tabVillains)) currentTab = "VILÕES";
 
         chars.forEach((key, i) => {
-            let col = i % 5;
-            let row = Math.floor(i / 5);
-            let cx = 40 + col * (UI.GRID_CARD_WIDTH + 12);
-            let cy = 80 + row * (UI.GRID_CARD_HEIGHT + 10);
-
-            if (inRect(x, y, cx, cy, UI.GRID_CARD_WIDTH, UI.GRID_CARD_HEIGHT)) {
+            if (hitRect(x, y, getCharacterCardRect(i))) {
                 if (currentTab === "HERÓIS") {
                     selectedCharacter = key;
                     saveSelectedCharacters();
@@ -2029,16 +2095,11 @@ function handleMenuClick(x, y) {
             }
         });
 
-        if (inRect(x, y, 20, 20, 42, 32)) setGameState("menu");
+        if (hitRect(x, y, MENU_LAYOUT.back)) setGameState("menu");
     }
     else if (gameState === "stages") {
         STAGE_PROGRESSION.forEach((stg, i) => {
-            let col = i % 4;
-            let row = Math.floor(i / 4);
-            let sx = 40 + col * 190;
-            let sy = 68 + row * 104;
-
-            if (inRect(x, y, sx, sy, 175, 90)) {
+            if (hitRect(x, y, getStageCardRect(i))) {
                 if (isStageUnlockedByProgress(stg.id, stageProgress)) {
                     selectedStage = stg.id;
                     saveSettings();
@@ -2050,82 +2111,71 @@ function handleMenuClick(x, y) {
             }
         });
 
-        if (inRect(x, y, 20, 20, 42, 32)) setGameState("menu");
+        if (hitRect(x, y, MENU_LAYOUT.back)) setGameState("menu");
     }
     else if (gameState === "options_main") {
-        if (inRect(x, y, 220, 120, 360, 42)) setGameState("options_controls", "CONFIGURAÇÃO DE CONTROLES");
-        else if (inRect(x, y, 220, 180, 360, 42)) setGameState("options_audio", "AJUSTES DE ÁUDIO");
-        else if (inRect(x, y, 220, 240, 360, 42)) setGameState("options_language", "IDIOMA DO JOGO");
-        else if (inRect(x, y, 20, 20, 42, 32)) setGameState(optionsReturnState);
+        if (hitRect(x, y, MENU_LAYOUT.optionsMain.controls)) setGameState("options_controls", "CONFIGURAÇÃO DE CONTROLES");
+        else if (hitRect(x, y, MENU_LAYOUT.optionsMain.audio)) setGameState("options_audio", "AJUSTES DE ÁUDIO");
+        else if (hitRect(x, y, MENU_LAYOUT.optionsMain.language)) setGameState("options_language", "IDIOMA DO JOGO");
+        else if (hitRect(x, y, MENU_LAYOUT.back)) setGameState(optionsReturnState);
     }
     else if (gameState === "options_language") {
-        if (inRect(x, y, 220, 145, 360, 42)) {
+        if (hitRect(x, y, MENU_LAYOUT.optionsLanguage.portuguese)) {
             selectedLanguage = "pt-BR";
             saveSettings();
-        } else if (inRect(x, y, 20, 20, 42, 32)) {
+        } else if (hitRect(x, y, MENU_LAYOUT.back)) {
             setGameState("options_main");
         }
     }
     else if (gameState === "options_controls") {
-        if (inRect(x, y, 180, 144, 220, 46)) {
+        if (hitRect(x, y, MENU_LAYOUT.optionsControls.pc)) {
             setGameState("options_pc", "CONFIGURAÇÃO PC");
             return;
         }
-        else if (inRect(x, y, 420, 144, 220, 46)) {
+        else if (hitRect(x, y, MENU_LAYOUT.optionsControls.touch)) {
             setGameState("options_touch", "CONFIGURAÇÃO TOUCH / MOBILE");
             return;
         }
-        else if (inRect(x, y, 180, 204, 220, 46)) {
+        else if (hitRect(x, y, MENU_LAYOUT.optionsControls.gamepad)) {
             padCapture = null;
             setGameState("options_gamepad", "CONTROLE PS5 / DUALSENSE");
             return;
         }
-        else if (inRect(x, y, 420, 204, 220, 46)) {
+        else if (hitRect(x, y, MENU_LAYOUT.optionsControls.test)) {
             controlsTestTouches = [];
             setGameState("controls_test", "TESTE DE CONTROLES");
             return;
         }
 
-        if (inRect(x, y, 20, 20, 42, 32)) setGameState("options_main");
+        if (hitRect(x, y, MENU_LAYOUT.back)) setGameState("options_main");
     }
     else if (gameState === "options_gamepad") {
         if (padCapture) { cancelPadCapture(); return; }
-        if (inRect(x, y, 20, 20, 42, 32)) { setGameState("options_controls"); return; }
+        if (hitRect(x, y, MENU_LAYOUT.back)) { setGameState("options_controls"); return; }
         PAD_ACTIONS.forEach((action, i) => {
-            if (inRect(x, y, 330, 82 + i * 36, 210, 28)) startPadCapture(action);
+            if (hitRect(x, y, getGamepadBindingRect(i))) startPadCapture(action);
         });
-        if (inRect(x, y, 570, 82, 120, 28)) {
+        if (hitRect(x, y, MENU_LAYOUT.optionsGamepad.reset)) {
             padBindings = normalizePadBindings(null);
             saveControls();
             padCaptureNote = "PADRÃO PS5 RESTAURADO";
             padCaptureNoteTimer = 3;
         }
-        else if (inRect(x, y, 570, 122, 120, 28)) {
+        else if (hitRect(x, y, MENU_LAYOUT.optionsGamepad.test)) {
             controlsTestTouches = [];
             setGameState("controls_test", "TESTE DE CONTROLES");
         }
     }
     else if (gameState === "controls_test") {
-        if (inRect(x, y, 20, 20, 42, 32)) setGameState("options_controls");
+        if (hitRect(x, y, MENU_LAYOUT.back)) setGameState("options_controls");
     }
     else if (gameState === "options_pc") {
-        if (inRect(x, y, 20, 20, 42, 32)) { setGameState("options_controls"); return; }
-        else if (inRect(x, y, 130, 78, 150, 32)) { activeControlProfile = "p1"; }
-        else if (inRect(x, y, 520, 78, 150, 32)) { activeControlProfile = "p2"; }
+        if (hitRect(x, y, MENU_LAYOUT.back)) { setGameState("options_controls"); return; }
+        else if (hitRect(x, y, MENU_LAYOUT.optionsPc.profileP1)) { activeControlProfile = "p1"; }
+        else if (hitRect(x, y, MENU_LAYOUT.optionsPc.profileP2)) { activeControlProfile = "p2"; }
 
-        const toggleRows = [
-            { key: "auto", x: 120, y: 314, w: 150, h: 28 },
-            { key: "pc", x: 325, y: 314, w: 150, h: 28 },
-            { key: "touch", x: 530, y: 314, w: 150, h: 28 }
-        ];
-
-        for (const row of toggleRows) {
-            const switchX = row.x + 62;
-            const switchY = row.y;
-            const switchW = 88;
-            const switchH = 28;
-
-            if (inRect(x, y, row.x, row.y, row.w, row.h) || inRect(x, y, switchX, switchY, switchW, switchH)) {
+        for (const row of MENU_LAYOUT.optionsPc.toggles) {
+            if (hitRect(x, y, row)) {
                 if (row.key === "auto") controlSelectionMode = "auto";
                 else if (row.key === "pc") { controlSelectionMode = "pc"; manualControlMode = "pc"; }
                 else { controlSelectionMode = "touch"; manualControlMode = "touch"; }
@@ -2134,42 +2184,35 @@ function handleMenuClick(x, y) {
             }
         }
 
-        if (inRect(x, y, 130, 114, 150, 28)) { pcInputMode = "keyboard"; saveControls(); }
-        else if (inRect(x, y, 520, 114, 150, 28)) { pcInputMode = "mouse"; saveControls(); }
+        if (hitRect(x, y, MENU_LAYOUT.optionsPc.keyboard)) { pcInputMode = "keyboard"; saveControls(); }
+        else if (hitRect(x, y, MENU_LAYOUT.optionsPc.mouse)) { pcInputMode = "mouse"; saveControls(); }
 
         const profileKey = activeControlProfile || "p1";
         let acts = ["up", "down", "left", "right", "attack", "charge", "transform", "parry", "special"];
         acts.forEach((act, idx) => {
-            let col = idx % 2;
-            let row = Math.floor(idx / 2);
-            let rx = col === 0 ? 280 : 560;
-            let ry = PC_KEY_ROW_Y0 + row * PC_KEY_ROW_STEP;
-
-            if (inRect(x, y, rx, ry, 110, 24)) startRemapping(`${profileKey}.${act}`);
+            if (hitRect(x, y, getPcKeyRect(idx))) startRemapping(`${profileKey}.${act}`);
         });
-
-        if (inRect(x, y, 310, 337, 180, 30)) setGameState("options_controls");
     }
     else if (gameState === "options_touch") {
-        if (inRect(x, y, 170, 106, 180, 34)) { touchControlMode = "analog"; saveControls(); }
-        else if (inRect(x, y, 450, 106, 180, 34)) { touchControlMode = "swipe"; saveControls(); }
-        else if (inRect(x, y, 200, 148, 400, 34)) { mobileDoubleTapParry = !mobileDoubleTapParry; saveControls(); }
-        else if (inRect(x, y, 200, 190, 400, 34)) {
+        if (hitRect(x, y, MENU_LAYOUT.optionsTouch.analog)) { touchControlMode = "analog"; saveControls(); }
+        else if (hitRect(x, y, MENU_LAYOUT.optionsTouch.swipe)) { touchControlMode = "swipe"; saveControls(); }
+        else if (hitRect(x, y, MENU_LAYOUT.optionsTouch.doubleTap)) { mobileDoubleTapParry = !mobileDoubleTapParry; saveControls(); }
+        else if (hitRect(x, y, MENU_LAYOUT.optionsTouch.vibration)) {
             vibrationEnabled = !vibrationEnabled;
             saveControls();
             vibrate(60);
         }
-        else if (inRect(x, y, 200, 232, 400, 34)) { touchAutoFire = !touchAutoFire; saveControls(); }
-        else if (inRect(x, y, 200, 274, 400, 34)) setGameState("options_hud", "ARRASTE OS BOTÕES PARA REORGANIZAR A HUD");
-        else if (inRect(x, y, 20, 20, 42, 32)) setGameState("options_main");
+        else if (hitRect(x, y, MENU_LAYOUT.optionsTouch.autoFire)) { touchAutoFire = !touchAutoFire; saveControls(); }
+        else if (hitRect(x, y, MENU_LAYOUT.optionsTouch.hud)) setGameState("options_hud", "ARRASTE OS BOTÕES PARA REORGANIZAR A HUD");
+        else if (hitRect(x, y, MENU_LAYOUT.back)) setGameState("options_main");
     }
     else if (gameState === "options_hud") {
-        if (inRect(x, y, 20, 20, 100, 30)) {
+        if (hitRect(x, y, MENU_LAYOUT.optionsHud.save)) {
             writeStorage("saiyan_touch_hud_customized", "1"); // impede o resize de apagar o layout escolhido
             saveControls();
             setGameState("options_touch");
         }
-        else if (inRect(x, y, 130, 20, 100, 30)) {
+        else if (hitRect(x, y, MENU_LAYOUT.optionsHud.reset)) {
             touchHudLayout = getDefaultTouchHudLayout(window.innerWidth);
             hudEditorSelectedBtn = null;
             writeStorage("saiyan_touch_hud_customized", "");
@@ -2178,29 +2221,28 @@ function handleMenuClick(x, y) {
         else handleHudEditorBarClick(x, y);
     }
     else if (gameState === "options_audio") {
-        if (inRect(x, y, 560, 105, 34, 34)) { sfxVolume = Math.max(0, sfxVolume - 0.1); saveAudioSettings(); }
-        else if (inRect(x, y, 604, 105, 34, 34)) { sfxVolume = Math.min(1, sfxVolume + 0.1); saveAudioSettings(); }
-        else if (inRect(x, y, 560, 160, 34, 34)) { bgmVolume = Math.max(0, bgmVolume - 0.1); saveAudioSettings(); }
-        else if (inRect(x, y, 604, 160, 34, 34)) { bgmVolume = Math.min(1, bgmVolume + 0.1); saveAudioSettings(); }
-        else if (inRect(x, y, 250, 205, 300, 38)) { isMuted = !isMuted; saveAudioSettings(); }
-        else if (inRect(x, y, 20, 20, 42, 32)) setGameState("options_main");
+        if (hitRect(x, y, MENU_LAYOUT.optionsAudio.sfxMinus)) { sfxVolume = Math.max(0, sfxVolume - 0.1); saveAudioSettings(); }
+        else if (hitRect(x, y, MENU_LAYOUT.optionsAudio.sfxPlus)) { sfxVolume = Math.min(1, sfxVolume + 0.1); saveAudioSettings(); }
+        else if (hitRect(x, y, MENU_LAYOUT.optionsAudio.bgmMinus)) { bgmVolume = Math.max(0, bgmVolume - 0.1); saveAudioSettings(); }
+        else if (hitRect(x, y, MENU_LAYOUT.optionsAudio.bgmPlus)) { bgmVolume = Math.min(1, bgmVolume + 0.1); saveAudioSettings(); }
+        else if (hitRect(x, y, MENU_LAYOUT.optionsAudio.mute)) { isMuted = !isMuted; saveAudioSettings(); }
+        else if (hitRect(x, y, MENU_LAYOUT.back)) setGameState("options_main");
     }
     else if (gameState === "ranking") {
-        if (inRect(x, y, 20, 20, 42, 32)) setGameState("menu");
-        else if (inRect(x, y, 220, 52, 170, 30)) { rankingViewMode = "geral"; }
-        else if (inRect(x, y, 410, 52, 170, 30)) { rankingViewMode = "fase"; if (!rankingSelectedStage) rankingSelectedStage = STAGE_PROGRESSION[0].id; }
+        if (hitRect(x, y, MENU_LAYOUT.back)) setGameState("menu");
+        else if (hitRect(x, y, MENU_LAYOUT.ranking.tabGeneral)) { rankingViewMode = "geral"; }
+        else if (hitRect(x, y, MENU_LAYOUT.ranking.tabStage)) { rankingViewMode = "fase"; if (!rankingSelectedStage) rankingSelectedStage = STAGE_PROGRESSION[0].id; }
         else if (rankingViewMode === "fase") {
             STAGE_PROGRESSION.forEach((stg, i) => {
-                const px = 40 + (i % 8) * 92;
-                if (inRect(x, y, px, 90, 84, 30)) rankingSelectedStage = stg.id;
+                if (hitRect(x, y, getRankingStageTabRect(i))) rankingSelectedStage = stg.id;
             });
         }
     }
     else if (gameState === "achievements") {
-        if (inRect(x, y, 20, 20, 42, 32)) setGameState("menu");
+        if (hitRect(x, y, MENU_LAYOUT.back)) setGameState("menu");
     }
     else if (gameState === "stage_victory") {
-        if (inRect(x, y, canvas.width / 2 - 90, 300, 180, 34)) setGameState("stage_map");
+        if (hitRect(x, y, MENU_LAYOUT.stageVictory.continue)) setGameState("stage_map");
     }
     else if (gameState === "tutorial") {
         const ui = getTutorialUiLayout();
@@ -2217,25 +2259,25 @@ function handleMenuClick(x, y) {
             // jogar; DIFÍCIL só depois de completar o NORMAL dessa fase; SEM LIMITE só depois dos dois.
             const canHard = isHardModeUnlocked(stageChoicePendingId, stageProgress);
             const canUnlimited = isUnlimitedModeUnlocked(stageChoicePendingId, stageProgress);
-            if (inRect(x, y, canvas.width / 2 - 270, 140, 170, 60)) {
+            if (hitRect(x, y, MENU_LAYOUT.stageMap.normal)) {
                 selectedStage = stageChoicePendingId;
                 stageMode = "normal";
                 stageChoicePendingId = null;
                 saveSettings();
                 startGame();
-            } else if (canHard && inRect(x, y, canvas.width / 2 - 85, 140, 170, 60)) {
+            } else if (canHard && hitRect(x, y, MENU_LAYOUT.stageMap.hard)) {
                 selectedStage = stageChoicePendingId;
                 stageMode = "hard";
                 stageChoicePendingId = null;
                 saveSettings();
                 startGame();
-            } else if (canUnlimited && inRect(x, y, canvas.width / 2 + 100, 140, 170, 60)) {
+            } else if (canUnlimited && hitRect(x, y, MENU_LAYOUT.stageMap.unlimited)) {
                 selectedStage = stageChoicePendingId;
                 stageMode = "unlimited";
                 stageChoicePendingId = null;
                 saveSettings();
                 startGame();
-            } else if (inRect(x, y, canvas.width / 2 - 70, 224, 140, 30)) {
+            } else if (hitRect(x, y, MENU_LAYOUT.stageMap.cancel)) {
                 stageChoicePendingId = null;
             }
             return;
@@ -2250,14 +2292,14 @@ function handleMenuClick(x, y) {
                 }
             }
         });
-        if (inRect(x, y, 20, 20, 42, 32)) setGameState("mode_select");
+        if (hitRect(x, y, MENU_LAYOUT.back)) setGameState("mode_select");
     }
     else if (gameState === "database") {
         const layout = getDatabaseLayoutMetrics();
         let keys = Object.keys(characterDB);
 
         if (inRect(x, y, layout.createButtonX, layout.createButtonY, layout.createButtonWidth, 30)) { openModal(null); return; }
-        if (inRect(x, y, 20, 20, 42, 32)) { setGameState("menu"); return; }
+        if (hitRect(x, y, MENU_LAYOUT.back)) { setGameState("menu"); return; }
 
         keys.forEach((k, idx) => {
             const row = Math.floor(idx / layout.columns);
@@ -3364,9 +3406,9 @@ function render() {
                     ctx.font = "12px 'Courier New', monospace";
                     ctx.fillText("TOQUE OU CLIQUE EM QUALQUER LUGAR PARA CONTINUAR", canvas.width / 2, 86);
                 }
-                drawBtn(300, 110, 200, 35, "CONTINUAR");
-                drawBtn(300, 160, 200, 35, "OPÇÕES");
-                drawBtn(300, 210, 200, 35, "SAIR PARA MENU");
+                drawBtnAt(MENU_LAYOUT.paused.resume, "CONTINUAR");
+                drawBtnAt(MENU_LAYOUT.paused.options, "OPÇÕES");
+                drawBtnAt(MENU_LAYOUT.paused.exit, "SAIR PARA MENU");
             }
         } else if (gameState === "gameover") {
             const gs = gameOverStats || { stageName: "", score, attacks: 0, parries: 0, hitsReceived: 0, items: { senzu: 0, capsule: 0, cloud: 0, staff: 0 }, isNewStageRecord: false, isNewGeneralRecord: false };
@@ -3436,25 +3478,25 @@ function render() {
 
         drawDragonBallPanel(150, 35, 500, 270, "SAIYAN FIGHT", "A BATALHA COMEÇA AGORA");
 
-        drawBtn(190, 95, 180, 36, "JOGAR", "#fff0a6");
-        drawBtn(430, 95, 180, 36, "PERSONAGENS", "#fff0a6");
-        drawBtn(190, 150, 180, 36, "ARENAS", "#fff0a6");
-        drawBtn(430, 150, 180, 36, "OPÇÕES", "#fff0a6");
-        drawBtn(190, 205, 180, 36, "RANKING", "#fff0a6");
-        drawBtn(430, 205, 180, 36, "DATABASE", "#fff0a6");
-        drawBtn(190, 260, 180, 36, "CONQUISTAS", "#fff0a6");
-        drawBtn(430, 260, 180, 36, "TUTORIAL", "#fff0a6");
+        drawBtnAt(MENU_LAYOUT.main.play, "JOGAR", "#fff0a6");
+        drawBtnAt(MENU_LAYOUT.main.characters, "PERSONAGENS", "#fff0a6");
+        drawBtnAt(MENU_LAYOUT.main.stages, "ARENAS", "#fff0a6");
+        drawBtnAt(MENU_LAYOUT.main.options, "OPÇÕES", "#fff0a6");
+        drawBtnAt(MENU_LAYOUT.main.ranking, "RANKING", "#fff0a6");
+        drawBtnAt(MENU_LAYOUT.main.database, "DATABASE", "#fff0a6");
+        drawBtnAt(MENU_LAYOUT.main.achievements, "CONQUISTAS", "#fff0a6");
+        drawBtnAt(MENU_LAYOUT.main.tutorial, "TUTORIAL", "#fff0a6");
 
-        drawBtn(20, 305, 120, 26, "UPDATES", "#fbbf24", "bold 10px 'Segoe UI', sans-serif");
+        drawBtnAt(MENU_LAYOUT.main.updates, "UPDATES", "#fbbf24", "bold 10px 'Segoe UI', sans-serif");
     }
     else if (gameState === "mode_select") {
         drawDragonBallMenuBackdrop(false);
 
         drawDragonBallPanel(120, 60, 560, 230, "ESCOLHA SEU CAMINHO", "PARTIDA RÁPIDA OU LOCAL");
 
-        drawBtn(175, 176, 200, 58, "SINGLEPLAYER", "#7dd3fc");
-        drawBtn(425, 176, 200, 58, "CO-OP LOCAL", "#a78bfa");
-        drawBtn(20, 20, 42, 32, "←", "#e2e8f0", "bold 20px monospace");
+        drawBtnAt(MENU_LAYOUT.modeSelect.single, "SINGLEPLAYER", "#7dd3fc");
+        drawBtnAt(MENU_LAYOUT.modeSelect.coop, "CO-OP LOCAL", "#a78bfa");
+        drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
     }
     else if (gameState === "characters") {
         drawDragonBallMenuBackdrop(false);
@@ -3466,15 +3508,12 @@ function render() {
         ctx.textAlign = "center";
         ctx.fillText("SELEÇÃO DE PERSONAGEM", canvas.width / 2, 25);
 
-        drawBtn(250, 45, 140, 25, "HERÓIS", currentTab === "HERÓIS" ? "#ffff00" : "#00ffff");
-        drawBtn(410, 45, 140, 25, "VILÕES", currentTab === "VILÕES" ? "#ffff00" : "#00ffff");
+        drawBtnAt(MENU_LAYOUT.characters.tabHeroes, "HERÓIS", currentTab === "HERÓIS" ? "#ffff00" : "#00ffff");
+        drawBtnAt(MENU_LAYOUT.characters.tabVillains, "VILÕES", currentTab === "VILÕES" ? "#ffff00" : "#00ffff");
 
         let chars = getFilteredCharacters();
         chars.forEach((key, i) => {
-            let col = i % 5;
-            let row = Math.floor(i / 5);
-            let cx = 40 + col * (UI.GRID_CARD_WIDTH + 12);
-            let cy = 80 + row * (UI.GRID_CARD_HEIGHT + 10);
+            const card = getCharacterCardRect(i), cx = card.x, cy = card.y;
 
             let isSel = (currentTab === "HERÓIS" && selectedCharacter === key) || (currentTab === "VILÕES" && selectedBoss === key);
 
@@ -3512,7 +3551,7 @@ function render() {
             ctx.fillText(cItem ? cItem.name : key, cx + UI.GRID_CARD_WIDTH / 2, cy + 70);
         });
 
-        drawBtn(20, 20, 42, 32, "←", "#e2e8f0", "bold 20px monospace");
+        drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
     }
     else if (gameState === "stages") {
         drawStageBackground();
@@ -3528,10 +3567,7 @@ function render() {
         ctx.fillText("COMPLETE O MODO NORMAL (5 ONDAS) PRA LIBERAR A PRÓXIMA FASE", canvas.width / 2, 42);
 
         STAGE_PROGRESSION.forEach((stg, i) => {
-            let col = i % 4;
-            let row = Math.floor(i / 4);
-            let sx = 40 + col * 190;
-            let sy = 68 + row * 104;
+            const card = getStageCardRect(i), sx = card.x, sy = card.y;
             const unlocked = isStageUnlockedByProgress(stg.id, stageProgress);
 
             registerMenuTarget(sx, sy, 175, 90);
@@ -3582,46 +3618,46 @@ function render() {
             ctx.fillText(stageLockedHintText, canvas.width / 2, canvas.height - 14);
         }
 
-        drawBtn(20, 20, 42, 32, "←", "#e2e8f0", "bold 20px monospace");
+        drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
     }
     else if (gameState === "options_main") {
         drawDragonBallMenuBackdrop(false);
 
         drawDragonBallPanel(180, 30, 440, 300, "OPÇÕES DO JOGO", "CONFIGURAÇÕES DA PARTIDA");
 
-        drawBtn(220, 120, 360, 42, "CONTROLES", "#7dd3fc");
-        drawBtn(220, 180, 360, 42, "CONFIGURAÇÃO DE ÁUDIO", "#c4b5fd");
-        drawBtn(220, 240, 360, 42, "IDIOMA", "#fde68a");
+        drawBtnAt(MENU_LAYOUT.optionsMain.controls, "CONTROLES", "#7dd3fc");
+        drawBtnAt(MENU_LAYOUT.optionsMain.audio, "CONFIGURAÇÃO DE ÁUDIO", "#c4b5fd");
+        drawBtnAt(MENU_LAYOUT.optionsMain.language, "IDIOMA", "#fde68a");
 
-        drawBtn(20, 20, 42, 32, "←", "#e2e8f0", "bold 20px monospace");
+        drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
     }
     else if (gameState === "options_language") {
         drawDragonBallMenuBackdrop(false);
         drawDragonBallPanel(170, 70, 460, 220, "IDIOMA DO JOGO", "IDIOMA ATUAL");
-        drawBtn(220, 145, 360, 42, "PORTUGUÊS", selectedLanguage === "pt-BR" ? "#fbbf24" : "#7dd3fc");
+        drawBtnAt(MENU_LAYOUT.optionsLanguage.portuguese, "PORTUGUÊS", selectedLanguage === "pt-BR" ? "#fbbf24" : "#7dd3fc");
         ctx.fillStyle = "#cbd5e1";
         ctx.font = "11px monospace";
         ctx.textAlign = "center";
         ctx.fillText("NOVOS IDIOMAS SERÃO ADICIONADOS FUTURAMENTE", canvas.width / 2, 220);
-        drawBtn(20, 20, 42, 32, "←", "#e2e8f0", "bold 20px monospace");
+        drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
     }
     else if (gameState === "options_controls") {
         drawDragonBallMenuBackdrop(false);
         drawDragonBallPanel(120, 50, 560, 270, "CONTROLES", "SELEÇÃO DE ENTRADA");
 
         // 2 linhas abaixo do subtítulo (que fica em y+54) — antes o 1º botão (y=100) cobria a escrita.
-        drawBtn(180, 144, 220, 46, "CONTROLES PC", "#7dd3fc");
-        drawBtn(420, 144, 220, 46, "CONTROLES TOUCH", "#93c5fd");
-        drawBtn(180, 204, 220, 46, "CONTROLE PS5", "#c4b5fd");
-        drawBtn(420, 204, 220, 46, "TESTAR CONTROLES", "#a7f3d0");
+        drawBtnAt(MENU_LAYOUT.optionsControls.pc, "CONTROLES PC", "#7dd3fc");
+        drawBtnAt(MENU_LAYOUT.optionsControls.touch, "CONTROLES TOUCH", "#93c5fd");
+        drawBtnAt(MENU_LAYOUT.optionsControls.gamepad, "CONTROLE PS5", "#c4b5fd");
+        drawBtnAt(MENU_LAYOUT.optionsControls.test, "TESTAR CONTROLES", "#a7f3d0");
 
-        drawBtn(20, 20, 42, 32, "←", "#e2e8f0", "bold 20px monospace");
+        drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
     }
     else if (gameState === "options_pc") {
         drawDragonBallMenuBackdrop(false);
 
         drawDragonBallPanel(90, 15, 620, 333, "CONTROLES PC");
-        drawBtn(20, 20, 42, 32, "←", "#e2e8f0", "bold 20px monospace");
+        drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
 
         const activeMode = getEffectiveControlMode();
         const autoMode = controlSelectionMode === "auto";
@@ -3635,7 +3671,7 @@ function render() {
         ctx.fillText(profileName, 400, 68);
 
         const drawToggleRow = (label, x, active, color) => {
-            registerMenuTarget(x, 314, 150, 28);
+            registerMenuTarget(x, MENU_LAYOUT.optionsPc.toggles[0].y, MENU_LAYOUT.optionsPc.toggles[0].w, MENU_LAYOUT.optionsPc.toggles[0].h);
             ctx.save();
             ctx.fillStyle = "#e2e8f0";
             ctx.font = "bold 14px 'Courier New', monospace";
@@ -3680,15 +3716,14 @@ function render() {
             ctx.restore();
         };
 
-        drawBtn(130, 78, 150, 32, "CONTROLE 1", activeControlProfile === "p1" ? "#fbbf24" : "#7dd3fc");
-        drawBtn(520, 78, 150, 32, "CONTROLE 2", activeControlProfile === "p2" ? "#fbbf24" : "#7dd3fc");
+        drawBtnAt(MENU_LAYOUT.optionsPc.profileP1, "CONTROLE 1", activeControlProfile === "p1" ? "#fbbf24" : "#7dd3fc");
+        drawBtnAt(MENU_LAYOUT.optionsPc.profileP2, "CONTROLE 2", activeControlProfile === "p2" ? "#fbbf24" : "#7dd3fc");
 
-        drawBtn(130, 114, 150, 28, "MODO TECLADO", pcInputMode === "keyboard" ? "#fbbf24" : "#7dd3fc", "10px monospace");
-        drawBtn(520, 114, 150, 28, "MODO MOUSE", pcInputMode === "mouse" ? "#fbbf24" : "#7dd3fc", "10px monospace");
+        drawBtnAt(MENU_LAYOUT.optionsPc.keyboard, "MODO TECLADO", pcInputMode === "keyboard" ? "#fbbf24" : "#7dd3fc", "10px monospace");
+        drawBtnAt(MENU_LAYOUT.optionsPc.mouse, "MODO MOUSE", pcInputMode === "mouse" ? "#fbbf24" : "#7dd3fc", "10px monospace");
 
-        drawToggleRow("AUTOMÁTICO", 120, autoMode, "#22c55e");
-        drawToggleRow("PC", 325, pcMode, "#7dd3fc");
-        drawToggleRow("TOUCH", 530, touchMode, "#93c5fd");
+        const toggleState = { auto: [autoMode, "#22c55e"], pc: [pcMode, "#7dd3fc"], touch: [touchMode, "#93c5fd"] };
+        MENU_LAYOUT.optionsPc.toggles.forEach(t => drawToggleRow(t.label, t.x, toggleState[t.key][0], toggleState[t.key][1]));
 
         const profileKey = activeControlProfile || "p1";
         let acts = ["up", "down", "left", "right", "attack", "charge", "transform", "parry", "special"];
@@ -3704,18 +3739,15 @@ function render() {
             special: "ESPECIAL"
         };
         acts.forEach((act, idx) => {
-            let col = idx % 2;
-            let row = Math.floor(idx / 2);
-            let lx = col === 0 ? 125 : 405;
-            let rx = col === 0 ? 280 : 560;
-            let ry = PC_KEY_ROW_Y0 + row * PC_KEY_ROW_STEP;
+            const keyRect = getPcKeyRect(idx), ry = keyRect.y;
+            const lx = idx % 2 === 0 ? 125 : 405;
 
             ctx.fillStyle = "#ffffff";
             ctx.font = "12px monospace";
             ctx.textAlign = "left";
             ctx.fillText(`${actionLabels[act]}:`, lx, ry + 16);
 
-            drawBtn(rx, ry, 110, 24, getBindingDisplayName(keyBindings[profileKey][act] || "NONE"), "#00ffff", "10px monospace");
+            drawBtnAt(keyRect, getBindingDisplayName(keyBindings[profileKey][act] || "NONE"), "#00ffff", "10px monospace");
         });
 
     }
@@ -3730,15 +3762,15 @@ function render() {
 
         drawDragonBallPanel(120, 40, 560, 290, "CONFIGURAÇÃO TOUCH / MOBILE", "CONTROLES MÓVEIS");
 
-        drawBtn(170, 106, 180, 34, "ANALÓGICO", touchControlMode === "analog" ? "#fbbf24" : "#7dd3fc");
-        drawBtn(450, 106, 180, 34, "DESLIZAR", touchControlMode === "swipe" ? "#fbbf24" : "#7dd3fc");
+        drawBtnAt(MENU_LAYOUT.optionsTouch.analog, "ANALÓGICO", touchControlMode === "analog" ? "#fbbf24" : "#7dd3fc");
+        drawBtnAt(MENU_LAYOUT.optionsTouch.swipe, "DESLIZAR", touchControlMode === "swipe" ? "#fbbf24" : "#7dd3fc");
 
-        drawBtn(200, 148, 400, 34, `DUPLO TOQUE PARRY: ${mobileDoubleTapParry ? "ATIVADO" : "DESATIVADO"}`, mobileDoubleTapParry ? "#a7f3d0" : "#fca5a5");
-        drawBtn(200, 190, 400, 34, `VIBRAÇÃO: ${vibrationEnabled ? "ATIVADA" : "DESATIVADA"}`, vibrationEnabled ? "#a7f3d0" : "#fca5a5");
-        drawBtn(200, 232, 400, 34, `TIRO CONTÍNUO (DEDO NO ANALÓGICO): ${touchAutoFire ? "ATIVADO" : "DESATIVADO"}`, touchAutoFire ? "#a7f3d0" : "#fca5a5", "bold 11px 'Courier New', monospace");
-        drawBtn(200, 274, 400, 34, "REORGANIZAR BOTÕES HUD", "#c4b5fd");
+        drawBtnAt(MENU_LAYOUT.optionsTouch.doubleTap, `DUPLO TOQUE PARRY: ${mobileDoubleTapParry ? "ATIVADO" : "DESATIVADO"}`, mobileDoubleTapParry ? "#a7f3d0" : "#fca5a5");
+        drawBtnAt(MENU_LAYOUT.optionsTouch.vibration, `VIBRAÇÃO: ${vibrationEnabled ? "ATIVADA" : "DESATIVADA"}`, vibrationEnabled ? "#a7f3d0" : "#fca5a5");
+        drawBtnAt(MENU_LAYOUT.optionsTouch.autoFire, `TIRO CONTÍNUO (DEDO NO ANALÓGICO): ${touchAutoFire ? "ATIVADO" : "DESATIVADO"}`, touchAutoFire ? "#a7f3d0" : "#fca5a5", "bold 11px 'Courier New', monospace");
+        drawBtnAt(MENU_LAYOUT.optionsTouch.hud, "REORGANIZAR BOTÕES HUD", "#c4b5fd");
 
-        drawBtn(20, 20, 42, 32, "←", "#e2e8f0", "bold 20px monospace");
+        drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
     }
     else if (gameState === "options_hud") {
         drawStageBackground();
@@ -3747,8 +3779,8 @@ function render() {
 
         drawTouchHUD();
 
-        drawBtn(20, 20, 100, 30, "SALVAR", "#00ff55");
-        drawBtn(130, 20, 100, 30, "RESETAR", "#ff0055");
+        drawBtnAt(MENU_LAYOUT.optionsHud.save, "SALVAR", "#00ff55");
+        drawBtnAt(MENU_LAYOUT.optionsHud.reset, "RESETAR", "#ff0055");
 
         ctx.fillStyle = "#ffff00";
         ctx.font = "12px monospace";
@@ -3765,16 +3797,16 @@ function render() {
         ctx.font = "14px 'Segoe UI', sans-serif";
         ctx.textAlign = "left";
         ctx.fillText(`VOLUME SFX: ${Math.round(sfxVolume * 100)}%`, 210, 125);
-        drawBtn(560, 105, 34, 34, "-", "#fca5a5");
-        drawBtn(604, 105, 34, 34, "+", "#86efac");
+        drawBtnAt(MENU_LAYOUT.optionsAudio.sfxMinus, "-", "#fca5a5");
+        drawBtnAt(MENU_LAYOUT.optionsAudio.sfxPlus, "+", "#86efac");
 
         ctx.fillText(`VOLUME BGM: ${Math.round(bgmVolume * 100)}%`, 210, 180);
-        drawBtn(560, 160, 34, 34, "-", "#fca5a5");
-        drawBtn(604, 160, 34, 34, "+", "#86efac");
+        drawBtnAt(MENU_LAYOUT.optionsAudio.bgmMinus, "-", "#fca5a5");
+        drawBtnAt(MENU_LAYOUT.optionsAudio.bgmPlus, "+", "#86efac");
 
-        drawBtn(250, 205, 300, 38, isMuted ? "ÁUDIO: MUTADO" : "ÁUDIO: ATIVADO", isMuted ? "#fca5a5" : "#86efac");
+        drawBtnAt(MENU_LAYOUT.optionsAudio.mute, isMuted ? "ÁUDIO: MUTADO" : "ÁUDIO: ATIVADO", isMuted ? "#fca5a5" : "#86efac");
 
-        drawBtn(20, 20, 42, 32, "←", "#e2e8f0", "bold 20px monospace");
+        drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
     }
     else if (gameState === "ranking") {
         drawStageBackground();
@@ -3786,10 +3818,10 @@ function render() {
         ctx.textAlign = "center";
         ctx.fillText("MELHORES PONTUAÇÕES", canvas.width / 2, 30);
 
-        registerMenuTarget(220, 52, 170, 30);
-        registerMenuTarget(410, 52, 170, 30);
-        drawBtn(220, 52, 170, 30, "GERAL", rankingViewMode === "geral" ? "#ffff00" : "#93c5fd");
-        drawBtn(410, 52, 170, 30, "POR FASE", rankingViewMode === "fase" ? "#ffff00" : "#93c5fd");
+        registerMenuTarget(MENU_LAYOUT.ranking.tabGeneral.x, MENU_LAYOUT.ranking.tabGeneral.y, MENU_LAYOUT.ranking.tabGeneral.w, MENU_LAYOUT.ranking.tabGeneral.h);
+        registerMenuTarget(MENU_LAYOUT.ranking.tabStage.x, MENU_LAYOUT.ranking.tabStage.y, MENU_LAYOUT.ranking.tabStage.w, MENU_LAYOUT.ranking.tabStage.h);
+        drawBtnAt(MENU_LAYOUT.ranking.tabGeneral, "GERAL", rankingViewMode === "geral" ? "#ffff00" : "#93c5fd");
+        drawBtnAt(MENU_LAYOUT.ranking.tabStage, "POR FASE", rankingViewMode === "fase" ? "#ffff00" : "#93c5fd");
 
         // drawBtn (GERAL/POR FASE acima) sempre deixa o alinhamento em "esquerda" depois de desenhar — sem
         // reafirmar "center" aqui, a lista de pontuação saía alinhada à esquerda a partir do meio da tela.
@@ -3813,8 +3845,8 @@ function render() {
             if (!rankingSelectedStage) rankingSelectedStage = STAGE_PROGRESSION[0].id;
             // fileira de mini-ícones das 8 arenas pra escolher qual ranking ver
             STAGE_PROGRESSION.forEach((stg, i) => {
-                const px = 40 + (i % 8) * 92, py = 90;
-                registerMenuTarget(px, py, 84, 30);
+                const tab = getRankingStageTabRect(i), px = tab.x, py = tab.y;
+                registerMenuTarget(px, py, tab.w, tab.h);
                 const isSel = rankingSelectedStage === stg.id;
                 ctx.fillStyle = isSel ? "rgba(255,255,0,0.18)" : "rgba(255,255,255,0.06)";
                 ctx.fillRect(px, py, 84, 30);
@@ -3848,7 +3880,7 @@ function render() {
             }
         }
 
-        drawBtn(20, 20, 42, 32, "←", "#e2e8f0", "bold 20px monospace");
+        drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
     }
     else if (gameState === "achievements") {
         drawStageBackground();
@@ -3963,7 +3995,7 @@ function render() {
             ctx.fillRect(barX, thumbY, 6, thumbH);
         }
 
-        drawBtn(20, 20, 42, 32, "←", "#e2e8f0", "bold 20px monospace");
+        drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
     }
     else if (gameState === "stage_victory") {
         const stats = stageVictoryStats || { stageName: "", mode: "normal", justUnlockedNext: false, justUnlockedUnlimited: false, score: 0, attacks: 0, parries: 0, hitsReceived: 0, items: { senzu: 0, capsule: 0, cloud: 0, staff: 0 } };
@@ -4037,8 +4069,9 @@ function render() {
             ctx.fillText("MODO SEM LIMITE LIBERADO NESTA FASE!", canvas.width / 2, panelY + panelH + 38);
         }
 
-        registerMenuTarget(canvas.width / 2 - 90, 300, 180, 34);
-        drawBtn(canvas.width / 2 - 90, 300, 180, 34, "CONTINUAR", "#86efac", "bold 12px 'Courier New', monospace");
+        const continueRect = MENU_LAYOUT.stageVictory.continue;
+        registerMenuTarget(continueRect.x, continueRect.y, continueRect.w, continueRect.h);
+        drawBtnAt(continueRect, "CONTINUAR", "#86efac", "bold 12px 'Courier New', monospace");
     }
     else if (gameState === "stage_map") {
         ctx.fillStyle = "#0a1024";
@@ -4144,11 +4177,11 @@ function render() {
             ctx.font = "11px 'Trebuchet MS', sans-serif";
             ctx.fillText("ESCOLHA O MODO", canvas.width / 2, 120);
 
-            drawBtn(canvas.width / 2 - 270, 140, 170, 60, "NORMAL (ONDAS 1-5)", "#93c5fd", "bold 10px 'Courier New', monospace");
-            drawModeButton(canvas.width / 2 - 85, 140, 170, 60, "DIFÍCIL", canHard, "#f87171");
-            drawModeButton(canvas.width / 2 + 100, 140, 170, 60, "SEM LIMITE", canUnlimited, "#86efac");
+            drawBtnAt(MENU_LAYOUT.stageMap.normal, "NORMAL (ONDAS 1-5)", "#93c5fd", "bold 10px 'Courier New', monospace");
+            drawModeButton(MENU_LAYOUT.stageMap.hard.x, MENU_LAYOUT.stageMap.hard.y, MENU_LAYOUT.stageMap.hard.w, MENU_LAYOUT.stageMap.hard.h, "DIFÍCIL", canHard, "#f87171");
+            drawModeButton(MENU_LAYOUT.stageMap.unlimited.x, MENU_LAYOUT.stageMap.unlimited.y, MENU_LAYOUT.stageMap.unlimited.w, MENU_LAYOUT.stageMap.unlimited.h, "SEM LIMITE", canUnlimited, "#86efac");
 
-            drawBtn(canvas.width / 2 - 70, 224, 140, 30, "VOLTAR", "#fca5a5", "bold 10px 'Courier New', monospace");
+            drawBtnAt(MENU_LAYOUT.stageMap.cancel, "VOLTAR", "#fca5a5", "bold 10px 'Courier New', monospace");
         }
 
         if (stageLockedHintTimer > 0) {
@@ -4159,7 +4192,7 @@ function render() {
             ctx.fillText(stageLockedHintText, canvas.width / 2, canvas.height - 10);
         }
 
-        drawBtn(20, 20, 42, 32, "←", "#e2e8f0", "bold 20px monospace");
+        drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
     }
     else if (gameState === "database") {
         drawStageBackground();
@@ -4256,7 +4289,7 @@ function render() {
             drawBtn(geo.firstBtnX + geo.btnW + 10, geo.actionY, geo.btnW, 20, "EXCLUIR", "#ff0055", "8px monospace");
         });
 
-        drawBtn(20, 20, 42, 32, "←", "#e2e8f0", "bold 20px monospace");
+        drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
     }
 
     if (achievementBanner.active) {
