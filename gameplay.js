@@ -160,6 +160,7 @@ function startTutorial() {
     player.parryHighlightTimer = 0;
     player.parryCombo = 0;
     player.parryComboTimer = 0;
+    player.parryCooldown = 0;
 
     // player2 fica fora da tela e sem agir — o tutorial não tem chefe, só o jogador praticando. isDying fica
     // false (não true) porque triggerSpecialAttack usa esse campo como guarda e o passo de ESPECIAL precisa
@@ -192,6 +193,7 @@ function updateTutorial(dt) {
     if (gameState !== "tutorial") return;
     player.animTimer += dt;
     if (player.parryHighlightTimer > 0) player.parryHighlightTimer -= dt * 60;
+    if (player.parryCooldown > 0) player.parryCooldown = Math.max(0, player.parryCooldown - dt * 60);
     if (player.actionTimer > 0) player.actionTimer -= dt * 60;
 
     const step = getCurrentTutorialStep();
@@ -506,6 +508,7 @@ function startGame() {
     player.actionState = "idle";
     player.actionTimer = 0;
     player.parryHighlightTimer = 0;
+    player.parryCooldown = 0;
 
     player2.x = 680;
     player2.y = 150;
@@ -521,6 +524,7 @@ function startGame() {
     player2.animTimer = 0;
     player2.actionState = "idle";
     player2.actionTimer = 0;
+    player2.parryCooldown = 0;
     player2.isDying = false;
 
     initScenario();
@@ -776,8 +780,13 @@ function updateAura(entity, auraType, isBoss = false) {
 // Cor do ki depois de rebatido — diferente da cor original (do jogador ou do chefe), pra ficar claro visualmente
 // que aquele projétil agora é "seu" e não do dono original.
 const PARRY_REFLECT_COLOR = "#fff23f";
+// Parry que não pega nada deixa um tempo de espera antes do próximo — sem isso, segurar a tecla (repetição
+// automática do teclado) ou apertar sem parar rebatia tudo o tempo todo. Parry que acerta não tem espera,
+// então rebater golpes seguidos no tempo certo continua valendo.
+const PARRY_WHIFF_COOLDOWN = 30;   // quadros (a 60fps) = 0,5s
 
 function tryReflect(target = player, isP2 = false) {
+    if (target.parryCooldown > 0) return;
     target.parryHighlightTimer = 10;
     setActionState(target, "parry", 14);
     let reflectedCount = 0;
@@ -795,7 +804,7 @@ function tryReflect(target = player, isP2 = false) {
             const boost = 1.4;   // rebatido sai mais rápido que veio, senão parece só "devolver fraco"
             obs.vx = (isP2 ? -1 : 1) * incomingSpeed * boost;
             obs.vy = 0;
-            obs.fromPlayer = true;
+            obs.fromPlayer = !isP2;
             obs.color = PARRY_REFLECT_COLOR;
             obs.damage = getBuffedAttackDamage(NORMAL_ATTACK_DAMAGE, !isP2 && player.powerBuffTimer > 0);
             reflectedCount++;
@@ -804,16 +813,18 @@ function tryReflect(target = player, isP2 = false) {
         }
     }
 
-    if (reflectedCount > 0) {
-        if (!isP2) runStats.parries += reflectedCount;
+    if (reflectedCount === 0) {
+        target.parryCooldown = PARRY_WHIFF_COOLDOWN;
+    } else {
         playSound("reflect");
         vibrate(45);
         totalReflects += reflectedCount;
-        score += reflectedCount;
         triggerScreenShake(6, 10);
-        bumpStat("reflectsTotal", reflectedCount);
-
         if (!isP2) {
+            runStats.parries += reflectedCount;
+            score += reflectedCount;
+            bumpStat("reflectsTotal", reflectedCount);
+
             // Combo de parry (só o jogador humano principal; o alvo tomar dano zera a sequência — ver o bloco
             // de colisão do player). A cada degrau (getParryComboBonus) ganha ki de bônus.
             player.parryCombo = (player.parryCombo || 0) + 1;
@@ -1204,6 +1215,8 @@ function update(dt) {
     if (player.hp < world.lastPlayerHp) vibrate(140); // levou dano
     world.lastPlayerHp = player.hp;
     if (player.parryHighlightTimer > 0) player.parryHighlightTimer -= dt * 60;
+    if (player.parryCooldown > 0) player.parryCooldown = Math.max(0, player.parryCooldown - dt * 60);
+    if (player2.parryCooldown > 0) player2.parryCooldown = Math.max(0, player2.parryCooldown - dt * 60);
     if (player2.hitTimer > 0) player2.hitTimer = Math.max(0, player2.hitTimer - dt * 60);
     if (world.beamActive > 0) {
         world.beamActive = Math.max(0, world.beamActive - dt * 60);
@@ -1240,7 +1253,7 @@ function update(dt) {
         }
     }
 
-    world.pickupSpawnTimer++;
+    world.pickupSpawnTimer += dt * 60;
     if (world.pickupSpawnTimer >= SPAWN_TIMERS.PICKUP_FRAMES) {
         world.pickupSpawnTimer = 0;
         spawnPickup();
@@ -1373,7 +1386,7 @@ function update(dt) {
         }
     }
 
-    world.saibamanSpawnTimer++;
+    world.saibamanSpawnTimer += dt * 60;
     if (world.saibamanSpawnTimer > SPAWN_TIMERS.SAIBAMAN_FRAMES) {
         world.saibamanSpawnTimer = 0;
         spawnSaibaman();
@@ -1382,8 +1395,8 @@ function update(dt) {
     for (let i = world.saibamans.length - 1; i >= 0; i--) {
         let s = world.saibamans[i];
         s.x -= s.speed * dt * 60;
-        s.hoverTime += 0.05;
-        s.y += Math.sin(s.hoverTime) * 1.5;
+        s.hoverTime += 0.05 * dt * 60;
+        s.y += Math.sin(s.hoverTime) * 1.5 * dt * 60;
 
         if (rectsOverlap(getHitboxRect(s), getHitboxRect(player))) {
             if (player.invulnerableTimer === 0) {
@@ -1546,7 +1559,7 @@ function update(dt) {
         player.y = Math.max(BOUNDS.PLAYER_MIN_Y, Math.min(BOUNDS.PLAYER_MAX_Y_BASE - (player.h - 56), player.y));
     }
 
-    if (gameMode === "coop") {
+    if (gameMode === "coop" && !player2.isDying) {
         let player2MoveX = 0;
         let player2MoveY = 0;
         if (keysPressed[keyBindings.p2.up]) player2.y -= 4 * dt * 60;
@@ -1591,12 +1604,12 @@ function update(dt) {
         }
     }
 
-    player.hoverTime += 0.05;
-    player2.hoverTime += 0.05;
+    player.hoverTime += 0.05 * dt * 60;
+    player2.hoverTime += 0.05 * dt * 60;
 
     if (player2.isDying) {
         player2.x += player2.dyingspeedX * dt * 60;
-        player2.y += Math.sin(player2.hoverTime * 5) * 3;
+        player2.y += Math.sin(player2.hoverTime * 5) * 3 * dt * 60;
         if (player2.x > canvas.width + 120) {
             respawnBoss();
         }
