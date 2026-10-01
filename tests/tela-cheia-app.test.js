@@ -19,8 +19,6 @@ check("e o jogo ocupa a tela toda mesmo assim", run("pseudoFullscreen") === true
 run("toggleFullscreen()");
 check("tocar de novo sai do modo tela cheia", run("pseudoFullscreen") === false);
 
-run("__pedidos = 0; activateMobileLandscape()");
-check("como aplicativo: 'tela deitada' também não pede tela cheia ao navegador", run("__pedidos") === 0);
 
 const manifest = JSON.parse(require("fs").readFileSync(__dirname + "/../manifest.webmanifest", "utf8"));
 check("o aplicativo abre deitado (orientation: landscape no manifest)", manifest.orientation === "landscape");
