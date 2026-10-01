@@ -2160,8 +2160,14 @@ const DEFAULT_CHARACTERS = {
     android18: { name: "ANDROIDE 18", presetKey: "android18", align: "ANTI-HERÓI", aura: "azul", spec: "DESTRUCTO DISC" },
     majin_buu: { name: "MAJIN BUU", presetKey: "majin", align: "VILÃO", aura: "rosa", spec: "CHOCOLATE BEAM" },
     raditz: { name: "RADITZ", presetKey: "raditz", align: "VILÃO", aura: "roxo", spec: "DOUBLE SUNDAY" },
-    broly: { name: "BROLY", presetKey: "broly", align: "VILÃO", aura: "verde", spec: "ERASER CANNON" }
+    broly: { name: "BROLY", presetKey: "broly", align: "VILÃO", aura: "verde", spec: "ERASER CANNON" },
+    cell: { name: "CELL", presetKey: "cell", align: "VILÃO", aura: "verde", spec: "KAMEHAMEHA PERFEITO" }
 };
+const PRESET_VALUES_BEFORE_ANIME = {
+    freeza: { accessory: "chifres" },
+    majin: { build: "gigante", outerShirt: "none", shoes: "botas_marrons", gloves: "nenhuma" }
+};
+
 // Personagem inicial salvo antes de o modelo dele ganhar o estilo novo (ex.: proporções "anime" em pixel art):
 // se o jogador não mexeu na aparência, passa a usar a do modelo atual (senão continuaria com o desenho antigo,
 // porque a aparência fica gravada no navegador). Personagem editado pelo jogador fica como está.
@@ -2170,9 +2176,11 @@ function refreshDefaultCharacterStyle(k, character) {
     const saved = character && character.builderAppearance;
     if (!d || !saved || !SPRITE_PRESETS[d.presetKey]) return false;
     const preset = SPRITE_PRESETS[d.presetKey].appearance;
-    const keys = new Set(Object.keys(saved).concat(Object.keys(preset)));
+    // como o modelo era antes da mudança de estilo (campos que mudaram junto, ex.: Freeza perdeu os chifres)
+    const before = Object.assign({}, preset, PRESET_VALUES_BEFORE_ANIME[d.presetKey] || {});
+    const keys = new Set(Object.keys(saved).concat(Object.keys(before)));
     keys.delete("proporcao");
-    for (const key of keys) if (saved[key] !== preset[key]) return false;   // o jogador personalizou
+    for (const key of keys) if (saved[key] !== before[key]) return false;   // o jogador personalizou
     if ((saved.proporcao || "classico") === (preset.proporcao || "classico")) return false;  // já está no estilo atual
     character.builderAppearance = preset;
     character.animations = {};

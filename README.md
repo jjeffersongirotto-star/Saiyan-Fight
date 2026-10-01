@@ -38,7 +38,7 @@ Abrindo pelo ícone, o jogo já abre **deitado e em tela cheia**, sem o aviso do
 
 ## 🧍 Personagens
 
-O jogo já vem com 14 personagens: Goku, Vegeta, Piccolo, Freeza, Trunks, Gohan, Supremo Sr. Kaio, Gogeta, Bardock, Androides 17 e 18, Majin Buu, Raditz e Broly.
+O jogo já vem com 15 personagens: Goku, Vegeta, Piccolo, Freeza, Trunks, Gohan, Supremo Sr. Kaio, Gogeta, Bardock, Androides 17 e 18, Majin Buu, Raditz, Broly e Cell.
 
 Em **DATABASE** você cria personagens novos de duas formas:
 - **Construtor:** monta o personagem juntando partes, como cabelo, roupa, cauda, asas e acessórios.
