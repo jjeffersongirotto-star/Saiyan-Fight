@@ -1527,10 +1527,14 @@ function assignSelectedSpriteFrame() {
 }
 
 function clearActiveSpriteFrames() {
-    tempAnimations[activeSpriteMovement] = [];
-    delete savedSpriteMotionPreviewFrames[activeSpriteMovement];
-    renderSpriteAssignedFrames();
-    renderSpriteMotionPreview();
+    const frames = getSpriteMotionPreviewFrames();
+    if (!frames.length) return;
+    showSystemConfirm("LIMPAR MOVIMENTO", `APAGAR TODOS OS ${frames.length} QUADRO(S) DO MOVIMENTO ${getSpriteMovementDisplayName(activeSpriteMovement)}?`, () => {
+        tempAnimations[activeSpriteMovement] = [];
+        delete savedSpriteMotionPreviewFrames[activeSpriteMovement];
+        renderSpriteAssignedFrames();
+        renderSpriteMotionPreview();
+    }, "SIM", "NÃO");
 }
 
 function renderSpriteAssignedFrames() {
@@ -2009,7 +2013,14 @@ function saveCharacterFromModal() {
     }
 
     let key = editingKey || ("char_" + Date.now());
-    const idleFrames = tempAnimations.idle || [];
+    let idleFrames = tempAnimations.idle || [];
+    let usedFirstSheetFrame = false;
+    if (!idleFrames.length && spriteSheetImage) {
+        const grid = getSpriteSheetGrid();
+        const frameCount = grid ? Math.min(grid.settings.total, grid.columns * grid.rows) : 1;
+        const firstFrame = frameCount > 1 ? extractSpriteSheetFrame(0) : null;
+        if (firstFrame) { idleFrames = [firstFrame]; usedFirstSheetFrame = true; }
+    }
     let finalUrl = idleFrames[0] || tempBase64 || getFallbackSpriteSvg();
 
     loadImageSecure(finalUrl, (img) => {
@@ -2087,7 +2098,9 @@ function saveCharacterFromModal() {
                 }
             }
             closeModal();
-            showSystemAlert("SUCESSO", `PERSONAGEM ${name} SALVO!`);
+            showSystemAlert("SUCESSO", usedFirstSheetFrame
+                ? `PERSONAGEM ${name} SALVO! COMO NENHUM QUADRO FOI ESCOLHIDO PARA "PARADO", FOI USADO O 1º QUADRO DA SPRITE SHEET.`
+                : `PERSONAGEM ${name} SALVO!`);
         } else {
             showSystemAlert("ERRO", "NÃO FOI POSSÍVEL CARREGAR A IMAGEM!");
         }

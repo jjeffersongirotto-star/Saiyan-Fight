@@ -129,8 +129,8 @@ function playSound(type) {
             osc.type = "sine";
             osc.frequency.setValueAtTime(500, now);
             osc.frequency.exponentialRampToValueAtTime(300, now + 0.08);
-            gain.gain.setValueAtTime(0.15 * bgmVolume, now);
-            gain.gain.linearRampToValueAtTime(0.01 * bgmVolume, now + 0.08);
+            gain.gain.setValueAtTime(0.15 * vol, now);
+            gain.gain.linearRampToValueAtTime(0.01 * vol, now + 0.08);
             duration = 0.08;
         }
 

@@ -1542,7 +1542,13 @@ function pollGamepads(dt) {
 
         for (const action of ["up", "down", "left", "right", "charge"]) setPadKey(profile, action, intent[action]);
 
-        if (intent.attack) {
+        const inClash = world.beamOwner === "clash" && world.beamActive > 0;
+        if (inClash) {
+            if (intent.attack && !padPrevPressed[profile].attack) triggerAction("attack", target, isP2);
+            padPrevPressed[profile].attack = intent.attack;
+            padAttackCooldown[profile] = 0;
+        } else if (intent.attack) {
+            padPrevPressed[profile].attack = true;
             padAttackCooldown[profile] -= dt * 60;
             const blocked = !isP2 && (player.isCharging || player.parryHighlightTimer > 0 || world.beamActive > 0);
             if (padAttackCooldown[profile] <= 0 && !blocked) {
@@ -1550,6 +1556,7 @@ function pollGamepads(dt) {
                 padAttackCooldown[profile] = TOUCH_AUTOFIRE_INTERVAL;
             }
         } else {
+            padPrevPressed[profile].attack = false;
             padAttackCooldown[profile] = 0;
         }
 
@@ -2046,6 +2053,9 @@ window.onkeydown = (e) => {
 
     keysPressed[e.code] = true;
 
+    // No choque de feixes vale quem APERTA mais rápido: a repetição automática de tecla segurada não conta.
+    if (e.repeat && world.beamOwner === "clash" && world.beamActive > 0) return;
+
     // Evita que Espaço/setas rolem a página ou "cliquem" num botão focado durante a partida.
     if (gameState === "playing" && ["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) {
         e.preventDefault();
@@ -2285,7 +2295,7 @@ function handleMenuClick(x, y) {
         else if (hitRect(x, y, MENU_LAYOUT.paused.resume) || autoPaused) requestResume();
     }
     else if (gameState === "gameover") {
-        setGameState("menu");
+        setGameState(gameMode === "singleplayer" ? "stage_map" : "menu");
     }
     else if (gameState === "characters") {
         let chars = getFilteredCharacters();
@@ -3683,7 +3693,7 @@ function render() {
             }
             ctx.fillStyle = "#ffffff";
             ctx.font = "12px 'Courier New', monospace";
-            ctx.fillText("CLIQUE EM QUALQUER LUGAR PARA REINICIAR", canvas.width / 2, panelY + panelH + 40);
+            ctx.fillText(gameMode === "singleplayer" ? "TOQUE OU CLIQUE PARA VOLTAR AO MAPA DE FASES" : "TOQUE OU CLIQUE PARA VOLTAR AO MENU", canvas.width / 2, panelY + panelH + 40);
         }
     } 
     else if (gameState === "menu") {
@@ -4517,9 +4527,10 @@ function render() {
         // Só anima/conta o tempo enquanto o jogo não está pausado — senão a conquista podia aparecer, deslizar
         // e sumir sozinha até enquanto a partida estava congelada, sem o jogador nem ver direito.
         if (gameState !== "paused") {
-            achievementBanner.timer++;
-            if (achievementBanner.timer < 30) achievementBanner.yOffset += 2;
-            else if (achievementBanner.timer > achievementBanner.maxTimer - 30) achievementBanner.yOffset -= 2;
+            // timer em "quadros a 60 fps": desce em 0,5 s, fica parado e sobe nos últimos 0,5 s
+            achievementBanner.timer += deltaTime * 60;
+            const t = achievementBanner.timer, endT = achievementBanner.maxTimer - 30;
+            achievementBanner.yOffset = t < 30 ? -60 + 2 * t : t > endT ? -2 * (t - endT) : 0;
         }
 
         ctx.save();

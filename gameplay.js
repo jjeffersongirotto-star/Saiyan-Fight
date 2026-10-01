@@ -26,8 +26,7 @@ const SPAWN_TIMERS = {
 };
 
 const SSJ_UNLOCK = {
-    SCORE_THRESHOLD: 10,
-    SPEED_AFTER_TRANSFORM: 5.5
+    SCORE_THRESHOLD: 10
 };
 
 const UNTOUCHABLE_ACHIEVEMENT_SCORE = 5;
@@ -748,8 +747,10 @@ function addFloatingText(textData) {
 }
 
 function updateAura(entity, auraType, isBoss = false) {
+    // só o jogador 1 tem a aura dourada de Super Saiyajin; a aura do chefe não muda com isso
+    const ssjAura = !isBoss && player.isSSJ;
     let colors = AURA_COLORS[auraType] || AURA_COLORS.gelo;
-    if (player.isSSJ && !isBoss) colors = AURA_COLORS.amarelo;
+    if (ssjAura) colors = AURA_COLORS.amarelo;
 
     let mult = ((!isBoss && player.isCharging) || (isBoss && player2.isCharging)) ? 3 : 1;
     
@@ -763,10 +764,10 @@ function updateAura(entity, auraType, isBoss = false) {
                 y: py,
                 vx: (Math.random() - 0.5) * 1.2,
                 vy: -1.5 - Math.random() * 3,
-                size: (auraType === "gelo" && !player.isSSJ) ? 3 + Math.random() * 3 : 4 + Math.random() * 6,
+                size: (auraType === "gelo" && !ssjAura) ? 3 + Math.random() * 3 : 4 + Math.random() * 6,
                 alpha: 0.8,
                 color: colors[Math.floor(Math.random() * colors.length)],
-                isWind: auraType === "gelo" && !player.isSSJ
+                isWind: auraType === "gelo" && !ssjAura
             });
         }
     }
@@ -871,7 +872,7 @@ function triggerGameOver() {
     const prevStageBest = getStageRecord(selectedStage);
 
     saveRankingScore(score);
-    saveStageRankingScore(selectedStage, score);
+    if (gameMode === "singleplayer") saveStageRankingScore(selectedStage, score);
     if (score > highScore) {
         highScore = score;
         writeStorage("saiyan_highscore", highScore);
@@ -1508,7 +1509,7 @@ function update(dt) {
     }
 
     if (score >= SSJ_UNLOCK.SCORE_THRESHOLD && !player.isSSJ) {
-        player.speed = SSJ_UNLOCK.SPEED_AFTER_TRANSFORM;
+        // mesma velocidade da transformação manual (transformPlayer soma +1)
         transformPlayer(player, false, true);
     }
 
@@ -1585,7 +1586,7 @@ function update(dt) {
         player2.y = Math.max(BOUNDS.PLAYER_MIN_Y, Math.min(BOUNDS.PLAYER_MAX_Y_BASE - (player2.h - 56), player2.y));
     }
 
-    player2.isCharging = !!keysPressed[keyBindings.p2.charge];
+    player2.isCharging = gameMode === "coop" && !!keysPressed[keyBindings.p2.charge];
     if (player2.isCharging) {
         player2.ki = Math.min(player2.maxKi, player2.ki + (0.8 * dt * 60));
     }
