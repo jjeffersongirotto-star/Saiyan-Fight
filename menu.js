@@ -3152,11 +3152,13 @@ function traceKiAuraFlame(g, cx, bottomY, w, h, phase, seed) {
 // Quadros da aura guardados (por cor, tamanho e quadro da animação): desenhar 3 labaredas grandes a cada quadro
 // pesava no celular. Tamanho arredondado em degraus para reaproveitar enquanto a aura cresce/diminui.
 const KI_AURA_FRAMES = 24;
+// Cada quadro é desenhado uma vez num tamanho fixo e esticado na hora para o tamanho da aura (que cresce ao
+// carregar e muda com o movimento) — guardar um quadro por tamanho criava centenas de imagens e pausas.
+const KI_AURA_BASE_W = 56, KI_AURA_BASE_H = 112;
 let kiAuraCache = new Map();
-function getKiAuraFrame(pal, w, h, frame, seed) {
-    w = Math.max(4, Math.round(w / 3) * 3);
-    h = Math.max(4, Math.round(h / 3) * 3);
-    const key = pal[0] + pal[1] + "|" + w + "|" + h + "|" + frame + "|" + seed;
+function getKiAuraFrame(pal, frame, seed) {
+    const w = KI_AURA_BASE_W, h = KI_AURA_BASE_H;
+    const key = pal[0] + pal[1] + "|" + frame + "|" + seed;
     let c = kiAuraCache.get(key);
     if (c) return c;
     if (kiAuraCache.size > 600) kiAuraCache = new Map();
@@ -3191,11 +3193,12 @@ function drawKiAura(entity, charData, cx, bottomY, bodyW, bodyH) {
     const seed = entity === player2 ? 0.37 : 0;
     // a energia sobe mais rápido quando carregando/transformado
     entity.kiAuraPhase = ((entity.kiAuraPhase || 0) + deltaTime * (0.55 + 0.35 * k)) % 1;
-    const img = getKiAuraFrame(pal, w, h, Math.floor(entity.kiAuraPhase * KI_AURA_FRAMES) % KI_AURA_FRAMES, seed);
+    const img = getKiAuraFrame(pal, Math.floor(entity.kiAuraPhase * KI_AURA_FRAMES) % KI_AURA_FRAMES, seed);
     if (!img || !img.width) return;
     ctx.save();
     ctx.globalAlpha *= 0.62 + 0.25 * k;
-    ctx.drawImage(img, Math.round(cx - img.width / 2), Math.round(bottomY + img.bottomOffset - img.height));
+    const sx = w / KI_AURA_BASE_W, sy = h / KI_AURA_BASE_H, dw = img.width * sx, dh = img.height * sy;
+    ctx.drawImage(img, Math.round(cx - dw / 2), Math.round(bottomY + img.bottomOffset * sy - dh), Math.round(dw), Math.round(dh));
     ctx.restore();
 }
 
@@ -3707,6 +3710,7 @@ function render() {
     let now = performance.now();
     deltaTime = Math.min((now - lastFrameTime) / 1000, 0.1);
     runDueButtonActions();
+    runBackgroundWork();
     lastFrameTime = now;
 
     // Janela (editor, novidades, alerta) cobrindo a tela fora da luta: não redesenha o jogo escondido atrás

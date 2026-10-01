@@ -224,10 +224,17 @@ const PROCEDURAL_ANIM_FPS = {
 // Um personagem do construtor guarda ~54 quadros de SVG por animação (centenas de KB a >1MB); persistir tudo
 // isso no localStorage estoura a cota do navegador (4-5 personagens já passam de 5-10MB). Por isso só a
 // aparência (poucas centenas de bytes) é salva, e as animações são recriadas aqui, na hora de carregar.
+// Os quadros de cada movimento só são gerados na primeira vez que alguém os lê (abrir o jogo gerava os ~800
+// quadros de todos os personagens de uma vez e demorava segundos no celular).
 function buildProceduralAnimations(appearance) {
     const animations = {}, fpsSettings = {};
     SUB_ANIM_KEYS.forEach(state => {
-        animations[state] = getProceduralFrameUrls(appearance, state);
+        const fixa = (v) => Object.defineProperty(animations, state, { value: v, enumerable: true, configurable: true, writable: true });
+        Object.defineProperty(animations, state, {
+            enumerable: true, configurable: true,
+            get() { const v = getProceduralFrameUrls(appearance, state); fixa(v); return v; },
+            set(v) { fixa(v); }
+        });
         fpsSettings[state] = PROCEDURAL_ANIM_FPS[state] || 12;
     });
     return { animations, fpsSettings };
@@ -2204,7 +2211,15 @@ function stopBuilderPreview() {
     }
 }
 
+// Arrastar uma cor dispara dezenas de trocas por segundo: a prévia só é refeita quando o dedo para por um instante
+// (antes cada passo gerava todos os quadros e o construtor travava por segundos).
+let builderPreviewDebounce = null;
 function refreshBuilderPreview() {
+    if (builderPreviewDebounce) clearTimeout(builderPreviewDebounce);
+    builderPreviewDebounce = setTimeout(() => { builderPreviewDebounce = null; refreshBuilderPreviewNow(); }, 90);
+}
+
+function refreshBuilderPreviewNow() {
     const canvas = document.getElementById("build-preview-canvas");
     if (!canvas || !canvas.getContext) return;
     const bctx = canvas.getContext("2d");

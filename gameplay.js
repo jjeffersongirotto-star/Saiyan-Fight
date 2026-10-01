@@ -334,12 +334,35 @@ function getCharacterAnimationFrame(charKey, actionState, animTimer, transformed
 
 // Carrega de antemão todos os quadros do personagem. Sem isso, a 1ª vez que cada quadro aparece (ao mudar de
 // movimento) ele ainda não está pronto e o personagem "pisca". Transformado: os quadros de cabelo amarelo.
+// Feito aos poucos (ver runBackgroundWork): gerar e carregar tudo de uma vez travava o começo da luta e, ao
+// transformar, congelava o jogo por quase um segundo no celular. Cada movimento vira uma tarefa que só calcula
+// os desenhos (rápido); as imagens normais são carregadas uma por tarefa. As do cabelo amarelo só são calculadas
+// — viram imagem quando aparecem (carregar ~100 imagens a mais no começo da luta derrubava o FPS).
+const backgroundWork = { frames: [], images: [], pixelArt: [] };
 function preloadCharacterFrames(charKey, transformed) {
+    if (!characterDB[charKey] || typeof Image === "undefined") return;
+    SUB_ANIM_KEYS.forEach(state => backgroundWork.frames.push([charKey, state, !!transformed]));
+}
+
+function preloadOneState(charKey, state, transformed) {
     const char = characterDB[charKey];
-    if (!char || typeof Image === "undefined") return;
-    SUB_ANIM_KEYS.forEach(state => {
-        getCharacterAnimationFrames(charKey, state, transformed).forEach(src => getOrCacheGameplayImage(src, char.imageObj, char.bgRemoval));
-    });
+    if (!char) return;
+    const frames = getCharacterAnimationFrames(charKey, state, transformed);
+    if (!transformed) frames.forEach(src => backgroundWork.images.push(() => getOrCacheGameplayImage(src, char.imageObj, char.bgRemoval)));
+}
+
+// Chamado uma vez por quadro (menu.js/render): adianta, sem passar de ~4 ms, o que pode ser preparado antes de
+// aparecer na tela — quadros dos personagens e a pixel art de cada quadro já carregado. Sempre anda pelo menos um passo.
+function runBackgroundWork(budgetMs = 4) {
+    const start = performance.now();
+    let feito = 0;
+    while (feito === 0 || performance.now() - start < budgetMs) {
+        if (backgroundWork.pixelArt.length) backgroundWork.pixelArt.shift()();
+        else if (backgroundWork.images.length) { backgroundWork.images.shift()(); break; }   // 1 imagem por quadro: o navegador decodifica depois
+        else if (backgroundWork.frames.length) preloadOneState(...backgroundWork.frames.shift());
+        else break;
+        feito++;
+    }
 }
 
 // Devolve a imagem sem a cor de fundo (canvas transparente), calculada uma vez por imagem + configuração.
@@ -443,7 +466,8 @@ function getPixelArtSource(source, w, h) {
     const sized = new Image();
     // cores chapadas só nos desenhos em pixel art (nítidos); outros SVGs mantêm os degradês
     const pixelStyle = src.includes("crispEdges");
-    sized.onload = () => { perSize[key] = buildPixelArt(sized, w, h, pixelStyle ? getSvgPalette(src) : null); };
+    // montar a pixel art (ler e chapar os pixels) fica na fila de runBackgroundWork, sem picos de vários de uma vez
+    sized.onload = () => { backgroundWork.pixelArt.push(() => { perSize[key] = buildPixelArt(sized, w, h, pixelStyle ? getSvgPalette(src) : null); }); };
     sized.src = src.replace(/width%3D%22[\d.]+%22%20height%3D%22[\d.]+%22/, `width%3D%22${w}%22%20height%3D%22${h}%22`);
     return null;
 }
@@ -515,7 +539,12 @@ function getOrCacheGameplayImage(src, fallbackObj, bgOpts) {
         img.src = src;
         gameplayImageCache[src] = img;
     }
-    return getCutoutSource(gameplayImageCache[src], bgOpts);
+    const img = gameplayImageCache[src];
+    // Desenho em pixel art (nítido): o jogo desenha a versão pixel art feita direto do SVG (getPixelArtSource);
+    // converter o SVG também para uma imagem do tamanho original era um trabalho a mais em cada quadro novo.
+    if (img.__pixelSvg === undefined) img.__pixelSvg = src.startsWith("data:image/svg") && src.includes("crispEdges");
+    if (img.__pixelSvg) { img.__svgImage = img; return img; }
+    return getCutoutSource(img, bgOpts);
 }
 
 function isDrawableSource(source) {
@@ -601,8 +630,12 @@ function startGame() {
     totalReflects = 0;
     takenDamageInRun = false;
     
+    backgroundWork.frames.length = 0;
+    backgroundWork.images.length = 0;
     preloadCharacterFrames(selectedCharacter, false);
     preloadCharacterFrames(selectedBoss, false);
+    preloadCharacterFrames(selectedCharacter, true);   // já deixa pronto o cabelo amarelo (transformar sem travar)
+    preloadCharacterFrames(selectedBoss, true);
     let waveParams = getWaveParams(waveNumber);
 
     world.obstacles = [];
