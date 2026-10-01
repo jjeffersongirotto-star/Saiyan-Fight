@@ -1,6 +1,6 @@
 // tests/limpeza-editor-e-toque.test.js — limpeza de código antigo/duplicado:
 // - botões de toque (ataque, parry, especial, transformar) passam pelo mesmo caminho do teclado (triggerAction),
-//   então o aviso "KI INSUFICIENTE" agora aparece em qualquer controle, não só no toque;
+//   então o aviso "ENCHA O KI PARA TRANSFORMAR" agora aparece em qualquer controle, não só no toque;
 // - "ADICIONAR QUADRO AO MOVIMENTO" e "SALVAR FRAMES NA PRÉVIA" faziam o mesmo: ficou um botão só;
 // - o editor sem imagem nenhuma continua mostrando/salvando a imagem reserva.
 //
@@ -15,21 +15,21 @@ const avisos = () => run("world.floatingTexts.map(t => t.text)");
 // ---------- aviso de ki insuficiente: teclado e toque ----------
 run("gameMode = 'singleplayer'; stageMode = 'normal'; startGame(); player.ki = 0; world.floatingTexts = []");
 run("triggerAction('transform', player, false)");
-check("teclado/controle: transformar sem ki mostra o aviso", avisos().some(t => t.startsWith("KI INSUFICIENTE")));
+check("teclado/controle: transformar sem ki mostra o aviso", avisos().some(t => t.startsWith("ENCHA O KI")));
 check("teclado/controle: sem ki não transforma", run("player.isSSJ") === false);
 
 run("world.floatingTexts = []; player.ki = 0");
 const r = run("getHudButtonRect('transform')");
 fire("touchstart", [touch(1, r.x + r.w / 2, r.y + r.h / 2)], [touch(1, r.x + r.w / 2, r.y + r.h / 2)]);
 fire("touchend", [], [touch(1, r.x + r.w / 2, r.y + r.h / 2)]);
-check("toque: o botão TRANSF. continua mostrando o aviso", avisos().some(t => t.startsWith("KI INSUFICIENTE")));
+check("toque: o botão TRANSF. continua mostrando o aviso", avisos().some(t => t.startsWith("ENCHA O KI")));
 
 run("world.floatingTexts = []; player.ki = 100");
 run("triggerAction('transform', player, false)");
-check("com ki suficiente transforma normalmente (sem aviso)", run("player.isSSJ") === true && !avisos().some(t => t.startsWith("KI INSUFICIENTE")));
+check("com ki suficiente transforma normalmente (sem aviso)", run("player.isSSJ") === true && !avisos().some(t => t.startsWith("ENCHA O KI")));
 run("world.floatingTexts = []");
 run("triggerAction('transform', player, false)");
-check("já transformado: apertar de novo não mostra aviso de ki", !avisos().some(t => t.startsWith("KI INSUFICIENTE")));
+check("já transformado: apertar de novo não mostra aviso de ki", !avisos().some(t => t.startsWith("ENCHA O KI")));
 
 // ---------- botão de toque ATAQUE e PARRY seguem funcionando pelo caminho único ----------
 run("startGame(); world.obstacles = []; runStats.attacks = 0");

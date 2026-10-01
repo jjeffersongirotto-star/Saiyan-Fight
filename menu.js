@@ -2322,7 +2322,7 @@ function triggerAction(actionName, targetPlayer, isP2 = false) {
         // Sem ki suficiente avisa em qualquer controle (toque, teclado, mouse ou controle), não só no toque.
         const alreadyTransformed = isP2 ? targetPlayer.isTransformed : targetPlayer.isSSJ;
         if (!transformPlayer(targetPlayer, isP2) && !alreadyTransformed) {
-            addFloatingText({ text: "KI INSUFICIENTE (80)", x: targetPlayer.x + targetPlayer.w / 2, y: targetPlayer.y - 10, alpha: 1, color: "#ffcc00" });
+            addFloatingText({ text: "ENCHA O KI PARA TRANSFORMAR", x: targetPlayer.x + targetPlayer.w / 2, y: targetPlayer.y - 10, alpha: 1, color: "#ffcc00" });
         }
     }
     else if (actionName === "parry") tryReflect(targetPlayer, isP2);
@@ -3669,7 +3669,7 @@ function drawTouchHUD() {
         const isEditing = gameState === "options_hud";
         const isSelected = hudEditorSelectedBtn === key && isEditing;
         // Botão TRANSF. acende (dourado) quando há ki suficiente e fica apagado quando não dá para usar.
-        const transformReady = key === "transform" && player.ki >= 80 && !player.isSSJ;
+        const transformReady = key === "transform" && player.ki >= player.maxKi && !player.isSSJ;
         const specialReady = key === "special" && canUseSpecial(player.ki, player.maxKi) && world.beamActive <= 0;
         const transformDim = (key === "transform" && !transformReady && !isEditing) || (key === "special" && !specialReady && !isEditing);
         const highlight = isSelected || transformReady || specialReady;
