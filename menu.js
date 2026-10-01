@@ -3059,11 +3059,26 @@ function drawPlayerEntity(p, charData, isBoss = false) {
     }
     drawKiAura(p, charData, artX + artW / 2, artY + artH * (103 / 112), artW, artH * 0.9);
     const pixelArt = isDrawableSource(animationFrame) ? getPixelArtSource(animationFrame, artW, artH) : null;
+    // Último desenho deste personagem: se o quadro novo ainda não ficou pronto (1ª vez daquele movimento/tamanho),
+    // repete o último em vez de sumir ou trocar de estilo por um instante (era a "piscada" ao se mover).
+    const last = p.lastSpriteDraw && p.lastSpriteDraw.key === fallbackKey ? p.lastSpriteDraw : null;
+    const pixelPending = svgSrc.includes("crispEdges") && !pixelArt;
     if (pixelArt) {
         // pixel art no tamanho exato: desenha 1:1 numa posição inteira (sem esticar = pixels nítidos)
         ctx.drawImage(pixelArt.img, Math.round(artX) - pixelArt.pad, Math.round(artY) - pixelArt.pad);
+        p.lastSpriteDraw = { key: fallbackKey, img: pixelArt.img, pad: pixelArt.pad, w: artW, h: artH };
+    } else if (last && (pixelPending || !isDrawableSource(animationFrame))) {
+        if (last.pad) {
+            const sx = artW / last.w, sy = artH / last.h, smooth = ctx.imageSmoothingEnabled;
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(last.img, Math.round(artX - last.pad * sx), Math.round(artY - last.pad * sy), last.img.width * sx, last.img.height * sy);
+            ctx.imageSmoothingEnabled = smooth;
+        } else {
+            ctx.drawImage(last.img, artX, artY, artW, artH);
+        }
     } else if (isDrawableSource(animationFrame)) {
         ctx.drawImage(animationFrame, artX, artY, artW, artH);
+        if (!svgSrc.includes("crispEdges")) p.lastSpriteDraw = { key: fallbackKey, img: animationFrame, pad: 0, w: artW, h: artH };
     } else if (charData && charData.imageObj && charData.imageObj.complete && charData.imageObj.naturalWidth !== 0) {
         let img = getCutoutSource(charData.imageObj, charData.bgRemoval);
         let imgW = img.naturalWidth || img.width;

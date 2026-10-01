@@ -332,6 +332,16 @@ function getCharacterAnimationFrame(charKey, actionState, animTimer, transformed
     return getOrCacheGameplayImage(frameSrc, char.imageObj, char.bgRemoval);
 }
 
+// Carrega de antemão todos os quadros do personagem. Sem isso, a 1ª vez que cada quadro aparece (ao mudar de
+// movimento) ele ainda não está pronto e o personagem "pisca". Transformado: os quadros de cabelo amarelo.
+function preloadCharacterFrames(charKey, transformed) {
+    const char = characterDB[charKey];
+    if (!char || typeof Image === "undefined") return;
+    SUB_ANIM_KEYS.forEach(state => {
+        getCharacterAnimationFrames(charKey, state, transformed).forEach(src => getOrCacheGameplayImage(src, char.imageObj, char.bgRemoval));
+    });
+}
+
 // Devolve a imagem sem a cor de fundo (canvas transparente), calculada uma vez por imagem + configuração.
 // bgOpts = character.bgRemoval ({mode: auto|color|none, color, tolerance}); sem config = "auto" (apaga o branco).
 // SVG do jogo já vem sem fundo (ver stripSvgWhiteBackground). Se a imagem não puder ser lida
@@ -591,6 +601,8 @@ function startGame() {
     totalReflects = 0;
     takenDamageInRun = false;
     
+    preloadCharacterFrames(selectedCharacter, false);
+    preloadCharacterFrames(selectedBoss, false);
     let waveParams = getWaveParams(waveNumber);
 
     world.obstacles = [];
@@ -853,6 +865,7 @@ function transformPlayer(p, isP2 = false, force = false) {
     if (!canTransform || (isP2 ? p.isTransformed : p.isSSJ)) return false;
 
     if (!force) p.ki -= 80;
+    preloadCharacterFrames(isP2 ? selectedBoss : selectedCharacter, true);
     if (!isP2) {
         p.isSSJ = true;
         p.speed += 1.0;
