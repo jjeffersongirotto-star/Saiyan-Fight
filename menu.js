@@ -140,7 +140,7 @@ let rankingViewMode = "geral";      // "geral" | "fase"
 let rankingSelectedStage = null;    // qual arena está selecionada na visão "por fase"
 let stageChoicePendingId = null;    // id da fase clicada no mapa quando ela já foi dominada (mostra o overlay
                                      // "DESAFIO (10 CHEFES)" vs "SEM LIMITE" antes de começar a partida)
-const TIER_COLORS = { gold: "#ffd23f", silver: "#cbd2da", bronze: "#c2793a" };
+const TIER_COLORS = { diamond: "#7fe8ff", gold: "#ffd23f", silver: "#cbd2da", bronze: "#c2793a" };
 
 // ==================== MAPA DE FASES (hub do singleplayer) ====================
 // Posições em serpentina (linha de baixo pra cima, esquerda-direita depois direita-esquerda), na MESMA ordem
@@ -4162,11 +4162,12 @@ function render() {
         ctx.strokeRect(cardX, cardY, cardW, cardH);
 
         const medalSlots = [
+            ["diamond", "DIAMANTE", TIER_COLORS.diamond],
             ["gold", "OURO", TIER_COLORS.gold],
             ["silver", "PRATA", TIER_COLORS.silver],
             ["bronze", "BRONZE", TIER_COLORS.bronze]
         ];
-        const slotW = cardW / 3;
+        const slotW = cardW / medalSlots.length;
         medalSlots.forEach(([tierKey, label, color], i) => {
             const sx = cardX + slotW * i + slotW / 2;
             drawMedalIcon(sx - 34, cardY + cardH / 2, 9, color);

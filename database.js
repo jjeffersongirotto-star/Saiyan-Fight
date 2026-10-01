@@ -400,6 +400,8 @@ function initSettings() {
         loadStats();
         loadStageProgress();
         loadStageWaveRecord();
+        checkStageModeAchievements();
+        checkAllAchievementsComplete();
         loadCharacterData();
 
         const savedHero = readStorage("saiyan_selected_hero");

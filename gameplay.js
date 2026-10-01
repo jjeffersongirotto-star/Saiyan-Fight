@@ -558,6 +558,7 @@ function resolveStageVictory() {
     const wasNormalDone = !!before.normalDone, wasHardDone = !!before.hardDone;
     const progress = registerStageModeComplete(selectedStage, stageMode);
     if (selectedStage === STAGE_PROGRESSION[0].id && progress.normalDone) unlockAchievement("stage_" + selectedStage);
+    checkStageModeAchievements();
     saveRankingScore(score);
     saveStageRankingScore(selectedStage, score);
     const stageInfo = STAGE_PROGRESSION.find(s => s.id === selectedStage);
