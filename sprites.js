@@ -81,7 +81,7 @@ const SPRITE_RACE_SKIN = {
 };
 
 const SPRITE_DEFAULT_APPEARANCE = {
-    race: "Saiyajin", build: "normal", proporcao: "classico", skinColor: "",
+    race: "Saiyajin", build: "normal", proporcao: "anime", skinColor: "",
     hairStyle: "goku", hairColor: "#16110f",
     eyeType: "normal", irisColor: "#1a1210", scleraColor: "#ffffff",
     earType: "normal", mouthType: "smile", accessory: "none", hat: "none",
@@ -159,10 +159,12 @@ function spriteLimb(x1, y1, x2, y2, w, color, opts) {
     const P = `x1="${_n2(x1)}" y1="${_n2(y1)}" x2="${_n2(x2)}" y2="${_n2(y2)}"`;
     const off = (k, ww) => `x1="${_n2(x1 + nx * k)}" y1="${_n2(y1 + ny * k)}" x2="${_n2(x2 + nx * k)}" y2="${_n2(y2 + ny * k)}"`;
     const cap = o.cap || "round";
-    return `<line ${P} stroke="${SPRITE_OUTLINE}" stroke-width="${_n2(w + 2.2)}" stroke-linecap="${cap}"/>` +
-        `<line ${P} stroke="${color}" stroke-width="${_n2(w)}" stroke-linecap="${cap}"/>` +
-        `<line ${off(-w * 0.27)} stroke="${spriteShade(color, -0.34)}" stroke-width="${_n2(w * 0.3)}" stroke-linecap="${cap}" opacity="0.55"/>` +
+    const base = `<line ${P} stroke="${SPRITE_OUTLINE}" stroke-width="${_n2(w + 2.2)}" stroke-linecap="${cap}"/>`;
+    const fill = `<line ${P} stroke="${color}" stroke-width="${_n2(w)}" stroke-linecap="${cap}"/>`;
+    const shade = `<line ${off(-w * 0.27)} stroke="${spriteShade(color, -0.34)}" stroke-width="${_n2(w * 0.3)}" stroke-linecap="${cap}" opacity="0.55"/>` +
         `<line ${off(w * 0.2)} stroke="${spriteShade(color, 0.42)}" stroke-width="${_n2(w * 0.26)}" stroke-linecap="${cap}" opacity="0.6"/>`;
+    if (o.parts) return { base, fill, shade };   // para juntar membros sem risco na junta (spriteJoined)
+    return base + fill + shade;
 }
 
 // Membro "anatômico" (estilo anime): mais grosso numa ponta que na outra (ombro→cotovelo, coxa→joelho), com
@@ -923,7 +925,8 @@ function spriteArm(R, a, B, spec, glove, skin, side, angles, handKind) {
         s += spriteHand(R, h[0], h[1], w * 0.52, handColor, handKind === "open", dirA + 180);
         return { svg: s, hand: h, elbow: e };
     }
-    s += spriteLimb(sx, sy, e[0], e[1], w, spec.armUpper);
+    // braço + antebraço como uma peça só (sem risco preto no cotovelo)
+    s += spriteJoined(spriteLimb(sx, sy, e[0], e[1], w, spec.armUpper, { parts: true }), spriteLimb(e[0], e[1], h[0], h[1], w * 0.94, spec.armLower, { parts: true }));
     // Bíceps: corpo "musculoso"/"gigante" ganha um bojo visível no meio do braço superior (senão a diferença
     // de espessura sozinha é sutil demais para notar no tamanho do jogo). "magro"/"jovem" não ganham nada extra.
     if (B.bulk > 0) {
@@ -933,7 +936,6 @@ function spriteArm(R, a, B, spec, glove, skin, side, angles, handKind) {
         s += `<ellipse cx="${_n2(mx)}" cy="${_n2(my)}" rx="${_n2(bulgeR)}" ry="${_n2(bulgeR * 0.82)}" fill="${bulgeFill}" stroke="${SPRITE_OUTLINE}" stroke-width="0.9"/>`;
         s += `<path d="M${_n2(mx - bulgeR * 0.3)} ${_n2(my - bulgeR * 0.4)} q${_n2(bulgeR * 0.3)} ${_n2(-bulgeR * 0.15)} ${_n2(bulgeR * 0.55)} ${_n2(bulgeR * 0.1)}" fill="none" stroke="${spriteShade(spec.armUpper, 0.55)}" stroke-width="0.8" opacity="0.6" stroke-linecap="round"/>`;
     }
-    s += spriteLimb(e[0], e[1], h[0], h[1], w * 0.94, spec.armLower);
     if (spec.sleeve) {
         const p = [sx + (e[0] - sx) * spec.sleeve.frac, sy + (e[1] - sy) * spec.sleeve.frac];
         s += spriteLimb(sx, sy, p[0], p[1], w * 1.2, spec.sleeve.color);
@@ -976,8 +978,8 @@ function spriteLeg(R, a, B, spec, boot, skin, side, angles) {
             `<path d="M${_n2(f[0] - 3.6)} ${_n2(f[1] + 2.4)} L${_n2(f[0] + side * 6.2)} ${_n2(f[1] + 2.4)}" stroke="${spriteShade(fc, -0.45)}" stroke-width="1.3"/></g>`;
         return { svg: s, foot: f, knee: k };
     }
-    s += spriteLimb(hx, hy, k[0], k[1], w, color);
-    s += spriteLimb(k[0], k[1], f[0], f[1], w * (spec.legWide ? 0.98 : 0.94), color);
+    // coxa + canela como uma peça só (sem risco preto no joelho)
+    s += spriteJoined(spriteLimb(hx, hy, k[0], k[1], w, color, { parts: true }), spriteLimb(k[0], k[1], f[0], f[1], w * (spec.legWide ? 0.98 : 0.94), color, { parts: true }));
     if (spec.legCover && spec.legWide) {   // barra da calça frouxa
         const c = [k[0] + (f[0] - k[0]) * 0.72, k[1] + (f[1] - k[1]) * 0.72];
         s += spriteBand(c[0], c[1], f[0], f[1], w * 1.02, spriteShade(color, -0.22), 1.6);

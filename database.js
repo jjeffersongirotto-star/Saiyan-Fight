@@ -2177,14 +2177,17 @@ function refreshDefaultCharacterStyle(k, character) {
     if (!d || !saved || !SPRITE_PRESETS[d.presetKey]) return false;
     const preset = SPRITE_PRESETS[d.presetKey].appearance;
     // como o modelo era antes da mudança de estilo (campos que mudaram junto, ex.: Freeza perdeu os chifres)
+    if (saved.proporcao === "anime") return false;   // já está no estilo atual
     const before = Object.assign({}, preset, PRESET_VALUES_BEFORE_ANIME[d.presetKey] || {});
     const keys = new Set(Object.keys(saved).concat(Object.keys(before)));
     keys.delete("proporcao");
-    for (const key of keys) if (saved[key] !== before[key]) return false;   // o jogador personalizou
-    if ((saved.proporcao || "classico") === (preset.proporcao || "classico")) return false;  // já está no estilo atual
-    character.builderAppearance = preset;
+    let personalized = false;
+    for (const key of keys) if (saved[key] !== before[key]) personalized = true;
+    // igual ao modelo antigo: passa a usar o modelo novo inteiro; diferente (personalizado ou de uma versão mais
+    // antiga do modelo): mantém as escolhas salvas e só ganha o desenho novo (estilo anime)
+    character.builderAppearance = personalized ? Object.assign({}, saved, { proporcao: "anime" }) : preset;
     character.animations = {};
-    character.defaultUrl = generateSpriteFrameUrl(preset, "idle", 0);
+    character.defaultUrl = generateSpriteFrameUrl(character.builderAppearance, "idle", 0);
     return true;
 }
 
