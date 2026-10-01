@@ -8,6 +8,8 @@ Jogo de luta no estilo Dragon Ball, feito para jogar direto no navegador do celu
 
 No celular dá para deixar o jogo na tela inicial, como um aplicativo: abra o link no Chrome, toque nos três pontinhos (⋮) e escolha **"Adicionar à tela inicial"** ou **"Instalar app"**. No iPhone, use o botão de compartilhar e depois **"Adicionar à Tela de Início"**.
 
+O jogo se atualiza sozinho: quando sai uma versão nova, ele percebe e recarrega assim que você estiver num menu (nunca no meio da luta). Não precisa instalar de novo.
+
 Abrindo pelo ícone, o jogo já abre **deitado e em tela cheia**, sem o aviso do navegador ("Para sair da tela cheia...") que aparece quando se usa a tela cheia dentro do Chrome.
 
 ## 🎮 Modos
