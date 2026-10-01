@@ -1005,7 +1005,7 @@
                         </select>
                     </div>
                     <div class="form-group"><label for="build-race">RAÇA</label>
-                        <select id="build-race" onchange="onBuilderRaceChange()">
+                        <select id="build-race" onchange="refreshBuilderPreview()">
                             <option value="Saiyajin">Saiyajin (Goku, Vegeta, Gohan...)</option><option value="Humano">Humano</option>
                             <option value="Namekuseijin">Namekuseijin (Piccolo)</option><option value="Raça Freeza">Raça do Freeza</option>
                             <option value="Majin">Majin (Majin Boo)</option><option value="Android">Androide (17 e 18)</option><option value="Bio-Androide">Bio-Androide (Cell)</option>
@@ -1090,8 +1090,9 @@
                 <div class="build-section-title">ROUPAS</div>
                 <div class="sprite-control-row">
                     <div class="form-group"><label for="build-inner-shirt">CAMISA (por baixo)</label>
-                        <select id="build-inner-shirt" onchange="refreshBuilderPreview()"><option value="regata">Regata (Goku)</option><option value="malha">Malha justa (Vegeta, Trunks, Androides)</option><option value="nenhuma">Nenhuma (pele à mostra)</option></select>
+                        <select id="build-inner-shirt" onchange="refreshBuilderPreview()"><option value="camiseta">Camiseta de manguinha (Goku)</option><option value="regata">Regata, sem manga (Gogeta)</option><option value="malha">Malha de manga comprida (Vegeta, Trunks, Bardock)</option><option value="nenhuma">Nenhuma (pele à mostra)</option></select>
                     </div>
+                    <div class="form-group"><label for="build-shirt-color">COR DA CAMISA</label><input type="color" id="build-shirt-color" value="#1f4fbf" oninput="refreshBuilderPreview()"></div>
                     <div class="form-group"><label for="build-outer-shirt">ROUPA DE CIMA / CASACO</label>
                         <select id="build-outer-shirt" onchange="refreshBuilderPreview()">
                             <option value="none">Nenhuma (Broly)</option>
@@ -1120,6 +1121,7 @@
                     <div class="form-group"><label for="build-pants">CALÇA</label>
                         <select id="build-pants" onchange="refreshBuilderPreview()"><option value="larga">Larga (Goku, Piccolo, Broly)</option><option value="justa">Justa (Vegeta, Trunks, Cell)</option><option value="nenhuma">Nenhuma (fica de cueca)</option></select>
                     </div>
+                    <div class="form-group"><label for="build-pants-color">COR DA CALÇA</label><input type="color" id="build-pants-color" value="#f26a0f" oninput="refreshBuilderPreview()"></div>
                     <div class="form-group"><label for="build-symbol">SÍMBOLO NO PEITO</label>
                         <select id="build-symbol" onchange="refreshBuilderPreview()">
                             <option value="none">Nenhum</option><option value="kame">Kame (tartaruga)</option><option value="kai">Kai (Goku)</option>
@@ -1161,8 +1163,8 @@
 
                 <div class="build-section-title">CORES</div>
                 <div class="sprite-control-row">
-                    <div class="form-group"><label for="build-primary-color">COR PRINCIPAL DA ROUPA</label><input type="color" id="build-primary-color" value="#f26a0f" oninput="refreshBuilderPreview()"></div>
-                    <div class="form-group"><label for="build-secondary-color">COR SECUNDÁRIA (camisa, cueca, top)</label><input type="color" id="build-secondary-color" value="#1f4fbf" oninput="refreshBuilderPreview()"></div>
+                    <div class="form-group"><label for="build-primary-color">COR DA ROUPA DE CIMA</label><input type="color" id="build-primary-color" value="#f26a0f" oninput="refreshBuilderPreview()"></div>
+                    <div class="form-group"><label for="build-secondary-color">COR SECUNDÁRIA (faixa, munhequeira, cueca, top)</label><input type="color" id="build-secondary-color" value="#1f4fbf" oninput="refreshBuilderPreview()"></div>
                     <div class="form-group"><label for="build-accent-color">COR DE DETALHE</label><input type="color" id="build-accent-color" value="#ffd23f" oninput="refreshBuilderPreview()"></div>
                     <div class="form-group"><label for="build-ki-color">COR DO KI / AURA</label><input type="color" id="build-ki-color" value="#5be3ff" oninput="refreshBuilderPreview()"></div>
                 </div>
@@ -1191,6 +1193,7 @@
                 Novidades e correções do jogo.
             </p>
             <ul style="margin: 0 0 18px; color: #ddd; line-height: 1.6; padding-left: 18px; max-height: 50vh; overflow-y: auto;">
+                <li>Construtor: cada opção muda só a sua parte (camisa só a camisa, calça só a calça), com cor própria para camisa e calça, e todas as opções têm desenho diferente (olhos, boca, cabelo do Androide 17...).</li>
                 <li>Construtor de personagem organizado por grupos (corpo, cabeça, especiais, roupas, acessórios, cores), com GÊNERO, orelhas (pontudas, furinhos do Majin, sem orelha), antenas/chifres e marcas da raça separadas. Sem calça fica de cueca; mulher sem roupa em cima fica de top.</li>
                 <li>Todos os personagens no desenho novo em pixel art, no estilo dos jogos de luta do anime (o estilo antigo foi removido).</li>
                 <li>15 personagens prontos: Goku, Vegeta, Piccolo, Freeza, Trunks, Gohan, Supremo Sr. Kaio, Gogeta, Bardock, Androides 17 e 18, Majin Buu, Raditz, Broly e Cell (novo).</li>
