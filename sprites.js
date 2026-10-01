@@ -179,9 +179,18 @@ function spriteMuscle(x1, y1, x2, y2, w1, w2, color, opts) {
         return `M${_n2(a1[0])} ${_n2(a1[1])} Q${_n2(mA[0])} ${_n2(mA[1])} ${_n2(a2[0])} ${_n2(a2[1])} A${_n2(r2)} ${_n2(r2)} 0 0 ${sweep} ${_n2(b2[0])} ${_n2(b2[1])} Q${_n2(mB[0])} ${_n2(mB[1])} ${_n2(b1[0])} ${_n2(b1[1])} A${_n2(r1)} ${_n2(r1)} 0 0 ${sweep} ${_n2(a1[0])} ${_n2(a1[1])} Z`;
     };
     const dark = spriteShade(color, -0.36), light = spriteShade(color, 0.38);
-    return `<path d="${shape(1, 1, 0)}" fill="${color}" stroke="${SPRITE_OUTLINE}" stroke-width="1.3" stroke-linejoin="round"/>` +
-        `<path d="${shape(0.42, 0.42, -Math.min(w1, w2) * 0.3)}" fill="${dark}"/>` +
+    const base = `<path d="${shape(1, 1, 0)}" fill="${color}" stroke="${SPRITE_OUTLINE}" stroke-width="1.3" stroke-linejoin="round"/>`;
+    const fill = `<path d="${shape(1, 1, 0)}" fill="${color}"/>`;
+    const shade = `<path d="${shape(0.42, 0.42, -Math.min(w1, w2) * 0.3)}" fill="${dark}"/>` +
         `<path d="${shape(0.16, 0.16, Math.min(w1, w2) * 0.24)}" fill="${light}" opacity="0.85"/>`;
+    if (o.parts) return { base, fill, shade };
+    return base + shade;
+}
+
+// Junta duas partes de um membro (coxa+canela, braço+antebraço) como UMA peça: primeiro os contornos das duas,
+// depois as cores por cima — assim o contorno preto fica só na volta de fora, sem risco no joelho/cotovelo.
+function spriteJoined(a, b) {
+    return a.base + b.base + a.fill + b.fill + a.shade + b.shade;
 }
 
 // Faixa fina (punho, barra da calça, borda da bota): segmento curto com ponta reta, perpendicular ao membro.
@@ -732,8 +741,8 @@ function spriteArm(R, a, B, spec, glove, skin, side, angles, handKind) {
     let s = "";
     if (B.cel) {
         // anime: deltoide largo afinando no cotovelo; antebraço forte afinando no punho; manga do kimono larga.
-        s += spriteMuscle(sx, sy, e[0], e[1], w * 1.35, w * 0.9, spec.armUpper, { bulge: 0.16 });
-        s += spriteMuscle(e[0], e[1], h[0], h[1], w * 1.0, w * 0.72, spec.armLower, { bulge: 0.14 });
+        s += spriteJoined(spriteMuscle(sx, sy, e[0], e[1], w * 1.35, w * 0.9, spec.armUpper, { bulge: 0.16, parts: true }),
+            spriteMuscle(e[0], e[1], h[0], h[1], w * 1.0, w * 0.72, spec.armLower, { bulge: 0.14, parts: true }));
         if (spec.sleeve) {
             const p = [sx + (e[0] - sx) * spec.sleeve.frac, sy + (e[1] - sy) * spec.sleeve.frac];
             s += spriteMuscle(sx, sy, p[0], p[1], w * 1.42, w * 1.2, spec.sleeve.color, { bulge: 0.04 });
@@ -787,8 +796,8 @@ function spriteLeg(R, a, B, spec, boot, skin, side, angles) {
     if (B.cel) {
         // anime: coxa larga afinando no joelho; calça folgada (gi) cai larga até a bota.
         const wide = spec.legCover && spec.legWide;
-        s += spriteMuscle(hx, hy, k[0], k[1], w * (wide ? 1.55 : 1.3), w * (wide ? 1.22 : 0.92), color, { bulge: wide ? 0.08 : 0.14 });
-        s += spriteMuscle(k[0], k[1], f[0], f[1], w * (wide ? 1.22 : 0.95), w * (wide ? 1.12 : 0.66), color, { bulge: wide ? 0.04 : 0.12 });
+        s += spriteJoined(spriteMuscle(hx, hy, k[0], k[1], w * (wide ? 1.55 : 1.3), w * (wide ? 1.22 : 0.92), color, { bulge: wide ? 0.08 : 0.14, parts: true }),
+            spriteMuscle(k[0], k[1], f[0], f[1], w * (wide ? 1.22 : 0.95), w * (wide ? 1.12 : 0.66), color, { bulge: wide ? 0.04 : 0.12, parts: true }));
         if (boot) {
             const from = [f[0] + (k[0] - f[0]) * boot.h, f[1] + (k[1] - f[1]) * boot.h];
             s += spriteMuscle(from[0], from[1], f[0], f[1], w * 0.98, w * 0.86, boot.color, { bulge: 0 });
