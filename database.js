@@ -2160,9 +2160,13 @@ const DEFAULT_CHARACTERS = {
     android18: { name: "ANDROIDE 18", presetKey: "android18", align: "ANTI-HERÓI", aura: "azul", spec: "DESTRUCTO DISC" },
     majin_buu: { name: "MAJIN BUU", presetKey: "majin", align: "VILÃO", aura: "rosa", spec: "CHOCOLATE BEAM" },
     raditz: { name: "RADITZ", presetKey: "raditz", align: "VILÃO", aura: "roxo", spec: "DOUBLE SUNDAY" },
-    broly: { name: "BROLY", presetKey: "broly", align: "VILÃO", aura: "verde", spec: "ERASER CANNON" }
+    broly: { name: "BROLY", presetKey: "broly", align: "VILÃO", aura: "verde", spec: "ERASER CANNON" },
+    cell: { name: "CELL", presetKey: "cell", align: "VILÃO", aura: "verde", spec: "KAMEHAMEHA PERFEITO" }
 };
-const PRESET_VALUES_BEFORE_ANIME = { freeza: { accessory: "chifres" } };
+const PRESET_VALUES_BEFORE_ANIME = {
+    freeza: { accessory: "chifres" },
+    majin: { build: "gigante", outerShirt: "none", shoes: "botas_marrons", gloves: "nenhuma" }
+};
 
 // Personagem inicial salvo antes de o modelo dele ganhar o estilo novo (ex.: proporções "anime" em pixel art):
 // se o jogador não mexeu na aparência, passa a usar a do modelo atual (senão continuaria com o desenho antigo,
