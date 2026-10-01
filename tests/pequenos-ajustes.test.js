@@ -12,12 +12,13 @@ const h = createHarness(__dirname + "/..", 800);
 const { run, check, summary, context } = h;
 const semSpawns = "world.pickupSpawnTimer = -1e9; world.saibamanSpawnTimer = -1e9; player2.shootTimer = -1e9;";
 
-// ---------- transformação: automática = manual (+1 de velocidade) ----------
-run("gameMode = 'singleplayer'; stageMode = 'normal'; startGame(); " + semSpawns + " player.ki = 100");
-run("transformPlayer(player, false)");
-const velManual = run("player.speed");
-run("startGame(); " + semSpawns + " score = 10; update(1/60)");
-check("transformação automática (10 pontos) deixa a mesma velocidade da manual", run("player.isSSJ") && run("player.speed") === velManual, `${run("player.speed")} vs ${velManual}`);
+// ---------- transformação: só com o ki cheio e quando o jogador aperta TRANSFORMAR ----------
+run("gameMode = 'singleplayer'; stageMode = 'normal'; startGame(); " + semSpawns + " player.ki = 99");
+check("ki quase cheio (99) não transforma", run("transformPlayer(player, false)") === false && run("player.isSSJ") === false);
+run("player.ki = player.maxKi");
+check("ki cheio + apertar TRANSFORMAR transforma e gasta a barra toda", run("transformPlayer(player, false)") === true && run("player.isSSJ") && run("player.ki") === 0);
+run("startGame(); " + semSpawns + " score = 50; player.ki = player.maxKi; for (let i = 0; i < 120; i++) update(1/60)");
+check("não transforma sozinho (nem com muitos pontos e ki cheio)", run("player.isSSJ") === false);
 
 // ---------- teclas do jogador 2 não fazem o chefe carregar no modo história ----------
 run("startGame(); " + semSpawns + " player2.ki = 0; keysPressed[keyBindings.p2.charge] = true; update(1/60)");

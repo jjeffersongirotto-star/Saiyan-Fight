@@ -25,10 +25,6 @@ const SPAWN_TIMERS = {
     PICKUP_FRAMES: 420
 };
 
-const SSJ_UNLOCK = {
-    SCORE_THRESHOLD: 10
-};
-
 const UNTOUCHABLE_ACHIEVEMENT_SCORE = 5;
 
 // Itens "nuvem voadora" (velocidade) e "bastão mágico" (força): duração em frames (a 60fps) e o quanto a
@@ -97,7 +93,7 @@ function setupTutorialStep() {
         tutorialMoveStartX = player.x;
         tutorialMoveStartY = player.y;
     } else if (step.key === "transform") {
-        player.ki = 80;
+        player.ki = player.maxKi;   // transformar exige o ki cheio
         player.isSSJ = false;
     } else if (step.key === "special") {
         player.ki = player.maxKi;
@@ -964,11 +960,13 @@ function setActionState(target, state, duration = 18) {
 // este tempo (em quadros de 60 fps). Depois a aura volta ao normal, mostrando que o poder extra acabou.
 const TRANSFORM_POWER_DURATION = 15 * 60;
 
+// Só transforma com o ki cheio, e gasta a barra toda. O jogador transforma apenas quando aperta TRANSFORMAR
+// (não existe mais transformação automática por pontos); o rival controlado pelo jogo transforma sozinho ao encher.
 function transformPlayer(p, isP2 = false, force = false) {
-    const canTransform = force || p.ki >= 80;
+    const canTransform = force || p.ki >= p.maxKi;
     if (!canTransform || (isP2 ? p.isTransformed : p.isSSJ)) return false;
 
-    if (!force) p.ki -= 80;
+    if (!force) p.ki = 0;
     preloadCharacterFrames(isP2 ? selectedBoss : selectedCharacter, true);
     if (!isP2) {
         p.isSSJ = true;
@@ -1839,11 +1837,6 @@ function update(dt) {
         player2.actionState = "chargeKi";
     } else if (player2.actionTimer <= 0 && ["attackKi", "transform", "parry"].includes(player2.actionState)) {
         player2.actionState = "idle";
-    }
-
-    if (score >= SSJ_UNLOCK.SCORE_THRESHOLD && !player.isSSJ) {
-        // mesma velocidade da transformação manual (transformPlayer soma +1)
-        transformPlayer(player, false, true);
     }
 
     if (score >= UNTOUCHABLE_ACHIEVEMENT_SCORE && !takenDamageInRun) {
