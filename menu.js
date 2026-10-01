@@ -274,6 +274,11 @@ function getStageMapNodes() {
 // Medalha simples (círculo com uma fitinha) desenhada com formas básicas, sem depender de emoji/fonte especial.
 // Cadeado das fases bloqueadas no mapa: arco + corpo dourado + fechadura. `open` (0..1) levanta e gira o arco
 // (animação de quando a fase acaba de ser liberada).
+// Quanto o lutador cresce em cada movimento (o mesmo número é usado para preparar a pixel art antes da luta).
+const ACTION_SPRITE_SCALE = {
+    idle: 1, flyRight: 1.05, flyLeft: 1.05, flyUp: 1.08, flyDown: 1.08, flyUpRight: 1.08, flyUpLeft: 1.08,
+    flyDownRight: 1.08, flyDownLeft: 1.08, parry: 1.12, attackKi: 1.1, chargeKi: 1.06, transform: 1.15, hit: 1.04
+};
 const PIXEL_SPRITE_SCALE = 1.54;   // tamanho do desenho em pixel art em relação à caixa de colisão do lutador
 let stageUnlockAnim = null;   // { id, t }: cadeado abrindo no mapa de fases (ver render de "stage_map")
 
@@ -3026,31 +3031,33 @@ function drawPlayerEntity(p, charData, isBoss = false) {
     const animationFrame = getCharacterAnimationFrame(fallbackKey, animationState, p.animTimer, !!(p.isSSJ || p.isTransformed));
 
     const actionShift = {
-        idle: { dx: 0, dy: 0, scale: 1 },
-        flyRight: { dx: Math.sin(p.animTimer * 2) * 4, dy: 0, scale: 1.05 },
-        flyLeft: { dx: -Math.sin(p.animTimer * 2) * 4, dy: 0, scale: 1.05 },
-        flyUp: { dx: 0, dy: -Math.sin(p.animTimer * 2) * 4, scale: 1.08 },
-        flyDown: { dx: 0, dy: Math.sin(p.animTimer * 2) * 4, scale: 1.08 },
-        flyUpRight: { dx: Math.sin(p.animTimer * 2) * 3, dy: -Math.sin(p.animTimer * 2) * 3, scale: 1.08 },
-        flyUpLeft: { dx: -Math.sin(p.animTimer * 2) * 3, dy: -Math.sin(p.animTimer * 2) * 3, scale: 1.08 },
-        flyDownRight: { dx: Math.sin(p.animTimer * 2) * 3, dy: Math.sin(p.animTimer * 2) * 3, scale: 1.08 },
-        flyDownLeft: { dx: -Math.sin(p.animTimer * 2) * 3, dy: Math.sin(p.animTimer * 2) * 3, scale: 1.08 },
-        parry: { dx: 0, dy: 0, scale: 1.12 },
-        attackKi: { dx: Math.sin(p.animTimer * 3) * 6, dy: 0, scale: 1.1 },
-        chargeKi: { dx: 0, dy: Math.sin(p.animTimer * 4) * 2, scale: 1.06 },
-        transform: { dx: 0, dy: -Math.sin(p.animTimer * 2) * 5, scale: 1.15 },
-        hit: { dx: 0, dy: 0, scale: 1.04 }
+        idle: { dx: 0, dy: 0 },
+        flyRight: { dx: Math.sin(p.animTimer * 2) * 4, dy: 0 },
+        flyLeft: { dx: -Math.sin(p.animTimer * 2) * 4, dy: 0 },
+        flyUp: { dx: 0, dy: -Math.sin(p.animTimer * 2) * 4 },
+        flyDown: { dx: 0, dy: Math.sin(p.animTimer * 2) * 4 },
+        flyUpRight: { dx: Math.sin(p.animTimer * 2) * 3, dy: -Math.sin(p.animTimer * 2) * 3 },
+        flyUpLeft: { dx: -Math.sin(p.animTimer * 2) * 3, dy: -Math.sin(p.animTimer * 2) * 3 },
+        flyDownRight: { dx: Math.sin(p.animTimer * 2) * 3, dy: Math.sin(p.animTimer * 2) * 3 },
+        flyDownLeft: { dx: -Math.sin(p.animTimer * 2) * 3, dy: Math.sin(p.animTimer * 2) * 3 },
+        parry: { dx: 0, dy: 0 },
+        attackKi: { dx: Math.sin(p.animTimer * 3) * 6, dy: 0 },
+        chargeKi: { dx: 0, dy: Math.sin(p.animTimer * 4) * 2 },
+        transform: { dx: 0, dy: -Math.sin(p.animTimer * 2) * 5 },
+        hit: { dx: 0, dy: 0 }
     };
     const shift = actionShift[animationState] || actionShift.idle;
-    const drawW = p.w * shift.scale;
-    const drawH = p.h * shift.scale;
+    const actionScale = ACTION_SPRITE_SCALE[animationState] || 1;
+    const drawW = p.w * actionScale;
+    const drawH = p.h * actionScale;
     const drawX = renderX + (p.w - drawW) / 2 + shift.dx;
     const drawY = renderY + (p.h - drawH) / 2 + shift.dy;
     // Personagem em pixel art (estilo anime): desenhado maior que a caixa de colisão, com os pés no mesmo lugar —
     // no tamanho da caixa o rosto e os detalhes não cabem. A área que leva/acerta golpes continua a mesma.
-    const svgSrc = animationFrame && animationFrame.__svgImage ? String(animationFrame.__svgImage.src) : "";
+    // pixel art: as fichas de desenho do jogo já vêm marcadas; outros SVGs são conferidos uma vez por quadro
+    const isPixel = !!(animationFrame && (animationFrame.__pixelSvg || (animationFrame.__svgImage && String(animationFrame.__svgImage.src).includes("crispEdges"))));
     let artW = drawW, artH = drawH, artX = drawX, artY = drawY;
-    if (svgSrc.includes("crispEdges")) {
+    if (isPixel) {
         const feetY = drawY + drawH * (103 / 112);
         artW = drawW * PIXEL_SPRITE_SCALE;
         artH = drawH * PIXEL_SPRITE_SCALE;
@@ -3062,7 +3069,7 @@ function drawPlayerEntity(p, charData, isBoss = false) {
     // Último desenho deste personagem: se o quadro novo ainda não ficou pronto (1ª vez daquele movimento/tamanho),
     // repete o último em vez de sumir ou trocar de estilo por um instante (era a "piscada" ao se mover).
     const last = p.lastSpriteDraw && p.lastSpriteDraw.key === fallbackKey ? p.lastSpriteDraw : null;
-    const pixelPending = svgSrc.includes("crispEdges") && !pixelArt;
+    const pixelPending = isPixel && !pixelArt;
     if (pixelArt) {
         // pixel art no tamanho exato: desenha 1:1 numa posição inteira (sem esticar = pixels nítidos)
         ctx.drawImage(pixelArt.img, Math.round(artX) - pixelArt.pad, Math.round(artY) - pixelArt.pad);
@@ -3076,9 +3083,11 @@ function drawPlayerEntity(p, charData, isBoss = false) {
         } else {
             ctx.drawImage(last.img, artX, artY, artW, artH);
         }
+    } else if (animationFrame && animationFrame.__pixelSvg) {
+        // pixel art ainda sendo montada e nada desenhado antes: espera (é só no primeiro instante)
     } else if (isDrawableSource(animationFrame)) {
         ctx.drawImage(animationFrame, artX, artY, artW, artH);
-        if (!svgSrc.includes("crispEdges")) p.lastSpriteDraw = { key: fallbackKey, img: animationFrame, pad: 0, w: artW, h: artH };
+        if (!isPixel) p.lastSpriteDraw = { key: fallbackKey, img: animationFrame, pad: 0, w: artW, h: artH };
     } else if (charData && charData.imageObj && charData.imageObj.complete && charData.imageObj.naturalWidth !== 0) {
         let img = getCutoutSource(charData.imageObj, charData.bgRemoval);
         let imgW = img.naturalWidth || img.width;

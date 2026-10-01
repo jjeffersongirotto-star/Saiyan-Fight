@@ -10,7 +10,7 @@ const { run, check, summary } = h;
 
 const todosCarregados = (key, transformed) => run(`SUB_ANIM_KEYS.every(st => getCharacterAnimationFrames("${key}", st, ${transformed}).every(src => !!gameplayImageCache[src]))`);
 
-run(`var terminarFila = () => { while (backgroundWork.frames.length || backgroundWork.images.length || backgroundWork.pixelArt.length) runBackgroundWork(1e9); };`);
+run(`var terminarFila = () => { while (backgroundWork.frames.length || backgroundWork.images.length || backgroundWork.pixelArt.length || backgroundWork.light.length) runBackgroundWork(1e9); };`);
 run(`selectedCharacter = "gohan"; selectedBoss = "vegeta"; gameMode = "singleplayer"; startGame();`);
 check("começar a luta não prepara tudo de uma vez (vai para a fila, sem travar)", run("backgroundWork.frames.length") >= 13 * 4);
 check("cada quadro do jogo adianta só um pedaço da fila", (() => { const antes = run("backgroundWork.frames.length"); run("runBackgroundWork(0)"); return run("backgroundWork.frames.length") === antes - 1; })());

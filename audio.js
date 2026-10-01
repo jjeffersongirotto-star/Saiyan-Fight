@@ -140,3 +140,14 @@ function playSound(type) {
         console.warn(`Erro ao tocar som "${type}":`, e.message);
     }
 }
+
+// Liga o som no primeiro toque/tecla em qualquer lugar (o navegador só deixa criar o áudio depois de uma interação).
+// Criar o áudio pela primeira vez é lento no celular: se ficasse para o começo da luta, o primeiro segundo engasgava.
+if (typeof document !== "undefined" && document.addEventListener) {
+    const AUDIO_UNLOCK_EVENTS = ["pointerdown", "touchstart", "keydown"];
+    const ligarAudio = () => {
+        initAudio();
+        AUDIO_UNLOCK_EVENTS.forEach(t => document.removeEventListener(t, ligarAudio, true));
+    };
+    AUDIO_UNLOCK_EVENTS.forEach(t => document.addEventListener(t, ligarAudio, { capture: true, passive: true }));
+}
