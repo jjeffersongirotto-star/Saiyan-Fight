@@ -274,7 +274,7 @@ function getStageMapNodes() {
 // Medalha simples (círculo com uma fitinha) desenhada com formas básicas, sem depender de emoji/fonte especial.
 // Cadeado das fases bloqueadas no mapa: arco + corpo dourado + fechadura. `open` (0..1) levanta e gira o arco
 // (animação de quando a fase acaba de ser liberada).
-const PIXEL_SPRITE_SCALE = 1.45;   // tamanho do desenho em pixel art em relação à caixa de colisão do lutador
+const PIXEL_SPRITE_SCALE = 1.54;   // tamanho do desenho em pixel art em relação à caixa de colisão do lutador
 let stageUnlockAnim = null;   // { id, t }: cadeado abrindo no mapa de fases (ver render de "stage_map")
 
 function drawPadlock(cx, cy, size, open = 0) {

@@ -135,7 +135,7 @@ function spriteBuild(a) {
 // cintura fina (~5 cabeças de altura, contra ~3,4 do boneco clássico), sombras recortadas.
 const SPRITE_ANIME_BODY = {
     comum: { headRx: 12.2, headRy: 13.6, headScale: 1, headY: 21.4, torsoTop: 36.5, torsoBottom: 62, shoulderY: 39.2, hipY: 60.4,
-        l1: 15.5, l2: 14.5, t1: 22, t2: 22, hairScale: 0.84, cel: true, bulk: 0, scale: 1, pixel: true, bigEyes: true },
+        l1: 15.5, l2: 14.5, t1: 22, t2: 22, hairScale: 1, cel: true, bulk: 0, scale: 0.94, pixel: true, bigEyes: true },
     normal: { sw: 29, ww: 16, hw: 18, arm: 7.4, leg: 8.2 },
     musculoso: { sw: 34, ww: 17.5, hw: 20, arm: 8.8, leg: 9.2 },
     magro: { sw: 24, ww: 14, hw: 16, arm: 5.4, leg: 7 },
@@ -247,11 +247,48 @@ function spriteHair(R, style, color, sway, lift, ssj, anime) {
     switch (style) {
         case "goku": {
             if (anime) {
-                // Volume grande do anime: espetos largos abrindo para os lados e para cima + franja de 3 mechas.
-                const mass = [[-11, -1, -23, 6, 10, -1], [-10, -6, -26, -11, 12, -1.5], [-9, -11, -22, -27, 12.5, -1], [-4, -13, -11, -35, 13, -0.5],
-                    [2, -14, 6, -37, 13, 0.5], [7, -12, 19, -30, 12.5, 1], [11, -7, 26, -15, 11.5, 1.5], [12, -1, 23, 5, 9.5, 1]];
-                back = spikes(mass) + shines(mass.slice(2, 6));
-                front = cap() + capShine + spikes([[-8, -9, -12.5, -2, 6.4, 0.8], [-1.5, -11, -0.6, -4.6, 5.6, -0.3], [5.5, -10, 9.6, -3.4, 5.4, -0.4]]);
+                // Silhueta do cabelo do Goku (Z) como no anime: espeto alto no topo inclinado para a esquerda,
+                // espetos grandes e curvos para a esquerda (3) e para a direita (3), franja em mechas na testa.
+                // Pontos em coordenadas da cabeça; as pontas balançam com o movimento (sway/lift).
+                const tip = (x, y) => { const h = Math.max(0, -y - 4); return [x * hs + sway * h * 0.22, y * hs - lift * h * 0.12]; };
+                const P = (pt) => `${_n2(pt[0])} ${_n2(pt[1])}`;
+                // preto chapado com sombra embaixo (sem o degradê claro no alto, que no pixel art vira mancha cinza)
+                const animeFill = R.lin(0, -40, 0, 8, [[0, spriteShade(color, ssj ? 0.18 : 0.05)], [0.7, color], [1, dark]]);
+                const piece = (dd) => spritePath(dd, animeFill);
+                // contorno: [ponta, vale seguinte]; cada lado do espeto é uma curva levemente convexa
+                const outline = [
+                    [-12, 4],
+                    { t: [-24.4, 5.9], v: [-15.1, -0.2] },     // espeto de baixo, esquerda
+                    { t: [-35.9, -4.6], v: [-17.1, -10] },     // espeto do meio, esquerda
+                    { t: [-37.3, -27.5], v: [-11, -22.2] },    // espeto grande de cima, esquerda
+                    { t: [-7, -43], v: [5, -19], k: 0.07 },    // espeto alto do topo (lado esquerdo quase reto)
+                    { t: [31, -15.3], v: [17.1, -10] },        // espeto de cima, direita
+                    { t: [35.9, -9.5], v: [15.1, -3.9] },      // espeto do meio, direita
+                    { t: [19.5, 7.6], v: [12.2, 4.7] }         // espeto de baixo, direita
+                ];
+                // Medidas tiradas do desenho do anime (em "larguras de rosto"): espetos largos na base, com o lado
+                // de cima abaulado e o de baixo côncavo, como labaredas.
+                let d = `M${P(outline[0])}`, prev = outline[0];
+                for (let i = 1; i < outline.length; i++) {
+                    const { t, v } = outline[i], T = tip(t[0], t[1]), k = outline[i].k === undefined ? 0.2 : outline[i].k;
+                    const c1 = [(prev[0] + T[0]) / 2 + (T[1] - prev[1]) * k, (prev[1] + T[1]) / 2 - (T[0] - prev[0]) * k];
+                    const c2 = [(T[0] + v[0]) / 2 + (v[1] - T[1]) * 0.08, (T[1] + v[1]) / 2 - (v[0] - T[0]) * 0.08];
+                    d += ` Q${P(c1)} ${P(T)} Q${P(c2)} ${P(v)}`;
+                    prev = v;
+                }
+                d += " Z";
+                back = piece(d);
+                // faixas de brilho (cinza no cabelo preto) ao longo de cada espeto grande
+                const glowColor = spriteShade(color, ssj ? 0.45 : 0.2);   // cinza escuro no cabelo preto (como no anime)
+                const glow = (b, t, w) => spritePath(spriteSpike(b[0], b[1], tip(t[0], t[1])[0], tip(t[0], t[1])[1], w, 0), glowColor, `opacity="0.9"`, "");
+                back += glow([-13, -23], [-33, -26.5], 2.4) + glow([-4, -23], [-7.4, -40], 2.6) + glow([-16, -8], [-32, -5], 3) +
+                    glow([14, -12], [28, -15], 3) + glow([14, -7], [32, -9.5], 2.6);
+                // franja: mechas pontudas caindo na testa (sem cobrir os olhos)
+                front = cap() + capShine +
+                    piece(spriteSpike(-9, -9, -11, -1, 7.4, 1)) +
+                    piece(spriteSpike(-3, -12, -2.6, -1.4, 8, 0.4)) +
+                    piece(spriteSpike(3.5, -12, 6.4, -2.6, 7, -0.6)) +
+                    piece(spriteSpike(9.5, -9, 12.8, -0.4, 5, -0.4));
                 break;
             }
             const big = [[-11, -9, -22, -19, 9, -1], [-6, -13, -13, -32, 9.5, -1], [1, -14, 5, -35, 10, 0], [7, -13, 16, -30, 9, 1], [11, -8, 22, -16, 8, 1], [-12.4, -3, -19.5, 3, 6, 0], [12.4, -3, 19.5, 3, 6, 0]];
