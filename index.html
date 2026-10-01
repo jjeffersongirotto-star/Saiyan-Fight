@@ -190,6 +190,8 @@
             max-height: 92vh;
             overflow-y: auto;
             overflow-x: hidden;
+            overscroll-behavior: contain;   /* rolar até o fim da janela não "puxa" a página de trás */
+            -webkit-overflow-scrolling: touch;
             box-shadow: 0 0 15px rgba(0, 229, 255, 0.3);
         }
 
@@ -1196,6 +1198,8 @@
                 <li>Cada fase tem 3 modos: NORMAL, DIFÍCIL e SEM LIMITE.</li>
                 <li>Modo 2 jogadores agora é VERSUS em melhor de 3 rodadas, com tela dizendo quem venceu.</li>
                 <li>Novas conquistas: 1ª vitória no DIFÍCIL, NORMAL e DIFÍCIL em todas as fases, e a medalha de DIAMANTE por completar todas.</li>
+                <li>Fases bloqueadas com cadeado de verdade, que abre e cai ao liberar a fase.</li>
+                <li>Editor de personagem, telas de personagens/DATABASE e a luta mais leves no celular.</li>
                 <li>Rebater (parry) que erra tem meio segundo de espera.</li>
                 <li>Mesma velocidade em celulares de tela 120 Hz.</li>
                 <li>Editor: aviso quando falta espaço para salvar; animações com poucos quadros não piscam mais.</li>

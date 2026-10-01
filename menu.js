@@ -159,54 +159,83 @@ const STAGE_THEME_COLOR = {
 
 // Ilustração pequena e simples de cada arena dentro do círculo do nó — não é o cenário completo (custaria caro
 // nesse tamanho), só um símbolo que lembra a fase: o suficiente pra reconhecer de relance no mapa.
-function drawStageNodeIcon(cx, cy, r, stageId) {
+// Ícone de fase bloqueada (cinza e apagado). O filtro de cinza do canvas é caro no celular, então cada ícone
+// cinza é desenhado uma vez numa imagem guardada e depois só copiado a cada quadro.
+const lockedStageIconCache = {};
+function drawLockedStageNodeIcon(cx, cy, r, stageId) {
+    const key = stageId + "|" + r;
+    let icon = lockedStageIconCache[key];
+    if (!icon) {
+        const size = Math.ceil(r * 2 + 4);
+        icon = document.createElement("canvas");
+        icon.width = icon.height = size;
+        const ictx = icon.getContext("2d");
+        if (!ictx) return;
+        drawStageNodeIcon(size / 2, size / 2, r, stageId, ictx);
+        try {
+            const px = ictx.getImageData(0, 0, size, size), d = px.data;
+            for (let i = 0; i < d.length; i += 4) {
+                const g = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
+                d[i] = d[i + 1] = d[i + 2] = g;
+            }
+            ictx.putImageData(px, 0, 0);
+        } catch (e) {}
+        lockedStageIconCache[key] = icon;
+    }
     ctx.save();
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.clip();
+    ctx.globalAlpha = 0.45;
+    ctx.drawImage(icon, cx - icon.width / 2, cy - icon.height / 2);
+    ctx.restore();
+}
+
+function drawStageNodeIcon(cx, cy, r, stageId, g = ctx) {
+    g.save();
+    g.beginPath();
+    g.arc(cx, cy, r, 0, Math.PI * 2);
+    g.clip();
     if (stageId === "terra") {
-        ctx.fillStyle = "#7ec8f2"; ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
-        ctx.fillStyle = "#d9a441"; ctx.fillRect(cx - r, cy + r * 0.3, r * 2, r);
-        ctx.strokeStyle = "#c0392b"; ctx.lineWidth = 3; ctx.strokeRect(cx - r * 0.6, cy - r * 0.1, r * 1.2, r * 0.4);
+        g.fillStyle = "#7ec8f2"; g.fillRect(cx - r, cy - r, r * 2, r * 2);
+        g.fillStyle = "#d9a441"; g.fillRect(cx - r, cy + r * 0.3, r * 2, r);
+        g.strokeStyle = "#c0392b"; g.lineWidth = 3; g.strokeRect(cx - r * 0.6, cy - r * 0.1, r * 1.2, r * 0.4);
     } else if (stageId === "kaio") {
-        ctx.fillStyle = "#2d1b4e"; ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
-        ctx.fillStyle = "#c9b6f5"; ctx.beginPath(); ctx.arc(cx, cy, r * 0.55, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = "#8a6fd1"; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(cx, cy, r * 0.95, r * 0.3, 0.4, 0, Math.PI * 2); ctx.stroke();
+        g.fillStyle = "#2d1b4e"; g.fillRect(cx - r, cy - r, r * 2, r * 2);
+        g.fillStyle = "#c9b6f5"; g.beginPath(); g.arc(cx, cy, r * 0.55, 0, Math.PI * 2); g.fill();
+        g.strokeStyle = "#8a6fd1"; g.lineWidth = 2; g.beginPath(); g.ellipse(cx, cy, r * 0.95, r * 0.3, 0.4, 0, Math.PI * 2); g.stroke();
     } else if (stageId === "namek") {
-        ctx.fillStyle = "#0f3d2e"; ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
-        ctx.fillStyle = "#3fae6a"; ctx.beginPath(); ctx.arc(cx, cy + r * 0.3, r * 0.7, Math.PI, 0); ctx.fill();
-        ctx.fillStyle = "#1d6b3f"; ctx.fillRect(cx - r * 0.12, cy - r * 0.1, r * 0.24, r * 0.5);
+        g.fillStyle = "#0f3d2e"; g.fillRect(cx - r, cy - r, r * 2, r * 2);
+        g.fillStyle = "#3fae6a"; g.beginPath(); g.arc(cx, cy + r * 0.3, r * 0.7, Math.PI, 0); g.fill();
+        g.fillStyle = "#1d6b3f"; g.fillRect(cx - r * 0.12, cy - r * 0.1, r * 0.24, r * 0.5);
     } else if (stageId === "namek_explosao") {
-        ctx.fillStyle = "#5a0e0e"; ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
-        ctx.fillStyle = "#ff8a3d"; ctx.beginPath(); ctx.arc(cx, cy, r * 0.5, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = "#ffe08a"; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(cx - r * 0.6, cy - r * 0.3); ctx.lineTo(cx, cy); ctx.lineTo(cx - r * 0.2, cy + r * 0.6); ctx.stroke();
+        g.fillStyle = "#5a0e0e"; g.fillRect(cx - r, cy - r, r * 2, r * 2);
+        g.fillStyle = "#ff8a3d"; g.beginPath(); g.arc(cx, cy, r * 0.5, 0, Math.PI * 2); g.fill();
+        g.strokeStyle = "#ffe08a"; g.lineWidth = 2;
+        g.beginPath(); g.moveTo(cx - r * 0.6, cy - r * 0.3); g.lineTo(cx, cy); g.lineTo(cx - r * 0.2, cy + r * 0.6); g.stroke();
     } else if (stageId === "freeza_ship") {
-        ctx.fillStyle = "#1a0f2e"; ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
-        ctx.fillStyle = "#8a5fd1"; ctx.beginPath(); ctx.ellipse(cx, cy, r * 0.8, r * 0.35, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = "#c9a6f0"; ctx.beginPath(); ctx.arc(cx, cy - r * 0.15, r * 0.28, 0, Math.PI * 2); ctx.fill();
+        g.fillStyle = "#1a0f2e"; g.fillRect(cx - r, cy - r, r * 2, r * 2);
+        g.fillStyle = "#8a5fd1"; g.beginPath(); g.ellipse(cx, cy, r * 0.8, r * 0.35, 0, 0, Math.PI * 2); g.fill();
+        g.fillStyle = "#c9a6f0"; g.beginPath(); g.arc(cx, cy - r * 0.15, r * 0.28, 0, Math.PI * 2); g.fill();
     } else if (stageId === "time_room") {
-        ctx.fillStyle = "#e8e8ef"; ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
-        ctx.fillStyle = "#b8b8c8";
-        for (let gx = -r; gx < r; gx += r * 0.4) ctx.fillRect(cx + gx, cy - r, 1.2, r * 2);
-        for (let gy = -r; gy < r; gy += r * 0.4) ctx.fillRect(cx - r, cy + gy, r * 2, 1.2);
+        g.fillStyle = "#e8e8ef"; g.fillRect(cx - r, cy - r, r * 2, r * 2);
+        g.fillStyle = "#b8b8c8";
+        for (let gx = -r; gx < r; gx += r * 0.4) g.fillRect(cx + gx, cy - r, 1.2, r * 2);
+        for (let gy = -r; gy < r; gy += r * 0.4) g.fillRect(cx - r, cy + gy, r * 2, 1.2);
     } else if (stageId === "cell_games") {
-        ctx.fillStyle = "#bfe4ff"; ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
-        ctx.fillStyle = "#e8e4d8"; ctx.fillRect(cx - r, cy + r * 0.2, r * 2, r);
-        ctx.strokeStyle = "#c0392b"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx - r, cy + r * 0.25); ctx.lineTo(cx + r, cy + r * 0.25); ctx.stroke();
+        g.fillStyle = "#bfe4ff"; g.fillRect(cx - r, cy - r, r * 2, r * 2);
+        g.fillStyle = "#e8e4d8"; g.fillRect(cx - r, cy + r * 0.2, r * 2, r);
+        g.strokeStyle = "#c0392b"; g.lineWidth = 2; g.beginPath(); g.moveTo(cx - r, cy + r * 0.25); g.lineTo(cx + r, cy + r * 0.25); g.stroke();
     } else if (stageId === "kaioshin") {
-        ctx.fillStyle = "#3a2a6a"; ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
-        ctx.fillStyle = "#fbbf24";
+        g.fillStyle = "#3a2a6a"; g.fillRect(cx - r, cy - r, r * 2, r * 2);
+        g.fillStyle = "#fbbf24";
         const spikes = 5, R1 = r * 0.55, R2 = r * 0.24;
-        ctx.beginPath();
+        g.beginPath();
         for (let i = 0; i < spikes * 2; i++) {
             const ang = (Math.PI / spikes) * i - Math.PI / 2, rad = i % 2 === 0 ? R1 : R2;
             const px = cx + Math.cos(ang) * rad, py = cy + Math.sin(ang) * rad;
-            i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+            i === 0 ? g.moveTo(px, py) : g.lineTo(px, py);
         }
-        ctx.closePath(); ctx.fill();
+        g.closePath(); g.fill();
     }
-    ctx.restore();
+    g.restore();
 }
 
 // Devolve as posições já combinadas com STAGE_PROGRESSION, prontas pra desenhar (id, name, x, y, unlocked, record).
@@ -243,6 +272,52 @@ function getStageMapNodes() {
 }
 
 // Medalha simples (círculo com uma fitinha) desenhada com formas básicas, sem depender de emoji/fonte especial.
+// Cadeado das fases bloqueadas no mapa: arco + corpo dourado + fechadura. `open` (0..1) levanta e gira o arco
+// (animação de quando a fase acaba de ser liberada).
+let stageUnlockAnim = null;   // { id, t }: cadeado abrindo no mapa de fases (ver render de "stage_map")
+
+function drawPadlock(cx, cy, size, open = 0) {
+    const bodyW = size * 1.5, bodyH = size * 1.15, r = size * 0.22;
+    const bodyX = cx - bodyW / 2, bodyY = cy - bodyH / 2 + size * 0.3;
+    ctx.save();
+    // arco (sobe e abre pro lado quando destrava)
+    ctx.save();
+    ctx.translate(cx + size * 0.45, bodyY - open * size * 0.45);
+    ctx.rotate(-open * 0.9);
+    ctx.strokeStyle = "#b9c2cf";
+    ctx.lineWidth = size * 0.28;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(-size * 0.9, size * 0.05);
+    ctx.lineTo(-size * 0.9, -size * 0.35);
+    ctx.arc(-size * 0.45, -size * 0.35, size * 0.45, Math.PI, 0);
+    ctx.lineTo(0, size * 0.05);
+    ctx.stroke();
+    ctx.restore();
+    // corpo
+    ctx.fillStyle = "#e8b93a";
+    ctx.strokeStyle = "#6b4a10";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(bodyX + r, bodyY);
+    ctx.arcTo(bodyX + bodyW, bodyY, bodyX + bodyW, bodyY + bodyH, r);
+    ctx.arcTo(bodyX + bodyW, bodyY + bodyH, bodyX, bodyY + bodyH, r);
+    ctx.arcTo(bodyX, bodyY + bodyH, bodyX, bodyY, r);
+    ctx.arcTo(bodyX, bodyY, bodyX + bodyW, bodyY, r);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "rgba(255, 255, 255, 0.35)";   // brilho
+    ctx.fillRect(bodyX + size * 0.2, bodyY + size * 0.15, size * 0.18, bodyH - size * 0.3);
+    // fechadura
+    ctx.fillStyle = "#3a2a10";
+    ctx.beginPath();
+    ctx.arc(cx, bodyY + bodyH * 0.42, size * 0.18, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillRect(cx - size * 0.07, bodyY + bodyH * 0.42, size * 0.14, bodyH * 0.35);
+    ctx.restore();
+}
+
 function drawMedalIcon(cx, cy, r, color) {
     ctx.save();
     ctx.fillStyle = color;
@@ -3539,11 +3614,24 @@ function drawTouchHUD() {
 }
 
 // ==================== LOOP PRINCIPAL DE RENDERIZAÇÃO E JOGO ====================
+let coveringModals = null;
+function isModalCoveringScreen() {
+    if (!coveringModals) coveringModals = ["modal-editor", "modal-updates", "modal-alert"].map(id => document.getElementById(id)).filter(Boolean);
+    return coveringModals.some(m => m.style.display === "flex");
+}
+
 function render() {
     let now = performance.now();
     deltaTime = Math.min((now - lastFrameTime) / 1000, 0.1);
     runDueButtonActions();
     lastFrameTime = now;
+
+    // Janela (editor, novidades, alerta) cobrindo a tela fora da luta: não redesenha o jogo escondido atrás
+    // dela — no celular isso deixava a rolagem e os toques do editor travados.
+    if (gameState !== "playing" && isModalCoveringScreen()) {
+        requestAnimationFrame(render);
+        return;
+    }
 
     // alvos de menu do quadro anterior (usados pela navegação com controle); o quadro atual recomeça vazio
     menuTargetsPrev = menuTargets;
@@ -3854,15 +3942,9 @@ function render() {
                 ctx.textAlign = "center";
                 ctx.fillText(stg.name, sx + 87, sy + 42, 165);
                 ctx.globalAlpha = 1;
-                // Cadeado simples desenhado com formas básicas, sem depender de fonte com emoji.
+                // Cadeado desenhado com formas básicas, sem depender de fonte com emoji.
                 const lockX = sx + 87, lockY = sy + 62;
-                ctx.strokeStyle = "#c9a13a";
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.arc(lockX, lockY - 5, 5, Math.PI, 0, false);
-                ctx.stroke();
-                ctx.fillStyle = "#c9a13a";
-                ctx.fillRect(lockX - 7, lockY - 5, 14, 10);
+                drawPadlock(lockX, lockY - 2, 8);
                 ctx.fillStyle = "#3a2a10";
                 ctx.font = "bold 8px monospace";
                 ctx.fillText("BLOQUEADA", lockX, sy + 84);
@@ -4348,6 +4430,21 @@ function render() {
 
         const nodes = getStageMapNodes();
 
+        // Acabou de vencer o NORMAL e liberar a próxima fase: toca a animação do cadeado abrindo, uma vez só.
+        if (stageVictoryStats && stageVictoryStats.justUnlockedNext && !stageVictoryStats.unlockAnimShown) {
+            stageVictoryStats.unlockAnimShown = true;
+            const idx = STAGE_PROGRESSION.findIndex(s => s.id === stageVictoryStats.stageId);
+            const next = STAGE_PROGRESSION[idx + 1];
+            if (next) {
+                stageUnlockAnim = { id: next.id, t: 0 };
+                playSound("powerup");
+            }
+        }
+        if (stageUnlockAnim) {
+            stageUnlockAnim.t += deltaTime;
+            if (stageUnlockAnim.t > 1.5) stageUnlockAnim = null;
+        }
+
         // conectores pontilhados: acende quando a fase de DESTINO (a mais avançada das duas) já está liberada.
         for (let i = 0; i < nodes.length - 1; i++) {
             const a = nodes[i], b = nodes[i + 1];
@@ -4370,10 +4467,8 @@ function render() {
             const isSel = selectedStage === node.id;
             const theme = STAGE_THEME_COLOR[node.id] || "#8899aa";
 
-            ctx.save();
-            if (!node.unlocked) { ctx.globalAlpha = 0.45; ctx.filter = "grayscale(1)"; }
-            drawStageNodeIcon(node.x, node.y, STAGE_MAP_NODE_R - 3, node.id);
-            ctx.restore();
+            if (node.unlocked) drawStageNodeIcon(node.x, node.y, STAGE_MAP_NODE_R - 3, node.id);
+            else drawLockedStageNodeIcon(node.x, node.y, STAGE_MAP_NODE_R - 3, node.id);
 
             ctx.beginPath();
             ctx.arc(node.x, node.y, STAGE_MAP_NODE_R, 0, Math.PI * 2);
@@ -4382,11 +4477,18 @@ function render() {
             ctx.stroke();
 
             if (!node.unlocked) {
-                ctx.fillStyle = "#e8b93a";
-                ctx.beginPath();
-                ctx.arc(node.x, node.y - STAGE_MAP_NODE_R - 2, 5.5, Math.PI, 0);
-                ctx.stroke();
-                ctx.fillRect(node.x - 6, node.y - STAGE_MAP_NODE_R - 2, 12, 9);
+                drawPadlock(node.x, node.y - 4, STAGE_MAP_NODE_R * 0.42);
+            } else if (stageUnlockAnim && stageUnlockAnim.id === node.id) {
+                // fase recém-liberada: espera a tela aparecer, o cadeado abre (0,3-0,8 s) e cai sumindo (0,8-1,5 s)
+                const t = stageUnlockAnim.t;
+                const open = Math.max(0, Math.min(1, (t - 0.3) / 0.5));
+                const fall = Math.max(0, t - 0.8) / 0.7;
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, 1 - fall);
+                ctx.translate(node.x, node.y - 4 + fall * fall * 40);
+                ctx.rotate(fall * 0.6);
+                drawPadlock(0, 0, STAGE_MAP_NODE_R * 0.42, open);
+                ctx.restore();
             }
 
             ctx.fillStyle = "#0a1024";
