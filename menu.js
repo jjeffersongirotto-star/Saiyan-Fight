@@ -3163,7 +3163,9 @@ function getKiAuraFrame(pal, w, h, frame, seed) {
 }
 
 function drawKiAura(entity, charData, cx, bottomY, bodyW, bodyH) {
-    const transformed = !!(entity.isSSJ || entity.isTransformed);   // jogador 2 marca a transformação em isTransformed
+    // aura grande e dourada só enquanto durar o poder extra da transformação; depois volta ao normal
+    // (o cabelo continua amarelo até o fim da luta). Jogador 2 marca a transformação em isTransformed.
+    const transformed = !!(entity.isSSJ || entity.isTransformed) && entity.transformPowerTimer > 0;
     const target = (entity.isCharging || transformed) ? 1 : 0;
     entity.kiAuraLevel = (entity.kiAuraLevel || 0) + (target - (entity.kiAuraLevel || 0)) * Math.min(1, deltaTime * 6);
     const k = entity.kiAuraLevel;
