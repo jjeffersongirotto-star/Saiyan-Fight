@@ -2256,7 +2256,6 @@ function getTutorialUiLayout() {
 
 function drawTutorialScreen() {
     drawStageBackground();
-    drawAuraWaves(player, characterDB[selectedCharacter], false);
     drawPlayerEntity(player, characterDB[selectedCharacter], false);
 
     const step = getCurrentTutorialStep();
@@ -3058,6 +3057,7 @@ function drawPlayerEntity(p, charData, isBoss = false) {
         artX = drawX + (drawW - artW) / 2;
         artY = feetY - artH * (103 / 112);
     }
+    drawKiAura(p, charData, artX + artW / 2, artY + artH * (103 / 112), artW, artH * 0.9);
     const pixelArt = isDrawableSource(animationFrame) ? getPixelArtSource(animationFrame, artW, artH) : null;
     if (pixelArt) {
         // pixel art no tamanho exato: desenha 1:1 numa posição inteira (sem esticar = pixels nítidos)
@@ -3084,61 +3084,101 @@ function drawPlayerEntity(p, charData, isBoss = false) {
     ctx.restore();
 }
 
-function drawAuraWaves(entity, charData, isBoss = false) {
-    const auraType = charData && charData.aura ? charData.aura : "gelo";
-    const palette = AURA_COLORS[auraType] || AURA_COLORS.gelo;
-    const colors = palette.length ? palette : ["#62eaff"];
-    const centerX = entity.x + entity.w / 2;
-    const baseY = entity.y + entity.h + 6;
-    const topY = entity.y - entity.h * 0.9;
-    const totalHeight = baseY - topY;
-    const time = gameplayClock;
-    const levelCount = isBoss ? 5 : 6;
-    const maxFlames = isBoss ? 5 : 7;
+// ==================== AURA DE KI (labareda em volta do corpo) ====================
+// Como no anime: uma labareda única envolvendo o corpo, com borda forte, meio e núcleo claro, e pontas que
+// nascem nas laterais e sobem o tempo todo. Normal: aura em volta do corpo. Carregando ki: aumenta. Transformado:
+// fica no tamanho de "carregando" até a transformação acabar (aura dourada).
+const KI_AURA_PALETTES = {
+    gelo: ["#5ec8ff", "#c8f0ff", "#ffffff"],
+    amarelo: ["#ff8a00", "#ffd23f", "#fff8c8"],
+    vermelho: ["#c21a1a", "#ff6a3d", "#ffd6be"],
+    rosa: ["#d63c96", "#ff9ad6", "#ffe8f6"],
+    azul: ["#1c5fe0", "#5cb8ff", "#e2f4ff"],
+    verde: ["#1d9a2a", "#6cff6a", "#e8ffe2"],
+    preto: ["#141418", "#3e3e4c", "#8c8c9c"],
+    vermelho_azul: ["#c21a1a", "#5cb8ff", "#ffffff"],
+    azul_escuro: ["#0b1f8a", "#2f6cff", "#c4d8ff"],
+    roxo: ["#6a1fb0", "#b878ff", "#f2e4ff"]
+};
 
-    ctx.save();
-    ctx.globalCompositeOperation = "lighter";
-    ctx.shadowBlur = 0;
-
-    for (let level = 0; level < levelCount; level++) {
-        const progress = level / (levelCount - 1);
-        const levelY = baseY - progress * totalHeight;
-        const envelope = 1 - progress * 0.9;
-        const flameCount = Math.max(1, Math.round(maxFlames * envelope));
-        const bandWidth = entity.w * (1.35 * envelope + 0.1);
-
-        for (let flame = 0; flame < flameCount; flame++) {
-            const spread = flameCount === 1 ? 0 : flame / (flameCount - 1) - 0.5;
-            const seed = level * 17 + flame * 3;
-            const baseX = centerX + spread * bandWidth;
-            const speed = 0.7 + (seed % 5) * 0.08;
-            const loop = entity.h * (0.58 + (seed % 4) * 0.08);
-            const travel = (time * entity.h * speed + seed * 13) % loop;
-            const y = levelY - travel;
-            const height = entity.h * (0.22 + envelope * 0.34);
-            const tipY = y - height;
-            const localSway = Math.sin(time * 2 + seed) * entity.w * 0.025 * envelope;
-            const width = entity.w * (0.035 + envelope * 0.055);
-            const color = colors[seed % colors.length];
-
-            ctx.fillStyle = color;
-            ctx.globalAlpha = 0.18 + envelope * 0.07;
-            ctx.beginPath();
-            ctx.moveTo(baseX - width, y + 3);
-            ctx.quadraticCurveTo(baseX - width * 1.4 + localSway, (y + tipY) / 2, baseX + localSway, tipY);
-            ctx.quadraticCurveTo(baseX + width * 1.4 + localSway, (y + tipY) / 2, baseX + width, y + 3);
-            ctx.closePath();
-            ctx.fill();
-
-            ctx.globalAlpha = 0.5 + envelope * 0.15;
-            ctx.strokeStyle = color;
-            ctx.lineWidth = Math.max(1, entity.w * 0.012);
-            ctx.beginPath();
-            ctx.moveTo(baseX, y + 3);
-            ctx.quadraticCurveTo(baseX - width * 0.3 + localSway, (y + tipY) / 2, baseX + localSway, tipY);
-            ctx.stroke();
+// Silhueta da labareda: lados que sobem do pé até uma ponta no alto, com "dentes" (pontas) que correm para cima.
+// `phase` (0..1) é a posição no ciclo da animação — tudo se repete a cada ciclo, então os quadros podem ser guardados.
+function traceKiAuraFlame(g, cx, bottomY, w, h, phase, seed) {
+    const STEPS = 28, SPIKES = 7, TAU = Math.PI * 2;
+    const side = (dir) => {
+        const pts = [];
+        for (let i = 0; i <= STEPS; i++) {
+            const f = i / STEPS;                                            // 0 = pé, 1 = topo
+            // estreita nos pés, mais larga na altura dos ombros/cabeça e afinando em ponta no alto (como no anime)
+            let half = w * (0.3 + 0.7 * Math.sin(Math.PI * Math.pow(f, 0.85))) * (1 - f * 0.25);
+            let spike = 0;
+            for (let j = 0; j < SPIKES; j++) {
+                const pos = (j / SPIKES + phase + (dir > 0 ? 0.5 / SPIKES : 0) + seed) % 1;
+                const d = f - pos;                                           // ponta: sobe devagar, desce rápido (puxada para cima)
+                const shape = d < 0 ? Math.max(0, 1 + d / 0.11) : Math.max(0, 1 - d / 0.035);
+                const len = (0.55 + 0.45 * Math.sin(j * 7.3 + seed * 11)) * (0.4 + 0.6 * Math.sin(Math.PI * Math.min(1, pos * 1.1)));
+                spike = Math.max(spike, shape * len);
+            }
+            half += w * 0.34 * spike * (1 - f * 0.3);
+            const lean = (dir > 0 ? 1 : -1) * half;
+            pts.push([cx + lean + Math.sin(TAU * (phase * 2) + f * 9 + seed * 5) * w * 0.03 * f, bottomY - f * h - spike * h * 0.05]);
         }
+        return pts;
+    };
+    const left = side(-1), right = side(1);
+    g.beginPath();
+    g.moveTo(cx, bottomY + h * 0.04);
+    left.forEach(([x, y]) => g.lineTo(x, y));
+    g.lineTo(cx + Math.sin(TAU * phase + seed) * w * 0.08, bottomY - h * (1.06 + 0.04 * Math.sin(TAU * phase * 3 + seed)));   // ponta do alto
+    for (let i = right.length - 1; i >= 0; i--) g.lineTo(right[i][0], right[i][1]);
+    g.closePath();
+}
+
+// Quadros da aura guardados (por cor, tamanho e quadro da animação): desenhar 3 labaredas grandes a cada quadro
+// pesava no celular. Tamanho arredondado em degraus para reaproveitar enquanto a aura cresce/diminui.
+const KI_AURA_FRAMES = 24;
+let kiAuraCache = new Map();
+function getKiAuraFrame(pal, w, h, frame, seed) {
+    w = Math.max(4, Math.round(w / 3) * 3);
+    h = Math.max(4, Math.round(h / 3) * 3);
+    const key = pal[0] + pal[1] + "|" + w + "|" + h + "|" + frame + "|" + seed;
+    let c = kiAuraCache.get(key);
+    if (c) return c;
+    if (kiAuraCache.size > 600) kiAuraCache = new Map();
+    c = document.createElement("canvas");
+    c.width = Math.ceil(w * 2.4);
+    c.height = Math.ceil(h * 1.3);
+    const g = c.getContext("2d");
+    if (g) {
+        const cx = c.width / 2, bottomY = c.height - h * 0.08, phase = frame / KI_AURA_FRAMES;
+        // camadas: borda forte por fora, meio, núcleo claro perto do corpo
+        g.fillStyle = pal[0]; traceKiAuraFlame(g, cx, bottomY, w, h, phase, seed); g.fill();
+        g.globalAlpha = 0.95;
+        g.fillStyle = pal[1]; traceKiAuraFlame(g, cx, bottomY, w * 0.78, h * 0.86, (phase * 2) % 1, seed + 0.21); g.fill();
+        g.fillStyle = pal[2]; traceKiAuraFlame(g, cx, bottomY, w * 0.5, h * 0.66, (phase * 3) % 1, seed + 0.47); g.fill();
     }
+    c.bottomOffset = h * 0.08;
+    kiAuraCache.set(key, c);
+    return c;
+}
+
+function drawKiAura(entity, charData, cx, bottomY, bodyW, bodyH) {
+    const transformed = !!(entity.isSSJ || entity.isTransformed);   // jogador 2 marca a transformação em isTransformed
+    const target = (entity.isCharging || transformed) ? 1 : 0;
+    entity.kiAuraLevel = (entity.kiAuraLevel || 0) + (target - (entity.kiAuraLevel || 0)) * Math.min(1, deltaTime * 6);
+    const k = entity.kiAuraLevel;
+    const auraType = transformed ? "amarelo" : (charData && charData.aura) || "gelo";
+    const pal = KI_AURA_PALETTES[auraType] || KI_AURA_PALETTES.gelo;
+    const grow = 1 + 0.4 * k;
+    const w = bodyW * 0.5 * grow, h = bodyH * (1.18 + 0.12 * k);
+    const seed = entity === player2 ? 0.37 : 0;
+    // a energia sobe mais rápido quando carregando/transformado
+    entity.kiAuraPhase = ((entity.kiAuraPhase || 0) + deltaTime * (0.55 + 0.35 * k)) % 1;
+    const img = getKiAuraFrame(pal, w, h, Math.floor(entity.kiAuraPhase * KI_AURA_FRAMES) % KI_AURA_FRAMES, seed);
+    if (!img || !img.width) return;
+    ctx.save();
+    ctx.globalAlpha *= 0.62 + 0.25 * k;
+    ctx.drawImage(img, Math.round(cx - img.width / 2), Math.round(bottomY + img.bottomOffset - img.height));
     ctx.restore();
 }
 
@@ -3689,9 +3729,6 @@ function render() {
         drawStageBackground();
         drawSaibamans();
         drawPickups();
-
-        drawAuraWaves(player, characterDB[selectedCharacter], false);
-        drawAuraWaves(player2, characterDB[selectedBoss], true);
 
         world.auraParticles.forEach(p => {
             ctx.save();
