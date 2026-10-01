@@ -272,9 +272,22 @@ function updateTutorial(dt) {
 
 // getHitboxRect, rectsOverlap e circleHitsEntity agora vivem em game-logic-core.js.
 
-function getCharacterAnimationFrames(charKey, actionState) {
+// Saiyajin transformado: na luta usa os mesmos movimentos, mas com o cabelo amarelo (Super Saiyajin).
+// Só para personagens do construtor (têm a aparência salva) com cabelo de Saiyajin; o resto segue igual.
+function getTransformedFrames(char, state) {
+    const a = char.builderAppearance;
+    if (!a || typeof getProceduralFrameUrls !== "function" || !SPRITE_SAIYAN_HAIR.includes(a.hairStyle)) return null;
+    if (!SPRITE_FRAME_COUNTS[state]) return null;
+    return getProceduralFrameUrls(a, state, { ssj: true, noGlow: true });
+}
+
+function getCharacterAnimationFrames(charKey, actionState, transformed) {
     let char = characterDB[charKey];
     if (!char) return [];
+    if (transformed) {
+        const ssjFrames = getTransformedFrames(char, actionState || "idle");
+        if (ssjFrames && ssjFrames.length) return ssjFrames;
+    }
 
     let anims = char.animations || {};
     let state = actionState || "idle";
@@ -295,14 +308,14 @@ function getCharacterAnimationFrames(charKey, actionState) {
     return [];
 }
 
-function getCharacterAnimationFrame(charKey, actionState, animTimer) {
+function getCharacterAnimationFrame(charKey, actionState, animTimer, transformed) {
     let char = characterDB[charKey];
     if (!char) return null;
 
     let anims = char.animations || {};
     let fpsSettings = char.fpsSettings || {};
     let state = actionState || "idle";
-    let animFrames = getCharacterAnimationFrames(charKey, state);
+    let animFrames = getCharacterAnimationFrames(charKey, state, transformed);
 
     if (animFrames.length === 0) {
         return getOrCacheGameplayImage(char.defaultUrl, char.imageObj, char.bgRemoval);
