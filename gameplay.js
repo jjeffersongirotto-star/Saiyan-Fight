@@ -844,6 +844,10 @@ function setActionState(target, state, duration = 18) {
 // getDominantMoveAction (escolhe animação de voo pela direção real do movimento)
 // agora vive em game-logic-core.js.
 
+// A transformação dura até o fim da luta (cabelo amarelo), mas os bônus — e a aura grande — só valem por
+// este tempo (em quadros de 60 fps). Depois a aura volta ao normal, mostrando que o poder extra acabou.
+const TRANSFORM_POWER_DURATION = 15 * 60;
+
 function transformPlayer(p, isP2 = false, force = false) {
     const canTransform = force || p.ki >= 80;
     if (!canTransform || (isP2 ? p.isTransformed : p.isSSJ)) return false;
@@ -852,12 +856,16 @@ function transformPlayer(p, isP2 = false, force = false) {
     if (!isP2) {
         p.isSSJ = true;
         p.speed += 1.0;
+        p.transformPowerTimer = TRANSFORM_POWER_DURATION;
         setActionState(p, "transform", 45);
         unlockAchievement("ssj_transform");
         bumpStat("transformsTotal", 1);
     } else {
         p.isTransformed = true;
-        p.aggressiveness = Math.min(1, (p.aggressiveness || 0.5) + 0.25);
+        const before = p.aggressiveness || 0.5;
+        p.aggressiveness = Math.min(1, before + 0.25);
+        p.transformAggroBonus = p.aggressiveness - before;
+        p.transformPowerTimer = TRANSFORM_POWER_DURATION;
         p.vy *= 1.3;
         setActionState(p, "transform", 45);
 
@@ -873,6 +881,18 @@ function transformPlayer(p, isP2 = false, force = false) {
     if (!isP2) vibrate([60, 40, 120]);
     triggerScreenShake(12, 25);
     return true;
+}
+
+// Conta o tempo dos bônus da transformação; quando acaba, tira os bônus (o personagem continua transformado).
+function updateTransformPower(p, isP2, dt) {
+    if (!(p.transformPowerTimer > 0)) return;
+    p.transformPowerTimer = Math.max(0, p.transformPowerTimer - dt * 60);
+    if (p.transformPowerTimer > 0) return;
+    if (isP2 ? !p.isTransformed : !p.isSSJ) return;   // a luta reiniciou no meio: nada a tirar
+    if (!isP2) p.speed = Math.max(4.5, p.speed - 1.0);
+    else p.aggressiveness = Math.max(0, (p.aggressiveness || 0) - (p.transformAggroBonus || 0));
+    p.transformAggroBonus = 0;
+    addFloatingText({ text: "PODER EXTRA ACABOU", x: p.x + p.w / 2, y: p.y - 10, alpha: 1, color: "#cfd8e6" });
 }
 
 // ==================== SAIBAMANS ====================
@@ -937,7 +957,7 @@ function addFloatingText(textData) {
 
 function updateAura(entity, auraType, isBoss = false) {
     // só o jogador 1 tem a aura dourada de Super Saiyajin; a aura do chefe não muda com isso
-    const ssjAura = !isBoss && player.isSSJ;
+    const ssjAura = !isBoss && player.isSSJ && player.transformPowerTimer > 0;   // dourada só enquanto dura o poder extra
     let colors = AURA_COLORS[auraType] || AURA_COLORS.gelo;
     if (ssjAura) colors = AURA_COLORS.amarelo;
 
@@ -1398,6 +1418,8 @@ function update(dt) {
     if (player.invulnerableTimer > 0) player.invulnerableTimer = Math.max(0, player.invulnerableTimer - dt * 60);
     if (player.speedBuffTimer > 0) player.speedBuffTimer = Math.max(0, player.speedBuffTimer - dt * 60);
     if (player.powerBuffTimer > 0) player.powerBuffTimer = Math.max(0, player.powerBuffTimer - dt * 60);
+    updateTransformPower(player, false, dt);
+    updateTransformPower(player2, true, dt);
     if (screenFlashTimer > 0) screenFlashTimer = Math.max(0, screenFlashTimer - dt * 60);
     if (player.parryComboTimer > 0) {
         player.parryComboTimer = Math.max(0, player.parryComboTimer - dt * 60);
