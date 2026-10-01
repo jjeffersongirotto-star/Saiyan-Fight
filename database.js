@@ -81,12 +81,12 @@ function fitCanvasToViewport() {
     // como se ainda estivesse em pé e ficava pequeno demais, ou saía da área rotacionada.
     const viewportWidth = isForcedLandscape ? Math.max(1, window.innerHeight)
         : Math.max(1, Math.min(window.innerWidth, containerWidth || window.innerWidth));
-    // Fora da tela cheia desconta o padding do body e o texto de instruções abaixo do canvas,
-    // senão a página passa da altura da janela e o jogo não fica centralizado.
-    const instructionEl = document.getElementById("instrucao-texto");
-    const instructionSpace = (instructionEl && instructionEl.offsetHeight ? instructionEl.offsetHeight : 20) + 10;
+    // Fora da tela cheia desconta só o espaçamento (padding) de cima e de baixo da página — 12px cada no PC,
+    // 8px no celular (ver o CSS do body) —, senão a página passa da altura da janela e aparece rolagem.
+    const bodyStyle = typeof getComputedStyle === "function" && document.body ? getComputedStyle(document.body) : null;
+    const pagePaddingY = bodyStyle ? (parseFloat(bodyStyle.paddingTop) || 0) + (parseFloat(bodyStyle.paddingBottom) || 0) : 24;
     const viewportHeight = isForcedLandscape ? Math.max(1, window.innerWidth)
-        : Math.max(1, isFullscreen ? window.innerHeight : window.innerHeight - 24 - instructionSpace);
+        : Math.max(1, isFullscreen ? window.innerHeight : window.innerHeight - pagePaddingY);
 
     // A resolução lógica do canvas fica SEMPRE fixa em GAME_WIDTH x GAME_HEIGHT
     // (ver AGENTS.md). Existia aqui um "modo adaptativo" que trocava o canvas.width/
