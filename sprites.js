@@ -81,10 +81,10 @@ const SPRITE_RACE_SKIN = {
 };
 
 const SPRITE_DEFAULT_APPEARANCE = {
-    race: "Saiyajin", build: "normal", skinColor: "",
+    gender: "masculino", race: "Saiyajin", build: "normal", skinColor: "",
     hairStyle: "goku", hairColor: "#16110f",
     eyeType: "normal", irisColor: "#1a1210", scleraColor: "#ffffff",
-    earType: "normal", mouthType: "smile", accessory: "none", hat: "none",
+    earType: "normal", mouthType: "smile", headFeature: "none", bodyMarks: "none", accessory: "none", hat: "none",
     innerShirt: "regata", outerShirt: "kimono", pants: "larga", shoes: "botas_artes", gloves: "pulseiras",
     primaryColor: "#f26a0f", secondaryColor: "#1f4fbf", accentColor: "#ffd23f",
     cape: "none", capeColor: "#ffffff", tail: "none", wings: "none", backWeapon: "none",
@@ -103,8 +103,32 @@ function normalizeAppearance(app) {
     }
     if (a.race === "ET/Alienígena genérico") a.race = "Alienígena";
     delete a.proporcao;   // escolha de estilo de versões antigas (só existe o desenho atual)
+    if (!app || app.bodyMarks === undefined) spriteLegacyFeatures(a, app || {});
     if (a.innerShirt === "regata" && a.outerShirt === "none") a.innerShirt = "regata";
     return a;
+}
+
+// Aparência salva antes de as características ficarem separadas da raça: orelhas, antenas/chifres, domo e placas
+// do Freeza, buracos do Majin, marcas do Namek/Cell eram decididos pela raça (ou misturados no "acessório").
+// Converte para os campos novos sem mudar o desenho de quem já existia.
+const SPRITE_RACE_FEATURES = {
+    "Namekuseijin": { earType: "pontuda", bodyMarks: "namek" }, "Kaioshin": { earType: "pontuda", bodyMarks: "none" },
+    "Majin": { earType: "majin", bodyMarks: "none" }, "Raça Freeza": { earType: "nenhuma", bodyMarks: "freeza" },
+    "Bio-Androide": { earType: "normal", bodyMarks: "cell" }
+};
+function spriteLegacyFeatures(a, raw) {
+    const byRace = SPRITE_RACE_FEATURES[a.race] || { earType: "normal", bodyMarks: "none" };
+    if (a.earType === "freeza_placa") a.earType = "nenhuma";
+    // antes, a raça mandava nas orelhas (Namek/Kaioshin pontudas, Freeza sem, Majin com buracos); senão, a escolha
+    if (a.earType !== "pontuda") a.earType = byRace.earType !== "normal" ? byRace.earType : (a.earType === "nenhuma" ? "nenhuma" : "normal");
+    a.bodyMarks = byRace.bodyMarks;
+    if (["antenas", "majin_antena", "chifres"].includes(a.accessory)) { a.headFeature = a.accessory; a.accessory = "none"; }
+    if (raw.gender === undefined && a.hairStyle === "android18") a.gender = "feminino";
+}
+
+// Ao escolher a raça no construtor, sugere as características típicas dela (o jogador pode trocar depois).
+function spriteRaceDefaults(race) {
+    return Object.assign({ earType: "normal", bodyMarks: "none" }, SPRITE_RACE_FEATURES[race] || {});
 }
 
 function spriteSkin(a) {
@@ -118,7 +142,12 @@ function spriteSkin(a) {
 function spriteBuild(a) {
     // headScale/headY/shoulderY/hipY/torsoTop/torsoBottom: onde ficam cabeça, ombros, quadril e o tronco (proporções);
     // hairScale: tamanho do cabelo em relação à cabeça; sw/ww/hw: ombros/cintura/quadril; arm/leg: grossura dos membros.
-    return Object.assign({}, SPRITE_ANIME_BODY.comum, SPRITE_ANIME_BODY[a.build] || SPRITE_ANIME_BODY.normal);
+    const B = Object.assign({}, SPRITE_ANIME_BODY.comum, SPRITE_ANIME_BODY[a.build] || SPRITE_ANIME_BODY.normal);
+    if (a.gender === "feminino") {
+        // corpo feminino: ombros e cintura mais finos, quadril um pouco mais largo, braços e pernas mais delicados
+        B.sw *= 0.86; B.ww *= B.belly ? 0.94 : 0.86; B.hw *= 1.06; B.arm *= 0.86; B.leg *= 0.94; B.female = true;
+    }
+    return B;
 }
 
 // Proporções de anime (como os sprites de luta de Dragon Ball): cabeça menor, pernas longas, ombros largos e
@@ -436,6 +465,10 @@ function spriteAnimeFace(a, pose, skin, browColor) {
             const px = x + w * 0.28 + (pose.lookX || 0) * 0.5;
             s += `<rect x="${_n2(px - 1.3 * k)}" y="${_n2(y - 1.2 + ly)}" width="${_n2(2.6 * k)}" height="${_n2(wide ? 2.6 : 3.6)}" fill="${spriteShade(a.irisColor, -0.3)}"/>`;
             s += `<path d="M${_n2(x - w - 0.6)} ${_n2(y - 1.2 + (inner < 0 ? up * 0.6 : 0))} L${_n2(x + w + 0.6)} ${_n2(y + top - 0.3 + (inner > 0 ? up * 0.6 : 0))}" stroke="${SPRITE_OUTLINE}" stroke-width="2" stroke-linecap="round"/>`;
+            if (a.gender === "feminino") {   // cílios na ponta de fora do olho
+                const ex = inner < 0 ? x + w + 0.6 : x - w - 0.6, ey = inner < 0 ? y + top - 0.3 : y - 1.2;
+                s += `<path d="M${_n2(ex)} ${_n2(ey)} L${_n2(ex - inner * 1.8)} ${_n2(ey - 1.8)}" stroke="${SPRITE_OUTLINE}" stroke-width="1.4" stroke-linecap="round"/>`;
+            }
         }
         if (noBrow) return;
         // sobrancelha: ponta de dentro mais baixa (determinado/bravo)
@@ -462,30 +495,30 @@ function spriteHead(R, a, B, pose, ctx) {
     const hairColor = ssj && SPRITE_SAIYAN_HAIR.includes(hairStyle) ? "#ffe34d" : a.hairColor;
     const hair = spriteHair(R, hairStyle, hairColor, pose.hairSway || 0, pose.hairLift || 0, ssj && SPRITE_SAIYAN_HAIR.includes(hairStyle));
     const rx = B.headRx, ry = B.headRy;
-    const isFreeza = a.race === "Raça Freeza", isNamek = a.race === "Namekuseijin", isMajin = a.race === "Majin";
+    const ear = a.earType, marks = a.bodyMarks;
     const browColor = hairStyle === "careca" || hairColor === a.hairColor && !hair.front ? spriteShade(skin, -0.5) : spriteShade(hairColor, -0.35);
 
     let s = "";
     // Rosto de anime pensado para pixel art: virado 3/4 para o adversário (direita), queixo marcado,
     // olhos grandes com branco + pupila, sobrancelha grossa — legível mesmo com poucos pixels.
-    const pointy = a.earType === "pontuda" || isNamek || a.race === "Kaioshin";
     s += `<path d="M-6.4 ${_n2(ry - 6)} L-6.4 ${_n2(ry + 2.6)} L6 ${_n2(ry + 2.6)} L5.6 ${_n2(ry - 6)} Z" fill="${spriteShade(skin, -0.3)}" stroke="${SPRITE_OUTLINE}" stroke-width="1"/>`;
-    if (pointy) s += spritePath(`M${_n2(-rx + 1.4)} -2.4 L${_n2(-rx - 9)} -9.6 L${_n2(-rx + 2.2)} 5.4 Z`, spriteShade(skin, -0.1));   // orelha pontuda (Namek/Kaioshin)
-    else if (!isFreeza && !isMajin && a.earType !== "nenhuma" && a.earType !== "freeza_placa") s += spriteEllipse(-rx + 0.6, 1.4, 2.6, 3.6, spriteShade(skin, -0.12));
+    if (ear === "pontuda") s += spritePath(`M${_n2(-rx + 1.4)} -2.4 L${_n2(-rx - 9)} -9.6 L${_n2(-rx + 2.2)} 5.4 Z`, spriteShade(skin, -0.1));   // orelha pontuda (Piccolo/Kaioshin)
+    else if (ear === "normal") s += spriteEllipse(-rx + 0.6, 1.4, 2.6, 3.6, spriteShade(skin, -0.12));
     const face = R.lin(-10, -8, 10, 12, [[0, spriteShade(skin, 0.22)], [0.55, skin], [1, spriteShade(skin, -0.3)]]);
     s += spritePath(`M${_n2(-rx + 0.6)} -1 C${_n2(-rx)} -15 ${_n2(rx)} -15 ${_n2(rx + 0.2)} -1 L${_n2(rx - 0.6)} 4.6 L7.6 10.8 L2.6 ${_n2(ry - 0.6)} L-3.6 11.6 L${_n2(-rx + 1.6)} 5.4 Z`, face);
-    if (isFreeza) {
+    if (marks === "freeza") {
         // forma final: domo roxo brilhante no alto da cabeça + marcas roxas sob os olhos
         const dome = R.lin(-10, -16, 8, 2, [[0, "#c9a6f0"], [0.45, "#7f4fc0"], [1, "#3f1f70"]]);
         s += spritePath(`M${_n2(-rx + 0.4)} -3 C${_n2(-rx - 0.4)} -17 ${_n2(rx + 0.4)} -17 ${_n2(rx)} -3 Q0 -9.4 ${_n2(-rx + 0.4)} -3 Z`, dome);
         s += spritePath("M-6 -12.4 Q-1 -15.4 3 -14.6 Q-1 -12.4 -4.6 -9.4 Z", "#f3e3ff", `opacity="0.7"`, "");
         s += `<path d="M2.4 4.4 L5.4 5.6 M-6.4 4.4 L-4.2 5.2" stroke="#7f4fc0" stroke-width="1.2" stroke-linecap="round"/>`;
     }
-    if (isNamek) s += `<path d="M-4 -9.6 Q0 -11.2 4 -9.6 M-3 -7.4 Q0 -8.8 3 -7.4" fill="none" stroke="${spriteShade(skin, -0.45)}" stroke-width="0.9" stroke-linecap="round"/>`;
-    if (isMajin) s += `<circle cx="-9" cy="-5" r="1.1" fill="${spriteShade(skin, -0.55)}"/><circle cx="-10" cy="-0.6" r="1.1" fill="${spriteShade(skin, -0.55)}"/><circle cx="-8.6" cy="3.8" r="1" fill="${spriteShade(skin, -0.55)}"/>`;
-    if (a.race === "Bio-Androide") s += `<path d="M3.4 4.6 L4.6 9.6 M-5.6 4.6 L-4.8 9" stroke="#b0457e" stroke-width="1.2" stroke-linecap="round"/>`;   // marcas do Cell
+    if (marks === "namek") s += `<path d="M-4 -9.6 Q0 -11.2 4 -9.6 M-3 -7.4 Q0 -8.8 3 -7.4" fill="none" stroke="${spriteShade(skin, -0.45)}" stroke-width="0.9" stroke-linecap="round"/>`;
+    if (ear === "majin") s += `<circle cx="-9" cy="-5" r="1.1" fill="${spriteShade(skin, -0.55)}"/><circle cx="-10" cy="-0.6" r="1.1" fill="${spriteShade(skin, -0.55)}"/><circle cx="-8.6" cy="3.8" r="1" fill="${spriteShade(skin, -0.55)}"/>`;
+    if (marks === "cell") s += `<path d="M3.4 4.6 L4.6 9.6 M-5.6 4.6 L-4.8 9" stroke="#b0457e" stroke-width="1.2" stroke-linecap="round"/>`;   // marcas do Cell
     s += spriteAnimeFace(a, pose, skin, browColor);
     if (a.scar === "bochecha") s += `<path d="M7 4.6 L10.4 6.6" stroke="#8a2a20" stroke-width="1.1" stroke-linecap="round"/>`;
+    if (a.scar === "olho") s += `<path d="M2.6 -4.6 L5.6 6.2" stroke="#8a2a20" stroke-width="1.2" stroke-linecap="round"/>`;   // corte vertical no olho
     const hairWrap = (svg) => B.hairScale !== 1 && svg ? `<g transform="scale(${_n2(B.hairScale)})">${svg}</g>` : svg;
     s += hairWrap(hair.front);
     s += spriteHeadAccessory(R, a, ctx, skin, pose, rx, ry);
@@ -497,15 +530,15 @@ function spriteHeadAccessory(R, a, ctx, skin, pose, rx, ry) {
     const acc = a.accessory;
     const hat = a.hat && a.hat !== "none" ? a.hat : (acc === "turbante" || acc === "faixa" ? acc : "none");
     const sway = pose.hairSway || 0;
-    if (acc === "antenas") {
+    if (a.headFeature === "antenas") {
         const ant = (side) => `<path d="M${side * 4.4} -12.6 Q${side * 6.4 + sway * 2} -20.6 ${_n2(side * 9 + sway * 3)} -25.4" fill="none" stroke="${SPRITE_OUTLINE}" stroke-width="3.4" stroke-linecap="round"/><path d="M${side * 4.4} -12.6 Q${side * 6.4 + sway * 2} -20.6 ${_n2(side * 9 + sway * 3)} -25.4" fill="none" stroke="${spriteShade(skin, 0.02)}" stroke-width="2" stroke-linecap="round"/><circle cx="${_n2(side * 9 + sway * 3)}" cy="-25.6" r="1.7" fill="${spriteShade(skin, 0.15)}" stroke="${SPRITE_OUTLINE}" stroke-width="0.8"/>`;
         s += ant(-1) + ant(1);
     }
-    if (acc === "chifres") {
+    if (a.headFeature === "chifres") {
         const horn = (side) => spritePath(`M${side * 6} -12 Q${side * 9} -17 ${side * 13} -22 Q${side * 12} -14 ${side * 10.4} -9 Z`, "#f3ecf8");
         s += horn(-1) + horn(1);
     }
-    if (acc === "majin_antena") {
+    if (a.headFeature === "majin_antena") {
         s += `<path d="M2 -13 Q9 -22 4 -30" fill="none" stroke="${SPRITE_OUTLINE}" stroke-width="4" stroke-linecap="round"/><path d="M2 -13 Q9 -22 4 -30" fill="none" stroke="${spriteShade(skin, 0.05)}" stroke-width="2.6" stroke-linecap="round"/><circle cx="4" cy="-31" r="3.2" fill="${R.rad(3, -32, 4, [[0, spriteShade(skin, 0.4)], [1, spriteShade(skin, -0.15)]])}" stroke="${SPRITE_OUTLINE}" stroke-width="0.9"/>`;
     }
     if (hat === "turbante") {
@@ -706,7 +739,7 @@ function spriteTorso(R, a, B, spec, skin, pose) {
             break;
         }
         default: {
-            if (spec.torso === skin) {
+            if (spec.torso === skin && !B.female) {
                 const line = spriteShade(skin, -0.42);
                 if (B.bulk > 0) {
                     // peitoral + abdômen definidos (personagem musculoso/gigante de torso nu)
@@ -725,6 +758,21 @@ function spriteTorso(R, a, B, spec, skin, pose) {
                 d += spritePath(`M${_n2(48 - ww / 2 - 1)} 67.4 L${_n2(48 + ww / 2 + 1)} 67.4 L${_n2(48 + ww / 2 + 1.6)} 72 L${_n2(48 - ww / 2 - 1.6)} 72 Z`, belt);
             }
         }
+    }
+    const bare = spec.torso === skin && a.outerShirt !== "armadura_freeza";   // peito à mostra (sem roupa em cima)
+    if (bare && a.scar === "peito") d += `<path d="M${_n2(48 + 1)} 50.6 L${_n2(48 + 8)} 61 M${_n2(48 + 7.6)} 51.4 L${_n2(48 + 2)} 60" stroke="#8a2a20" stroke-width="1.2" stroke-linecap="round"/>`;
+    if (bare && B.female) {
+        // top: personagem feminina sem roupa em cima nunca fica com o peito de fora
+        const top = a.secondaryColor;
+        d += `<path d="M${_n2(x0 + 3)} ${_n2(y0b + 1)} L${_n2(x0 + 4.4)} 49.4 M${_n2(x1 - 3)} ${_n2(y0b + 1)} L${_n2(x1 - 4.4)} 49.4" stroke="${spriteShade(top, -0.2)}" stroke-width="1.4" stroke-linecap="round"/>`;
+        d += spritePath(`M${_n2(x0 + 1)} 49.4 Q48 46.8 ${_n2(x1 - 1)} 49.4 L${_n2(x1 - 1.6)} 56 Q48 57.6 ${_n2(x0 + 1.6)} 56 Z`, R.lin(0, 48, 0, 57, [[0, spriteShade(top, 0.25)], [1, spriteShade(top, -0.3)]]));
+    }
+    if (a.pants === "nenhuma" && a.outerShirt !== "armadura_freeza") {
+        // sem calça: sempre de cueca (a do Freeza é a armadura do próprio corpo)
+        const brief = a.secondaryColor;
+        d += spritePath(`M${_n2(48 - ww / 2 - 0.8)} 69.4 L${_n2(48 + ww / 2 + 0.8)} 69.4 L${_n2(48 + hw / 2 + 0.8)} ${yh} Q${_n2(48 + 3)} ${_n2(yh + 2.6)} 48 ${_n2(yh + 3.6)} Q${_n2(48 - 3)} ${_n2(yh + 2.6)} ${_n2(48 - hw / 2 - 0.8)} ${yh} Z`,
+            R.lin(0, 69, 0, yh + 3, [[0, spriteShade(brief, 0.25)], [1, spriteShade(brief, -0.35)]]));
+        d += `<path d="M${_n2(48 - ww / 2 - 0.6)} 71 L${_n2(48 + ww / 2 + 0.6)} 71" stroke="${a.accentColor}" stroke-width="1.2"/>`;
     }
     s += d;
     // dobras de tecido / luz de contorno
@@ -770,7 +818,7 @@ function spriteArm(R, a, B, spec, glove, skin, side, angles, handKind) {
     // anime: deltoide largo afinando no cotovelo; antebraço forte afinando no punho; manga do kimono larga.
     s += spriteJoined(spriteMuscle(sx, sy, e[0], e[1], w * 1.35, w * 0.9, spec.armUpper, { bulge: 0.16, parts: true }),
         spriteMuscle(e[0], e[1], h[0], h[1], w * 1.0, w * 0.72, spec.armLower, { bulge: 0.14, parts: true }));
-    if (a.race === "Raça Freeza") s += spritePlate(R, e[0], e[1], h[0], h[1], 0.5, B.l2 * 0.62, w * 0.82, a.primaryColor);
+    if (a.bodyMarks === "freeza") s += spritePlate(R, e[0], e[1], h[0], h[1], 0.5, B.l2 * 0.62, w * 0.82, a.primaryColor);
     if (spec.spots) s += spriteSpots(sx, sy, e[0], e[1], [0.35, 0.68], w * 0.26);
     if (spec.sleeve) {
         const p = [sx + (e[0] - sx) * spec.sleeve.frac, sy + (e[1] - sy) * spec.sleeve.frac];
@@ -799,7 +847,7 @@ function spriteLeg(R, a, B, spec, boot, skin, side, angles) {
     const wide = spec.legCover && spec.legWide;
     s += spriteJoined(spriteMuscle(hx, hy, k[0], k[1], w * (wide ? 1.55 : 1.3), w * (wide ? 1.22 : 0.92), color, { bulge: wide ? 0.08 : 0.14, parts: true }),
         spriteMuscle(k[0], k[1], f[0], f[1], w * (wide ? 1.22 : 0.95), w * (wide ? 1.12 : 0.66), color, { bulge: wide ? 0.04 : 0.12, parts: true }));
-    if (a.race === "Raça Freeza") s += spritePlate(R, k[0], k[1], f[0], f[1], 0.42, B.t2 * 0.55, w * 0.78, a.primaryColor);
+    if (a.bodyMarks === "freeza") s += spritePlate(R, k[0], k[1], f[0], f[1], 0.42, B.t2 * 0.55, w * 0.78, a.primaryColor);
     if (spec.spots) s += spriteSpots(hx, hy, k[0], k[1], [0.3, 0.66], w * 0.28);
     if (boot) {
         const from = [f[0] + (k[0] - f[0]) * boot.h, f[1] + (k[1] - f[1]) * boot.h];
@@ -1141,28 +1189,28 @@ function getProceduralFrameUrls(appearance, state, opts) {
 // MODELOS (presets): personagens do anime montados com as peças do construtor.
 // ---------------------------------------------------------------------------
 const SPRITE_PRESETS = {
-    goku: { label: "Goku", appearance: { race: "Saiyajin", build: "musculoso", hairStyle: "goku", hairColor: "#16110f", eyeType: "normal", irisColor: "#1a1210", mouthType: "smile", outerShirt: "kimono", innerShirt: "regata", pants: "larga", shoes: "botas_artes", gloves: "pulseiras", primaryColor: "#f2680d", secondaryColor: "#1c45b0", accentColor: "#f7d23c", symbol: "kai", kiColor: "#5be3ff" } },
-    vegeta: { label: "Vegeta", appearance: { race: "Saiyajin", build: "normal", hairStyle: "vegeta", hairColor: "#100e18", eyeType: "serio", irisColor: "#161a24", mouthType: "serio", outerShirt: "armadura_saiyajin", innerShirt: "malha", pants: "justa", shoes: "botas_saiyajin", gloves: "luvas_saiyajin", primaryColor: "#1b3fa0", secondaryColor: "#f4f4f8", accentColor: "#e8b93a", kiColor: "#ffe45a" } },
-    piccolo: { label: "Piccolo", appearance: { race: "Namekuseijin", build: "musculoso", hairStyle: "careca", eyeType: "bravo", irisColor: "#151515", earType: "pontuda", mouthType: "serio", accessory: "antenas", hat: "turbante", outerShirt: "gi_piccolo", innerShirt: "nenhuma", pants: "larga", shoes: "botas_marrons", gloves: "nenhuma", primaryColor: "#5b2e91", secondaryColor: "#20336f", accentColor: "#f5f5f7", cape: "capa_ombreiras", capeColor: "#f6f6f8", kiColor: "#e9ff7a" } },
-    freeza: { label: "Freeza (final)", appearance: { race: "Raça Freeza", build: "magro", hairStyle: "careca", eyeType: "freeza", irisColor: "#d81f3f", earType: "nenhuma", mouthType: "serio", accessory: "none", outerShirt: "armadura_freeza", innerShirt: "nenhuma", pants: "nenhuma", shoes: "descalco", gloves: "nenhuma", primaryColor: "#7f4fc0", secondaryColor: "#3a1d6a", accentColor: "#e7d3ff", tail: "freeza", kiColor: "#ff5be0" } },
-    trunks: { label: "Trunks do Futuro", appearance: { race: "Saiyajin", build: "normal", hairStyle: "trunks_futuro", hairColor: "#8c7ee0", eyeType: "serio", irisColor: "#2a4a86", mouthType: "serio", outerShirt: "jaqueta_trunks", innerShirt: "malha", pants: "justa", shoes: "botas_trunks", gloves: "nenhuma", primaryColor: "#3f66c8", secondaryColor: "#20263a", accentColor: "#d7b25a", symbol: "cc", backWeapon: "espada_trunks", kiColor: "#9fd0ff" } },
-    gohan: { label: "Gohan (jovem)", appearance: { race: "Saiyajin", build: "normal", hairStyle: "gohan", hairColor: "#16110f", eyeType: "gentil", irisColor: "#1a1210", mouthType: "smile", outerShirt: "gi_piccolo", innerShirt: "nenhuma", pants: "larga", shoes: "botas_marrons", gloves: "nenhuma", primaryColor: "#5b2e91", secondaryColor: "#20336f", accentColor: "#f5f5f7", cape: "capa_ombreiras", capeColor: "#f6f6f8", kiColor: "#ffd45b" } },
-    kaioshin: { label: "Supremo Sr. Kaio", appearance: { race: "Kaioshin", build: "magro", hairStyle: "kaioshin_moicano", hairColor: "#f4f4f4", eyeType: "gentil", irisColor: "#2a2a44", earType: "pontuda", mouthType: "smile", accessory: "potara", outerShirt: "roupa_kaioshin", innerShirt: "nenhuma", pants: "larga", shoes: "botas_kaioshin", gloves: "nenhuma", primaryColor: "#5648b8", secondaryColor: "#f3eedd", accentColor: "#f2c94c", kiColor: "#c9a0ff" } },
-    fusao: { label: "Fusão (Gogeta)", appearance: { race: "Saiyajin", build: "musculoso", hairStyle: "goku", hairColor: "#111018", eyeType: "serio", irisColor: "#161a24", mouthType: "maligno", accessory: "potara", outerShirt: "colete_fusao", innerShirt: "malha", pants: "larga", shoes: "botas_saiyajin", gloves: "pulseiras", primaryColor: "#1c3fb0", secondaryColor: "#2a2f45", accentColor: "#f5c518", kiColor: "#7fd8ff" } },
-    bardock: { label: "Bardock", appearance: { race: "Saiyajin", build: "musculoso", hairStyle: "bardock", hairColor: "#0e0c10", eyeType: "bravo", irisColor: "#141014", mouthType: "maligno", hat: "faixa", accessory: "scouter", outerShirt: "armadura_saiyajin", innerShirt: "malha", pants: "justa", shoes: "botas_saiyajin", gloves: "luvas_pretas", primaryColor: "#2b2430", secondaryColor: "#5a4636", accentColor: "#b88a3a", tail: "cinto_saiyajin", scar: "bochecha", kiColor: "#ff9a5b" } },
-    android17: { label: "Androide 17", appearance: { race: "Android", build: "normal", hairStyle: "android17", hairColor: "#12121a", eyeType: "android", irisColor: "#3a6fa8", mouthType: "serio", outerShirt: "traje_android", innerShirt: "malha", pants: "justa", shoes: "botas_marrons", gloves: "nenhuma", primaryColor: "#24262f", secondaryColor: "#2f3a55", accentColor: "#e8752a", kiColor: "#ffe07a" } },
-    android18: { label: "Androide 18", appearance: { race: "Android", build: "magro", hairStyle: "android18", hairColor: "#ffe27a", eyeType: "android", irisColor: "#4aa3e8", mouthType: "serio", outerShirt: "traje_android", innerShirt: "malha", pants: "justa", shoes: "botas_marrons", gloves: "nenhuma", primaryColor: "#33507a", secondaryColor: "#20293a", accentColor: "#f4f1e8", kiColor: "#a9e3ff" } },
-    majin: { label: "Majin Buu", appearance: { race: "Majin", build: "gordo", hairStyle: "careca", eyeType: "normal", irisColor: "#101010", mouthType: "smile", accessory: "majin_antena", outerShirt: "colete_buu", innerShirt: "nenhuma", pants: "larga", shoes: "botas_kaioshin", gloves: "luvas_saiyajin", primaryColor: "#f4f1e8", secondaryColor: "#7a3f8f", accentColor: "#d7a23a", cape: "capa", capeColor: "#5a2f7a", kiColor: "#ff9de0" } },
-    raditz: { label: "Raditz", appearance: { race: "Saiyajin", build: "musculoso", hairStyle: "raditz", hairColor: "#0e0c10", eyeType: "serio", irisColor: "#141014", mouthType: "maligno", accessory: "scouter", outerShirt: "armadura_saiyajin", innerShirt: "malha", pants: "justa", shoes: "botas_saiyajin", gloves: "luvas_pretas", primaryColor: "#232c48", secondaryColor: "#c9c2b8", accentColor: "#c9a13a", tail: "saiyajin", kiColor: "#ff7ad9" } },
-    cell: { label: "Cell (perfeito)", appearance: { race: "Bio-Androide", build: "musculoso", hairStyle: "cell_crista", hairColor: "#4f9a3a", eyeType: "serio", irisColor: "#b0457e", earType: "nenhuma", mouthType: "serio", outerShirt: "armadura_cell", innerShirt: "nenhuma", pants: "justa", shoes: "botas_cell", gloves: "luvas_pretas", primaryColor: "#4f9a3a", secondaryColor: "#2a2532", accentColor: "#e9e3ee", wings: "cell", kiColor: "#7dff7a" } },
-    broly: { label: "Broly", appearance: { race: "Saiyajin", build: "gigante", hairStyle: "broly", hairColor: "#213018", eyeType: "bravo", irisColor: "#1a2a1a", mouthType: "serio", outerShirt: "none", innerShirt: "nenhuma", pants: "larga", shoes: "descalco", gloves: "pulseiras", primaryColor: "#8a6a2a", secondaryColor: "#c9a13a", accentColor: "#e8c04a", kiColor: "#7dff7a" } }
+    goku: { label: "Goku", appearance: { gender: "masculino", race: "Saiyajin", build: "musculoso", hairStyle: "goku", hairColor: "#16110f", eyeType: "normal", irisColor: "#1a1210", mouthType: "smile", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "none", outerShirt: "kimono", innerShirt: "regata", pants: "larga", shoes: "botas_artes", gloves: "pulseiras", primaryColor: "#f2680d", secondaryColor: "#1c45b0", accentColor: "#f7d23c", symbol: "kai", kiColor: "#5be3ff" } },
+    vegeta: { label: "Vegeta", appearance: { gender: "masculino", race: "Saiyajin", build: "normal", hairStyle: "vegeta", hairColor: "#100e18", eyeType: "serio", irisColor: "#161a24", mouthType: "serio", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "none", outerShirt: "armadura_saiyajin", innerShirt: "malha", pants: "justa", shoes: "botas_saiyajin", gloves: "luvas_saiyajin", primaryColor: "#1b3fa0", secondaryColor: "#f4f4f8", accentColor: "#e8b93a", kiColor: "#ffe45a" } },
+    piccolo: { label: "Piccolo", appearance: { gender: "masculino", race: "Namekuseijin", build: "musculoso", hairStyle: "careca", eyeType: "bravo", irisColor: "#151515", mouthType: "serio", earType: "pontuda", headFeature: "antenas", bodyMarks: "namek", accessory: "none", hat: "turbante", outerShirt: "gi_piccolo", innerShirt: "nenhuma", pants: "larga", shoes: "botas_marrons", gloves: "nenhuma", primaryColor: "#5b2e91", secondaryColor: "#20336f", accentColor: "#f5f5f7", cape: "capa_ombreiras", capeColor: "#f6f6f8", kiColor: "#e9ff7a" } },
+    freeza: { label: "Freeza (final)", appearance: { gender: "masculino", race: "Raça Freeza", build: "magro", hairStyle: "careca", eyeType: "freeza", irisColor: "#d81f3f", mouthType: "serio", earType: "nenhuma", headFeature: "none", bodyMarks: "freeza", accessory: "none", outerShirt: "armadura_freeza", innerShirt: "nenhuma", pants: "nenhuma", shoes: "descalco", gloves: "nenhuma", primaryColor: "#7f4fc0", secondaryColor: "#3a1d6a", accentColor: "#e7d3ff", tail: "freeza", kiColor: "#ff5be0" } },
+    trunks: { label: "Trunks do Futuro", appearance: { gender: "masculino", race: "Saiyajin", build: "normal", hairStyle: "trunks_futuro", hairColor: "#8c7ee0", eyeType: "serio", irisColor: "#2a4a86", mouthType: "serio", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "none", outerShirt: "jaqueta_trunks", innerShirt: "malha", pants: "justa", shoes: "botas_trunks", gloves: "nenhuma", primaryColor: "#3f66c8", secondaryColor: "#20263a", accentColor: "#d7b25a", symbol: "cc", backWeapon: "espada_trunks", kiColor: "#9fd0ff" } },
+    gohan: { label: "Gohan (jovem)", appearance: { gender: "masculino", race: "Saiyajin", build: "normal", hairStyle: "gohan", hairColor: "#16110f", eyeType: "gentil", irisColor: "#1a1210", mouthType: "smile", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "none", outerShirt: "gi_piccolo", innerShirt: "nenhuma", pants: "larga", shoes: "botas_marrons", gloves: "nenhuma", primaryColor: "#5b2e91", secondaryColor: "#20336f", accentColor: "#f5f5f7", cape: "capa_ombreiras", capeColor: "#f6f6f8", kiColor: "#ffd45b" } },
+    kaioshin: { label: "Supremo Sr. Kaio", appearance: { gender: "masculino", race: "Kaioshin", build: "magro", hairStyle: "kaioshin_moicano", hairColor: "#f4f4f4", eyeType: "gentil", irisColor: "#2a2a44", mouthType: "smile", earType: "pontuda", headFeature: "none", bodyMarks: "none", accessory: "potara", outerShirt: "roupa_kaioshin", innerShirt: "nenhuma", pants: "larga", shoes: "botas_kaioshin", gloves: "nenhuma", primaryColor: "#5648b8", secondaryColor: "#f3eedd", accentColor: "#f2c94c", kiColor: "#c9a0ff" } },
+    fusao: { label: "Fusão (Gogeta)", appearance: { gender: "masculino", race: "Saiyajin", build: "musculoso", hairStyle: "goku", hairColor: "#111018", eyeType: "serio", irisColor: "#161a24", mouthType: "maligno", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "potara", outerShirt: "colete_fusao", innerShirt: "malha", pants: "larga", shoes: "botas_saiyajin", gloves: "pulseiras", primaryColor: "#1c3fb0", secondaryColor: "#2a2f45", accentColor: "#f5c518", kiColor: "#7fd8ff" } },
+    bardock: { label: "Bardock", appearance: { gender: "masculino", race: "Saiyajin", build: "musculoso", hairStyle: "bardock", hairColor: "#0e0c10", eyeType: "bravo", irisColor: "#141014", mouthType: "maligno", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "scouter", hat: "faixa", outerShirt: "armadura_saiyajin", innerShirt: "malha", pants: "justa", shoes: "botas_saiyajin", gloves: "luvas_pretas", primaryColor: "#2b2430", secondaryColor: "#5a4636", accentColor: "#b88a3a", tail: "cinto_saiyajin", scar: "bochecha", kiColor: "#ff9a5b" } },
+    android17: { label: "Androide 17", appearance: { gender: "masculino", race: "Android", build: "normal", hairStyle: "android17", hairColor: "#12121a", eyeType: "android", irisColor: "#3a6fa8", mouthType: "serio", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "none", outerShirt: "traje_android", innerShirt: "malha", pants: "justa", shoes: "botas_marrons", gloves: "nenhuma", primaryColor: "#24262f", secondaryColor: "#2f3a55", accentColor: "#e8752a", kiColor: "#ffe07a" } },
+    android18: { label: "Androide 18", appearance: { gender: "feminino", race: "Android", build: "magro", hairStyle: "android18", hairColor: "#ffe27a", eyeType: "android", irisColor: "#4aa3e8", mouthType: "serio", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "none", outerShirt: "traje_android", innerShirt: "malha", pants: "justa", shoes: "botas_marrons", gloves: "nenhuma", primaryColor: "#33507a", secondaryColor: "#20293a", accentColor: "#f4f1e8", kiColor: "#a9e3ff" } },
+    majin: { label: "Majin Buu", appearance: { gender: "masculino", race: "Majin", build: "gordo", hairStyle: "careca", eyeType: "normal", irisColor: "#101010", mouthType: "smile", earType: "majin", headFeature: "majin_antena", bodyMarks: "none", accessory: "none", outerShirt: "colete_buu", innerShirt: "nenhuma", pants: "larga", shoes: "botas_kaioshin", gloves: "luvas_saiyajin", primaryColor: "#f4f1e8", secondaryColor: "#7a3f8f", accentColor: "#d7a23a", cape: "capa", capeColor: "#5a2f7a", kiColor: "#ff9de0" } },
+    raditz: { label: "Raditz", appearance: { gender: "masculino", race: "Saiyajin", build: "musculoso", hairStyle: "raditz", hairColor: "#0e0c10", eyeType: "serio", irisColor: "#141014", mouthType: "maligno", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "scouter", outerShirt: "armadura_saiyajin", innerShirt: "malha", pants: "justa", shoes: "botas_saiyajin", gloves: "luvas_pretas", primaryColor: "#232c48", secondaryColor: "#c9c2b8", accentColor: "#c9a13a", tail: "saiyajin", kiColor: "#ff7ad9" } },
+    cell: { label: "Cell (perfeito)", appearance: { gender: "masculino", race: "Bio-Androide", build: "musculoso", hairStyle: "cell_crista", hairColor: "#4f9a3a", eyeType: "serio", irisColor: "#b0457e", mouthType: "serio", earType: "nenhuma", headFeature: "none", bodyMarks: "cell", accessory: "none", outerShirt: "armadura_cell", innerShirt: "nenhuma", pants: "justa", shoes: "botas_cell", gloves: "luvas_pretas", primaryColor: "#4f9a3a", secondaryColor: "#2a2532", accentColor: "#e9e3ee", wings: "cell", kiColor: "#7dff7a" } },
+    broly: { label: "Broly", appearance: { gender: "masculino", race: "Saiyajin", build: "gigante", hairStyle: "broly", hairColor: "#213018", eyeType: "bravo", irisColor: "#1a2a1a", mouthType: "serio", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "none", outerShirt: "none", innerShirt: "nenhuma", pants: "larga", shoes: "descalco", gloves: "pulseiras", primaryColor: "#8a6a2a", secondaryColor: "#c9a13a", accentColor: "#e8c04a", kiColor: "#7dff7a" } }
 };
 
 
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
         SPRITE_VIEW, SPRITE_STATES, SPRITE_FRAME_COUNTS, SPRITE_PRESETS, SPRITE_DEFAULT_APPEARANCE,
-        normalizeAppearance, spritePoseFor, generateSpriteFrameSvg, generateSpriteFrameUrl, getProceduralFrameUrls, spriteSvgToUrl,
+        normalizeAppearance, spriteRaceDefaults, spritePoseFor, generateSpriteFrameSvg, generateSpriteFrameUrl, getProceduralFrameUrls, spriteSvgToUrl,
         spriteMix, spriteShade
     };
 }

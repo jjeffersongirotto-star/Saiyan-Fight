@@ -2139,9 +2139,10 @@ let builderPreviewTimer = null;
 let builderPreviewFrame = 0;
 
 const BUILDER_FIELD_IDS = {
-    race: "build-race", build: "build-build", hairStyle: "build-hair-style", hairColor: "build-hair-color",
+    gender: "build-gender", race: "build-race", build: "build-build", hairStyle: "build-hair-style", hairColor: "build-hair-color",
     eyeType: "build-eye-type", irisColor: "build-iris-color", scleraColor: "build-sclera-color",
-    earType: "build-ear-type", mouthType: "build-mouth-type", scar: "build-scar", accessory: "build-accessory",
+    earType: "build-ear-type", headFeature: "build-head-feature", bodyMarks: "build-body-marks",
+    mouthType: "build-mouth-type", scar: "build-scar", accessory: "build-accessory",
     hat: "build-hat", symbol: "build-symbol", outerShirt: "build-outer-shirt", innerShirt: "build-inner-shirt",
     pants: "build-pants", shoes: "build-shoes", gloves: "build-gloves", cape: "build-cape", capeColor: "build-cape-color",
     tail: "build-tail", wings: "build-wings", backWeapon: "build-back-weapon", primaryColor: "build-primary-color",
@@ -2182,6 +2183,17 @@ function setBuilderFormFromAppearance(appearance) {
     const skinInput = document.getElementById("build-skin");
     if (autoSkin) autoSkin.checked = !app.skinColor;
     if (skinInput) skinInput.value = app.skinColor || spriteSkin(app);
+}
+
+// Trocar a raça sugere as orelhas e marcas típicas dela (Namekuseijin: orelhas pontudas e linhas na testa;
+// Majin: furinhos; Freeza: sem orelha, domo e placas...). O jogador pode mudar cada uma depois.
+function onBuilderRaceChange() {
+    const race = document.getElementById("build-race");
+    const d = spriteRaceDefaults(race ? race.value : "");
+    const ear = document.getElementById("build-ear-type"), marks = document.getElementById("build-body-marks");
+    if (ear) ear.value = d.earType;
+    if (marks) marks.value = d.bodyMarks;
+    refreshBuilderPreview();
 }
 
 function applyBuilderPreset() {
