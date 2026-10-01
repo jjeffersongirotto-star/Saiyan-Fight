@@ -1174,16 +1174,20 @@ function generateSpriteFrameUrl(appearance, state, frameIndex, opts) {
 }
 
 // Todos os quadros de um estado (com cache: gerar SVG é barato, mas não precisa repetir a cada partida).
-const _spriteFrameCache = {};
+// Guarda no máximo SPRITE_FRAME_CACHE_MAX movimentos (o construtor cria uma aparência nova a cada ajuste;
+// sem limite a memória só crescia). Os mais antigos saem primeiro.
+const _spriteFrameCache = new Map();
+const SPRITE_FRAME_CACHE_MAX = 400;
 function getProceduralFrameUrls(appearance, state, opts) {
     const a = normalizeAppearance(appearance);
     const o = opts || {};
     const key = JSON.stringify([a, state, !!o.ssj, o.kiColor || "", !!o.noGlow]);
-    if (_spriteFrameCache[key]) return _spriteFrameCache[key];
+    if (_spriteFrameCache.has(key)) return _spriteFrameCache.get(key);
     const n = SPRITE_FRAME_COUNTS[state] || 1;
     const frames = [];
     for (let i = 0; i < n; i++) frames.push(generateSpriteFrameUrl(a, state, i, o));
-    _spriteFrameCache[key] = frames;
+    if (_spriteFrameCache.size >= SPRITE_FRAME_CACHE_MAX) _spriteFrameCache.delete(_spriteFrameCache.keys().next().value);
+    _spriteFrameCache.set(key, frames);
     return frames;
 }
 
