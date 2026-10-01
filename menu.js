@@ -428,6 +428,12 @@ function toggleFullscreen() {
     const enterPseudo = () => { pseudoFullscreen = true; syncFullscreenState(); };
     const requestFullscreen = container.requestFullscreen || container.webkitRequestFullscreen;
     if (!requestFullscreen) { enterPseudo(); return; }
+    // Como aplicativo (ícone da tela inicial) a tela já é cheia: só ajusta o jogo, sem o aviso do Chrome.
+    if (isInstalledApp()) {
+        enterPseudo();
+        if (isMobileDevice() && screen.orientation && screen.orientation.lock) screen.orientation.lock("landscape").catch(() => {});
+        return;
+    }
     try {
         const result = requestFullscreen.call(container);
         if (result && result.then) {

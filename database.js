@@ -133,7 +133,7 @@ async function activateMobileLandscape() {
     const container = document.getElementById("game-container");
     try {
         const requestFullscreen = container && (container.requestFullscreen || container.webkitRequestFullscreen);
-        if (requestFullscreen && !document.fullscreenElement) {
+        if (requestFullscreen && !document.fullscreenElement && !isInstalledApp()) {
             await requestFullscreen.call(container);
         }
         if (screen.orientation && screen.orientation.lock) {
@@ -261,6 +261,14 @@ let isTouchDevice = false; // declarada aqui (antes de initSettings) para não v
 // Detecção do tipo de aparelho. NÃO usa mais a largura da janela nem "ontouchstart"/maxTouchPoints
 // (davam "celular" em PC com janela estreita, painel de pré-visualização ou notebook com tela touch).
 // Regra: se existe mouse/trackpad => PC; senão, se o ponteiro principal é o dedo (ou o navegador é mobile) => touch.
+// Aberto pelo ícone da tela inicial (como aplicativo): o jogo já ocupa a tela toda, sem a barra do navegador.
+// Aí não se pede a tela cheia ao navegador — é esse pedido que faz o Chrome mostrar, por alguns segundos, o
+// aviso "Para sair da tela cheia, arraste..." (que nenhum site consegue esconder).
+function isInstalledApp() {
+    const mq = (q) => Boolean(window.matchMedia && window.matchMedia(q).matches);
+    return mq("(display-mode: fullscreen)") || mq("(display-mode: standalone)") || (navigator && navigator.standalone === true);
+}
+
 function isMobileDevice() {
     const mq = (q) => Boolean(window.matchMedia && window.matchMedia(q).matches);
     const ua = /Android|iPhone|iPad|iPod|Mobile/i.test((navigator && navigator.userAgent) || "");
