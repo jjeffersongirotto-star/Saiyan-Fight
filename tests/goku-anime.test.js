@@ -16,7 +16,7 @@ const svgGoku = sprites.generateSpriteFrameSvg(goku, "idle", 0);
 const svgClassico = sprites.generateSpriteFrameSvg(sprites.SPRITE_DEFAULT_APPEARANCE, "idle", 0);
 check("Goku: desenho nítido de pixel art (sem suavização de borda)", svgGoku.includes('shape-rendering="crispEdges"'));
 check("personagem no estilo clássico (padrão do construtor) continua sem pixel art", !svgClassico.includes("crispEdges"));
-for (const k of ["vegeta", "freeza", "piccolo", "gohan", "majin", "cell"]) {
+for (const k of Object.keys(sprites.SPRITE_PRESETS)) {
     const app = sprites.SPRITE_PRESETS[k].appearance;
     check(`${k}: usa o estilo anime e gera todos os movimentos`, app.proporcao === "anime" && sprites.SPRITE_STATES.every(st => sprites.getProceduralFrameUrls(app, st).length === sprites.SPRITE_FRAME_COUNTS[st]));
 }
