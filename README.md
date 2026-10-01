@@ -14,7 +14,7 @@ No celular dá para deixar o jogo na tela inicial, como um aplicativo: abra o li
   - **NORMAL:** 5 ondas. Vencer libera a próxima fase.
   - **DIFÍCIL:** 5 ondas mais fortes. Libera depois do NORMAL da mesma fase.
   - **SEM LIMITE:** ondas sem fim. Libera depois do DIFÍCIL da mesma fase.
-- **2 jogadores (mesmo aparelho):** o jogador 2 controla o rival.
+- **VERSUS (2 jogadores no mesmo aparelho):** o jogador 2 controla o rival. A partida é em **melhor de 3 rodadas**: quem vencer 2 rodadas ganha.
 - **Tutorial:** ensina cada comando passo a passo.
 
 ## 🕹️ Controles

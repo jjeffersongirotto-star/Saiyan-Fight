@@ -476,6 +476,8 @@ function startGame() {
     world.clashMashP2 = 0;
     world.clashResolved = false;
     world.beamIsSuper = false;
+    world.versusScore = { p1: 0, p2: 0 };   // VERSUS: rodadas vencidas por cada jogador (melhor de 3)
+    world.versusRound = 1;
     screenFlashTimer = 0;
     world.lastPlayerHp = 3;
     world.saibamanSpawnTimer = 0;
@@ -497,7 +499,7 @@ function startGame() {
     player.parryCombo = 0;
     player.parryComboTimer = 0;
     player.lastParryComboBonus = 0;
-    player.zenkaiUsed = false;    // ressurreição de uma vez por partida (só no co-op, ver attemptZenkaiRevival)
+    player.zenkaiUsed = false;    // ressurreição de uma vez por partida (só no versus, ver attemptZenkaiRevival)
     player.ki = 0;
     player.isSSJ = false;
     player.shield = false;
@@ -539,7 +541,7 @@ function onBossDeath() {
     createImpactParticles(player2.x + player2.w / 2, player2.y + player2.h / 2, "#ff0000", 30);
 }
 
-// Chamado no lugar de advanceWave() quando o chefe morre no modo história (não no co-op/versus): usa a MESMA
+// Chamado no lugar de advanceWave() quando o chefe morre no modo história (não no versus): usa a MESMA
 // animação de "morrendo voando da tela" que já existe (onBossDeath), só que o respawnBoss() que roda ao final
 // dela (ver mais abaixo) checa pendingStageVictory e mostra o quadro de resultado em vez de trazer um chefe
 // mais forte de volta — sem avançar pra uma onda mais difícil automaticamente.
@@ -578,7 +580,7 @@ function resolveStageVictory() {
     setGameState("stage_victory");
 }
 
-// Chamado a cada chefe derrotado no modo história (fora do co-op): decide se a fase continua (chefe volta mais
+// Chamado a cada chefe derrotado no modo história (fora do versus): decide se a fase continua (chefe volta mais
 // forte, na próxima onda da sequência do MODO escolhido) ou se as 5 ondas do modo acabaram (mostra o quadro).
 function handleStageModeProgression() {
     registerStageWaveRecord(selectedStage, waveNumber);
@@ -594,9 +596,13 @@ function respawnBoss() {
         resolveStageVictory();
         return;
     }
+    if (gameMode === "coop") {   // VERSUS: o rival terminou de sair voando = o jogador 1 venceu a rodada
+        finishVersusRound("p1");
+        return;
+    }
     // No modo normal/difícil, a próxima onda não é sempre "+1" — o difícil pula direto pros degraus mais
-    // difíceis (2, 4, 6, 8, 10). Fora do modo história (co-op) ou no sem limite, continua sempre +1, como já era.
-    if (gameMode !== "coop" && stageMode !== "unlimited") {
+    // difíceis (2, 4, 6, 8, 10). No sem limite, continua sempre +1.
+    if (stageMode !== "unlimited") {
         waveNumber = getRealWaveForModeStep(stageMode, modeStepIndex);
     } else {
         waveNumber++;
@@ -629,17 +635,67 @@ function respawnBoss() {
     triggerScreenShake(10, 20);
 }
 
-// Registra a estatística de "oponente derrotado": no modo história é um chefe (bossesDefeated), no co-op
-// (versus local) é uma vitória de duelo (versusWinsTotal). Ganha o bônus extra se você venceu transformado.
+// Registra a estatística de "oponente derrotado": no modo história é um chefe (bossesDefeated). No VERSUS as
+// estatísticas contam partidas vencidas, não rodadas (ver endVersusMatch). Bônus extra se venceu transformado.
 function registerOpponentDefeated() {
-    if (gameMode === "coop") {
+    if (gameMode !== "coop") bumpStat("bossesDefeated", 1);
+    if (player.isSSJ) unlockAchievement("ssj_boss");
+}
+
+// ==================== VERSUS: RODADAS (MELHOR DE 3) ====================
+// Uma rodada acaba quando um dos dois cai (o rival depois de sair voando da tela; o jogador 1 na hora, se a
+// Zenkai não o salvar). Quem chegar a VERSUS_ROUNDS_TO_WIN rodadas vence a partida.
+function finishVersusRound(roundWinner) {
+    if (gameState !== "playing") return;   // evita contar a mesma rodada duas vezes no mesmo quadro
+    const result = registerVersusRoundWin(world.versusScore, roundWinner);
+    world.versusScore = result.score;
+    if (result.matchWinner) endVersusMatch(result.matchWinner);
+    else startNextVersusRound(roundWinner);
+}
+
+function startNextVersusRound(lastRoundWinner) {
+    world.versusRound++;
+    world.obstacles = [];
+    world.saibamans = [];
+    world.beamActive = 0;
+    world.beamOwner = "p1";
+    world.beamClashPush = 0;
+    world.clashMashP1 = 0;
+    world.clashMashP2 = 0;
+    world.clashResolved = false;
+    // os dois voltam ao lugar, com vida cheia e sem ki/transformação — rodada nova começa igual para os dois
+    Object.assign(player, { x: 80, y: 150, hp: player.maxHp, ki: 0, isSSJ: false, speed: 4.5, invulnerableTimer: 60, parryCooldown: 0 });
+    const waveParams = getWaveParams(waveNumber);
+    Object.assign(player2, {
+        x: 680, y: 150, vx: 0, vy: 2, hp: waveParams.bossHp, maxHp: waveParams.bossHp, ki: 0, isTransformed: false,
+        isDying: false, dyingspeedX: 0, hitTimer: 0, parryCooldown: 0
+    });
+    addFloatingText({ text: `JOGADOR ${lastRoundWinner === "p1" ? 1 : 2} VENCEU A RODADA!`, x: canvas.width / 2, y: 120, alpha: 1, color: "#ffd23f" });
+    addFloatingText({ text: `RODADA ${world.versusRound}  —  ${world.versusScore.p1} x ${world.versusScore.p2}`, x: canvas.width / 2, y: 145, alpha: 1, color: "#ffffff" });
+    playSound("powerup");
+    triggerScreenShake(10, 20);
+}
+
+function endVersusMatch(matchWinner) {
+    if (matchWinner === "p1") {
         bumpStat("versusWinsTotal", 1);
         unlockAchievement("versus_win_first");
         if (player.zenkaiUsed) unlockAchievement("zenkai_win");
-    } else {
-        bumpStat("bossesDefeated", 1);
     }
-    if (player.isSSJ) unlockAchievement("ssj_boss");
+    gameOverStats = {
+        versusWinner: matchWinner,
+        versusScore: Object.assign({}, world.versusScore),
+        stageName: "",
+        score,
+        attacks: runStats.attacks,
+        parries: runStats.parries,
+        hitsReceived: runStats.hitsReceived,
+        items: Object.assign({}, runStats.items),
+        isNewStageRecord: false,
+        isNewGeneralRecord: false
+    };
+    playSound("powerup");
+    setGameState("gameover");
 }
 
 function advanceWave() {
@@ -848,9 +904,9 @@ function triggerScreenFlash(color = "#ffffff", duration = 18) {
     screenFlashColor = color;
 }
 
-// Zenkai: no co-op (versus local), a primeira vez que o jogador chegaria a 0 de vida ele ressurge com 1 HP
-// e um instante de invulnerabilidade, em vez de perder na hora — tema clássico Saiyajin de quase-morte.
-// Só uma vez por partida. Fora do co-op não existe (não faria sentido contra ondas intermináveis de chefes).
+// Zenkai: no VERSUS, a primeira vez que o jogador 1 chegaria a 0 de vida ele ressurge com 1 HP e um instante
+// de invulnerabilidade, em vez de perder a rodada — tema clássico Saiyajin de quase-morte. Só uma vez por
+// partida. Fora do versus não existe (não faria sentido contra ondas intermináveis de chefes).
 function attemptZenkaiRevival() {
     if (gameMode !== "coop" || player.zenkaiUsed) return false;
     player.zenkaiUsed = true;
@@ -869,12 +925,13 @@ function attemptZenkaiRevival() {
 // Mesmo perdendo antes de completar o modo da fase, o jogador vê o que fez na
 // tentativa — ataques, rebatidas, itens, golpes recebidos — e o jogo avisa se bateu recorde (da fase ou geral).
 function triggerGameOver() {
+    if (gameMode === "coop") { finishVersusRound("p2"); return; }   // VERSUS: o jogador 2 venceu a rodada
     const prevGeneralList = readJsonStorage("saiyan_ranking", []);
     const prevGeneralBest = Array.isArray(prevGeneralList) && prevGeneralList.length ? prevGeneralList[0].score : 0;
     const prevStageBest = getStageRecord(selectedStage);
 
     saveRankingScore(score);
-    if (gameMode === "singleplayer") saveStageRankingScore(selectedStage, score);
+    saveStageRankingScore(selectedStage, score);
     if (score > highScore) {
         highScore = score;
         writeStorage("saiyan_highscore", highScore);
@@ -889,20 +946,20 @@ function triggerGameOver() {
         parries: runStats.parries,
         hitsReceived: runStats.hitsReceived,
         items: Object.assign({}, runStats.items),
-        isNewStageRecord: gameMode === "singleplayer" && score > prevStageBest,
+        isNewStageRecord: score > prevStageBest,
         isNewGeneralRecord: score > prevGeneralBest
     };
     setGameState("gameover");
 }
 
-// Especial: causa o TRIPLO do dano de antes (getSpecialDamage). isP2 = true só existe no co-op local:
+// Especial: causa o TRIPLO do dano de antes (getSpecialDamage). isP2 = true só existe no VERSUS:
 // o jogador 2 usa o ki dele e o raio vai para a esquerda, acertando o jogador 1.
 function triggerSpecialAttack(isP2 = false) {
     const caster = isP2 ? player2 : player;
     const requestedOwner = isP2 ? "p2" : "p1";
 
-    // Choque de feixes: no co-op, se o OUTRO jogador já tinha um especial no ar, os dois se encontram no meio
-    // em vez de o segundo simplesmente ser ignorado. Fora do co-op (ou mesmo dono), continua bloqueando spam.
+    // Choque de feixes: no VERSUS, se o OUTRO jogador já tinha um especial no ar, os dois se encontram no meio
+    // em vez de o segundo simplesmente ser ignorado. Fora do versus (ou mesmo dono), continua bloqueando spam.
     if (world.beamActive > 0) {
         if (gameMode === "coop" && world.beamOwner !== requestedOwner && !player2.isDying && canUseSpecial(caster.ki, caster.maxKi)) {
             resolveBeamClash(requestedOwner, caster);
@@ -1014,6 +1071,7 @@ function resolveClashDamage() {
     // push>0 (a favor de p1, ou seja, p1 apertou mais) machuca mais o p2, e vice-versa — mesmo quem "ganhou"
     // a disputa leva um pouco de dano (a explosão do meio não poupa ninguém).
     triggerScreenShake(16, 22);
+    const roundBefore = world.versusRound;
     if (player.invulnerableTimer === 0) {
         if (player.shield) { player.shield = false; playSound("reflect"); }
         else {
@@ -1027,6 +1085,8 @@ function resolveClashDamage() {
         }
         player.invulnerableTimer = 30;
     }
+    // se o jogador 1 caiu aqui, a rodada já acabou e a próxima começou: o dano do rival não passa para ela
+    if (world.versusRound !== roundBefore || gameState !== "playing") return;
     player2.hp -= p2Dmg;
     player2.hitTimer = 20;
     if (player2.hp <= 0) { score += 3; advanceWave(); }

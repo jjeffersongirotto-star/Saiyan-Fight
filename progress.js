@@ -67,7 +67,7 @@ let achievements = {
     untouchable: { name: "Intocável", desc: "Faça 5 pontos sem tomar dano", tier: "bronze" },
     untouchable_wave5: { name: "Guerreiro Impecável", desc: "Alcance a onda 5 numa partida sem tomar dano", tier: "silver" },
     zenkai_first: { name: "Ressurreição Saiyajin", desc: "Use a ressurreição Zenkai pela primeira vez", statKey: "zenkaiTotal", threshold: 1, tier: "bronze" },
-    zenkai_win: { name: "Do Limiar da Morte à Vitória", desc: "Vença um duelo depois de usar a Zenkai", tier: "silver" },
+    zenkai_win: { name: "Do Limiar da Morte à Vitória", desc: "Vença uma partida do Versus depois de usar a Zenkai", tier: "silver" },
     saibaman_50: { name: "Exterminador de Saibamen", desc: "Derrote 50 Saibamen ao todo", statKey: "saibamansDefeated", threshold: 50, tier: "bronze" },
     saibaman_200: { name: "Praga dos Saibamen", desc: "Derrote 200 Saibamen ao todo", statKey: "saibamansDefeated", threshold: 200, tier: "silver" },
     // -- Transformação --
@@ -78,7 +78,7 @@ let achievements = {
     special_first: { name: "Primeira Kamehameha", desc: "Use o ataque especial pela primeira vez", tier: "bronze" },
     super_attack_first: { name: "Força Amplificada", desc: "Use o Super Ataque (especial + bastão mágico)", statKey: "superAttacksTotal", threshold: 1, tier: "bronze" },
     super_attack_10: { name: "Poder Absoluto", desc: "Use o Super Ataque 10 vezes ao todo", statKey: "superAttacksTotal", threshold: 10, tier: "silver" },
-    beam_clash_first: { name: "Choque de Titãs", desc: "Provoque um Choque de Feixes no co-op", statKey: "beamClashesTotal", threshold: 1, tier: "bronze" },
+    beam_clash_first: { name: "Choque de Titãs", desc: "Provoque um Choque de Feixes no Versus", statKey: "beamClashesTotal", threshold: 1, tier: "bronze" },
     beam_clash_5: { name: "Guerra de Kamehamehas", desc: "Provoque 5 Choques de Feixes ao todo", statKey: "beamClashesTotal", threshold: 5, tier: "silver" },
     // -- Itens --
     item_senzu_10: { name: "Sempre Bem Alimentado", desc: "Colete 10 Feijões Mágicos ao todo", statKey: "pickupsSenzu", threshold: 10, tier: "bronze" },
@@ -106,9 +106,9 @@ let achievements = {
     stage_time_room: { name: "Um Ano em Um Dia", desc: "Libere a arena Sala do Tempo", tier: "silver" },
     stage_cell_games: { name: "Competidor dos Jogos de Cell", desc: "Libere a arena Torneio de Cell", tier: "gold" },
     stage_kaioshin: { name: "Entre os Deuses", desc: "Libere a arena Planeta Supremo Kaioh", tier: "gold" },
-    // -- Co-op / versus --
-    versus_win_first: { name: "Duelo Vencido", desc: "Vença uma partida no modo Co-op", statKey: "versusWinsTotal", threshold: 1, tier: "bronze" },
-    versus_win_10: { name: "Rival Implacável", desc: "Vença 10 partidas no modo Co-op", statKey: "versusWinsTotal", threshold: 10, tier: "silver" },
+    // -- Versus (2 jogadores; internamente gameMode "coop") --
+    versus_win_first: { name: "Duelo Vencido", desc: "Vença uma partida do Versus (melhor de 3)", statKey: "versusWinsTotal", threshold: 1, tier: "bronze" },
+    versus_win_10: { name: "Rival Implacável", desc: "Vença 10 partidas do Versus", statKey: "versusWinsTotal", threshold: 10, tier: "silver" },
     // -- Construtor de personagens --
     builder_first: { name: "Criador de Guerreiros", desc: "Crie seu primeiro personagem no construtor", statKey: "customCharactersCreated", threshold: 1, tier: "bronze" },
     builder_5: { name: "Elenco Próprio", desc: "Crie 5 personagens no construtor", statKey: "customCharactersCreated", threshold: 5, tier: "silver" },

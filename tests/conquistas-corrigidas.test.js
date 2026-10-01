@@ -17,8 +17,10 @@ run("player2.hp = 0; advanceWave()");
 check("vencer um duelo SEM usar a Zenkai não libera 'Do Limiar da Morte à Vitória'", run("achievements.zenkai_win.unlocked") === false);
 run("startGame(); " + semSpawns + " player.hp = 0; attemptZenkaiRevival()");
 check("a Zenkai foi usada (o jogador voltou com 1 de vida)", run("player.zenkaiUsed") === true && run("player.hp") === 1);
-run("player2.hp = 0; advanceWave()");
-check("vencer um duelo DEPOIS de usar a Zenkai libera 'Do Limiar da Morte à Vitória'", run("achievements.zenkai_win.unlocked") === true);
+run("finishVersusRound('p1')");
+check("vencer só uma rodada ainda não libera (a conquista é vencer a PARTIDA do Versus)", run("achievements.zenkai_win.unlocked") === false);
+run("finishVersusRound('p1')");
+check("vencer a partida do Versus DEPOIS de usar a Zenkai libera 'Do Limiar da Morte à Vitória'", run("achievements.zenkai_win.unlocked") === true);
 
 // ---------- Campeão do Torneio ----------
 run(zerar + "gameMode = 'singleplayer'; selectedStage = 'terra'; stageMode = 'normal'; startGame(); " + semSpawns + " update(1/60)");
