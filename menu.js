@@ -2328,9 +2328,17 @@ function startRemapping(keyPath) {
     showSystemAlert("MAPEAMENTO", "PRESSIONE QUALQUER TECLA OU BOTÃO DO MOUSE PARA RECONFIGURAR...");
 }
 
+// O som de clique só toca quando o toque cai num botão (alvo desenhado na tela) — tocar no fundo vazio fica
+// em silêncio. Exceções: telas de "toque em qualquer lugar" (derrota e a pausa automática).
+function isMenuClickOnButton(x, y) {
+    if (gameState === "gameover" || (gameState === "paused" && autoPaused)) return true;
+    const onTarget = t => x >= t.x && x <= t.x + t.w && y >= t.y && y <= t.y + t.h;
+    return menuTargets.some(onTarget) || menuTargetsPrev.some(onTarget);
+}
+
 function handleMenuClick(x, y) {
     initAudio();
-    playSound("menu");
+    if (isMenuClickOnButton(x, y)) playSound("menu");
 
     if (gameState === "menu") {
         if (hitRect(x, y, MENU_LAYOUT.main.play)) setGameState("mode_select");
