@@ -1,0 +1,54 @@
+# Saiyan Fight
+
+Jogo de luta no estilo Dragon Ball, feito para jogar direto no navegador do celular ou do computador. Não precisa instalar nada.
+
+## ▶️ Jogar
+
+**https://jjeffersongirotto-star.github.io/Saiyan-Fight/**
+
+No celular dá para deixar o jogo na tela inicial, como um aplicativo: abra o link no Chrome, toque nos três pontinhos (⋮) e escolha **"Adicionar à tela inicial"** ou **"Instalar app"**. No iPhone, use o botão de compartilhar e depois **"Adicionar à Tela de Início"**.
+
+## 🎮 Modos
+
+- **Modo história:** 8 fases em sequência, do Torneio de Artes Marciais ao Planeta Supremo Kaioh. Cada fase tem 3 modos:
+  - **NORMAL:** 5 ondas. Vencer libera a próxima fase.
+  - **DIFÍCIL:** 5 ondas mais fortes. Libera depois do NORMAL da mesma fase.
+  - **SEM LIMITE:** ondas sem fim. Libera depois do DIFÍCIL da mesma fase.
+- **2 jogadores (mesmo aparelho):** o jogador 2 controla o rival.
+- **Tutorial:** ensina cada comando passo a passo.
+
+## 🕹️ Controles
+
+| Ação | Jogador 1 (teclado) | Jogador 2 (teclado) | Controle PS5 |
+|---|---|---|---|
+| Mover | W A S D | Setas | Analógico esquerdo ou direcional |
+| Ataque de ki | F | Enter | ✕ |
+| Rebater (parry) | Espaço | Numpad 2 | ○ |
+| Carregar ki | C | Numpad 0 | □ |
+| Transformar | T | Numpad 1 | △ |
+| Especial | E | Numpad 3 | R1, R2 ou touchpad |
+| Pausar | Esc ou P | — | Options |
+
+- **No celular:** use o analógico na esquerda da tela e os botões na direita. Por padrão, rebater é um **toque duplo** em qualquer lugar livre da tela.
+- Tudo pode ser trocado em **OPÇÕES → CONTROLES**, inclusive a posição e o tamanho dos botões na tela.
+
+## 🧍 Personagens
+
+O jogo já vem com 14 personagens: Goku, Vegeta, Piccolo, Freeza, Trunks, Gohan, Supremo Sr. Kaio, Gogeta, Bardock, Androides 17 e 18, Majin Buu, Raditz e Broly.
+
+Em **DATABASE** você cria personagens novos de duas formas:
+- **Construtor:** monta o personagem juntando partes, como cabelo, roupa, cauda, asas e acessórios.
+- **Sprite sheet:** usa uma imagem sua, recortando os quadros de cada movimento.
+
+Tudo fica salvo no próprio navegador.
+
+## 🛠️ Para quem mexe no código
+
+É HTML, CSS e JavaScript puro, sem nenhuma instalação. As regras do projeto estão em [`AGENTS.md`](AGENTS.md). Para conferir se nada quebrou (é preciso ter o Node 18 ou mais novo):
+
+```bash
+node --test tests/game-logic-core.test.js
+for t in tests/*.test.js; do node "$t"; done
+```
+
+Os mesmos testes rodam automaticamente no GitHub a cada alteração.

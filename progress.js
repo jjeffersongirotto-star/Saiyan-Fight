@@ -98,7 +98,7 @@ let achievements = {
     boss_defeat_10: { name: "Terror dos Vilões", desc: "Derrote 10 chefes ao todo", statKey: "bossesDefeated", threshold: 10, tier: "silver" },
     boss_defeat_50: { name: "Flagelo do Universo", desc: "Derrote 50 chefes ao todo", statKey: "bossesDefeated", threshold: 50, tier: "gold" },
     // -- Arenas (uma por fase, na ordem de STAGE_PROGRESSION) --
-    stage_terra: { name: "Campeão do Torneio", desc: "Libere a arena Torneio de Artes Marciais", tier: "bronze" },
+    stage_terra: { name: "Campeão do Torneio", desc: "Vença o modo NORMAL do Torneio de Artes Marciais", tier: "bronze" },
     stage_kaio: { name: "Treino nas Alturas", desc: "Libere a arena Planeta do Sr. Kaioh", tier: "bronze" },
     stage_namek: { name: "Visitante de Namek", desc: "Libere a arena Planeta Namek", tier: "bronze" },
     stage_namek_explosao: { name: "Fuga por um Triz", desc: "Libere a arena Namek Prestes a Explodir", tier: "silver" },

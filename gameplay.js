@@ -555,6 +555,7 @@ function resolveStageVictory() {
     const before = stageProgress[selectedStage] || { normalDone: false, hardDone: false };
     const wasNormalDone = !!before.normalDone, wasHardDone = !!before.hardDone;
     const progress = registerStageModeComplete(selectedStage, stageMode);
+    if (selectedStage === STAGE_PROGRESSION[0].id && progress.normalDone) unlockAchievement("stage_" + selectedStage);
     saveRankingScore(score);
     saveStageRankingScore(selectedStage, score);
     const stageInfo = STAGE_PROGRESSION.find(s => s.id === selectedStage);
@@ -634,6 +635,7 @@ function registerOpponentDefeated() {
     if (gameMode === "coop") {
         bumpStat("versusWinsTotal", 1);
         unlockAchievement("versus_win_first");
+        if (player.zenkaiUsed) unlockAchievement("zenkai_win");
     } else {
         bumpStat("bossesDefeated", 1);
     }
@@ -1188,7 +1190,8 @@ function checkRunMilestones() {
     if (score >= 50) unlockAchievement("score_50");
     if (score >= 100) unlockAchievement("score_100");
     if (!takenDamageInRun && waveNumber >= 5) unlockAchievement("untouchable_wave5");
-    STAGE_PROGRESSION.forEach(stg => { if (isStageUnlockedByProgress(stg.id, stageProgress)) unlockAchievement("stage_" + stg.id); });
+    // A 1ª fase já começa aberta: a conquista dela é vencer o modo NORMAL (ver resolveStageVictory), não "liberar".
+    STAGE_PROGRESSION.forEach(stg => { if (stg.id !== STAGE_PROGRESSION[0].id && isStageUnlockedByProgress(stg.id, stageProgress)) unlockAchievement("stage_" + stg.id); });
 }
 
 function update(dt) {
