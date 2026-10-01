@@ -270,19 +270,33 @@ function updateTutorial(dt) {
 
 // Saiyajin transformado: na luta usa os mesmos movimentos, mas com o cabelo amarelo (Super Saiyajin).
 // Só para personagens do construtor (têm a aparência salva) com cabelo de Saiyajin; o resto segue igual.
-function getTransformedFrames(char, state) {
+// Transformação N (lista do personagem, ver getCharacterTransformations): o personagem base + só o que muda
+// naquela transformação (diff). "ssj" pinta o cabelo de Saiyajin de amarelo. Sem diferença visível, usa os
+// quadros normais (o efeito fica por conta da aura e dos raios).
+function getTransformedFrames(char, state, t) {
     const a = char.builderAppearance;
-    if (!a || typeof getProceduralFrameUrls !== "function" || !SPRITE_SAIYAN_HAIR.includes(a.hairStyle)) return null;
-    if (!SPRITE_FRAME_COUNTS[state]) return null;
-    return getProceduralFrameUrls(a, state, { ssj: true, noGlow: true });
+    if (!a || !t || typeof getProceduralFrameUrls !== "function" || !SPRITE_FRAME_COUNTS[state]) return null;
+    const hasDiff = t.diff && Object.keys(t.diff).length > 0;
+    const app = hasDiff ? spriteTransformAppearance(a, t) : a;
+    const ssj = !!t.ssj && SPRITE_SAIYAN_HAIR.includes(app.hairStyle);
+    if (!hasDiff && !ssj) return null;
+    return getProceduralFrameUrls(app, state, { ssj, noGlow: true });
 }
 
+// Nível de transformação de um lutador (0 = normal). Antes só existia uma (isSSJ/isTransformed).
+function getTransformLevel(p) {
+    return (p && (p.isSSJ || p.isTransformed)) ? Math.max(1, p.transformLevel || 1) : 0;
+}
+
+// transformed: nível da transformação (true = 1, para quem ainda chama do jeito antigo)
 function getCharacterAnimationFrames(charKey, actionState, transformed) {
     let char = characterDB[charKey];
     if (!char) return [];
-    if (transformed) {
-        const ssjFrames = getTransformedFrames(char, actionState || "idle");
-        if (ssjFrames && ssjFrames.length) return ssjFrames;
+    const level = transformed === true ? 1 : (transformed | 0);
+    if (level > 0) {
+        const t = getCharacterTransformations(charKey)[level - 1];
+        const tFrames = getTransformedFrames(char, actionState || "idle", t);
+        if (tFrames && tFrames.length) return tFrames;
     }
 
     let anims = char.animations || {};
@@ -335,16 +349,19 @@ function getCharacterAnimationFrame(charKey, actionState, animTimer, transformed
 // os desenhos (rápido); as imagens normais são carregadas uma por tarefa. As do cabelo amarelo só são calculadas
 // — viram imagem quando aparecem (carregar ~100 imagens a mais no começo da luta derrubava o FPS).
 const backgroundWork = { frames: [], images: [], pixelArt: [], light: [] };
-function preloadCharacterFrames(charKey, transformed) {
+// comArte: também monta a pixel art de cada quadro (o normal sempre; transformações quando pedido)
+function preloadCharacterFrames(charKey, transformed, comArte) {
     if (!characterDB[charKey] || typeof Image === "undefined") return;
-    SUB_ANIM_KEYS.forEach(state => backgroundWork.frames.push([charKey, state, !!transformed]));
+    const nivel = transformed === true ? 1 : (transformed | 0);
+    const arte = comArte === undefined ? nivel === 0 : !!comArte;
+    SUB_ANIM_KEYS.forEach(state => backgroundWork.frames.push([charKey, state, nivel, arte]));
 }
 
-function preloadOneState(charKey, state, transformed) {
+function preloadOneState(charKey, state, transformed, comArte) {
     const char = characterDB[charKey];
     if (!char) return;
     const frames = getCharacterAnimationFrames(charKey, state, transformed);
-    if (!transformed) frames.forEach(src => backgroundWork.images.push(() => warmFrameArt(charKey, state, src, 0)));
+    if (comArte) frames.forEach(src => backgroundWork.images.push(() => warmFrameArt(charKey, state, src, 0)));
 }
 
 // Caixa do lutador na luta (52x56 × escala do personagem). Usada pela luta e pela preparação da pixel art.
@@ -380,14 +397,18 @@ function warmSelectedFighters() {
     backgroundWork.light.length = 0;
     preloadCharacterFrames(selectedCharacter, false);
     preloadCharacterFrames(selectedBoss, false);
-    preloadCharacterFrames(selectedCharacter, true);
-    preloadCharacterFrames(selectedBoss, true);
+    // transformações do jogador: as duas primeiras já com a pixel art (transformar sem engasgo); as demais só
+    // calculadas. O rival: só a primeira (é a única que ele faz sozinho).
+    getCharacterTransformations(selectedCharacter).forEach((t, i) => preloadCharacterFrames(selectedCharacter, i + 1, i < 2));
+    preloadCharacterFrames(selectedBoss, 1);
     // quadros da aura de ki (cor de cada lutador + dourada da transformação), um por tarefa
     if (typeof getKiAuraFrame === "function") {
         const auras = [[selectedCharacter, 0], [selectedBoss, 0.37]];
         auras.forEach(([k, seed]) => {
             const c = characterDB[k];
-            [(c && c.aura) || "gelo", "amarelo"].forEach(tipo => {
+            const tiposAura = new Set([(c && c.aura) || "gelo"]);
+            getCharacterTransformations(k).forEach(t => tiposAura.add(t.aura || "amarelo"));
+            tiposAura.forEach(tipo => {
                 const pal = KI_AURA_PALETTES[tipo] || KI_AURA_PALETTES.gelo;
                 for (let f = 0; f < KI_AURA_FRAMES; f++) backgroundWork.light.push(() => getKiAuraFrame(pal, f, seed));
             });
@@ -963,29 +984,37 @@ const TRANSFORM_POWER_DURATION = 15 * 60;
 // Só transforma com o ki cheio, e gasta a barra toda. O jogador transforma apenas quando aperta TRANSFORMAR
 // (não existe mais transformação automática por pontos); o rival controlado pelo jogo transforma sozinho ao encher.
 function transformPlayer(p, isP2 = false, force = false) {
+    const charKey = isP2 ? selectedBoss : selectedCharacter;
+    const lista = getCharacterTransformations(charKey);
+    const nivel = getTransformLevel(p);
     const canTransform = force || p.ki >= p.maxKi;
-    if (!canTransform || (isP2 ? p.isTransformed : p.isSSJ)) return false;
+    if (!canTransform || nivel >= lista.length) return false;   // já está na última transformação
 
     if (!force) p.ki = 0;
-    preloadCharacterFrames(isP2 ? selectedBoss : selectedCharacter, true);
+    p.transformLevel = nivel + 1;
+    const bonusJaAtivo = p.transformPowerTimer > 0;   // transformou de novo durante o bônus: renova o tempo, não acumula
+    if (lista[nivel + 1]) preloadCharacterFrames(charKey, nivel + 2, !isP2);   // já prepara a próxima (com a pixel art)
     if (!isP2) {
         p.isSSJ = true;
-        p.speed += 1.0;
+        if (!bonusJaAtivo) p.speed += 1.0;
         p.transformPowerTimer = TRANSFORM_POWER_DURATION;
         setActionState(p, "transform", 45);
         unlockAchievement("ssj_transform");
         bumpStat("transformsTotal", 1);
+        if (lista.length > 1) addFloatingText({ text: String(lista[nivel].name || "TRANSFORMAÇÃO").toUpperCase() + "!", x: p.x + p.w / 2, y: p.y - 14, alpha: 1, color: "#ffe34d" });
     } else {
         p.isTransformed = true;
-        const before = p.aggressiveness || 0.5;
-        p.aggressiveness = Math.min(1, before + 0.25);
-        p.transformAggroBonus = p.aggressiveness - before;
+        if (!bonusJaAtivo) {
+            const before = p.aggressiveness || 0.5;
+            p.aggressiveness = Math.min(1, before + 0.25);
+            p.transformAggroBonus = p.aggressiveness - before;
+            p.vy *= 1.3;
+        }
         p.transformPowerTimer = TRANSFORM_POWER_DURATION;
-        p.vy *= 1.3;
         setActionState(p, "transform", 45);
 
         addFloatingText({
-            text: "VILÃO TRANSFORMOU-SE!",
+            text: nivel > 0 ? "VILÃO TRANSFORMOU-SE DE NOVO!" : "VILÃO TRANSFORMOU-SE!",
             x: canvas.width / 2,
             y: 100,
             alpha: 1,
@@ -1072,9 +1101,9 @@ function addFloatingText(textData) {
 
 function updateAura(entity, auraType, isBoss = false) {
     // só o jogador 1 tem a aura dourada de Super Saiyajin; a aura do chefe não muda com isso
-    const ssjAura = !isBoss && player.isSSJ && player.transformPowerTimer > 0;   // dourada só enquanto dura o poder extra
+    const ssjAura = !isBoss && player.isSSJ && player.transformPowerTimer > 0;   // cor da transformação só enquanto dura o poder extra
     let colors = AURA_COLORS[auraType] || AURA_COLORS.gelo;
-    if (ssjAura) colors = AURA_COLORS.amarelo;
+    if (ssjAura) colors = AURA_COLORS[getTransformationAura(selectedCharacter, getTransformLevel(player))] || AURA_COLORS.amarelo;
 
     let mult = ((!isBoss && player.isCharging) || (isBoss && player2.isCharging)) ? 3 : 1;
     

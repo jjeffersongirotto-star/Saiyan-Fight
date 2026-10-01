@@ -29,7 +29,12 @@ run("triggerAction('transform', player, false)");
 check("com ki suficiente transforma normalmente (sem aviso)", run("player.isSSJ") === true && !avisos().some(t => t.startsWith("ENCHA O KI")));
 run("world.floatingTexts = []");
 run("triggerAction('transform', player, false)");
-check("já transformado: apertar de novo não mostra aviso de ki", !avisos().some(t => t.startsWith("ENCHA O KI")));
+const temProxima = run("getTransformLevel(player) < getCharacterTransformations(selectedCharacter).length");
+check("ainda há outra transformação e o ki está vazio: avisa para encher", !temProxima || avisos().some(t => t.startsWith("ENCHA O KI")));
+run("while (getTransformLevel(player) < getCharacterTransformations(selectedCharacter).length) { player.ki = player.maxKi; transformPlayer(player, false); }");
+run("world.floatingTexts = []");
+run("triggerAction('transform', player, false)");
+check("na última transformação: apertar de novo não mostra aviso de ki", !avisos().some(t => t.startsWith("ENCHA O KI")));
 
 // ---------- botão de toque ATAQUE e PARRY seguem funcionando pelo caminho único ----------
 run("startGame(); world.obstacles = []; runStats.attacks = 0");

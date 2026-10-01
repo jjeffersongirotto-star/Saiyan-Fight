@@ -2320,8 +2320,9 @@ function triggerAction(actionName, targetPlayer, isP2 = false) {
     }
     else if (actionName === "transform") {
         // Sem ki suficiente avisa em qualquer controle (toque, teclado, mouse ou controle), não só no toque.
-        const alreadyTransformed = isP2 ? targetPlayer.isTransformed : targetPlayer.isSSJ;
-        if (!transformPlayer(targetPlayer, isP2) && !alreadyTransformed) {
+        // já na última transformação da lista: apertar de novo não faz nada (nem avisa)
+        const naUltima = getTransformLevel(targetPlayer) >= getCharacterTransformations(isP2 ? selectedBoss : selectedCharacter).length;
+        if (!transformPlayer(targetPlayer, isP2) && !naUltima) {
             addFloatingText({ text: "ENCHA O KI PARA TRANSFORMAR", x: targetPlayer.x + targetPlayer.w / 2, y: targetPlayer.y - 10, alpha: 1, color: "#ffcc00" });
         }
     }
@@ -3028,7 +3029,7 @@ function drawPlayerEntity(p, charData, isBoss = false) {
 
     const fallbackKey = isBoss ? selectedBoss : selectedCharacter;
     const animationState = p.actionState || "idle";
-    const animationFrame = getCharacterAnimationFrame(fallbackKey, animationState, p.animTimer, !!(p.isSSJ || p.isTransformed));
+    const animationFrame = getCharacterAnimationFrame(fallbackKey, animationState, p.animTimer, getTransformLevel(p));
 
     const actionShift = {
         idle: { dx: 0, dy: 0 },
@@ -3191,11 +3192,13 @@ function getKiAuraFrame(pal, frame, seed) {
 function drawKiAura(entity, charData, cx, bottomY, bodyW, bodyH) {
     // aura grande e dourada só enquanto durar o poder extra da transformação; depois volta ao normal
     // (o cabelo continua amarelo até o fim da luta). Jogador 2 marca a transformação em isTransformed.
-    const transformed = !!(entity.isSSJ || entity.isTransformed) && entity.transformPowerTimer > 0;
+    const nivel = getTransformLevel(entity);
+    const transformed = nivel > 0 && entity.transformPowerTimer > 0;
     const target = (entity.isCharging || transformed) ? 1 : 0;
     entity.kiAuraLevel = (entity.kiAuraLevel || 0) + (target - (entity.kiAuraLevel || 0)) * Math.min(1, deltaTime * 6);
     const k = entity.kiAuraLevel;
-    const auraType = transformed ? "amarelo" : (charData && charData.aura) || "gelo";
+    const charKey = entity === player2 ? selectedBoss : selectedCharacter;
+    const auraType = transformed ? getTransformationAura(charKey, nivel) : (charData && charData.aura) || "gelo";
     const pal = KI_AURA_PALETTES[auraType] || KI_AURA_PALETTES.gelo;
     const grow = 1 + 0.4 * k;
     const w = bodyW * 0.5 * grow, h = bodyH * (1.18 + 0.12 * k);
@@ -3208,6 +3211,41 @@ function drawKiAura(entity, charData, cx, bottomY, bodyW, bodyH) {
     ctx.globalAlpha *= 0.62 + 0.25 * k;
     const sx = w / KI_AURA_BASE_W, sy = h / KI_AURA_BASE_H, dw = img.width * sx, dh = img.height * sy;
     ctx.drawImage(img, Math.round(cx - dw / 2), Math.round(bottomY + img.bottomOffset * sy - dh), Math.round(dw), Math.round(dh));
+    ctx.restore();
+    if (nivel > 0) drawKiLightning(entity, cx, bottomY, w, h, transformed);
+}
+
+// Raios de ki em volta de quem está transformado (como no anime): traços em zigue-zague que piscam. Com o poder
+// extra ativo são mais frequentes; depois ficam raros (o personagem continua transformado até o fim da luta).
+function drawKiLightning(entity, cx, bottomY, w, h, forte) {
+    const t = Math.floor(gameplayClock * 14);
+    const seed = entity === player2 ? 7 : 1;
+    const rnd = (n) => { const x = Math.sin((t * 31 + n * 17 + seed * 101) * 12.9898) * 43758.5453; return x - Math.floor(x); };
+    const raios = forte ? 3 : 1;
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    for (let b = 0; b < raios; b++) {
+        if (rnd(b * 5) > (forte ? 0.7 : 0.3)) continue;
+        let x = cx + (rnd(b * 5 + 1) - 0.5) * w * 1.1, y = bottomY - h * (0.15 + rnd(b * 5 + 2) * 0.7);
+        const dir = rnd(b * 5 + 3) < 0.5 ? -1 : 1;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        for (let i = 0; i < 5; i++) {
+            x += dir * (2 + rnd(b * 7 + i + 40) * 5);
+            y += (rnd(b * 11 + i + 80) - 0.5) * 10;
+            ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = "rgba(255,255,255,0.9)";
+        ctx.lineWidth = 2;
+        ctx.shadowColor = "#9fe8ff";
+        ctx.shadowBlur = 6;
+        ctx.stroke();
+        ctx.strokeStyle = "#bff4ff";
+        ctx.lineWidth = 1;
+        ctx.shadowBlur = 0;
+        ctx.stroke();
+    }
     ctx.restore();
 }
 
@@ -3669,7 +3707,7 @@ function drawTouchHUD() {
         const isEditing = gameState === "options_hud";
         const isSelected = hudEditorSelectedBtn === key && isEditing;
         // Botão TRANSF. acende (dourado) quando há ki suficiente e fica apagado quando não dá para usar.
-        const transformReady = key === "transform" && player.ki >= player.maxKi && !player.isSSJ;
+        const transformReady = key === "transform" && player.ki >= player.maxKi && getTransformLevel(player) < getCharacterTransformations(selectedCharacter).length;
         const specialReady = key === "special" && canUseSpecial(player.ki, player.maxKi) && world.beamActive <= 0;
         const transformDim = (key === "transform" && !transformReady && !isEditing) || (key === "special" && !specialReady && !isEditing);
         const highlight = isSelected || transformReady || specialReady;

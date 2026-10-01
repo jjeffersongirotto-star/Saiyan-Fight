@@ -44,6 +44,8 @@ Em **DATABASE** você cria personagens novos de duas formas:
 - **Construtor:** monta o personagem juntando partes, como cabelo, roupa, cauda, asas e acessórios.
 - **Sprite sheet:** usa uma imagem sua, recortando os quadros de cada movimento.
 
+Na aba **TRANSFORMAÇÃO** do editor, cada personagem pode ter várias transformações, na ordem que você escolher. Elas são editadas no próprio construtor, guardando só o que muda. Na luta, cada **TRANSFORMAR** com o ki cheio leva à próxima.
+
 Tudo fica salvo no próprio navegador.
 
 ## 🛠️ Para quem mexe no código
