@@ -3023,7 +3023,7 @@ function drawPlayerEntity(p, charData, isBoss = false) {
 
     const fallbackKey = isBoss ? selectedBoss : selectedCharacter;
     const animationState = p.actionState || "idle";
-    const animationFrame = getCharacterAnimationFrame(fallbackKey, animationState, p.animTimer);
+    const animationFrame = getCharacterAnimationFrame(fallbackKey, animationState, p.animTimer, !!(p.isSSJ || p.isTransformed));
 
     const actionShift = {
         idle: { dx: 0, dy: 0, scale: 1 },

@@ -1267,8 +1267,9 @@ function spriteRenderFigure(a, pose, opts) {
 
     // luz de contorno (rim light) sobre a figura toda + brilho dourado quando transformado
     let behind = "";
-    if (pose.flash > 0 || ssj) {
-        const f = Math.max(pose.flash, ssj ? 0.4 : 0);
+    const ssjGlow = ssj && !(opts && opts.noGlow);   // na luta a aura de ki já faz o brilho (menu.js)
+    if (pose.flash > 0 || ssjGlow) {
+        const f = Math.max(pose.flash, ssjGlow ? 0.4 : 0);
         behind += `<ellipse cx="48" cy="62" rx="${_n2(30 + f * 14)}" ry="${_n2(46 + f * 12)}" fill="${R.rad(48, 62, 56, [[0, "#fff7b8", 0.85 * f], [0.55, "#ffd93b", 0.45 * f], [1, "#ffb300", 0]])}"/>`;
     }
     let front = "";
@@ -1313,7 +1314,7 @@ const _spriteFrameCache = {};
 function getProceduralFrameUrls(appearance, state, opts) {
     const a = normalizeAppearance(appearance);
     const o = opts || {};
-    const key = JSON.stringify([a, state, !!o.ssj, o.kiColor || ""]);
+    const key = JSON.stringify([a, state, !!o.ssj, o.kiColor || "", !!o.noGlow]);
     if (_spriteFrameCache[key]) return _spriteFrameCache[key];
     const n = SPRITE_FRAME_COUNTS[state] || 1;
     const frames = [];
