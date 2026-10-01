@@ -42,12 +42,24 @@ function spriteCtx() {
     const R = { defs: [], n: 0 };
     R.id = () => `g${++R.n}`;
     // degradê linear; (x1,y1)-(x2,y2) em coordenadas do viewBox (userSpaceOnUse)
+    // Sombras recortadas (R.cel): cada cor do degradê vira uma faixa chapada, como pintura de desenho animado.
+    R.steps = (stops) => {
+        if (!R.cel || stops.length < 2) return stops;
+        const out = [];
+        stops.forEach(([o, c, al], i) => {
+            const start = i === 0 ? 0 : (stops[i - 1][0] + o) / 2, end = i === stops.length - 1 ? 1 : (o + stops[i + 1][0]) / 2;
+            out.push([_n2(start), c, al], [_n2(end), c, al]);
+        });
+        return out;
+    };
     R.lin = (x1, y1, x2, y2, stops) => {
+        stops = R.steps(stops);
         const id = R.id();
         R.defs.push(`<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${_n2(x1)}" y1="${_n2(y1)}" x2="${_n2(x2)}" y2="${_n2(y2)}">${stops.map(([o, c, a]) => `<stop offset="${o}" stop-color="${c}"${a !== undefined ? ` stop-opacity="${a}"` : ""}/>`).join("")}</linearGradient>`);
         return `url(#${id})`;
     };
     R.rad = (cx, cy, r, stops, fx, fy) => {
+        stops = R.steps(stops);
         const id = R.id();
         R.defs.push(`<radialGradient id="${id}" gradientUnits="userSpaceOnUse" cx="${_n2(cx)}" cy="${_n2(cy)}" r="${_n2(r)}"${fx !== undefined ? ` fx="${_n2(fx)}" fy="${_n2(fy)}"` : ""}>${stops.map(([o, c, a]) => `<stop offset="${o}" stop-color="${c}"${a !== undefined ? ` stop-opacity="${a}"` : ""}/>`).join("")}</radialGradient>`);
         return `url(#${id})`;
@@ -69,7 +81,7 @@ const SPRITE_RACE_SKIN = {
 };
 
 const SPRITE_DEFAULT_APPEARANCE = {
-    race: "Saiyajin", build: "normal", skinColor: "",
+    race: "Saiyajin", build: "normal", proporcao: "classico", skinColor: "",
     hairStyle: "goku", hairColor: "#16110f",
     eyeType: "normal", irisColor: "#1a1210", scleraColor: "#ffffff",
     earType: "normal", mouthType: "smile", accessory: "none", hat: "none",
@@ -103,15 +115,33 @@ function spriteSkin(a) {
 // jogo (48x56 px) uma diferença sutil de 20-30% em espessura de membro é quase invisível, então "magro" e
 // "musculoso" precisam ficar claramente diferentes já na prévia do construtor (~100x100 px).
 function spriteBuild(a) {
-    const base = { sw: 30, ww: 20, hw: 22, arm: 8.2, leg: 10.8, headRx: 12.2, headRy: 13.6, scale: 1, l1: 14.5, l2: 13.5, t1: 15.5, t2: 15, bulk: 0 };
+    // headScale/headY/shoulderY/hipY/torsoTop/torsoBottom: onde ficam cabeça, ombros, quadril e o tronco (proporções);
+    // hairScale: tamanho do cabelo em relação à cabeça; cel: sombras recortadas (estilo desenho animado).
+    const base = { sw: 30, ww: 20, hw: 22, arm: 8.2, leg: 10.8, headRx: 12.2, headRy: 13.6, scale: 1, l1: 14.5, l2: 13.5, t1: 15.5, t2: 15, bulk: 0,
+        headScale: 1, headY: 27, shoulderY: 48.2, hipY: 75, torsoTop: 45, torsoBottom: 77, hairScale: 1, cel: false };
+    let B;
     switch (a.build) {
-        case "magro": return Object.assign(base, { sw: 22, ww: 13.5, hw: 16, arm: 5.4, leg: 8, headRx: 12.6, headRy: 14, bulk: -1 });
-        case "musculoso": return Object.assign(base, { sw: 40, ww: 27, hw: 27, arm: 13.2, leg: 15, headRx: 11.6, headRy: 12.8, bulk: 1 });
-        case "gigante": return Object.assign(base, { sw: 48, ww: 32, hw: 33, arm: 16, leg: 16.5, headRx: 12.2, headRy: 12.2, scale: 1.05, bulk: 1 });
-        case "jovem": return Object.assign(base, { sw: 20, ww: 13, hw: 15, arm: 5, leg: 7.4, headRx: 14.4, headRy: 15, scale: 0.78, bulk: -1 });
-        default: return base;
+        case "magro": B = Object.assign(base, { sw: 22, ww: 13.5, hw: 16, arm: 5.4, leg: 8, headRx: 12.6, headRy: 14, bulk: -1 }); break;
+        case "musculoso": B = Object.assign(base, { sw: 40, ww: 27, hw: 27, arm: 13.2, leg: 15, headRx: 11.6, headRy: 12.8, bulk: 1 }); break;
+        case "gigante": B = Object.assign(base, { sw: 48, ww: 32, hw: 33, arm: 16, leg: 16.5, headRx: 12.2, headRy: 12.2, scale: 1.05, bulk: 1 }); break;
+        case "jovem": B = Object.assign(base, { sw: 20, ww: 13, hw: 15, arm: 5, leg: 7.4, headRx: 14.4, headRy: 15, scale: 0.78, bulk: -1 }); break;
+        default: B = base;
     }
+    if (a.proporcao === "anime") Object.assign(B, SPRITE_ANIME_BODY.comum, SPRITE_ANIME_BODY[a.build] || SPRITE_ANIME_BODY.normal);
+    return B;
 }
+
+// Proporções "anime" (como os sprites de luta de Dragon Ball): cabeça menor, pernas longas, ombros largos e
+// cintura fina (~5 cabeças de altura, contra ~3,4 do boneco clássico), sombras recortadas.
+const SPRITE_ANIME_BODY = {
+    comum: { headRx: 12.2, headRy: 13.6, headScale: 1, headY: 21.4, torsoTop: 36.5, torsoBottom: 62, shoulderY: 39.2, hipY: 60.4,
+        l1: 15.5, l2: 14.5, t1: 22, t2: 22, hairScale: 0.84, cel: true, bulk: 0, scale: 1, pixel: true, bigEyes: true },
+    normal: { sw: 29, ww: 16, hw: 18, arm: 7.4, leg: 8.2 },
+    musculoso: { sw: 34, ww: 17.5, hw: 20, arm: 8.8, leg: 9.2 },
+    magro: { sw: 24, ww: 14, hw: 16, arm: 5.4, leg: 7 },
+    gigante: { sw: 40, ww: 24, hw: 25, arm: 10, leg: 11, scale: 1.05 },
+    jovem: { sw: 21, ww: 13, hw: 15, arm: 5, leg: 6.6, headScale: 0.86, scale: 0.8 }
+};
 
 // ---------------------------------------------------------------------------
 // Peças básicas
@@ -129,6 +159,29 @@ function spriteLimb(x1, y1, x2, y2, w, color, opts) {
         `<line ${P} stroke="${color}" stroke-width="${_n2(w)}" stroke-linecap="${cap}"/>` +
         `<line ${off(-w * 0.27)} stroke="${spriteShade(color, -0.34)}" stroke-width="${_n2(w * 0.3)}" stroke-linecap="${cap}" opacity="0.55"/>` +
         `<line ${off(w * 0.2)} stroke="${spriteShade(color, 0.42)}" stroke-width="${_n2(w * 0.26)}" stroke-linecap="${cap}" opacity="0.6"/>`;
+}
+
+// Membro "anatômico" (estilo anime): mais grosso numa ponta que na outra (ombro→cotovelo, coxa→joelho), com
+// contorno, cor chapada, faixa de sombra do lado oposto à luz e um filete de luz — como sprites de luta desenhados.
+function spriteMuscle(x1, y1, x2, y2, w1, w2, color, opts) {
+    const o = opts || {};
+    const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1;
+    let nx = -dy / len, ny = dx / len;
+    if (nx * SPRITE_LIGHT.x + ny * SPRITE_LIGHT.y < 0) { nx = -nx; ny = -ny; }   // n aponta para a luz
+    const bulge = o.bulge === undefined ? 0.12 : o.bulge;                        // barriga do músculo (curva)
+    const sweep = (dx * ny - dy * nx) > 0 ? 0 : 1;                               // pontas arredondadas sempre para fora
+    const shape = (k1, k2, off) => {
+        const a1 = [x1 + nx * (w1 / 2 * k1 + off), y1 + ny * (w1 / 2 * k1 + off)], b1 = [x1 - nx * (w1 / 2 * k1 - off), y1 - ny * (w1 / 2 * k1 - off)];
+        const a2 = [x2 + nx * (w2 / 2 * k2 + off), y2 + ny * (w2 / 2 * k2 + off)], b2 = [x2 - nx * (w2 / 2 * k2 - off), y2 - ny * (w2 / 2 * k2 - off)];
+        const mA = [(a1[0] + a2[0]) / 2 + nx * w1 * bulge * k1, (a1[1] + a2[1]) / 2 + ny * w1 * bulge * k1];
+        const mB = [(b1[0] + b2[0]) / 2 - nx * w1 * bulge * k1, (b1[1] + b2[1]) / 2 - ny * w1 * bulge * k1];
+        const r1 = w1 / 2 * k1, r2 = w2 / 2 * k2;
+        return `M${_n2(a1[0])} ${_n2(a1[1])} Q${_n2(mA[0])} ${_n2(mA[1])} ${_n2(a2[0])} ${_n2(a2[1])} A${_n2(r2)} ${_n2(r2)} 0 0 ${sweep} ${_n2(b2[0])} ${_n2(b2[1])} Q${_n2(mB[0])} ${_n2(mB[1])} ${_n2(b1[0])} ${_n2(b1[1])} A${_n2(r1)} ${_n2(r1)} 0 0 ${sweep} ${_n2(a1[0])} ${_n2(a1[1])} Z`;
+    };
+    const dark = spriteShade(color, -0.36), light = spriteShade(color, 0.38);
+    return `<path d="${shape(1, 1, 0)}" fill="${color}" stroke="${SPRITE_OUTLINE}" stroke-width="1.3" stroke-linejoin="round"/>` +
+        `<path d="${shape(0.42, 0.42, -Math.min(w1, w2) * 0.3)}" fill="${dark}"/>` +
+        `<path d="${shape(0.16, 0.16, Math.min(w1, w2) * 0.24)}" fill="${light}" opacity="0.85"/>`;
 }
 
 // Faixa fina (punho, barra da calça, borda da bota): segmento curto com ponta reta, perpendicular ao membro.
@@ -166,7 +219,7 @@ function spriteSpike(bx, by, tx, ty, bw, curv) {
 // ---------------------------------------------------------------------------
 // Devolve { back, front }: "back" desenha atrás da cabeça/pescoço, "front" por cima. `sway` (-1..1) balança as pontas
 // para os lados, `lift` (-1..1) levanta/abaixa (ex.: voando para baixo o cabelo sobe).
-function spriteHair(R, style, color, sway, lift, ssj) {
+function spriteHair(R, style, color, sway, lift, ssj, anime) {
     const hs = ssj ? 1.16 : 1;                       // Super Saiyajin: cabelo mais alto
     const dark = spriteShade(color, -0.42), mid = spriteShade(color, -0.12), light = spriteShade(color, 0.42);
     const fill = R.lin(-6, -34, 8, 6, [[0, light], [0.38, color], [1, dark]]);
@@ -184,6 +237,14 @@ function spriteHair(R, style, color, sway, lift, ssj) {
 
     switch (style) {
         case "goku": {
+            if (anime) {
+                // Volume grande do anime: espetos largos abrindo para os lados e para cima + franja de 3 mechas.
+                const mass = [[-11, -1, -23, 6, 10, -1], [-10, -6, -26, -11, 12, -1.5], [-9, -11, -22, -27, 12.5, -1], [-4, -13, -11, -35, 13, -0.5],
+                    [2, -14, 6, -37, 13, 0.5], [7, -12, 19, -30, 12.5, 1], [11, -7, 26, -15, 11.5, 1.5], [12, -1, 23, 5, 9.5, 1]];
+                back = spikes(mass) + shines(mass.slice(2, 6));
+                front = cap() + capShine + spikes([[-8, -9, -12.5, -2, 6.4, 0.8], [-1.5, -11, -0.6, -4.6, 5.6, -0.3], [5.5, -10, 9.6, -3.4, 5.4, -0.4]]);
+                break;
+            }
             const big = [[-11, -9, -22, -19, 9, -1], [-6, -13, -13, -32, 9.5, -1], [1, -14, 5, -35, 10, 0], [7, -13, 16, -30, 9, 1], [11, -8, 22, -16, 8, 1], [-12.4, -3, -19.5, 3, 6, 0], [12.4, -3, 19.5, 3, 6, 0]];
             back = spikes(big) + shines(big.slice(0, 5));
             front = cap() + capShine + spikes([[-6, -10, -7.8, -0.4, 5.8, 0.4], [-0.5, -11, 2.2, -1.6, 5.8, -0.4], [6, -10, 9, -1.2, 5.2, 0]]);
@@ -256,7 +317,7 @@ const SPRITE_SAIYAN_HAIR = ["goku", "vegeta", "gohan", "bardock", "raditz", "bro
 // ---------------------------------------------------------------------------
 // ROSTO (olhos, sobrancelhas, nariz, boca)
 // ---------------------------------------------------------------------------
-function spriteEyes(R, a, pose, skin, browColor) {
+function spriteEyes(R, a, pose, skin, browColor, big) {
     const type = pose.eyes && pose.eyes !== "open" ? pose.eyes : a.eyeType;
     const T = {
         normal: { rx: 3.3, ry: 2.8, lid: 0.12, brow: -3, browY: -4.6, iris: 1 },
@@ -271,6 +332,8 @@ function spriteEyes(R, a, pose, skin, browColor) {
     };
     let t = T[type] || T.normal;
     if (pose.eyes === "closed") t = T.fechado;
+    // pixel art: olhos maiores para continuarem legíveis no tamanho do jogo (branco do olho + pupila)
+    if (big && !t.closed) t = Object.assign({}, t, { rx: t.rx * 1.22, ry: t.ry * 1.3, browY: t.browY - 0.8 });
     const look = (pose.lookX || 0), lookY = (pose.lookY || 0);
     let out = "";
     for (const side of [-1, 1]) {
@@ -297,6 +360,44 @@ function spriteEyes(R, a, pose, skin, browColor) {
     return out;
 }
 
+// Olhos/boca de anime em pixel art (rosto virado para a direita): olho da frente maior, pupila olhando para o
+// adversário, traço grosso de cílio em cima e sobrancelha inclinada para o centro (cara de luta).
+function spriteAnimeFace(a, pose, skin, browColor) {
+    const type = pose.eyes && pose.eyes !== "open" ? pose.eyes : a.eyeType;
+    const closed = pose.eyes === "closed" || type === "fechado";
+    const angry = ["angry", "bravo", "serio", "freeza"].includes(type);
+    const wide = type === "wide";
+    const ly = (pose.lookY || 0) * 0.6;
+    let s = "";
+    const eye = (x, y, k, inner) => {
+        // inner = -1: canto de dentro do olho fica à esquerda (olho da frente); +1: à direita (olho de trás)
+        const w = 4.2 * k, up = angry ? 1.6 : 1.1;
+        if (closed) {
+            s += `<path d="M${_n2(x - w)} ${_n2(y + 0.4)} Q${_n2(x)} ${_n2(y + 2.4)} ${_n2(x + w)} ${_n2(y + 0.2)}" fill="none" stroke="${SPRITE_OUTLINE}" stroke-width="1.8" stroke-linecap="round"/>`;
+        } else {
+            const top = wide ? -3.4 : -2.4;
+            s += `<path d="M${_n2(x - w)} ${_n2(y - 1 + (inner < 0 ? up * 0.6 : 0))} L${_n2(x + w)} ${_n2(y + top + (inner > 0 ? up * 0.6 : 0))} L${_n2(x + w * 0.85)} ${_n2(y + 2.6)} L${_n2(x - w * 0.8)} ${_n2(y + 2.8)} Z" fill="${a.scleraColor || "#ffffff"}"/>`;
+            const px = x + w * 0.28 + (pose.lookX || 0) * 0.5;
+            s += `<rect x="${_n2(px - 1.3 * k)}" y="${_n2(y - 1.2 + ly)}" width="${_n2(2.6 * k)}" height="${_n2(wide ? 2.6 : 3.6)}" fill="${spriteShade(a.irisColor, -0.3)}"/>`;
+            s += `<path d="M${_n2(x - w - 0.6)} ${_n2(y - 1.2 + (inner < 0 ? up * 0.6 : 0))} L${_n2(x + w + 0.6)} ${_n2(y + top - 0.3 + (inner > 0 ? up * 0.6 : 0))}" stroke="${SPRITE_OUTLINE}" stroke-width="2" stroke-linecap="round"/>`;
+        }
+        // sobrancelha: ponta de dentro mais baixa (determinado/bravo)
+        const by = y - (wide ? 6.4 : 5.4), tilt = angry ? 2.6 : 1.4;
+        const x1 = x - w - 0.4, x2 = x + w + 0.2;
+        const y1 = by + (inner < 0 ? tilt : -tilt * 0.4), y2 = by + (inner < 0 ? -tilt * 0.4 : tilt);
+        s += `<path d="M${_n2(x1)} ${_n2(y1)} L${_n2(x2)} ${_n2(y2)}" stroke="${browColor}" stroke-width="2.2" stroke-linecap="round"/>`;
+    };
+    eye(4.4, 1.2, 1, -1);      // olho da frente (lado do adversário)
+    eye(-5, 1.4, 0.78, 1);     // olho de trás, menor (perspectiva)
+    // nariz e boca
+    s += `<path d="M8.6 4.4 L9.6 6.4 L7.8 6.8" fill="none" stroke="${spriteShade(skin, -0.45)}" stroke-width="1.1" stroke-linejoin="round"/>`;
+    const mouth = pose.mouth && pose.mouth !== "auto" ? pose.mouth : a.mouthType;
+    if (mouth === "shout" || mouth === "grito") s += `<path d="M1.6 8.4 L7.2 8 L6.2 11.6 L2.6 11.8 Z" fill="#4a0d0d" stroke="${SPRITE_OUTLINE}" stroke-width="1"/>`;
+    else if (mouth === "smile") s += `<path d="M0.6 9 Q3 10.2 5.4 8.6" fill="none" stroke="${spriteShade(skin, -0.5)}" stroke-width="1.1" stroke-linecap="round"/>`;
+    else s += `<path d="M1 9.4 L5 9.1" stroke="${spriteShade(skin, -0.5)}" stroke-width="1.1" stroke-linecap="round"/>`;
+    return s;
+}
+
 function spriteMouth(a, pose, skin) {
     const type = pose.mouth && pose.mouth !== "auto" ? pose.mouth : a.mouthType;
     const lx = (pose.lookX || 0) * 0.8;
@@ -318,13 +419,27 @@ function spriteHead(R, a, B, pose, ctx) {
     const skin = ctx.skin, ssj = !!ctx.ssj;
     const hairStyle = a.hairStyle;
     const hairColor = ssj && SPRITE_SAIYAN_HAIR.includes(hairStyle) ? "#ffe34d" : a.hairColor;
-    const hair = spriteHair(R, hairStyle, hairColor, pose.hairSway || 0, pose.hairLift || 0, ssj && SPRITE_SAIYAN_HAIR.includes(hairStyle));
+    const hair = spriteHair(R, hairStyle, hairColor, pose.hairSway || 0, pose.hairLift || 0, ssj && SPRITE_SAIYAN_HAIR.includes(hairStyle), B.cel);
     const rx = B.headRx, ry = B.headRy;
     const faceFill = R.rad(-4.2, -5.2, 22, [[0, spriteShade(skin, 0.28)], [0.5, skin], [1, spriteShade(skin, -0.38)]]);
     const isFreeza = a.race === "Raça Freeza", isNamek = a.race === "Namekuseijin", isMajin = a.race === "Majin";
     const browColor = hairStyle === "careca" || hairColor === a.hairColor && !hair.front ? spriteShade(skin, -0.5) : spriteShade(hairColor, -0.35);
 
     let s = "";
+    if (B.bigEyes && !isFreeza && !isNamek && a.race !== "Kaioshin" && a.earType !== "pontuda") {
+        // Rosto de anime pensado para pixel art: virado 3/4 para o adversário (direita), queixo marcado,
+        // olhos grandes com branco + pupila, sobrancelha grossa — legível mesmo com poucos pixels.
+        s += `<path d="M-6.4 ${_n2(ry - 6)} L-6.4 ${_n2(ry + 2.6)} L6 ${_n2(ry + 2.6)} L5.6 ${_n2(ry - 6)} Z" fill="${spriteShade(skin, -0.3)}" stroke="${SPRITE_OUTLINE}" stroke-width="1"/>`;
+        if (a.earType !== "nenhuma") s += spriteEllipse(-rx + 0.6, 1.4, 2.6, 3.6, spriteShade(skin, -0.12));
+        const face = R.lin(-10, -8, 10, 12, [[0, spriteShade(skin, 0.22)], [0.55, skin], [1, spriteShade(skin, -0.3)]]);
+        s += spritePath(`M${_n2(-rx + 0.6)} -1 C${_n2(-rx)} -15 ${_n2(rx)} -15 ${_n2(rx + 0.2)} -1 L${_n2(rx - 0.6)} 4.6 L7.6 10.8 L2.6 ${_n2(ry - 0.6)} L-3.6 11.6 L${_n2(-rx + 1.6)} 5.4 Z`, face);
+        s += spriteAnimeFace(a, pose, skin, browColor);
+        if (a.scar === "bochecha") s += `<path d="M7 4.6 L10.4 6.6" stroke="#8a2a20" stroke-width="1.1" stroke-linecap="round"/>`;
+        const hairWrapA = (svg) => B.hairScale !== 1 && svg ? `<g transform="scale(${_n2(B.hairScale)})">${svg}</g>` : svg;
+        s += hairWrapA(hair.front);
+        s += spriteHeadAccessory(R, a, ctx, skin, pose, rx, ry);
+        return { back: hairWrapA(hair.back), front: s };
+    }
     // pescoço
     s += `<path d="M-5.2 ${ry - 5} L-5 ${ry + 5} L5 ${ry + 5} L5.2 ${ry - 5} Z" fill="${spriteShade(skin, -0.24)}" stroke="${SPRITE_OUTLINE}" stroke-width="1"/>`;
     // orelhas
@@ -355,7 +470,7 @@ function spriteHead(R, a, B, pose, ctx) {
     // olhos e boca
     const eyeShift = (pose.lookX || 0) * 0.9;
     s += `<g transform="translate(${_n2(eyeShift)} 0)">`;
-    s += spriteEyes(R, a, pose, skin, browColor);
+    s += spriteEyes(R, a, pose, skin, browColor, B.bigEyes);
     s += `<path d="M${_n2(0.4)} 4.2 Q${_n2(1.9)} 6 ${_n2(0.2)} 6.9" fill="none" stroke="${spriteShade(skin, -0.5)}" stroke-width="0.85" stroke-linecap="round"/>`;
     s += spriteMouth(a, pose, skin);
     s += `</g>`;
@@ -363,9 +478,10 @@ function spriteHead(R, a, B, pose, ctx) {
     if (a.scar === "bochecha") s += `<path d="M4.4 4.4 L9 7" stroke="#8a2a20" stroke-width="1.1" stroke-linecap="round"/>`;
     // sombra do cabelo na testa
     if (hair.front) s += `<path d="M${-rx + 1.6} -3 Q0 -6.4 ${rx - 1.6} -3 L${rx - 2.6} -1.8 Q0 -4.4 ${-rx + 2.6} -1.8 Z" fill="#000" opacity="0.13"/>`;
-    s += hair.front;
+    const hairWrap = (svg) => B.hairScale !== 1 && svg ? `<g transform="scale(${_n2(B.hairScale)})">${svg}</g>` : svg;
+    s += hairWrap(hair.front);
     s += spriteHeadAccessory(R, a, ctx, skin, pose, rx, ry);
-    return { back: hair.back, front: s };
+    return { back: hairWrap(hair.back), front: s };
 }
 
 function spriteHeadAccessory(R, a, ctx, skin, pose, rx, ry) {
@@ -411,12 +527,17 @@ function spriteHeadAccessory(R, a, ctx, skin, pose, rx, ry) {
 // ---------------------------------------------------------------------------
 // ROUPAS: cada "outerShirt" define cores de tronco/braços/pernas e o desenho por cima do corpo.
 // ---------------------------------------------------------------------------
-function spriteOutfitSpec(a, skin) {
+function spriteOutfitSpec(a, skin, anime) {
     const P = a.primaryColor, S = a.secondaryColor, A = a.accentColor;
     const hasInner = a.innerShirt && a.innerShirt !== "nenhuma";
     const spec = { kind: a.outerShirt, torso: skin, armUpper: skin, armLower: skin, sleeve: null, leg: skin, legWide: false, legCover: a.pants !== "nenhuma" };
     switch (a.outerShirt) {
         case "kimono":
+            if (anime) {
+                // como no anime: gi sem manga, braços de fora e só a manguinha curta da camiseta de baixo no ombro
+                Object.assign(spec, { torso: P, sleeve: hasInner ? { color: S, frac: 0.3 } : null, leg: P, legWide: true });
+                break;
+            }
             Object.assign(spec, { torso: P, armUpper: hasInner ? S : skin, armLower: hasInner ? S : skin, sleeve: { color: P, frac: 0.58 }, leg: P, legWide: true });
             break;
         case "armadura_saiyajin":
@@ -604,11 +725,30 @@ function spriteHand(R, cx, cy, r, color, open, ang) {
 
 // Devolve { svg, hand:[x,y], elbow:[x,y] }. angles = [ombro, cotovelo] em graus (0 = braço reto para baixo).
 function spriteArm(R, a, B, spec, glove, skin, side, angles, handKind) {
-    const sx = 48 + side * (B.sw / 2 - 3.2) + SPRITE_TURN * (side > 0 ? 0.4 : -0.15), sy = 48.2;
+    const sx = 48 + side * (B.sw / 2 - 3.2) + SPRITE_TURN * (side > 0 ? 0.4 : -0.15), sy = B.shoulderY;
     const e = spriteSeg(sx, sy, angles[0], B.l1);
     const h = spriteSeg(e[0], e[1], angles[1], B.l2);
     const w = B.arm;
     let s = "";
+    if (B.cel) {
+        // anime: deltoide largo afinando no cotovelo; antebraço forte afinando no punho; manga do kimono larga.
+        s += spriteMuscle(sx, sy, e[0], e[1], w * 1.35, w * 0.9, spec.armUpper, { bulge: 0.16 });
+        s += spriteMuscle(e[0], e[1], h[0], h[1], w * 1.0, w * 0.72, spec.armLower, { bulge: 0.14 });
+        if (spec.sleeve) {
+            const p = [sx + (e[0] - sx) * spec.sleeve.frac, sy + (e[1] - sy) * spec.sleeve.frac];
+            s += spriteMuscle(sx, sy, p[0], p[1], w * 1.42, w * 1.2, spec.sleeve.color, { bulge: 0.04 });
+        }
+        if (glove) {
+            const from = glove.full ? 0.5 : 0.6, to = glove.full ? 1 : 0.86;
+            const q1 = [e[0] + (h[0] - e[0]) * from, e[1] + (h[1] - e[1]) * from], q2 = [e[0] + (h[0] - e[0]) * to, e[1] + (h[1] - e[1]) * to];
+            s += spriteMuscle(q1[0], q1[1], q2[0], q2[1], w * 0.98, w * 0.86, glove.color, { bulge: 0 });
+            if (glove.trim) s += spriteBand(q1[0], q1[1], q2[0], q2[1], w * 1.0, glove.trim, 1.5);
+        }
+        const handColor = glove && glove.full ? glove.color : skin;
+        const dirA = Math.atan2(h[0] - e[0], -(h[1] - e[1])) * 180 / Math.PI;
+        s += spriteHand(R, h[0], h[1], w * 0.52, handColor, handKind === "open", dirA + 180);
+        return { svg: s, hand: h, elbow: e };
+    }
     s += spriteLimb(sx, sy, e[0], e[1], w, spec.armUpper);
     // Bíceps: corpo "musculoso"/"gigante" ganha um bojo visível no meio do braço superior (senão a diferença
     // de espessura sozinha é sutil demais para notar no tamanho do jogo). "magro"/"jovem" não ganham nada extra.
@@ -638,12 +778,28 @@ function spriteArm(R, a, B, spec, glove, skin, side, angles, handKind) {
 }
 
 function spriteLeg(R, a, B, spec, boot, skin, side, angles) {
-    const hx = 48 + side * B.hw * 0.23 + SPRITE_TURN * (side > 0 ? 0.35 : -0.12), hy = 75;
+    const hx = 48 + side * B.hw * 0.23 + SPRITE_TURN * (side > 0 ? 0.35 : -0.12), hy = B.hipY;
     const k = spriteSeg(hx, hy, angles[0], B.t1);
     const f = spriteSeg(k[0], k[1], angles[1], B.t2);
     const w = B.leg * (spec.legWide ? 1.13 : 1);
     const color = spec.legCover ? spec.leg : skin;
     let s = "";
+    if (B.cel) {
+        // anime: coxa larga afinando no joelho; calça folgada (gi) cai larga até a bota.
+        const wide = spec.legCover && spec.legWide;
+        s += spriteMuscle(hx, hy, k[0], k[1], w * (wide ? 1.55 : 1.3), w * (wide ? 1.22 : 0.92), color, { bulge: wide ? 0.08 : 0.14 });
+        s += spriteMuscle(k[0], k[1], f[0], f[1], w * (wide ? 1.22 : 0.95), w * (wide ? 1.12 : 0.66), color, { bulge: wide ? 0.04 : 0.12 });
+        if (boot) {
+            const from = [f[0] + (k[0] - f[0]) * boot.h, f[1] + (k[1] - f[1]) * boot.h];
+            s += spriteMuscle(from[0], from[1], f[0], f[1], w * 0.98, w * 0.86, boot.color, { bulge: 0 });
+            s += spriteBand(from[0], from[1], f[0], f[1], w * 1.04, boot.trim, 1.8);
+        }
+        const fc = boot ? boot.color : skin;
+        s += `<g transform="rotate(${_n2(angles[1] * 0.45 + side * 4)} ${_n2(f[0])} ${_n2(f[1])})">` +
+            `<path d="M${_n2(f[0] - 3.4)} ${_n2(f[1] - 1)} L${_n2(f[0] + 3.4)} ${_n2(f[1] - 1)} Q${_n2(f[0] + side * 7.6 + (side < 0 ? 2 : 0))} ${_n2(f[1] + 0.4)} ${_n2(f[0] + side * 6.4 + (side < 0 ? 1.4 : 0))} ${_n2(f[1] + 3.6)} L${_n2(f[0] - 3.8)} ${_n2(f[1] + 3.6)} Z" fill="${fc}" stroke="${SPRITE_OUTLINE}" stroke-width="1.2" stroke-linejoin="round"/>` +
+            `<path d="M${_n2(f[0] - 3.6)} ${_n2(f[1] + 2.4)} L${_n2(f[0] + side * 6.2)} ${_n2(f[1] + 2.4)}" stroke="${spriteShade(fc, -0.45)}" stroke-width="1.3"/></g>`;
+        return { svg: s, foot: f, knee: k };
+    }
     s += spriteLimb(hx, hy, k[0], k[1], w, color);
     s += spriteLimb(k[0], k[1], f[0], f[1], w * (spec.legWide ? 0.98 : 0.94), color);
     if (spec.legCover && spec.legWide) {   // barra da calça frouxa
@@ -871,10 +1027,12 @@ const SPRITE_FIG_SCALE = 0.85;
 function spriteRenderFigure(a, pose, opts) {
     const R = spriteCtx();
     const B = spriteBuild(a);
+    R.cel = B.cel;
+    R.pixel = !!B.pixel;
     const skin = spriteSkin(a);
     const ssj = !!(opts && opts.ssj) || pose.ssj;
     const ctx = { skin, ssj };
-    const spec = spriteOutfitSpec(a, skin);
+    const spec = spriteOutfitSpec(a, skin, B.cel);
     const boot = spriteBootSpec(a);
     const glove = spriteGloveSpec(a);
     const kiColor = (opts && opts.kiColor) || a.kiColor || "#5be3ff";
@@ -884,27 +1042,32 @@ function spriteRenderFigure(a, pose, opts) {
     const legL = spriteLeg(R, a, B, spec, boot, skin, -1, pose.legL);
     const legR = spriteLeg(R, a, B, spec, boot, skin, 1, pose.legR);
 
-    const hy = 27 - (pose.breath || 0);
+    const hy = B.headY - (pose.breath || 0);
     const headParts = spriteHead(R, a, B, pose, ctx);
-    const headWrap = (svg) => `<g transform="translate(48 ${_n2(hy)}) rotate(${_n2((pose.lean || 0) * -0.25 + (pose.lookX || 0) * 1.2)}) scale(${_n2(B.headRx / 12.2)} ${_n2(B.headRy / 13.6)})">${svg}</g>`;
+    const headWrap = (svg) => `<g transform="translate(48 ${_n2(hy)}) rotate(${_n2((pose.lean || 0) * -0.25 + (pose.lookX || 0) * 1.2)}) scale(${_n2(B.headRx / 12.2 * B.headScale)} ${_n2(B.headRy / 13.6 * B.headScale)})">${svg}</g>`;
+    // O tronco é desenhado no espaço padrão (ombros y=45, quadril y=77) e encaixado entre torsoTop e torsoBottom.
+    const tk = (B.torsoBottom - B.torsoTop) / 32;
+    const torsoWrap = (svg) => tk === 1 && B.torsoTop === 45 ? svg : `<g transform="translate(0 ${_n2(B.torsoTop - 45 * tk)}) scale(1 ${_n2(tk)})">${svg}</g>`;
 
     let fig = "";
     fig += spriteBack(R, a, B, pose, skin);
     fig += headWrap(headParts.back);          // cabelo comprido fica ATRÁS do corpo
     fig += legL.svg + legR.svg;
     fig += armL.svg;                          // braço de trás (esquerdo, lado oposto ao adversário) some atrás do tronco
-    fig += spriteTorso(R, a, B, spec, skin, pose);
+    let torso = spriteTorso(R, a, B, spec, skin, pose);
     if (a.tail === "cinto_saiyajin") {
-        fig += spritePath(`M${_n2(48 - B.ww / 2 - 1)} 66.6 L${_n2(48 + B.ww / 2 + 1)} 66.6 L${_n2(48 + B.ww / 2 + 1.6)} 71.4 L${_n2(48 - B.ww / 2 - 1.6)} 71.4 Z`, R.lin(0, 66, 0, 72, [[0, "#b98a52"], [1, "#6d4522"]]));
-        fig += spriteTaper([[40, 70], [37, 76], [39, 82 + (pose.tailSwing || 0) * 1.5], [41, 86]], 3.4, 2.2, "#8a5a2b", "#c9a26a");
+        torso += spritePath(`M${_n2(48 - B.ww / 2 - 1)} 66.6 L${_n2(48 + B.ww / 2 + 1)} 66.6 L${_n2(48 + B.ww / 2 + 1.6)} 71.4 L${_n2(48 - B.ww / 2 - 1.6)} 71.4 Z`, R.lin(0, 66, 0, 72, [[0, "#b98a52"], [1, "#6d4522"]]));
+        torso += spriteTaper([[40, 70], [37, 76], [39, 82 + (pose.tailSwing || 0) * 1.5], [41, 86]], 3.4, 2.2, "#8a5a2b", "#c9a26a");
     }
-    fig += spriteSymbol(a, B);
+    torso += spriteSymbol(a, B);
+    fig += torsoWrap(torso);
     fig += armR.svg;                          // braço da frente (direito, rumo ao adversário) fica por cima
-    fig += spriteShoulderPads(R, a, B);
+    fig += torsoWrap(spriteShoulderPads(R, a, B));
 
     // cabeça (com leve inclinação e olhar)
     fig += headWrap(headParts.front);
 
+    R.cel = false;   // efeitos (ki, escudo, brilho, aura) continuam com degradê suave
     if (pose.ki) {
         const h = pose.ki.follow === "R" ? armR.hand : armL.hand;
         fig += spriteKiBall(R, h[0] + (pose.ki.ox || 0), h[1], pose.ki.r, kiColor, pose.ki.flick || 0);
@@ -941,6 +1104,12 @@ function generateSpriteFrameSvg(appearance, state, frameIndex, opts) {
     const pose = spritePoseFor(SPRITE_STATES.includes(state) ? state : "idle", idx, n);
     const { R, body } = spriteRenderFigure(a, pose, Object.assign({ seed: idx }, opts || {}));
     const W = Math.round(SPRITE_VIEW.w * SPRITE_RASTER_SCALE), H = Math.round(SPRITE_VIEW.h * SPRITE_RASTER_SCALE);
+    if (R.pixel) {
+        // Estilo pixel art: sem suavização de bordas (cores chapadas, sem "borrado") e traços com pelo menos ~1 pixel
+        // na tela do jogo (no jogo, 1 pixel = 2 unidades deste desenho) — senão os contornos internos somem.
+        const crisp = body.replace(/stroke-width="([\d.]+)"/g, (m, v) => `stroke-width="${_n2(+v >= 1 ? Math.max(+v, 1.9) : +v)}"`);
+        return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${SPRITE_VIEW.w} ${SPRITE_VIEW.h}" shape-rendering="crispEdges"><defs>${R.defs.join("")}</defs>${crisp}</svg>`;
+    }
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${SPRITE_VIEW.w} ${SPRITE_VIEW.h}"><defs>${R.defs.join("")}</defs>${body}</svg>`;
 }
 
@@ -970,7 +1139,7 @@ function getProceduralFrameUrls(appearance, state, opts) {
 // MODELOS (presets): personagens do anime montados com as peças do construtor.
 // ---------------------------------------------------------------------------
 const SPRITE_PRESETS = {
-    goku: { label: "Goku", appearance: { race: "Saiyajin", build: "musculoso", hairStyle: "goku", hairColor: "#16110f", eyeType: "normal", irisColor: "#1a1210", mouthType: "smile", outerShirt: "kimono", innerShirt: "regata", pants: "larga", shoes: "botas_artes", gloves: "pulseiras", primaryColor: "#f2680d", secondaryColor: "#1c45b0", accentColor: "#f7d23c", symbol: "kai", kiColor: "#5be3ff" } },
+    goku: { label: "Goku", appearance: { race: "Saiyajin", build: "musculoso", proporcao: "anime", hairStyle: "goku", hairColor: "#16110f", eyeType: "normal", irisColor: "#1a1210", mouthType: "smile", outerShirt: "kimono", innerShirt: "regata", pants: "larga", shoes: "botas_artes", gloves: "pulseiras", primaryColor: "#f2680d", secondaryColor: "#1c45b0", accentColor: "#f7d23c", symbol: "kai", kiColor: "#5be3ff" } },
     vegeta: { label: "Vegeta", appearance: { race: "Saiyajin", build: "normal", hairStyle: "vegeta", hairColor: "#100e18", eyeType: "serio", irisColor: "#161a24", mouthType: "serio", outerShirt: "armadura_saiyajin", innerShirt: "malha", pants: "justa", shoes: "botas_saiyajin", gloves: "luvas_saiyajin", primaryColor: "#1b3fa0", secondaryColor: "#f4f4f8", accentColor: "#e8b93a", kiColor: "#ffe45a" } },
     piccolo: { label: "Piccolo", appearance: { race: "Namekuseijin", build: "musculoso", hairStyle: "careca", eyeType: "bravo", irisColor: "#151515", earType: "pontuda", mouthType: "serio", accessory: "antenas", hat: "turbante", outerShirt: "gi_piccolo", innerShirt: "nenhuma", pants: "larga", shoes: "botas_marrons", gloves: "nenhuma", primaryColor: "#5b2e91", secondaryColor: "#20336f", accentColor: "#f5f5f7", cape: "capa_ombreiras", capeColor: "#f6f6f8", kiColor: "#e9ff7a" } },
     freeza: { label: "Freeza (final)", appearance: { race: "Raça Freeza", build: "magro", hairStyle: "careca", eyeType: "freeza", irisColor: "#d81f3f", earType: "nenhuma", mouthType: "serio", accessory: "chifres", outerShirt: "armadura_freeza", innerShirt: "nenhuma", pants: "nenhuma", shoes: "descalco", gloves: "nenhuma", primaryColor: "#7f4fc0", secondaryColor: "#3a1d6a", accentColor: "#e7d3ff", tail: "freeza", kiColor: "#ff5be0" } },

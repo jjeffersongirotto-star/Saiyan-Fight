@@ -388,11 +388,100 @@ function getRasterSource(img) {
         c.naturalWidth = w;
         c.naturalHeight = h;
         c.complete = true;
+        c.__svgImage = img;   // guarda o desenho original para a versão pixel art (getPixelArtSource)
         result = c;
     } catch (err) {
         result = img;
     }
     svgRasterCache.set(img, result);
+    return result;
+}
+
+// Personagem na luta como PIXEL ART nítida: o desenho (SVG) é feito já no tamanho exato em que aparece na tela,
+// com as bordas firmes (sem o "borrado" de encolher uma imagem grande) e um contorno escuro de 1 pixel em volta
+// — como os sprites de jogos de luta. Fica guardado por tamanho; efeitos semitransparentes (aura, brilho) são
+// preservados. Devolve { img, pad } (pad = pixels de contorno em cada lado) ou null se não for um desenho SVG.
+const pixelArtCache = new WeakMap();
+const PIXEL_ART_OUTLINE = [21, 17, 15];
+function getPixelArtSource(source, w, h) {
+    const svg = source && source.__svgImage;
+    if (!svg || typeof document === "undefined") return null;
+    w = Math.max(1, Math.round(w));
+    h = Math.max(1, Math.round(h));
+    let perSize = pixelArtCache.get(svg);
+    if (!perSize) { perSize = {}; pixelArtCache.set(svg, perSize); }
+    const key = w + "x" + h;
+    if (key in perSize) return perSize[key];
+    // O SVG é redesenhado já com o tamanho final (width/height = pixels da tela do jogo): desenhar o grande e
+    // encolher misturaria as cores (borrão). Carrega em segundo plano; até lá, o jogo usa o desenho normal.
+    const src = String(svg.src || "");
+    if (!src.startsWith("data:image/svg")) return null;
+    perSize[key] = null;
+    const sized = new Image();
+    // cores chapadas só no estilo pixel art (desenho nítido); no clássico, os degradês continuam como são
+    const pixelStyle = src.includes("crispEdges");
+    sized.onload = () => { perSize[key] = buildPixelArt(sized, w, h, pixelStyle ? getSvgPalette(src) : null); };
+    sized.src = src.replace(/width%3D%22[\d.]+%22%20height%3D%22[\d.]+%22/, `width%3D%22${w}%22%20height%3D%22${h}%22`);
+    return null;
+}
+
+// Cores usadas no desenho (para "chapar" cada pixel na cor mais próxima, sem misturas de borda/transparência).
+function getSvgPalette(dataUrl) {
+    let txt = "";
+    try { txt = decodeURIComponent(dataUrl.slice(dataUrl.indexOf(",") + 1)); } catch (e) { return []; }
+    const seen = new Set((txt.match(/#[0-9a-fA-F]{6}\b/g) || []).map(c => c.toLowerCase()));
+    return [...seen].map(h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]);
+}
+
+function buildPixelArt(svg, w, h, palette) {
+    let result = null;
+    try {
+        const pad = 1, W = w + pad * 2, H = h + pad * 2;
+        const c = document.createElement("canvas");
+        c.width = W;
+        c.height = H;
+        const g = c.getContext("2d", { willReadFrequently: true });
+        g.imageSmoothingEnabled = false;
+        g.drawImage(svg, pad, pad, w, h);
+        const px = g.getImageData(0, 0, W, H), d = px.data;
+        const solid = new Uint8Array(W * H);
+        for (let i = 0; i < W * H; i++) if (d[i * 4 + 3] === 255) solid[i] = 1;
+        // borda do corpo: pixel meio transparente encostado no corpo vira cheio ou vazio (sem franja borrada);
+        // brilhos/auras longe do corpo continuam suaves
+        const near = (i, x, y) => (x > 0 && solid[i - 1]) || (x < W - 1 && solid[i + 1]) || (y > 0 && solid[i - W]) || (y < H - 1 && solid[i + W]);
+        const edge = [];
+        for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+            const i = y * W + x, a = d[i * 4 + 3];
+            if (a > 0 && a < 255 && near(i, x, y)) edge.push(i, a >= 110 ? 255 : 0);
+        }
+        for (let k = 0; k < edge.length; k += 2) { d[edge[k] * 4 + 3] = edge[k + 1]; if (edge[k + 1]) solid[edge[k]] = 1; }
+        // cor chapada: cada pixel do corpo vai para a cor mais próxima da paleta do desenho
+        if (palette && palette.length) {
+            for (let i = 0; i < W * H; i++) {
+                if (!solid[i]) continue;
+                const r = d[i * 4], gg = d[i * 4 + 1], b = d[i * 4 + 2];
+                let best = palette[0], bd = Infinity;
+                for (const c of palette) {
+                    const dd = (c[0] - r) * (c[0] - r) * 0.3 + (c[1] - gg) * (c[1] - gg) * 0.59 + (c[2] - b) * (c[2] - b) * 0.11;
+                    if (dd < bd) { bd = dd; best = c; }
+                }
+                d[i * 4] = best[0]; d[i * 4 + 1] = best[1]; d[i * 4 + 2] = best[2];
+            }
+        }
+        for (let y = 0; y < H; y++) {
+            for (let x = 0; x < W; x++) {
+                const i = y * W + x;
+                if (solid[i] || d[i * 4 + 3] !== 0) continue;
+                if ((x > 0 && solid[i - 1]) || (x < W - 1 && solid[i + 1]) || (y > 0 && solid[i - W]) || (y < H - 1 && solid[i + W])) {
+                    d[i * 4] = PIXEL_ART_OUTLINE[0]; d[i * 4 + 1] = PIXEL_ART_OUTLINE[1]; d[i * 4 + 2] = PIXEL_ART_OUTLINE[2]; d[i * 4 + 3] = 255;
+                }
+            }
+        }
+        g.putImageData(px, 0, 0);
+        result = { img: c, pad };
+    } catch (err) {
+        result = null;
+    }
     return result;
 }
 
