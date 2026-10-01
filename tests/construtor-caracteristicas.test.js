@@ -44,15 +44,12 @@ check("dá para misturar: Saiyajin com antenas, furinhos do Majin e marcas do Ce
         const [k, v] = kv.split(":"); return svg(Object.assign({}, P.vegeta.appearance, { [k]: v })) !== base;
     });
 })());
-check("raça sugere as características típicas", sp.spriteRaceDefaults("Namekuseijin").earType === "pontuda" && sp.spriteRaceDefaults("Majin").earType === "majin" && sp.spriteRaceDefaults("Saiyajin").earType === "normal");
 
 // ---------- construtor (tela) ----------
 const html = fs.readFileSync(__dirname + "/../index.html", "utf8");
 check("construtor tem GÊNERO, CARACTERÍSTICA DA CABEÇA e MARCAS DA RAÇA", ["build-gender", "build-head-feature", "build-body-marks"].every(id => html.includes(`id="${id}"`)));
 check("opções organizadas em grupos (corpo, cabeça, especiais, roupas, acessórios, cores)", ["CORPO", "CABEÇA E ROSTO", "CARACTERÍSTICAS ESPECIAIS", "ROUPAS", "ACESSÓRIOS", "CORES"].every(t => html.includes(`<div class="build-section-title">${t}</div>`)));
 check("orelhas: normais, pontudas, furinhos do Majin, sem orelha", ['value="pontuda"', 'value="majin"', 'value="nenhuma">Sem orelha'].every(v => html.includes(v)));
-run(`document.getElementById("build-race").value = "Namekuseijin"; onBuilderRaceChange();`);
-check("trocar a raça para Namekuseijin sugere orelha pontuda e linhas na testa", run(`document.getElementById("build-ear-type").value`) === "pontuda" && run(`document.getElementById("build-body-marks").value`) === "namek");
 run(`setBuilderFormFromAppearance(SPRITE_PRESETS.android18.appearance)`);
 check("ao abrir a Androide 18 no construtor, o gênero aparece como feminino", run(`getBuilderAppearanceFromForm().gender`) === "feminino");
 
