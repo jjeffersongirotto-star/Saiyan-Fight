@@ -986,12 +986,10 @@ const SPRITE_PRESETS = {
     broly: { label: "Broly", appearance: { race: "Saiyajin", build: "gigante", hairStyle: "broly", hairColor: "#213018", eyeType: "bravo", irisColor: "#1a2a1a", mouthType: "serio", outerShirt: "none", innerShirt: "nenhuma", pants: "larga", shoes: "descalco", gloves: "pulseiras", primaryColor: "#8a6a2a", secondaryColor: "#c9a13a", accentColor: "#e8c04a", kiColor: "#7dff7a" } }
 };
 
-// Personagem inicial do jogo (chave no Database) -> modelo do construtor que o gera (ver DEFAULT_CHARACTERS em database.js).
-const SPRITE_DEFAULT_KEYS = { goku_adult: "goku", vegeta: "vegeta", piccolo: "piccolo", freeza_1: "freeza", trunks: "trunks", gohan: "gohan", kaioshin: "kaioshin", gogeta: "fusao", bardock: "bardock", android17: "android17", android18: "android18", majin_buu: "majin", raditz: "raditz", broly: "broly" };
 
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
-        SPRITE_VIEW, SPRITE_STATES, SPRITE_FRAME_COUNTS, SPRITE_PRESETS, SPRITE_DEFAULT_KEYS, SPRITE_DEFAULT_APPEARANCE,
+        SPRITE_VIEW, SPRITE_STATES, SPRITE_FRAME_COUNTS, SPRITE_PRESETS, SPRITE_DEFAULT_APPEARANCE,
         normalizeAppearance, spritePoseFor, generateSpriteFrameSvg, generateSpriteFrameUrl, getProceduralFrameUrls, spriteSvgToUrl,
         spriteMix, spriteShade
     };

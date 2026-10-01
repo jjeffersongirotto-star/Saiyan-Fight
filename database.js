@@ -21,7 +21,6 @@ const UI = {
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 const fileInput = document.getElementById("file-input");
-const txtInst = document.getElementById("instrucao-texto");
 const modal = document.getElementById("modal-editor");
 const updatesModal = document.getElementById("modal-updates");
 const sysAlertModal = document.getElementById("modal-alert");
@@ -217,7 +216,6 @@ let previewSelectionPointerDown = false;
 let previewSelectionWasDragged = false;
 let selectedStage = "terra";
 let gameMode = "singleplayer";
-let selectedLanguage = "pt-BR";
 
 let loadedUrlImageObj = null;
 let loadedFileImageObj = null;
@@ -364,7 +362,6 @@ function initSettings() {
 
         isMuted = readStorage("saiyan_mute") === "true";
         gameMode = readStorage("saiyan_mode") || "singleplayer";
-        selectedLanguage = readStorage("saiyan_language") || "pt-BR";
 
         pcInputMode = readStorage("saiyan_pc_mode") || "keyboard";
         touchControlMode = readStorage("saiyan_touch_mode") || "analog";
@@ -467,7 +464,6 @@ function saveSettings() {
     try {
         writeStorage("saiyan_stage", selectedStage);
         writeStorage("saiyan_mode", gameMode);
-        writeStorage("saiyan_language", selectedLanguage);
         writeStorage("saiyan_selected_hero", selectedCharacter || "");
         writeStorage("saiyan_selected_villain", selectedBoss || "");
     } catch (e) {
@@ -485,9 +481,8 @@ function saveSelectedCharacters() {
 }
 
 // ==================== GERENCIAMENTO DE ESTADO ====================
-function setGameState(newState, instText = "") {
+function setGameState(newState) {
     gameState = newState;
-    if (instText && txtInst) txtInst.innerText = instText;
     if (newState === "playing") startBGM();
     else stopBGM();
 }
@@ -1532,10 +1527,14 @@ function assignSelectedSpriteFrame() {
 }
 
 function clearActiveSpriteFrames() {
-    tempAnimations[activeSpriteMovement] = [];
-    delete savedSpriteMotionPreviewFrames[activeSpriteMovement];
-    renderSpriteAssignedFrames();
-    renderSpriteMotionPreview();
+    const frames = getSpriteMotionPreviewFrames();
+    if (!frames.length) return;
+    showSystemConfirm("LIMPAR MOVIMENTO", `APAGAR TODOS OS ${frames.length} QUADRO(S) DO MOVIMENTO ${getSpriteMovementDisplayName(activeSpriteMovement)}?`, () => {
+        tempAnimations[activeSpriteMovement] = [];
+        delete savedSpriteMotionPreviewFrames[activeSpriteMovement];
+        renderSpriteAssignedFrames();
+        renderSpriteMotionPreview();
+    }, "SIM", "NÃO");
 }
 
 function renderSpriteAssignedFrames() {
@@ -2014,7 +2013,14 @@ function saveCharacterFromModal() {
     }
 
     let key = editingKey || ("char_" + Date.now());
-    const idleFrames = tempAnimations.idle || [];
+    let idleFrames = tempAnimations.idle || [];
+    let usedFirstSheetFrame = false;
+    if (!idleFrames.length && spriteSheetImage) {
+        const grid = getSpriteSheetGrid();
+        const frameCount = grid ? Math.min(grid.settings.total, grid.columns * grid.rows) : 1;
+        const firstFrame = frameCount > 1 ? extractSpriteSheetFrame(0) : null;
+        if (firstFrame) { idleFrames = [firstFrame]; usedFirstSheetFrame = true; }
+    }
     let finalUrl = idleFrames[0] || tempBase64 || getFallbackSpriteSvg();
 
     loadImageSecure(finalUrl, (img) => {
@@ -2092,7 +2098,9 @@ function saveCharacterFromModal() {
                 }
             }
             closeModal();
-            showSystemAlert("SUCESSO", `PERSONAGEM ${name} SALVO!`);
+            showSystemAlert("SUCESSO", usedFirstSheetFrame
+                ? `PERSONAGEM ${name} SALVO! COMO NENHUM QUADRO FOI ESCOLHIDO PARA "PARADO", FOI USADO O 1º QUADRO DA SPRITE SHEET.`
+                : `PERSONAGEM ${name} SALVO!`);
         } else {
             showSystemAlert("ERRO", "NÃO FOI POSSÍVEL CARREGAR A IMAGEM!");
         }
@@ -2159,16 +2167,16 @@ const DEFAULT_CHARACTERS = {
     vegeta: { name: "VEGETA", presetKey: "vegeta", align: "ANTI-HERÓI", aura: "amarelo", spec: "FINAL FLASH" },
     piccolo: { name: "PICCOLO", presetKey: "piccolo", align: "HERÓI", aura: "verde", spec: "MAKAN KOSAPPO" },
     freeza_1: { name: "FREEZA (FINAL)", presetKey: "freeza", align: "VILÃO", aura: "roxo", spec: "DEATH BEAM" },
-    trunks: { name: "TRUNKS", presetKey: "trunks", align: "HERÓI", aura: "azul", spec: "BURNING ATTACK", useKiColor: true },
-    gohan: { name: "GOHAN", presetKey: "gohan", align: "HERÓI", aura: "gelo", spec: "MASENKO", useKiColor: true },
-    kaioshin: { name: "SUPREMO SR. KAIO", presetKey: "kaioshin", align: "HERÓI", aura: "rosa", spec: "KIAI SAGRADO", useKiColor: true },
-    gogeta: { name: "GOGETA", presetKey: "fusao", align: "HERÓI", aura: "amarelo", spec: "BIG BANG KAMEHAMEHA", useKiColor: true },
-    bardock: { name: "BARDOCK", presetKey: "bardock", align: "ANTI-HERÓI", aura: "azul", spec: "RIOT JAVELIN", useKiColor: true },
-    android17: { name: "ANDROIDE 17", presetKey: "android17", align: "ANTI-HERÓI", aura: "verde", spec: "POWER BLITZ", useKiColor: true },
-    android18: { name: "ANDROIDE 18", presetKey: "android18", align: "ANTI-HERÓI", aura: "azul", spec: "DESTRUCTO DISC", useKiColor: true },
-    majin_buu: { name: "MAJIN BUU", presetKey: "majin", align: "VILÃO", aura: "rosa", spec: "CHOCOLATE BEAM", useKiColor: true },
-    raditz: { name: "RADITZ", presetKey: "raditz", align: "VILÃO", aura: "roxo", spec: "DOUBLE SUNDAY", useKiColor: true },
-    broly: { name: "BROLY", presetKey: "broly", align: "VILÃO", aura: "verde", spec: "ERASER CANNON", useKiColor: true }
+    trunks: { name: "TRUNKS", presetKey: "trunks", align: "HERÓI", aura: "azul", spec: "BURNING ATTACK" },
+    gohan: { name: "GOHAN", presetKey: "gohan", align: "HERÓI", aura: "gelo", spec: "MASENKO" },
+    kaioshin: { name: "SUPREMO SR. KAIO", presetKey: "kaioshin", align: "HERÓI", aura: "rosa", spec: "KIAI SAGRADO" },
+    gogeta: { name: "GOGETA", presetKey: "fusao", align: "HERÓI", aura: "amarelo", spec: "BIG BANG KAMEHAMEHA" },
+    bardock: { name: "BARDOCK", presetKey: "bardock", align: "ANTI-HERÓI", aura: "azul", spec: "RIOT JAVELIN" },
+    android17: { name: "ANDROIDE 17", presetKey: "android17", align: "ANTI-HERÓI", aura: "verde", spec: "POWER BLITZ" },
+    android18: { name: "ANDROIDE 18", presetKey: "android18", align: "ANTI-HERÓI", aura: "azul", spec: "DESTRUCTO DISC" },
+    majin_buu: { name: "MAJIN BUU", presetKey: "majin", align: "VILÃO", aura: "rosa", spec: "CHOCOLATE BEAM" },
+    raditz: { name: "RADITZ", presetKey: "raditz", align: "VILÃO", aura: "roxo", spec: "DOUBLE SUNDAY" },
+    broly: { name: "BROLY", presetKey: "broly", align: "VILÃO", aura: "verde", spec: "ERASER CANNON" }
 };
 // Os 4 que já vinham nas versões antigas: perfis antigos já os receberam (se o jogador apagou algum, não volta).
 const ORIGINAL_DEFAULT_CHARACTER_KEYS = ["goku_adult", "vegeta", "piccolo", "freeza_1"];
@@ -2191,7 +2199,7 @@ function createDefaultCharacter(k) {
         frameWidth: 32,
         frameHeight: 32,
         totalFrames: 1,
-        projColor: (d.useKiColor && appearance.kiColor) || "#00ffff",
+        projColor: appearance.kiColor || "#00ffff",   // o tiro sai na cor de ki do modelo
         projSize: "normal",
         builderAppearance: appearance,
         bgRemoval: { mode: "none" }

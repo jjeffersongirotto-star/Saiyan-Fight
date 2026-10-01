@@ -78,7 +78,7 @@ run("achievementBanner = { active: true, title: 'TESTE', timer: 5, maxTimer: 180
 run("gameState = 'paused'");
 for (let i = 0; i < 8; i++) run("render()");
 check("o banner de conquista não avança o timer nem desliza com o jogo pausado", run("achievementBanner.timer") === 5 && run("achievementBanner.yOffset") === 10);
-run("gameState = 'playing'; render()");
+run("gameState = 'playing'; lastFrameTime = performance.now() - 16; render()");   // 1 quadro de ~1/60 s (o aviso conta por tempo)
 check("mas volta a animar normalmente assim que despausa", run("achievementBanner.timer") > 5);
 
 run("setGameState('menu')");

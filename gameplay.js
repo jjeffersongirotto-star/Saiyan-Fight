@@ -26,8 +26,7 @@ const SPAWN_TIMERS = {
 };
 
 const SSJ_UNLOCK = {
-    SCORE_THRESHOLD: 10,
-    SPEED_AFTER_TRANSFORM: 5.5
+    SCORE_THRESHOLD: 10
 };
 
 const UNTOUCHABLE_ACHIEVEMENT_SCORE = 5;
@@ -172,7 +171,7 @@ function startTutorial() {
     tutorialStepIndex = 0;
     tutorialReflectsBefore = totalReflects;
     setupTutorialStep();
-    setGameState("tutorial", "TUTORIAL");
+    setGameState("tutorial");
 }
 
 function advanceTutorialStep() {
@@ -322,7 +321,7 @@ function getCharacterAnimationFrame(charKey, actionState, animTimer) {
 
 // Devolve a imagem sem a cor de fundo (canvas transparente), calculada uma vez por imagem + configuração.
 // bgOpts = character.bgRemoval ({mode: auto|color|none, color, tolerance}); sem config = "auto" (apaga o branco).
-// SVG do jogo já vem sem fundo (ver generateDbzSpriteSvg/stripSvgWhiteBackground). Se a imagem não puder ser lida
+// SVG do jogo já vem sem fundo (ver stripSvgWhiteBackground). Se a imagem não puder ser lida
 // (ex.: origem externa bloqueada pelo navegador) ou não tiver a cor de fundo nas bordas, usa a original.
 const spriteCutoutCache = new WeakMap();
 function getCutoutSource(img, bgOpts) {
@@ -528,7 +527,7 @@ function startGame() {
     player2.isDying = false;
 
     initScenario();
-    setGameState("playing", "BATALHA INICIADA! ESPAÇO PARA PARRY NO MOMENTO CERTO.");
+    setGameState("playing");
 }
 
 function onBossDeath() {
@@ -575,7 +574,7 @@ function resolveStageVictory() {
         justUnlockedUnlimited: !wasHardDone && progress.hardDone && progress.normalDone
     };
     playSound("powerup");
-    setGameState("stage_victory", "VITÓRIA!");
+    setGameState("stage_victory");
 }
 
 // Chamado a cada chefe derrotado no modo história (fora do co-op): decide se a fase continua (chefe volta mais
@@ -605,10 +604,6 @@ function respawnBoss() {
         maxWaveReached = waveNumber;
         writeStorage("saiyan_max_wave", maxWaveReached);
     }
-    // Rotação de chefe por arena: preparada em game-logic-core.js (ARENA_BOSS_ROSTER), mas ainda inativa —
-    // getBossForArena hoje sempre devolve o mesmo chefe escolhido no menu. Ativar no futuro é só trocar essa
-    // função para usar getArenaBossRoster(selectedStage) em vez de currentBossKey.
-    selectedBoss = getBossForArena(selectedStage, selectedBoss);
     let waveParams = getWaveParams(waveNumber);
     player2.maxHp = waveParams.bossHp;
     player2.hp = player2.maxHp;
@@ -752,8 +747,10 @@ function addFloatingText(textData) {
 }
 
 function updateAura(entity, auraType, isBoss = false) {
+    // só o jogador 1 tem a aura dourada de Super Saiyajin; a aura do chefe não muda com isso
+    const ssjAura = !isBoss && player.isSSJ;
     let colors = AURA_COLORS[auraType] || AURA_COLORS.gelo;
-    if (player.isSSJ && !isBoss) colors = AURA_COLORS.amarelo;
+    if (ssjAura) colors = AURA_COLORS.amarelo;
 
     let mult = ((!isBoss && player.isCharging) || (isBoss && player2.isCharging)) ? 3 : 1;
     
@@ -767,10 +764,10 @@ function updateAura(entity, auraType, isBoss = false) {
                 y: py,
                 vx: (Math.random() - 0.5) * 1.2,
                 vy: -1.5 - Math.random() * 3,
-                size: (auraType === "gelo" && !player.isSSJ) ? 3 + Math.random() * 3 : 4 + Math.random() * 6,
+                size: (auraType === "gelo" && !ssjAura) ? 3 + Math.random() * 3 : 4 + Math.random() * 6,
                 alpha: 0.8,
                 color: colors[Math.floor(Math.random() * colors.length)],
-                isWind: auraType === "gelo" && !player.isSSJ
+                isWind: auraType === "gelo" && !ssjAura
             });
         }
     }
@@ -867,7 +864,7 @@ function attemptZenkaiRevival() {
     return true;
 }
 
-// Mesmo perdendo sem dominar a fase (sem completar as 10 vitórias seguidas), o jogador vê o que fez na
+// Mesmo perdendo antes de completar o modo da fase, o jogador vê o que fez na
 // tentativa — ataques, rebatidas, itens, golpes recebidos — e o jogo avisa se bateu recorde (da fase ou geral).
 function triggerGameOver() {
     const prevGeneralList = readJsonStorage("saiyan_ranking", []);
@@ -875,7 +872,7 @@ function triggerGameOver() {
     const prevStageBest = getStageRecord(selectedStage);
 
     saveRankingScore(score);
-    saveStageRankingScore(selectedStage, score);
+    if (gameMode === "singleplayer") saveStageRankingScore(selectedStage, score);
     if (score > highScore) {
         highScore = score;
         writeStorage("saiyan_highscore", highScore);
@@ -893,7 +890,7 @@ function triggerGameOver() {
         isNewStageRecord: gameMode === "singleplayer" && score > prevStageBest,
         isNewGeneralRecord: score > prevGeneralBest
     };
-    setGameState("gameover", "GAME OVER! CLIQUE PARA REINICIAR");
+    setGameState("gameover");
 }
 
 // Especial: causa o TRIPLO do dano de antes (getSpecialDamage). isP2 = true só existe no co-op local:
@@ -1512,7 +1509,7 @@ function update(dt) {
     }
 
     if (score >= SSJ_UNLOCK.SCORE_THRESHOLD && !player.isSSJ) {
-        player.speed = SSJ_UNLOCK.SPEED_AFTER_TRANSFORM;
+        // mesma velocidade da transformação manual (transformPlayer soma +1)
         transformPlayer(player, false, true);
     }
 
@@ -1589,7 +1586,7 @@ function update(dt) {
         player2.y = Math.max(BOUNDS.PLAYER_MIN_Y, Math.min(BOUNDS.PLAYER_MAX_Y_BASE - (player2.h - 56), player2.y));
     }
 
-    player2.isCharging = !!keysPressed[keyBindings.p2.charge];
+    player2.isCharging = gameMode === "coop" && !!keysPressed[keyBindings.p2.charge];
     if (player2.isCharging) {
         player2.ki = Math.min(player2.maxKi, player2.ki + (0.8 * dt * 60));
     }
