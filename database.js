@@ -2340,23 +2340,24 @@ function refreshBuilderPreview() {
     const poseSel = document.getElementById("build-pose");
     const state = poseSel ? poseSel.value : "idle";
     const appearance = getBuilderAppearanceFromForm();
-    const frames = getProceduralFrameUrls(appearance, state, { ssj: state === "transform" && builderPreviewFrame >= 2 });
-    const url = frames[builderPreviewFrame % frames.length];
 
     stopBuilderPreview();
     builderPreviewFrame = 0;
+    // Cada quadro vira uma imagem só uma vez (antes criava e decodificava uma imagem nova a cada 130 ms).
+    const list = getProceduralFrameUrls(appearance, state, { ssj: state === "transform" });
+    const images = list.map(src => { const img = new Image(); img.src = src; return img; });
     const draw = () => {
-        const img = new Image();
-        img.onload = () => {
+        const img = images[builderPreviewFrame % images.length];
+        builderPreviewFrame++;
+        const paint = () => {
             bctx.clearRect(0, 0, canvas.width, canvas.height);
             const scale = Math.min((canvas.width * 0.92) / img.naturalWidth, (canvas.height * 0.92) / img.naturalHeight);
             const w = img.naturalWidth * scale, h = img.naturalHeight * scale;
             bctx.imageSmoothingEnabled = true;
             bctx.drawImage(img, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h);
         };
-        const list = getProceduralFrameUrls(appearance, state, { ssj: state === "transform" });
-        img.src = list[builderPreviewFrame % list.length];
-        builderPreviewFrame++;
+        if (img.complete && img.naturalWidth) paint();
+        else img.onload = paint;
     };
     draw();
     builderPreviewTimer = setInterval(draw, 130);

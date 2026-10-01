@@ -328,7 +328,7 @@ function getCutoutSource(img, bgOpts) {
     if (!img || typeof HTMLCanvasElement === "undefined" || img instanceof HTMLCanvasElement) return img;
     if (!isDrawableSource(img)) return img;
     const cfg = normalizeBgRemoval(bgOpts);
-    if (cfg.mode === "none") return img;
+    if (cfg.mode === "none") return getRasterSource(img);
 
     const key = getBgRemovalKey(cfg);
     let perImage = spriteCutoutCache.get(img);
@@ -364,7 +364,35 @@ function getCutoutSource(img, bgOpts) {
     } catch (err) {
         result = img;
     }
+    if (result === img) result = getRasterSource(img);
     perImage[key] = result;
+    return result;
+}
+
+// Desenhos SVG (todos os personagens do construtor e do elenco inicial) são redesenhados do zero pelo navegador
+// a cada drawImage — com vários na tela, 60 vezes por segundo, isso deixava o jogo e as telas de personagens
+// lentos no celular. Aqui cada SVG vira uma imagem pronta (canvas) uma única vez, no tamanho dele (que já é
+// maior que o tamanho em que aparece no jogo, então não perde nitidez).
+const svgRasterCache = new WeakMap();
+function getRasterSource(img) {
+    if (!img || typeof HTMLCanvasElement === "undefined" || img instanceof HTMLCanvasElement) return img;
+    if (!String(img.src || "").startsWith("data:image/svg") || !isDrawableSource(img)) return img;
+    if (svgRasterCache.has(img)) return svgRasterCache.get(img);
+    let result = img;
+    try {
+        const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+        const c = document.createElement("canvas");
+        c.width = w;
+        c.height = h;
+        c.getContext("2d").drawImage(img, 0, 0, w, h);
+        c.naturalWidth = w;
+        c.naturalHeight = h;
+        c.complete = true;
+        result = c;
+    } catch (err) {
+        result = img;
+    }
+    svgRasterCache.set(img, result);
     return result;
 }
 
