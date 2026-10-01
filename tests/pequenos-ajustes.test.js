@@ -40,8 +40,8 @@ check("partida do modo história continua entrando no ranking da fase", run("get
 // ---------- tela de derrota: para onde volta ----------
 run("handleMenuClick(400, 175)");
 check("derrota no modo história volta ao MAPA DE FASES", run("gameState") === "stage_map");
-run("gameMode = 'coop'; startGame(); triggerGameOver(); handleMenuClick(400, 175)");
-check("derrota no modo 2 jogadores volta ao MENU", run("gameState") === "menu");
+run("gameMode = 'coop'; startGame(); finishVersusRound('p2'); finishVersusRound('p2'); handleMenuClick(400, 175)");
+check("fim de partida do Versus volta ao MENU", run("gameState") === "menu");
 run("gameMode = 'singleplayer'; startGame(); triggerGameOver(); h_calls_reset = 0");
 h.calls.length = 0;
 run("render()");

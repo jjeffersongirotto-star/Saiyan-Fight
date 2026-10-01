@@ -50,7 +50,7 @@ function raiseStat(key, value) {
     return stats[key];
 }
 
-// ==================== CONQUISTAS (50) ====================
+// ==================== CONQUISTAS ====================
 // Cada uma: nome, descrição e ou um limiar simples contra `stats` (statKey/threshold, checado automaticamente
 // por checkThresholdAchievements) ou nenhum limiar (statKey ausente) — essas são destravadas na hora certa
 // direto no código do jogo via unlockAchievement("chave"), quando um contador simples não é suficiente
@@ -67,7 +67,7 @@ let achievements = {
     untouchable: { name: "Intocável", desc: "Faça 5 pontos sem tomar dano", tier: "bronze" },
     untouchable_wave5: { name: "Guerreiro Impecável", desc: "Alcance a onda 5 numa partida sem tomar dano", tier: "silver" },
     zenkai_first: { name: "Ressurreição Saiyajin", desc: "Use a ressurreição Zenkai pela primeira vez", statKey: "zenkaiTotal", threshold: 1, tier: "bronze" },
-    zenkai_win: { name: "Do Limiar da Morte à Vitória", desc: "Vença um duelo depois de usar a Zenkai", tier: "silver" },
+    zenkai_win: { name: "Do Limiar da Morte à Vitória", desc: "Vença uma partida do Versus depois de usar a Zenkai", tier: "silver" },
     saibaman_50: { name: "Exterminador de Saibamen", desc: "Derrote 50 Saibamen ao todo", statKey: "saibamansDefeated", threshold: 50, tier: "bronze" },
     saibaman_200: { name: "Praga dos Saibamen", desc: "Derrote 200 Saibamen ao todo", statKey: "saibamansDefeated", threshold: 200, tier: "silver" },
     // -- Transformação --
@@ -78,7 +78,7 @@ let achievements = {
     special_first: { name: "Primeira Kamehameha", desc: "Use o ataque especial pela primeira vez", tier: "bronze" },
     super_attack_first: { name: "Força Amplificada", desc: "Use o Super Ataque (especial + bastão mágico)", statKey: "superAttacksTotal", threshold: 1, tier: "bronze" },
     super_attack_10: { name: "Poder Absoluto", desc: "Use o Super Ataque 10 vezes ao todo", statKey: "superAttacksTotal", threshold: 10, tier: "silver" },
-    beam_clash_first: { name: "Choque de Titãs", desc: "Provoque um Choque de Feixes no co-op", statKey: "beamClashesTotal", threshold: 1, tier: "bronze" },
+    beam_clash_first: { name: "Choque de Titãs", desc: "Provoque um Choque de Feixes no Versus", statKey: "beamClashesTotal", threshold: 1, tier: "bronze" },
     beam_clash_5: { name: "Guerra de Kamehamehas", desc: "Provoque 5 Choques de Feixes ao todo", statKey: "beamClashesTotal", threshold: 5, tier: "silver" },
     // -- Itens --
     item_senzu_10: { name: "Sempre Bem Alimentado", desc: "Colete 10 Feijões Mágicos ao todo", statKey: "pickupsSenzu", threshold: 10, tier: "bronze" },
@@ -105,10 +105,13 @@ let achievements = {
     stage_freeza_ship: { name: "Infiltrado na Nave", desc: "Libere a arena Nave de Freeza", tier: "silver" },
     stage_time_room: { name: "Um Ano em Um Dia", desc: "Libere a arena Sala do Tempo", tier: "silver" },
     stage_cell_games: { name: "Competidor dos Jogos de Cell", desc: "Libere a arena Torneio de Cell", tier: "gold" },
-    stage_kaioshin: { name: "Entre os Deuses", desc: "Libere a arena Planeta Supremo Kaioh", tier: "gold" },
-    // -- Co-op / versus --
-    versus_win_first: { name: "Duelo Vencido", desc: "Vença uma partida no modo Co-op", statKey: "versusWinsTotal", threshold: 1, tier: "bronze" },
-    versus_win_10: { name: "Rival Implacável", desc: "Vença 10 partidas no modo Co-op", statKey: "versusWinsTotal", threshold: 10, tier: "silver" },
+    stage_kaioshin: { name: "Entre os Deuses", desc: "Libere todas as fases (a última é o Planeta Supremo Kaioh)", tier: "gold" },
+    hard_first: { name: "Difícil? Não Para Mim", desc: "Vença o modo DIFÍCIL de uma fase pela primeira vez", tier: "silver" },
+    all_normal: { name: "Rodei o Universo Inteiro", desc: "Vença o modo NORMAL de todas as fases", tier: "gold" },
+    all_hard: { name: "Dificuldade? Pouco É Bobagem", desc: "Vença o modo DIFÍCIL de todas as fases", tier: "gold" },
+    // -- Versus (2 jogadores; internamente gameMode "coop") --
+    versus_win_first: { name: "Duelo Vencido", desc: "Vença uma partida do Versus (melhor de 3)", statKey: "versusWinsTotal", threshold: 1, tier: "bronze" },
+    versus_win_10: { name: "Rival Implacável", desc: "Vença 10 partidas do Versus", statKey: "versusWinsTotal", threshold: 10, tier: "silver" },
     // -- Construtor de personagens --
     builder_first: { name: "Criador de Guerreiros", desc: "Crie seu primeiro personagem no construtor", statKey: "customCharactersCreated", threshold: 1, tier: "bronze" },
     builder_5: { name: "Elenco Próprio", desc: "Crie 5 personagens no construtor", statKey: "customCharactersCreated", threshold: 5, tier: "silver" },
@@ -118,7 +121,10 @@ let achievements = {
     // -- Progresso geral --
     games_5: { name: "Aquecendo os Punhos", desc: "Jogue 5 partidas ao todo", statKey: "gamesPlayed", threshold: 5, tier: "bronze" },
     games_20: { name: "Veterano de Batalhas", desc: "Jogue 20 partidas ao todo", statKey: "gamesPlayed", threshold: 20, tier: "silver" },
-    games_50: { name: "Lenda do Torneio", desc: "Jogue 50 partidas ao todo", statKey: "gamesPlayed", threshold: 50, tier: "gold" }
+    games_50: { name: "Lenda do Torneio", desc: "Jogue 50 partidas ao todo", statKey: "gamesPlayed", threshold: 50, tier: "gold" },
+
+    // Medalha de diamante: a última de todas — liberada sozinha quando todas as outras estiverem completas.
+    all_achievements: { name: "Quem Sabe, Sabe", desc: "Complete todas as outras conquistas", tier: "diamond" }
 };
 
 // Roda depois de qualquer bumpStat: destrava toda conquista com statKey cujo limiar já foi atingido.
@@ -129,9 +135,9 @@ function checkThresholdAchievements() {
     }
 }
 
-// Toda conquista tem uma medalha (bronze/prata/ouro) de acordo com a dificuldade — checado uma vez ao carregar
+// Toda conquista tem uma medalha (bronze/prata/ouro, e diamante só para a de completar todas) de acordo com a dificuldade — checado uma vez ao carregar
 // pra nunca ficar uma conquista sem medalha por engano numa edição futura.
-const ACHIEVEMENT_TIERS = ["bronze", "silver", "gold"];
+const ACHIEVEMENT_TIERS = ["bronze", "silver", "gold", "diamond"];
 for (const key in achievements) {
     if (!ACHIEVEMENT_TIERS.includes(achievements[key].tier)) {
         console.warn(`Conquista "${key}" sem medalha válida (tier).`);
@@ -140,7 +146,7 @@ for (const key in achievements) {
 
 // Contagem de progresso por medalha, para o card no topo da tela de Conquistas — { gold: {done, total}, ... , total: {done, total} }.
 function getAchievementTierProgress() {
-    const progress = { gold: { done: 0, total: 0 }, silver: { done: 0, total: 0 }, bronze: { done: 0, total: 0 }, total: { done: 0, total: 0 } };
+    const progress = { diamond: { done: 0, total: 0 }, gold: { done: 0, total: 0 }, silver: { done: 0, total: 0 }, bronze: { done: 0, total: 0 }, total: { done: 0, total: 0 } };
     for (const key in achievements) {
         const a = achievements[key];
         const tier = ACHIEVEMENT_TIERS.includes(a.tier) ? a.tier : "bronze";
@@ -183,7 +189,24 @@ function unlockAchievement(key) {
         saveAchievements();
         playSound("powerup");
         triggerAchievementPopup(achievements[key].name);
+        checkAllAchievementsComplete();
     }
+}
+
+// Libera a medalha de diamante quando todas as outras conquistas já foram feitas.
+function checkAllAchievementsComplete() {
+    if (achievements.all_achievements.unlocked) return;
+    const faltando = Object.keys(achievements).some(k => k !== "all_achievements" && !achievements[k].unlocked);
+    if (!faltando) unlockAchievement("all_achievements");
+}
+
+// Conquistas dos modos de cada fase (stageProgress): 1ª vitória no DIFÍCIL, NORMAL em todas, DIFÍCIL em todas.
+// Chamado ao vencer uma fase e ao abrir o jogo (assim quem já tinha esse progresso também ganha).
+function checkStageModeAchievements() {
+    const fases = STAGE_PROGRESSION.map(stg => stageProgress[stg.id] || {});
+    if (fases.some(p => p.hardDone)) unlockAchievement("hard_first");
+    if (fases.every(p => p.normalDone)) unlockAchievement("all_normal");
+    if (fases.every(p => p.hardDone)) unlockAchievement("all_hard");
 }
 
 function triggerAchievementPopup(title) {

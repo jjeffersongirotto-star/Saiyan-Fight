@@ -26,6 +26,8 @@ const {
     NORMAL_ATTACK_DAMAGE,
     WAVE_DIFFICULTY_CAP,
     STAGE_PROGRESSION,
+    VERSUS_ROUNDS_TO_WIN,
+    registerVersusRoundWin,
     getStageBossDefeats,
     STAGE_MODE_WAVE_COUNT,
     NORMAL_MODE_WAVES,
@@ -526,4 +528,18 @@ test("getBeamClashPush: quem aperta o ataque mais vezes empurra o choque para o 
     assert.equal(getBeamClashPush(100, 0), 1, "trava no máximo, nunca passa de 1");
     assert.equal(getBeamClashPush(0, 100), -1, "trava no mínimo, nunca passa de -1");
     assert.equal(getBeamClashPush(4, 0, 8), 0.5, "meio caminho do scale = metade do empurrão");
+});
+
+test("registerVersusRoundWin: VERSUS em melhor de 3 — quem vence 2 rodadas leva a partida", () => {
+    assert.equal(VERSUS_ROUNDS_TO_WIN, 2);
+    let r = registerVersusRoundWin({ p1: 0, p2: 0 }, "p1");
+    assert.deepEqual(r.score, { p1: 1, p2: 0 });
+    assert.equal(r.matchWinner, null, "1 x 0 ainda não acaba a partida");
+    r = registerVersusRoundWin(r.score, "p2");
+    assert.deepEqual(r.score, { p1: 1, p2: 1 });
+    assert.equal(r.matchWinner, null, "1 x 1 vai para a rodada decisiva");
+    r = registerVersusRoundWin(r.score, "p2");
+    assert.equal(r.matchWinner, "p2", "2 x 1 para o jogador 2: ele vence a partida");
+    assert.equal(registerVersusRoundWin({ p1: 1, p2: 0 }, "p1").matchWinner, "p1", "2 x 0 também acaba");
+    assert.deepEqual(registerVersusRoundWin(undefined, "p1").score, { p1: 1, p2: 0 }, "placar ausente começa do 0 x 0");
 });

@@ -425,7 +425,21 @@ function getSuperAttackDamage(specialDamage, hasPowerBuff) {
     return hasPowerBuff ? specialDamage * 2 : specialDamage;
 }
 
-// ---- Choque de feixes (co-op: os dois especiais saem quase juntos e colidem no meio) ----
+// ---- VERSUS (2 jogadores no mesmo aparelho): partida em melhor de 3 rodadas ----
+// Internamente o modo continua se chamando "coop" (gameMode), porque esse valor já fica salvo no navegador
+// de quem joga ("saiyan_mode"); na tela ele aparece como VERSUS.
+const VERSUS_ROUNDS_TO_WIN = 2;
+
+// Registra quem venceu a rodada. Devolve o placar novo e, se alguém chegou a VERSUS_ROUNDS_TO_WIN, o vencedor
+// da partida ("p1" ou "p2"); senão matchWinner = null (a partida continua com a próxima rodada).
+function registerVersusRoundWin(versusScore, roundWinner) {
+    const score = { p1: (versusScore && versusScore.p1) || 0, p2: (versusScore && versusScore.p2) || 0 };
+    if (roundWinner === "p1" || roundWinner === "p2") score[roundWinner]++;
+    const matchWinner = score.p1 >= VERSUS_ROUNDS_TO_WIN ? "p1" : score.p2 >= VERSUS_ROUNDS_TO_WIN ? "p2" : null;
+    return { score, matchWinner };
+}
+
+// ---- Choque de feixes (versus: os dois especiais saem quase juntos e colidem no meio) ----
 // Vira uma disputa de apertar o ATAQUE o mais rápido possível durante a janela do choque — quem aperta mais
 // vezes empurra o ponto de encontro para o lado do adversário. Devolve 0 (choque exatamente no meio, ninguém
 // apertou mais) a ±1 (empurrado até a ponta do oponente); positivo favorece p1. `scale` é quantos apertos a
@@ -505,6 +519,8 @@ if (typeof module !== "undefined" && module.exports) {
         NORMAL_ATTACK_DAMAGE,
         WAVE_DIFFICULTY_CAP,
         STAGE_PROGRESSION,
+        VERSUS_ROUNDS_TO_WIN,
+        registerVersusRoundWin,
         STAGE_MODE_WAVE_COUNT,
         NORMAL_MODE_WAVES,
         HARD_MODE_WAVES,

@@ -140,7 +140,7 @@ let rankingViewMode = "geral";      // "geral" | "fase"
 let rankingSelectedStage = null;    // qual arena está selecionada na visão "por fase"
 let stageChoicePendingId = null;    // id da fase clicada no mapa quando ela já foi dominada (mostra o overlay
                                      // "DESAFIO (10 CHEFES)" vs "SEM LIMITE" antes de começar a partida)
-const TIER_COLORS = { gold: "#ffd23f", silver: "#cbd2da", bronze: "#c2793a" };
+const TIER_COLORS = { diamond: "#7fe8ff", gold: "#ffd23f", silver: "#cbd2da", bronze: "#c2793a" };
 
 // ==================== MAPA DE FASES (hub do singleplayer) ====================
 // Posições em serpentina (linha de baixo pra cima, esquerda-direita depois direita-esquerda), na MESMA ordem
@@ -1499,7 +1499,7 @@ function getConnectedGamepads() {
     }
 }
 
-// 2+ controles: o 1º é do jogador 1 e o 2º do jogador 2. Só 1 controle no co-op em aparelho touch:
+// 2+ controles: o 1º é do jogador 1 e o 2º do jogador 2. Só 1 controle no versus em aparelho touch:
 // fica com o jogador 2 (o jogador 1 joga na tela).
 function getGamepadAssignments() {
     const pads = getConnectedGamepads();
@@ -3290,7 +3290,7 @@ function drawHUD() {
     ctx.fillStyle = "#ffff00";
     ctx.font = "bold 14px 'Courier New', monospace";
     ctx.fillText(`SCORE: ${score}`, 20, 58);
-    ctx.fillText(`WAVE: ${waveNumber}`, 120, 58);
+    ctx.fillText(gameMode === "coop" ? `RODADA ${world.versusRound || 1}` : `WAVE: ${waveNumber}`, 120, 58);
 
     // Combo de parry: só aparece enquanto está "vivo" (parryComboTimer > 0), com uma barrinha mostrando
     // quanto falta pra sequência expirar — reforça que é preciso continuar rebatendo pra não perder o combo.
@@ -3335,9 +3335,17 @@ function drawHUD() {
         ctx.textAlign = "right";
         ctx.fillText(bChar ? bChar.name : "VILÃO", canvas.width - 20, 42);
 
-        // Onda atual e recorde de ondas daquela fase, logo abaixo da barra de vida do vilão — só faz sentido
-        // no modo história (o co-op é versus, não tem "onda").
-        if (gameMode === "singleplayer") {
+        // Onda atual e recorde de ondas daquela fase, logo abaixo da barra de vida do vilão — só no modo
+        // história. No VERSUS mostra o placar da partida (melhor de 3).
+        if (gameMode === "coop") {
+            const vs = world.versusScore || { p1: 0, p2: 0 };
+            ctx.fillStyle = "#ffd23f";
+            ctx.font = "bold 9px monospace";
+            ctx.fillText(`PLACAR: J1 ${vs.p1} x ${vs.p2} J2`, canvas.width - 20, 55);
+            ctx.fillStyle = "#93c5fd";
+            ctx.font = "8px monospace";
+            ctx.fillText(`MELHOR DE ${VERSUS_ROUNDS_TO_WIN * 2 - 1} RODADAS`, canvas.width - 20, 66);
+        } else if (gameMode === "singleplayer") {
             const modeLabel = stageMode === "hard" ? "DIFÍCIL" : stageMode === "unlimited" ? "SEM LIMITE" : "NORMAL";
             ctx.fillStyle = "#ffd23f";
             ctx.font = "bold 9px monospace";
@@ -3639,9 +3647,18 @@ function render() {
             ctx.fillStyle = "rgba(0,0,0,0.88)";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.textAlign = "center";
-            ctx.fillStyle = "#ff0055";
             ctx.font = "bold 22px 'Courier New', monospace";
-            ctx.fillText("VOCÊ FOI DERROTADO!", canvas.width / 2, 30);
+            if (gs.versusWinner) {
+                // VERSUS: quem venceu a partida (melhor de 3) e o placar final
+                ctx.fillStyle = gs.versusWinner === "p1" ? "#00e5ff" : "#ff0055";
+                ctx.fillText(`JOGADOR ${gs.versusWinner === "p1" ? 1 : 2} VENCEU!`, canvas.width / 2, 30);
+                ctx.fillStyle = "#ffd23f";
+                ctx.font = "bold 12px 'Courier New', monospace";
+                ctx.fillText(`PLACAR FINAL: ${gs.versusScore.p1} x ${gs.versusScore.p2}  (ESTATÍSTICAS DO JOGADOR 1)`, canvas.width / 2, 46);
+            } else {
+                ctx.fillStyle = "#ff0055";
+                ctx.fillText("VOCÊ FOI DERROTADO!", canvas.width / 2, 30);
+            }
             if (gs.stageName) {
                 ctx.fillStyle = "#9fb3d8";
                 ctx.font = "11px 'Courier New', monospace";
@@ -3718,7 +3735,7 @@ function render() {
         drawDragonBallPanel(120, 60, 560, 230, "ESCOLHA SEU CAMINHO", "PARTIDA RÁPIDA OU LOCAL");
 
         drawBtnAt(MENU_LAYOUT.modeSelect.single, "SINGLEPLAYER", "#7dd3fc");
-        drawBtnAt(MENU_LAYOUT.modeSelect.coop, "CO-OP LOCAL", "#a78bfa");
+        drawBtnAt(MENU_LAYOUT.modeSelect.coop, "VERSUS (2 JOGADORES)", "#a78bfa");
         drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
     }
     else if (gameState === "characters") {
@@ -4145,11 +4162,12 @@ function render() {
         ctx.strokeRect(cardX, cardY, cardW, cardH);
 
         const medalSlots = [
+            ["diamond", "DIAMANTE", TIER_COLORS.diamond],
             ["gold", "OURO", TIER_COLORS.gold],
             ["silver", "PRATA", TIER_COLORS.silver],
             ["bronze", "BRONZE", TIER_COLORS.bronze]
         ];
-        const slotW = cardW / 3;
+        const slotW = cardW / medalSlots.length;
         medalSlots.forEach(([tierKey, label, color], i) => {
             const sx = cardX + slotW * i + slotW / 2;
             drawMedalIcon(sx - 34, cardY + cardH / 2, 9, color);
@@ -4533,19 +4551,24 @@ function render() {
             achievementBanner.yOffset = t < 30 ? -60 + 2 * t : t > endT ? -2 * (t - endT) : 0;
         }
 
+        // Nas telas de resultado (derrota/fim do versus e vitória da fase) o título fica no topo: lá o aviso aparece
+        // no canto de baixo à esquerda (subindo), que está livre — senão cobria "JOGADOR 1 VENCEU!"/"VITÓRIA!".
+        const onResultScreen = gameState === "gameover" || gameState === "stage_victory";
+        const bannerX = onResultScreen ? 10 : canvas.width / 2 - 140;
+        const bannerY = onResultScreen ? canvas.height - 44 - achievementBanner.yOffset : achievementBanner.yOffset;
         ctx.save();
         ctx.fillStyle = "#111133";
-        ctx.fillRect(canvas.width / 2 - 140, achievementBanner.yOffset, 280, 40);
+        ctx.fillRect(bannerX, bannerY, 280, 40);
         ctx.strokeStyle = "#ffff00";
         ctx.lineWidth = 2;
-        ctx.strokeRect(canvas.width / 2 - 140, achievementBanner.yOffset, 280, 40);
+        ctx.strokeRect(bannerX, bannerY, 280, 40);
 
         ctx.fillStyle = "#ffff00";
         ctx.font = "bold 10px monospace";
         ctx.textAlign = "center";
-        ctx.fillText("CONQUISTA DESBLOQUEADA!", canvas.width / 2, achievementBanner.yOffset + 15);
+        ctx.fillText("CONQUISTA DESBLOQUEADA!", bannerX + 140, bannerY + 15);
         ctx.fillStyle = "#ffffff";
-        ctx.fillText(achievementBanner.title, canvas.width / 2, achievementBanner.yOffset + 30);
+        ctx.fillText(achievementBanner.title, bannerX + 140, bannerY + 30);
         ctx.restore();
 
         if (achievementBanner.timer >= achievementBanner.maxTimer) achievementBanner.active = false;
