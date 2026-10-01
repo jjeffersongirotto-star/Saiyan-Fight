@@ -172,6 +172,10 @@ let activeControlProfile = "p1";
 let selectedCharacter = "goku_adult";
 let selectedBoss = "vegeta";
 let editingKey = null;
+// aba TRANSFORMAÇÃO do editor (ver "ABA TRANSFORMAÇÃO" mais abaixo)
+let tempTransformations = [];
+let editingTransformIndex = null;   // índice da transformação aberta no construtor (null = editando o personagem normal)
+let transformEditStash = null;      // como estava o construtor (personagem normal) antes de abrir a transformação
 let currentTab = "HERÓIS";
 let tempBase64 = null;
 let tempAnimations = {};
@@ -572,7 +576,7 @@ function loadImageSecure(src, callback) {
 }
 
 // ==================== CONTROLE DE ABAS DO EDITOR ====================
-const EDITOR_TAB_ORDER = ["basico", "animacoes", "construtor"];
+const EDITOR_TAB_ORDER = ["basico", "animacoes", "construtor", "transformacao"];
 let currentEditorTab = "basico";
 
 function switchEditorTab(tabName) {
@@ -580,6 +584,8 @@ function switchEditorTab(tabName) {
         tabName = 'basico';
     }
 
+    // saiu do construtor no meio da edição de uma transformação: guarda o que foi feito nela
+    if (editingTransformIndex !== null && tabName !== "construtor") finishTransformationEdit(tabName);
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
 
@@ -589,6 +595,7 @@ function switchEditorTab(tabName) {
     if (selectedContent) selectedContent.style.display = 'block';
     currentEditorTab = tabName;
     if (tabName === "construtor") refreshBuilderPreview();
+    if (tabName === "transformacao") renderTransformationList();
 }
 
 // ==================== GERENCIAMENTO DE MINIATURAS E ANIMAÇÕES ====================
@@ -1841,6 +1848,11 @@ function openModal(key = null) {
     setFormFromBgRemoval(char.bgRemoval);
     populateBuilderPresetOptions();
     builderLastAppearance = char.builderAppearance || null;
+    // cópia das transformações: o editor só grava no personagem ao SALVAR
+    tempTransformations = JSON.parse(JSON.stringify(key ? getCharacterTransformations(key) : [SPRITE_DEFAULT_TRANSFORMATION]));
+    editingTransformIndex = null;
+    transformEditStash = null;
+    showTransformBanner(false);
     setBuilderFormFromAppearance(char.builderAppearance || SPRITE_PRESETS.goku.appearance);
     const buildPresetSel = document.getElementById("build-preset");
     if (buildPresetSel) buildPresetSel.value = "";
@@ -1858,6 +1870,9 @@ function openModal(key = null) {
 
 function closeModal() {
     stopBuilderPreview();
+    editingTransformIndex = null;
+    transformEditStash = null;
+    showTransformBanner(false);
     stopSpriteMotionPreview();
     if (modal) modal.style.display = 'none';
     editingKey = null;
@@ -1880,6 +1895,7 @@ function closeUpdatesModal() {
 }
 
 function saveCharacterFromModal() {
+    if (editingTransformIndex !== null) finishTransformationEdit(null);
     const charName = document.getElementById('char-name');
     const name = charName ? charName.value.trim().toUpperCase() : "";
     if (!name) {
@@ -1953,7 +1969,8 @@ function saveCharacterFromModal() {
                 frameWidth: charFw ? parseInt(charFw.value, 10) || img.naturalWidth || 32 : 32,
                 frameHeight: charFh ? parseInt(charFh.value, 10) || img.naturalHeight || 32 : 32,
                 totalFrames: charFrames ? parseInt(charFrames.value, 10) || 1 : 1,
-                bgRemoval: getBgRemovalFromForm()
+                bgRemoval: getBgRemovalFromForm(),
+                transformations: JSON.parse(JSON.stringify(tempTransformations.length ? tempTransformations : [SPRITE_DEFAULT_TRANSFORMATION]))
             };
             if (!saveCharacterData()) {
                 // Não coube no armazenamento do navegador: desfaz na memória também, para o jogo não mostrar
@@ -2040,7 +2057,12 @@ function loadCharacterData() {
 // sprites.js), montados com o próprio construtor — já nascem com animações fluidas (voo, ataque, parry, carregar,
 // transformar). O construtor continua funcionando igual para criar personagens novos a partir desses modelos.
 const DEFAULT_CHARACTERS = {
-    goku_adult: { name: "GOKU", presetKey: "goku", align: "HERÓI", aura: "gelo", spec: "KAMEHAMEHA" },
+    // Goku já vem com a Transformação 2 (cabelo longo de Super Saiyajin), criada pela aba TRANSFORMAÇÃO do editor
+    goku_adult: { name: "GOKU", presetKey: "goku", align: "HERÓI", aura: "gelo", spec: "KAMEHAMEHA",
+        transformations: [
+            { name: "Transformação 1", diff: {}, ssj: true, aura: "amarelo" },
+            { name: "Transformação 2", diff: { hairStyle: "ssj_longo", hairColor: "#ffe34d" }, ssj: false, aura: "amarelo" }
+        ] },
     vegeta: { name: "VEGETA", presetKey: "vegeta", align: "ANTI-HERÓI", aura: "amarelo", spec: "FINAL FLASH" },
     piccolo: { name: "PICCOLO", presetKey: "piccolo", align: "HERÓI", aura: "verde", spec: "MAKAN KOSAPPO" },
     freeza_1: { name: "FREEZA (FINAL)", presetKey: "freeza", align: "VILÃO", aura: "roxo", spec: "DEATH BEAM" },
@@ -2056,6 +2078,23 @@ const DEFAULT_CHARACTERS = {
     broly: { name: "BROLY", presetKey: "broly", align: "VILÃO", aura: "verde", spec: "ERASER CANNON" },
     cell: { name: "CELL", presetKey: "cell", align: "VILÃO", aura: "verde", spec: "KAMEHAMEHA PERFEITO" }
 };
+// Transformações do personagem, na ordem em que acontecem na luta (aba TRANSFORMAÇÃO do editor). Quem nunca
+// mexeu nisso tem a "Transformação 1" padrão (a de sempre: cabelo de Saiyajin amarelo, aura dourada e raios);
+// personagens iniciais podem trazer mais (DEFAULT_CHARACTERS[k].transformations).
+function getCharacterTransformations(charKey) {
+    const c = characterDB[charKey];
+    if (c && Array.isArray(c.transformations) && c.transformations.length) return c.transformations;
+    const d = DEFAULT_CHARACTERS[charKey];
+    if (d && Array.isArray(d.transformations) && d.transformations.length) return d.transformations;
+    return [SPRITE_DEFAULT_TRANSFORMATION];
+}
+
+// Cor da aura enquanto dura o poder extra da transformação (nível 1, 2...)
+function getTransformationAura(charKey, nivel) {
+    const t = getCharacterTransformations(charKey)[Math.max(0, nivel - 1)];
+    return (t && t.aura) || "amarelo";
+}
+
 // Os 4 que já vinham nas versões antigas: perfis antigos já os receberam (se o jogador apagou algum, não volta).
 const ORIGINAL_DEFAULT_CHARACTER_KEYS = ["goku_adult", "vegeta", "piccolo", "freeza_1"];
 
@@ -2230,7 +2269,9 @@ function refreshBuilderPreviewNow() {
     stopBuilderPreview();
     builderPreviewFrame = 0;
     // Cada quadro vira uma imagem só uma vez (antes criava e decodificava uma imagem nova a cada 130 ms).
-    const list = getProceduralFrameUrls(appearance, state, { ssj: state === "transform" });
+    const tEdit = editingTransformIndex !== null ? tempTransformations[editingTransformIndex] : null;
+    const ssjPrevia = state === "transform" || !!(tEdit && tEdit.ssj && SPRITE_SAIYAN_HAIR.includes(appearance.hairStyle));
+    const list = getProceduralFrameUrls(appearance, state, { ssj: ssjPrevia });
     const images = list.map(src => { const img = new Image(); img.src = src; return img; });
     const draw = () => {
         const img = images[builderPreviewFrame % images.length];
@@ -2252,6 +2293,7 @@ function refreshBuilderPreviewNow() {
 // Gera as animações de todos os movimentos e as coloca no personagem em edição — o mesmo lugar que a aba
 // ANIMAÇÕES preencheria à mão. Depois disso, SALVAR PERSONAGEM funciona exatamente como com uma sprite sheet.
 function applyBuilderToCharacter() {
+    if (editingTransformIndex !== null) return finishTransformationEdit("transformacao");   // no modo transformação, o botão conclui a edição
     const appearance = getBuilderAppearanceFromForm();
     const { animations, fpsSettings } = buildProceduralAnimations(appearance);
     SUB_ANIM_KEYS.forEach(state => {
@@ -2269,4 +2311,127 @@ function applyBuilderToCharacter() {
     updateModalPreview();
     renderSpriteAssignedFrames();
     renderSpriteMotionPreview();
+}
+
+// ==================== ABA TRANSFORMAÇÃO ====================
+// Lista de transformações do personagem em edição (cópia; vai para o personagem ao SALVAR). Cada uma guarda só o
+// que muda em relação ao personagem normal (diff), editado no próprio CONSTRUTOR — sem outro editor.
+
+// Personagem normal das transformações: o gerado no construtor (USAR ESTE PERSONAGEM) ou o já salvo.
+function getTransformBase() {
+    if (builderLastAppearance) return builderLastAppearance;
+    const c = editingKey ? characterDB[editingKey] : null;
+    return c && c.builderAppearance ? c.builderAppearance : null;
+}
+
+function getTransformThumbnail(t) {
+    const base = getTransformBase();
+    if (base) {
+        const app = spriteTransformAppearance(base, t);
+        return generateSpriteFrameUrl(app, "idle", 0, { ssj: !!t.ssj && SPRITE_SAIYAN_HAIR.includes(app.hairStyle), noGlow: true });
+    }
+    const c = editingKey ? characterDB[editingKey] : null;
+    return (tempAnimations.idle && tempAnimations.idle[0]) || (c && c.defaultUrl) || getFallbackSpriteSvg();
+}
+
+function showTransformBanner(show, name) {
+    const banner = document.getElementById("build-transform-banner");
+    if (banner) banner.style.display = show ? "flex" : "none";
+    const label = document.getElementById("build-transform-name");
+    if (label) label.textContent = name || "";
+}
+
+function renderTransformationList() {
+    const list = document.getElementById("transform-list");
+    if (!list) return;
+    list.innerHTML = "";
+    const base = getTransformBase();
+    const auraSel = document.getElementById("char-aura");
+    tempTransformations.forEach((t, i) => {
+        const card = document.createElement("div");
+        card.className = "transform-card";
+        const ordem = document.createElement("span");
+        ordem.className = "transform-order";
+        ordem.textContent = (i + 1) + "º";
+        const img = document.createElement("img");
+        img.alt = t.name;
+        img.src = getTransformThumbnail(t);
+        const nome = document.createElement("input");
+        nome.type = "text";
+        nome.value = t.name;
+        nome.setAttribute("aria-label", "Nome da transformação");
+        nome.oninput = () => { t.name = nome.value; img.alt = nome.value; };
+        const aura = document.createElement("select");
+        aura.setAttribute("aria-label", "Aura da transformação");
+        if (auraSel) Array.from(auraSel.options).forEach(o => aura.add(new Option(o.textContent, o.value)));
+        aura.value = t.aura || "amarelo";
+        aura.onchange = () => { t.aura = aura.value; };
+        const botao = (texto, titulo, acao, desligado) => {
+            const b = document.createElement("button");
+            b.type = "button"; b.className = "btn"; b.textContent = texto; b.title = titulo;
+            b.setAttribute("aria-label", titulo);
+            b.disabled = !!desligado;
+            b.onclick = acao;
+            return b;
+        };
+        card.append(ordem, img, nome, aura,
+            botao("▲", "Subir na ordem", () => moveTransformation(i, -1), i === 0),
+            botao("▼", "Descer na ordem", () => moveTransformation(i, 1), i === tempTransformations.length - 1),
+            botao("EDITAR", base ? "Editar no construtor" : "Gere o personagem no CONSTRUTOR primeiro", () => editTransformation(i), !base),
+            botao("✕", "Apagar transformação", () => removeTransformation(i), tempTransformations.length <= 1));
+        list.appendChild(card);
+    });
+    const status = document.getElementById("transform-status");
+    if (status) status.textContent = base
+        ? "Toque em + para adicionar: ela começa igual ao personagem e você muda no construtor."
+        : "Para mudar a aparência das transformações, gere o personagem no CONSTRUTOR (USAR ESTE PERSONAGEM). Sem isso, elas mudam só a aura, o poder e os raios.";
+}
+
+function moveTransformation(i, dir) {
+    const j = i + dir;
+    if (j < 0 || j >= tempTransformations.length) return;
+    const [t] = tempTransformations.splice(i, 1);
+    tempTransformations.splice(j, 0, t);
+    renderTransformationList();
+}
+
+function removeTransformation(i) {
+    if (tempTransformations.length <= 1) return;
+    showSystemConfirm("APAGAR TRANSFORMAÇÃO", `APAGAR "${String(tempTransformations[i].name).toUpperCase()}"?`, () => {
+        tempTransformations.splice(i, 1);
+        renderTransformationList();
+    }, "APAGAR");
+}
+
+// Nova transformação: começa igual ao personagem normal (sem diferenças) e já abre no construtor.
+function addTransformation() {
+    tempTransformations.push({ name: "Transformação " + (tempTransformations.length + 1), diff: {}, ssj: false, aura: "amarelo" });
+    renderTransformationList();
+    if (getTransformBase()) editTransformation(tempTransformations.length - 1);
+}
+
+function editTransformation(i) {
+    const base = getTransformBase();
+    const t = tempTransformations[i];
+    if (!base || !t) return;
+    if (editingTransformIndex === null) transformEditStash = getBuilderAppearanceFromForm();
+    editingTransformIndex = i;
+    setBuilderFormFromAppearance(spriteTransformAppearance(base, t));
+    const presetSel = document.getElementById("build-preset");
+    if (presetSel) presetSel.value = "";
+    showTransformBanner(true, t.name);
+    switchEditorTab("construtor");
+}
+
+// Guarda na transformação só o que ficou diferente do personagem normal e devolve o construtor como estava.
+function finishTransformationEdit(nextTab = "transformacao") {
+    if (editingTransformIndex === null) return;
+    const t = tempTransformations[editingTransformIndex];
+    const base = getTransformBase();
+    if (t && base) t.diff = spriteAppearanceDiff(base, getBuilderAppearanceFromForm());
+    editingTransformIndex = null;
+    showTransformBanner(false);
+    if (transformEditStash) setBuilderFormFromAppearance(transformEditStash);
+    transformEditStash = null;
+    if (nextTab) switchEditorTab(nextTab);
 }

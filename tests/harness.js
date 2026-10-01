@@ -37,6 +37,8 @@ function createHarness(dir, width = 800, height = 360) {
             getBoundingClientRect: () => ({ left: 0, top: 0, width: el.width, height: el.height }),
             setPointerCapture() {}, hasPointerCapture: () => false, releasePointerCapture() {},
             querySelector: () => null, focus() {}, click() {}, children: [], appendChild(child) { this.children.push(child); },
+            append(...kids) { this.children.push(...kids); }, attributes: {}, setAttribute(k, v) { this.attributes[k] = String(v); },
+            options: [], add(opt) { this.options.push(opt); },   // <select>: new Option(...) + add()
             get parentElement() { return id === "game" ? document.getElementById("game-container") : { clientWidth: 800 }; },
             get clientWidth() { return context.innerWidth; }
         };
@@ -57,6 +59,7 @@ function createHarness(dir, width = 800, height = 360) {
 
     const store = {};
     const context = {
+        Option: function (text, value) { this.textContent = text; this.value = value; },
         console: { log() {}, warn() {}, error() {} }, setTimeout, clearTimeout, setInterval, clearInterval,
         document, innerWidth: width, innerHeight: height, addEventListener(t, f) { (winL[t] = winL[t] || []).push(f); },
         localStorage: { getItem: k => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); } },

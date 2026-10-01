@@ -233,6 +233,22 @@
             color: #ccc;
         }
 
+        /* aba TRANSFORMAÇÃO: cartões com imagem, nome, ordem e ações */
+        .transform-list { display: flex; flex-direction: column; gap: 8px; }
+        .transform-card {
+            display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+            background: #111; border: 1px solid var(--border-color); border-radius: 6px; padding: 8px;
+        }
+        .transform-card img { width: 64px; height: 75px; image-rendering: pixelated; background: #1b1b24; border-radius: 4px; }
+        .transform-card .transform-order { font-weight: bold; color: var(--cyan); min-width: 22px; text-align: center; }
+        .transform-card input[type="text"] { flex: 1 1 140px; min-width: 120px; }
+        .transform-card .btn { padding: 6px 10px; min-height: 32px; }
+        .build-transform-banner {
+            display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+            background: #3a2a05; border: 1px solid #ffd23f; color: #ffe9a6; border-radius: 6px;
+            padding: 8px 10px; margin-bottom: 10px; font-size: 12px;
+        }
+
         /* construtor: título de cada grupo de peças (corpo, cabeça, roupas...) */
         .build-section-title {
             margin: 14px 0 6px;
@@ -742,6 +758,7 @@
                 <button id="tab-btn-basico" class="tab-btn active" onclick="switchEditorTab('basico')">DADOS</button>
                 <button id="tab-btn-animacoes" class="tab-btn" onclick="switchEditorTab('animacoes')">ANIMAÇÕES DOS MOVIMENTOS</button>
                 <button id="tab-btn-construtor" class="tab-btn" onclick="switchEditorTab('construtor')">CONSTRUTOR DE PERSONAGEM</button>
+                <button id="tab-btn-transformacao" class="tab-btn" onclick="switchEditorTab('transformacao')">TRANSFORMAÇÃO</button>
             </div>
 
             <!-- ABA 1: DADOS DO PERSONAGEM -->
@@ -969,6 +986,10 @@
 
             <!-- ABA 3: CONSTRUTOR — monta um personagem do zero combinando partes (cabelo, roupa, cauda, asas, arma nas costas, acessórios) -->
             <div id="tab-content-construtor" class="tab-content">
+                <div id="build-transform-banner" class="build-transform-banner" style="display:none;">
+                    <span>EDITANDO A TRANSFORMAÇÃO: <b id="build-transform-name"></b> — mude só o que for diferente do personagem normal.</span>
+                    <button type="button" class="btn" onclick="finishTransformationEdit()">CONCLUIR TRANSFORMAÇÃO</button>
+                </div>
                 <div class="preview-box">
                     <div class="preview-image-wrap">
                         <canvas id="build-preview-canvas" class="prev-canvas" width="100" height="100"></canvas>
@@ -1036,7 +1057,7 @@
                             <option value="gotenks">3 picos (Gotenks)</option>
                             <option value="trunks_futuro">Liso c/franja (Trunks do Futuro)</option><option value="trunks_kid">Liso curto (Trunks criança)</option>
                             <option value="android17">Liso longo (Androide 17)</option><option value="android18">Curto loiro (Androide 18)</option>
-                            <option value="kaioshin_moicano">Moicano (Supremo Sr. Kaio)</option>
+                            <option value="kaioshin_moicano">Moicano (Supremo Sr. Kaio)</option><option value="ssj_longo">Longo de Super Saiyajin (Goku fase 3)</option>
                         </select>
                     </div>
                     <div class="form-group"><label for="build-hair-color">COR DO CABELO</label><input type="color" id="build-hair-color" value="#16110f" oninput="refreshBuilderPreview()"></div>
@@ -1175,6 +1196,15 @@
                 </div>
             </div>
 
+            <div id="tab-content-transformacao" class="tab-content">
+                <p style="font-size:12px; color:#9fb3d8; margin:0 0 10px;">Na luta, com o ki cheio, cada TRANSFORMAR leva para a próxima desta lista, de cima para baixo. Cada uma dá o poder extra por um tempo e a aparência fica até o fim da luta. Use ▲▼ para mudar a ordem.</p>
+                <div id="transform-list" class="transform-list"></div>
+                <div style="display:flex; gap:10px; margin-top:10px; align-items:center; flex-wrap:wrap;">
+                    <button type="button" class="btn" style="background:#0d6b3a; font-size:18px; min-width:56px;" onclick="addTransformation()" aria-label="Adicionar transformação">+</button>
+                    <span id="transform-status" style="font-size:11px; color:#9fb3d8;">Adicione uma transformação: ela começa igual ao personagem e você muda no construtor.</span>
+                </div>
+            </div>
+
             <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
                 <button class="btn" style="background: #333; color: #fff;" onclick="closeModal()">CANCELAR</button>
                 <button class="btn" onclick="saveCharacterFromModal()">SALVAR PERSONAGEM</button>
@@ -1193,6 +1223,7 @@
                 Novidades e correções do jogo.
             </p>
             <ul style="margin: 0 0 18px; color: #ddd; line-height: 1.6; padding-left: 18px; max-height: 50vh; overflow-y: auto;">
+                <li>Nova aba TRANSFORMAÇÃO no editor: várias transformações por personagem, na ordem que você quiser (cada TRANSFORMAR com o ki cheio leva à próxima), editadas no próprio construtor. Raios de ki em volta de quem está transformado. Goku ganhou a Transformação 2 com o novo cabelo longo de Super Saiyajin.</li>
                 <li>Transformação só quando você aperta TRANSFORMAR com o ki cheio (não transforma mais sozinho ao fazer pontos).</li>
                 <li>Primeiro segundo da luta liso: os lutadores escolhidos são preparados ainda nos menus.</li>
                 <li>Jogo mais leve: abre bem mais rápido, transformar não trava mais, o começo da luta ficou mais suave e arrastar cores no construtor não trava.</li>

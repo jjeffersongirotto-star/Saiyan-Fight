@@ -424,6 +424,19 @@ function spriteHair(R, style, color, sway, lift, ssj) {
             front = cap() + capShine + spikes([[-6, -10, -8, -0.4, 5.8, 0.4], [0, -11, 2.4, -1.4, 5.6, 0], [6, -10, 9.4, -1, 5.2, 0]]);
             break;
         }
+        case "ssj_longo": {
+            // Cabelo longo de Super Saiyajin (como a 3ª fase do anime): juba de espetos que desce pelas costas até
+            // o quadril, coroa de espetos no alto e franja em mechas na testa.
+            const L = 46;
+            const juba = R.lin(0, -10, 0, L + 5, [[0, spriteShade(color, 0.05)], [0.75, color], [1, spriteShade(color, -0.22)]]);
+            back = spritePath(`M-13 -6 C-23 -2 -27 14 -25 ${L * 0.5} L-31 ${L * 0.6} L-22 ${L * 0.68} L-27 ${L * 0.84} L-15 ${L * 0.8} L-14 ${L} L-6 ${L * 0.88} L0 ${L + 5} L6 ${L * 0.88} L14 ${L} L15 ${L * 0.8} L27 ${L * 0.84} L22 ${L * 0.68} L31 ${L * 0.6} L25 ${L * 0.5} C27 14 23 -2 13 -6 Z`, juba) +
+                spritePath(spriteSpike(-12, 6, -20, L * 0.55, 3, 0), spriteShade(color, -0.15), `opacity="0.8"`, "") +
+                spritePath(spriteSpike(12, 6, 20, L * 0.55, 3, 0), spriteShade(color, -0.15), `opacity="0.8"`, "");
+            const coroa = [[-10, -10, -18, -29, 9.5, -1], [-3, -13, -5, -36, 10, -0.3], [4, -13, 8, -34, 10, 0.5], [10, -9, 19, -26, 9, 1], [-13, -4, -25, -13, 8.5, -1], [13, -4, 25, -13, 8.5, 1]];
+            back += spikes(coroa) + shines(coroa.slice(0, 4));
+            front = cap() + capShine + spikes([[-7, -10, -10.5, 1.4, 6, 0.4], [-1, -11, 0.4, 2.4, 6.2, 0], [5, -10, 8.6, 1.2, 5.6, -0.4]]);
+            break;
+        }
         case "gotenks": {
             const s = [[-8, -11, -14.5, -33, 12, -1], [0, -14, 0.5, -39, 12.5, 0], [8, -11, 15, -33, 12, 1]];
             back = spikes(s) + shines(s);
@@ -459,7 +472,23 @@ function spriteHair(R, style, color, sway, lift, ssj) {
     return { back, front };
 }
 
-const SPRITE_SAIYAN_HAIR = ["goku", "vegeta", "gohan", "bardock", "raditz", "broly", "gotenks", "trunks_futuro", "trunks_kid"];
+const SPRITE_SAIYAN_HAIR = ["goku", "vegeta", "gohan", "bardock", "raditz", "broly", "gotenks", "trunks_futuro", "trunks_kid", "ssj_longo"];
+
+// ---------------------------------------------------------------------------
+// TRANSFORMAÇÕES: cada uma guarda só o que muda em relação ao personagem base (diff); a aparência de cada
+// transformação é o base + essas diferenças. "ssj" = o efeito padrão (cabelo de Saiyajin amarelo e mais alto).
+// ---------------------------------------------------------------------------
+const SPRITE_DEFAULT_TRANSFORMATION = { name: "Transformação 1", diff: {}, ssj: true, aura: "amarelo" };
+
+function spriteTransformAppearance(base, t) {
+    return normalizeAppearance(Object.assign({}, base, (t && t.diff) || {}));
+}
+
+function spriteAppearanceDiff(base, edited) {
+    const a = normalizeAppearance(base), b = normalizeAppearance(edited), d = {};
+    for (const k of Object.keys(b)) if (b[k] !== a[k]) d[k] = b[k];
+    return d;
+}
 
 // ---------------------------------------------------------------------------
 // ROSTO (olhos, sobrancelhas, boca)
@@ -1216,7 +1245,7 @@ const SPRITE_PRESETS = {
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
         SPRITE_VIEW, SPRITE_STATES, SPRITE_FRAME_COUNTS, SPRITE_PRESETS, SPRITE_DEFAULT_APPEARANCE,
-        normalizeAppearance, spritePoseFor, generateSpriteFrameSvg, generateSpriteFrameUrl, getProceduralFrameUrls, spriteSvgToUrl,
+        normalizeAppearance, spriteTransformAppearance, spriteAppearanceDiff, SPRITE_DEFAULT_TRANSFORMATION, SPRITE_SAIYAN_HAIR, spritePoseFor, generateSpriteFrameSvg, generateSpriteFrameUrl, getProceduralFrameUrls, spriteSvgToUrl,
         spriteMix, spriteShade
     };
 }
