@@ -107,40 +107,6 @@
             aspect-ratio: 800 / 350;
         }
 
-        #mobile-orientation-hint {
-            display: none;
-            position: fixed;
-            inset: 0;
-            z-index: 250;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            background: rgba(3, 7, 18, 0.96);
-            text-align: center;
-        }
-
-        #mobile-orientation-hint .orientation-card {
-            width: min(360px, 100%);
-            padding: 22px;
-            border: 2px solid var(--cyan);
-            border-radius: 10px;
-            background: #111827;
-            box-shadow: 0 0 24px rgba(0, 229, 255, 0.25);
-        }
-
-        #mobile-orientation-hint strong {
-            display: block;
-            margin-bottom: 10px;
-            color: var(--cyan);
-            font-size: 18px;
-        }
-
-        #mobile-orientation-hint p {
-            margin: 0 0 16px;
-            color: #cbd5e1;
-            font-size: 13px;
-        }
-
         @media (max-width: 540px) {
             body {
                 padding: 8px;
@@ -149,12 +115,6 @@
             #instrucao-texto {
                 max-width: 100%;
                 font-size: 12px;
-            }
-        }
-
-        @media (max-width: 768px) and (orientation: landscape) {
-            #mobile-orientation-hint {
-                display: none !important;
             }
         }
 
@@ -752,13 +712,6 @@
 
     <div id="game-container">
         <canvas id="game" width="800" height="350" role="application" aria-label="Área de jogo: batalha em canvas contra o vilão. Use as teclas de movimento e ação configuradas para jogar."></canvas>
-        <div id="mobile-orientation-hint" aria-live="polite">
-            <div class="orientation-card">
-                <strong>GIRE O CELULAR</strong>
-                <p>Para jogar melhor, ative a tela deitada.</p>
-                <button type="button" class="btn" onclick="activateMobileLandscape()">ATIVAR TELA DEITADA</button>
-            </div>
-        </div>
 
     <!-- INPUT DE ARQUIVO ESCONDIDO -->
     <input type="file" id="file-input" accept="image/*" style="display: none;">
@@ -1198,6 +1151,7 @@
                 <li>Cada fase tem 3 modos: NORMAL, DIFÍCIL e SEM LIMITE.</li>
                 <li>Modo 2 jogadores agora é VERSUS em melhor de 3 rodadas, com tela dizendo quem venceu.</li>
                 <li>Novas conquistas: 1ª vitória no DIFÍCIL, NORMAL e DIFÍCIL em todas as fases, e a medalha de DIAMANTE por completar todas.</li>
+                <li>No celular em pé o jogo já aparece deitado sozinho, sem o aviso "GIRE O CELULAR".</li>
                 <li>Fases bloqueadas com cadeado de verdade, que abre e cai ao liberar a fase.</li>
                 <li>Editor de personagem, telas de personagens/DATABASE e a luta mais leves no celular.</li>
                 <li>Rebater (parry) que erra tem meio segundo de espera.</li>

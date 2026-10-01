@@ -413,8 +413,7 @@ function toggleFullscreen() {
     const container = document.getElementById("game-container");
     if (!container) return;
 
-    if (isFullscreenActive() || container.classList.contains("forced-landscape")) {
-        if (container.classList.contains("forced-landscape")) deactivateForcedLandscape();
+    if (isFullscreenActive()) {
         if (pseudoFullscreen) {
             pseudoFullscreen = false;
             syncFullscreenState();
@@ -835,10 +834,7 @@ function drawDragonBallPanel(x, y, w, h, title, subtitle = "") {
 }
 
 function getCanvasCoords(clientX, clientY) {
-    const r = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / r.width;
-    const scaleY = canvas.height / r.height;
-    return { x: (clientX - r.left) * scaleX, y: (clientY - r.top) * scaleY };
+    return getElementPointFromClient(canvas, clientX, clientY, canvas.width, canvas.height);   // considera o jogo girado
 }
 
 function getHudButtonRect(buttonKey) {

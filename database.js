@@ -64,13 +64,7 @@ ctx.imageSmoothingEnabled = false;
 if (prevCtx) prevCtx.imageSmoothingEnabled = false;
 
 function fitCanvasToViewport() {
-    // Se o aparelho já girou de verdade (landscape real) enquanto a rotação por CSS estava ativa, tira a
-    // rotação forçada — senão os dois se somam e o jogo aparece de lado/de cabeça pra baixo.
-    const rotatedContainer = document.getElementById("game-container");
-    if (rotatedContainer && rotatedContainer.classList.contains("forced-landscape") && window.innerWidth > window.innerHeight) {
-        rotatedContainer.classList.remove("forced-landscape");
-    }
-    updateMobileOrientationHint();
+    updateAutoLandscape();
     const canvasContainer = canvas.parentElement;
     const isForcedLandscape = Boolean(canvasContainer && canvasContainer.classList && canvasContainer.classList.contains("forced-landscape"));
     const containerWidth = canvasContainer ? canvasContainer.clientWidth : window.innerWidth;
@@ -118,46 +112,31 @@ function fitCanvasToViewport() {
     }
 }
 
-function updateMobileOrientationHint() {
-    const hint = document.getElementById("mobile-orientation-hint");
-    if (!hint) return;
+// Celular em pé: o jogo já aparece deitado sozinho, girado 90° por CSS (sem aviso nem botão — girar a tela de
+// verdade exigiria pedir tela cheia ao navegador, que mostra o aviso do Chrome). Com o celular deitado de verdade,
+// ou no computador, fica sem rotação (senão as duas se somariam e o jogo apareceria de lado).
+function updateAutoLandscape() {
     const container = document.getElementById("game-container");
-    const isForcedLandscape = Boolean(container && container.classList.contains("forced-landscape"));
-    const isMobilePortrait = isMobileDevice() && window.innerWidth <= 768 && window.innerHeight > window.innerWidth;
-    // Com a rotação forçada por CSS já ativa, o aparelho continua fisicamente em pé (a checagem de largura x
-    // altura acima nunca vira "false" sozinha) — sem essa condição extra, o aviso nunca sumiria.
-    hint.style.display = isMobilePortrait && !isForcedLandscape ? "flex" : "none";
+    if (!container || !container.classList) return;
+    const portraitPhone = isMobileDevice() && window.innerHeight > window.innerWidth;
+    container.classList.toggle("forced-landscape", portraitPhone);
 }
 
-async function activateMobileLandscape() {
+function isForcedLandscapeActive() {
     const container = document.getElementById("game-container");
-    try {
-        const requestFullscreen = container && (container.requestFullscreen || container.webkitRequestFullscreen);
-        if (requestFullscreen && !document.fullscreenElement && !isInstalledApp()) {
-            await requestFullscreen.call(container);
-        }
-        if (screen.orientation && screen.orientation.lock) {
-            await screen.orientation.lock("landscape");
-        }
-    } catch (error) {
-        console.warn("Não foi possível ativar a orientação horizontal automaticamente.", error);
-    } finally {
-        // Se depois de tentar de verdade o aparelho continuar em pé (comum dentro de janelas incorporadas,
-        // como a do app do Claude, que costuma bloquear essas duas permissões), gira só visualmente por CSS —
-        // assim o botão sempre faz alguma coisa, em vez de simplesmente não responder.
-        if (container && window.innerWidth <= window.innerHeight) {
-            container.classList.add("forced-landscape");
-        }
-        updateMobileOrientationHint();
-        fitCanvasToViewport();
+    return Boolean(container && container.classList && container.classList.contains("forced-landscape"));
+}
+
+// Converte um toque/clique (clientX/Y da tela) para coordenadas dentro do elemento (em unidades unitsW x unitsH),
+// levando em conta o jogo girado 90° no sentido horário por CSS: aí a largura do jogo corre de cima para baixo
+// na tela e a altura corre da direita para a esquerda.
+function getElementPointFromClient(el, clientX, clientY, unitsW, unitsH) {
+    const r = el.getBoundingClientRect();
+    if (isForcedLandscapeActive() && el.closest && el.closest("#game-container")) {
+        const right = r.left + r.width;
+        return { x: (clientY - r.top) / r.height * unitsW, y: (right - clientX) / r.width * unitsH };
     }
-}
-
-// Desliga a rotação forçada por CSS (chamado ao girar o aparelho de verdade, ou ao sair da tela cheia).
-function deactivateForcedLandscape() {
-    const container = document.getElementById("game-container");
-    if (container) container.classList.remove("forced-landscape");
-    fitCanvasToViewport();
+    return { x: (clientX - r.left) / r.width * unitsW, y: (clientY - r.top) / r.height * unitsH };
 }
 
 function normalizeTouchHudLayout(layout) {
@@ -1022,14 +1001,8 @@ function getSpriteSheetCanvasPoint(event) {
     const map = document.getElementById("sprite-sheet-map");
     const grid = getSpriteSheetGrid();
     if (!map || !grid) return null;
-    const rect = map.getBoundingClientRect();
-    const scaleX = map.width / rect.width;
-    const scaleY = map.height / rect.height;
-    return {
-        grid,
-        x: (event.clientX - rect.left) * scaleX,
-        y: (event.clientY - rect.top) * scaleY
-    };
+    const point = getElementPointFromClient(map, event.clientX, event.clientY, map.width, map.height);
+    return { grid, x: point.x, y: point.y };
 }
 
 function getFrameAtPoint(x, y, grid) {

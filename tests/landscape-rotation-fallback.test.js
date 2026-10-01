@@ -1,8 +1,6 @@
-// tests/landscape-rotation-fallback.test.js — verificações desta atualização: o botão "ATIVAR TELA DEITADA"
-// não fazia nada visível em janelas incorporadas (como o visualizador de artefatos do app do Claude), que
-// costumam bloquear as APIs de tela cheia e de travar a orientação. Agora, quando essas APIs não funcionam,
-// o jogo gira sozinho por CSS (sem depender de nenhuma permissão do sistema) — o botão sempre faz alguma
-// coisa visível. Também confirma que o overlay de escolha de modo ficou sem o texto pequeno embaixo dos
+// tests/landscape-rotation-fallback.test.js — com o celular em pé, o jogo aparece deitado sozinho (girado 90°
+// por CSS), sem o antigo aviso "GIRE O CELULAR"/botão "ATIVAR TELA DEITADA"; ao deitar o celular de verdade a
+// rotação por CSS sai (não soma as duas); e os toques com o jogo girado caem no lugar certo. Também confirma que o overlay de escolha de modo ficou sem o texto pequeno embaixo dos
 // botões, e que título/subtítulo/botões subiram um pouco, como pedido.
 //
 // Uso: node tests/landscape-rotation-fallback.test.js
@@ -11,25 +9,31 @@ const { createHarness } = require("./harness.js");
 const h = createHarness(__dirname + "/..", 800);
 const { run, check, summary } = h;
 
-// ---------- botão "ativar tela deitada": sem suporte nativo (como no app do Claude), gira por CSS ----------
-run("innerWidth = 400; innerHeight = 800"); // celular em pé
-run("activateMobileLandscape()");
-check("sem as APIs nativas disponíveis, aplica a rotação por CSS como alternativa", run("document.getElementById('game-container').classList.contains('forced-landscape')") === true);
-
-// o aviso "GIRE O CELULAR" some assim que a rotação por CSS está ativa (senão ficaria um aviso de rotação por
-// cima de um jogo que, visualmente, já está rotacionado)
-run("updateMobileOrientationHint()");
-check("o aviso de girar o celular some depois que a rotação por CSS entrou em ação", run("document.getElementById('mobile-orientation-hint').style.display") === "none");
+// ---------- celular em pé: o jogo já aparece deitado sozinho (sem aviso "GIRE O CELULAR" nem botão) ----------
+run("isMobileDevice = () => true");
+run("innerWidth = 400; innerHeight = 800; fitCanvasToViewport()"); // celular em pé
+check("celular em pé: o jogo gira sozinho por CSS, sem precisar apertar nada", run("document.getElementById('game-container').classList.contains('forced-landscape')") === true);
+check("o aviso 'GIRE O CELULAR' não existe mais", run("document.getElementById('mobile-orientation-hint')") === null || !require("fs").readFileSync(__dirname + "/../index.html", "utf8").includes("mobile-orientation-hint"));
 
 // ---------- gira o aparelho de verdade depois: a rotação por CSS se desliga sozinha (não soma as duas) ----------
 run("innerWidth = 800; innerHeight = 400"); // agora landscape de verdade
 run("fitCanvasToViewport()");
 check("quando o aparelho gira de verdade, a rotação por CSS se desliga sozinha (não fica dobrado)", run("document.getElementById('game-container').classList.contains('forced-landscape')") === false);
+run("innerWidth = 400; innerHeight = 800; fitCanvasToViewport()");
+check("voltando a ficar em pé, gira de novo sozinho", run("document.getElementById('game-container').classList.contains('forced-landscape')") === true);
 
-// ---------- sair da tela cheia (ou apertar Escape) também desliga a rotação por CSS ----------
-run("innerWidth = 400; innerHeight = 800; document.getElementById('game-container').classList.add('forced-landscape')");
-run("toggleFullscreen()");
-check("alternar a tela cheia enquanto a rotação por CSS está ativa também desliga ela", run("document.getElementById('game-container').classList.contains('forced-landscape')") === false);
+// ---------- toque com o jogo girado: cai no lugar certo do jogo ----------
+// Girado 90° (sentido horário): o canvas de 800x350 ocupa na tela uma caixa em pé de 350x800 (largura x altura).
+run(`canvas.closest = () => ({}); canvas.getBoundingClientRect = () => ({ left: 0, top: 0, width: 350, height: 800 })`);
+const canto = run("getCanvasCoords(349, 1)");   // canto de cima à direita da tela = canto de cima à esquerda do jogo
+check("girado: o canto de cima à direita da tela é o canto de cima à esquerda do jogo", canto.x < 2 && canto.y < 2, JSON.stringify(canto));
+const meio = run("getCanvasCoords(175, 400)");
+check("girado: o meio da tela é o meio do jogo", Math.abs(meio.x - 400) < 1 && Math.abs(meio.y - 175) < 1, JSON.stringify(meio));
+const fundo = run("getCanvasCoords(0, 800)");   // canto de baixo à esquerda da tela = canto de baixo à direita do jogo
+check("girado: o canto de baixo à esquerda da tela é o canto de baixo à direita do jogo", Math.abs(fundo.x - 800) < 1 && Math.abs(fundo.y - 350) < 1, JSON.stringify(fundo));
+run("innerWidth = 800; innerHeight = 400; fitCanvasToViewport(); canvas.getBoundingClientRect = () => ({ left: 0, top: 0, width: 800, height: 350 })");
+const normal = run("getCanvasCoords(100, 50)");
+check("sem rotação: o toque continua igual", normal.x === 100 && normal.y === 50);
 
 // ---------- overlay de escolha de modo: sem o texto pequeno, título/subtítulo/botões mais acima ----------
 run("writeStorage('saiyan_stage_progress', ''); stageProgress = {}; setGameState('stage_map')");
