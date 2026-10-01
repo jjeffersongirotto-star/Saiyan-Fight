@@ -1001,6 +1001,11 @@
                             <option value="musculoso">Musculoso</option><option value="gigante">Gigante</option><option value="jovem">Jovem/Criança</option>
                         </select>
                     </div>
+                    <div class="form-group"><label for="build-proporcao">ESTILO DO DESENHO</label>
+                        <select id="build-proporcao" onchange="refreshBuilderPreview()">
+                            <option value="classico">Clássico</option><option value="anime">Anime (pixel art)</option>
+                        </select>
+                    </div>
                     <div class="form-group"><label for="build-skin">COR DA PELE (vazio = da raça)</label>
                         <input type="color" id="build-skin" value="#f3c29a" oninput="refreshBuilderPreview()">
                         <label style="font-weight:normal; margin-top:4px;"><input type="checkbox" id="build-skin-auto" checked onchange="refreshBuilderPreview()"> usar cor padrão da raça</label>
@@ -1151,6 +1156,7 @@
                 <li>Cada fase tem 3 modos: NORMAL, DIFÍCIL e SEM LIMITE.</li>
                 <li>Modo 2 jogadores agora é VERSUS em melhor de 3 rodadas, com tela dizendo quem venceu.</li>
                 <li>Novas conquistas: 1ª vitória no DIFÍCIL, NORMAL e DIFÍCIL em todas as fases, e a medalha de DIAMANTE por completar todas.</li>
+                <li>Goku com visual novo em pixel art, no estilo dos jogos de luta do anime (teste do estilo novo).</li>
                 <li>O jogo se atualiza sozinho quando sai versão nova (espera você estar num menu).</li>
                 <li>No celular em pé o jogo já aparece deitado sozinho, sem o aviso "GIRE O CELULAR".</li>
                 <li>Fases bloqueadas com cadeado de verdade, que abre e cai ao liberar a fase.</li>

@@ -274,6 +274,7 @@ function getStageMapNodes() {
 // Medalha simples (círculo com uma fitinha) desenhada com formas básicas, sem depender de emoji/fonte especial.
 // Cadeado das fases bloqueadas no mapa: arco + corpo dourado + fechadura. `open` (0..1) levanta e gira o arco
 // (animação de quando a fase acaba de ser liberada).
+const PIXEL_SPRITE_SCALE = 1.45;   // tamanho do desenho em pixel art em relação à caixa de colisão do lutador
 let stageUnlockAnim = null;   // { id, t }: cadeado abrindo no mapa de fases (ver render de "stage_map")
 
 function drawPadlock(cx, cy, size, open = 0) {
@@ -3046,8 +3047,23 @@ function drawPlayerEntity(p, charData, isBoss = false) {
     const drawH = p.h * shift.scale;
     const drawX = renderX + (p.w - drawW) / 2 + shift.dx;
     const drawY = renderY + (p.h - drawH) / 2 + shift.dy;
-    if (isDrawableSource(animationFrame)) {
-        ctx.drawImage(animationFrame, drawX, drawY, drawW, drawH);
+    // Personagem em pixel art (estilo anime): desenhado maior que a caixa de colisão, com os pés no mesmo lugar —
+    // no tamanho da caixa o rosto e os detalhes não cabem. A área que leva/acerta golpes continua a mesma.
+    const svgSrc = animationFrame && animationFrame.__svgImage ? String(animationFrame.__svgImage.src) : "";
+    let artW = drawW, artH = drawH, artX = drawX, artY = drawY;
+    if (svgSrc.includes("crispEdges")) {
+        const feetY = drawY + drawH * (103 / 112);
+        artW = drawW * PIXEL_SPRITE_SCALE;
+        artH = drawH * PIXEL_SPRITE_SCALE;
+        artX = drawX + (drawW - artW) / 2;
+        artY = feetY - artH * (103 / 112);
+    }
+    const pixelArt = isDrawableSource(animationFrame) ? getPixelArtSource(animationFrame, artW, artH) : null;
+    if (pixelArt) {
+        // pixel art no tamanho exato: desenha 1:1 numa posição inteira (sem esticar = pixels nítidos)
+        ctx.drawImage(pixelArt.img, Math.round(artX) - pixelArt.pad, Math.round(artY) - pixelArt.pad);
+    } else if (isDrawableSource(animationFrame)) {
+        ctx.drawImage(animationFrame, artX, artY, artW, artH);
     } else if (charData && charData.imageObj && charData.imageObj.complete && charData.imageObj.naturalWidth !== 0) {
         let img = getCutoutSource(charData.imageObj, charData.bgRemoval);
         let imgW = img.naturalWidth || img.width;

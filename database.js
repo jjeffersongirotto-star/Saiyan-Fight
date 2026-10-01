@@ -2119,6 +2119,7 @@ function loadCharacterData() {
                 Object.keys(character).forEach(property => {
                     if (/^(animation|img)(zoom|offset)/i.test(property)) delete character[property];
                 });
+                refreshDefaultCharacterStyle(k, character);
                 // Personagem do construtor sem animações salvas (foram descartadas para caber no localStorage,
                 // ver saveCharacterData): recria os quadros a partir da aparência guardada.
                 if (character.builderAppearance && (!character.animations || Object.keys(character.animations).length === 0)) {
@@ -2161,6 +2162,24 @@ const DEFAULT_CHARACTERS = {
     raditz: { name: "RADITZ", presetKey: "raditz", align: "VILÃO", aura: "roxo", spec: "DOUBLE SUNDAY" },
     broly: { name: "BROLY", presetKey: "broly", align: "VILÃO", aura: "verde", spec: "ERASER CANNON" }
 };
+// Personagem inicial salvo antes de o modelo dele ganhar o estilo novo (ex.: proporções "anime" em pixel art):
+// se o jogador não mexeu na aparência, passa a usar a do modelo atual (senão continuaria com o desenho antigo,
+// porque a aparência fica gravada no navegador). Personagem editado pelo jogador fica como está.
+function refreshDefaultCharacterStyle(k, character) {
+    const d = DEFAULT_CHARACTERS[k];
+    const saved = character && character.builderAppearance;
+    if (!d || !saved || !SPRITE_PRESETS[d.presetKey]) return false;
+    const preset = SPRITE_PRESETS[d.presetKey].appearance;
+    const keys = new Set(Object.keys(saved).concat(Object.keys(preset)));
+    keys.delete("proporcao");
+    for (const key of keys) if (saved[key] !== preset[key]) return false;   // o jogador personalizou
+    if ((saved.proporcao || "classico") === (preset.proporcao || "classico")) return false;  // já está no estilo atual
+    character.builderAppearance = preset;
+    character.animations = {};
+    character.defaultUrl = generateSpriteFrameUrl(preset, "idle", 0);
+    return true;
+}
+
 // Os 4 que já vinham nas versões antigas: perfis antigos já os receberam (se o jogador apagou algum, não volta).
 const ORIGINAL_DEFAULT_CHARACTER_KEYS = ["goku_adult", "vegeta", "piccolo", "freeza_1"];
 
@@ -2251,7 +2270,7 @@ let builderPreviewTimer = null;
 let builderPreviewFrame = 0;
 
 const BUILDER_FIELD_IDS = {
-    race: "build-race", build: "build-build", hairStyle: "build-hair-style", hairColor: "build-hair-color",
+    race: "build-race", build: "build-build", proporcao: "build-proporcao", hairStyle: "build-hair-style", hairColor: "build-hair-color",
     eyeType: "build-eye-type", irisColor: "build-iris-color", scleraColor: "build-sclera-color",
     earType: "build-ear-type", mouthType: "build-mouth-type", scar: "build-scar", accessory: "build-accessory",
     hat: "build-hat", symbol: "build-symbol", outerShirt: "build-outer-shirt", innerShirt: "build-inner-shirt",
