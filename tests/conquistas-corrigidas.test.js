@@ -32,14 +32,14 @@ check("as outras arenas continuam sendo liberadas ao abrir a fase (Kaioh abriu)"
 
 // ---------- modos das fases: 1º DIFÍCIL, NORMAL em todas, DIFÍCIL em todas ----------
 run(zerar + "gameMode = 'singleplayer'; selectedStage = 'terra'; stageMode = 'normal'; startGame(); " + semSpawns + " stageMode = 'hard'; resolveStageVictory()");
-check("1ª vitória no DIFÍCIL libera 'Desafio Aceito'", run("achievements.hard_first.unlocked") === true);
+check("1ª vitória no DIFÍCIL libera 'Difícil? Não Para Mim'", run("achievements.hard_first.unlocked") === true);
 check("vencer só uma fase não libera 'NORMAL em todas' nem 'DIFÍCIL em todas'", run("achievements.all_normal.unlocked || achievements.all_hard.unlocked") === false);
 run("STAGE_PROGRESSION.slice(0, -1).forEach(s => registerStageModeComplete(s.id, 'normal'))");
 run("selectedStage = STAGE_PROGRESSION[STAGE_PROGRESSION.length - 1].id; stageMode = 'normal'; resolveStageVictory()");
-check("vencer o NORMAL da última fase que faltava libera 'Herói de Todas as Fases'", run("achievements.all_normal.unlocked") === true && run("achievements.all_hard.unlocked") === false);
+check("vencer o NORMAL da última fase que faltava libera 'Rodei o Universo Inteiro'", run("achievements.all_normal.unlocked") === true && run("achievements.all_hard.unlocked") === false);
 run("STAGE_PROGRESSION.forEach(s => registerStageModeComplete(s.id, 'hard'))");
 run("checkStageModeAchievements()");
-check("DIFÍCIL em todas as fases libera 'Mestre das Dificuldades'", run("achievements.all_hard.unlocked") === true);
+check("DIFÍCIL em todas as fases libera 'Dificuldade? Pouco É Bobagem'", run("achievements.all_hard.unlocked") === true);
 check("'Entre os Deuses' agora diz que é liberar todas as fases", run("achievements.stage_kaioshin.desc").includes("todas as fases"));
 
 // ---------- medalha de diamante ----------

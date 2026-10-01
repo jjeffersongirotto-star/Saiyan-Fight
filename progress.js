@@ -106,9 +106,9 @@ let achievements = {
     stage_time_room: { name: "Um Ano em Um Dia", desc: "Libere a arena Sala do Tempo", tier: "silver" },
     stage_cell_games: { name: "Competidor dos Jogos de Cell", desc: "Libere a arena Torneio de Cell", tier: "gold" },
     stage_kaioshin: { name: "Entre os Deuses", desc: "Libere todas as fases (a última é o Planeta Supremo Kaioh)", tier: "gold" },
-    hard_first: { name: "Desafio Aceito", desc: "Vença o modo DIFÍCIL de uma fase pela primeira vez", tier: "silver" },
-    all_normal: { name: "Herói de Todas as Fases", desc: "Vença o modo NORMAL de todas as fases", tier: "gold" },
-    all_hard: { name: "Mestre das Dificuldades", desc: "Vença o modo DIFÍCIL de todas as fases", tier: "gold" },
+    hard_first: { name: "Difícil? Não Para Mim", desc: "Vença o modo DIFÍCIL de uma fase pela primeira vez", tier: "silver" },
+    all_normal: { name: "Rodei o Universo Inteiro", desc: "Vença o modo NORMAL de todas as fases", tier: "gold" },
+    all_hard: { name: "Dificuldade? Pouco É Bobagem", desc: "Vença o modo DIFÍCIL de todas as fases", tier: "gold" },
     // -- Versus (2 jogadores; internamente gameMode "coop") --
     versus_win_first: { name: "Duelo Vencido", desc: "Vença uma partida do Versus (melhor de 3)", statKey: "versusWinsTotal", threshold: 1, tier: "bronze" },
     versus_win_10: { name: "Rival Implacável", desc: "Vença 10 partidas do Versus", statKey: "versusWinsTotal", threshold: 10, tier: "silver" },
@@ -124,7 +124,7 @@ let achievements = {
     games_50: { name: "Lenda do Torneio", desc: "Jogue 50 partidas ao todo", statKey: "gamesPlayed", threshold: 50, tier: "gold" },
 
     // Medalha de diamante: a última de todas — liberada sozinha quando todas as outras estiverem completas.
-    all_achievements: { name: "Lenda Suprema", desc: "Complete todas as outras conquistas", tier: "diamond" }
+    all_achievements: { name: "Quem Sabe, Sabe", desc: "Complete todas as outras conquistas", tier: "diamond" }
 };
 
 // Roda depois de qualquer bumpStat: destrava toda conquista com statKey cujo limiar já foi atingido.
