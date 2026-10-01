@@ -314,27 +314,6 @@ const AURA_COLORS = {
 // ==================== DATABASE DE PERSONAGENS ====================
 let characterDB = {};
 
-const DEFAULT_APPEARANCE = {
-    race: "Saiyajin",
-    hairStyle: "goku",
-    hairColor: "#000000",
-    eyeType: "normal",
-    irisColor: "#000000",
-    scleraColor: "#ffffff",
-    earType: "normal",
-    mouthType: "smile",
-    accessory: "none",
-    innerShirt: "regata",
-    outerShirt: "kimono",
-    pants: "larga",
-    shoes: "botas_artes",
-    primaryColor: "#ff6600",
-    secondaryColor: "#0033cc",
-    tail: "saiyan_belt",
-    wings: "none",
-    backWeapon: "none"
-};
-
 // ==================== INICIALIZAÇÃO ====================
 function initSettings() {
     try {
@@ -517,104 +496,9 @@ function executeSystemConfirm(result) {
     restoreFocusAfterModal();
 }
 
-// ==================== GERADOR DE SPRITES DBZ PROCEDURAL ====================
-function generateDbzSpriteSvg(appearance) {
-    const app = Object.assign({}, DEFAULT_APPEARANCE, appearance || {});
-    
-    let skinColor = "#ffcc99";
-    if (app.race === "Namekuseijin") skinColor = "#00aa44";
-    else if (app.race === "Raça Freeza") skinColor = "#f0f0f0";
-    else if (app.race === "Majin") skinColor = "#ff66cc";
-    else if (app.race === "Android") skinColor = "#ffe0bd";
-    else if (app.race === "ET/Alienígena genérico") skinColor = "#8855ff";
-
-    let hairSvg = '';
-    if (app.hairStyle !== "careca") {
-        let hCol = app.hairColor || "#000000";
-        if (app.hairStyle === "goku") {
-            hairSvg = `<path d='M8 2h16l2 4-4 2 6 4-6 2 2 4-6-2-2 4h-4l-2-4-6 2 2-4-6-2 6-4-4-2z' fill='${hCol}' stroke='#000000' stroke-width='0.8'/>`;
-        } else if (app.hairStyle === "vegeta") {
-            hairSvg = `<path d='M10 1h12l3 6-3 2 2 4-4 1h-8l-4-1 2-4-3-2z' fill='${hCol}' stroke='#000000' stroke-width='0.8'/>`;
-        } else if (app.hairStyle === "trunks") {
-            hairSvg = `<path d='M9 3h14l2 5-2 2h-12l-2-2z' fill='${hCol}'/><rect x='10' y='8' width='12' height='3' fill='${hCol}'/>`;
-        } else if (app.hairStyle === "gohan") {
-            hairSvg = `<path d='M11 2h10l3 4-2 3h-12l-2-3z' fill='${hCol}'/>`;
-        }
-    }
-
-    let earSvg = `<rect x='8' y='12' width='2' height='4' fill='${skinColor}'/><rect x='22' y='12' width='2' height='4' fill='${skinColor}'/>`;
-    if (app.earType === "pontuda") {
-        earSvg = `<path d='M6 10l4 3v3h-4z' fill='${skinColor}'/><path d='M26 10l-4 3v3h4z' fill='${skinColor}'/>`;
-    } else if (app.earType === "majin") {
-        earSvg = `<circle cx='7' cy='14' r='3' fill='#ff99dd'/><circle cx='25' cy='14' r='3' fill='#ff99dd'/>`;
-    } else if (app.earType === "freeza_placa") {
-        earSvg = `<rect x='7' y='11' width='3' height='6' fill='#aa00aa'/><rect x='22' y='11' width='3' height='6' fill='#aa00aa'/>`;
-    }
-
-    let accSvg = '';
-    if (app.accessory === "antenas") {
-        accSvg = `<path d='M12 4L9 1M20 4l3-3' stroke='#005511' stroke-width='2'/>`;
-    } else if (app.accessory === "potara") {
-        accSvg = `<circle cx='7' cy='17' r='2' fill='#ffff00'/><circle cx='25' cy='17' r='2' fill='#ffff00'/>`;
-    } else if (app.accessory === "oculos") {
-        accSvg = `<rect x='10' y='12' width='12' height='3' fill='#111111'/><rect x='11' y='13' width='4' height='1' fill='#00ffff'/><rect x='17' y='13' width='4' height='1' fill='#00ffff'/>`;
-    } else if (app.accessory === "mascara") {
-        accSvg = `<rect x='11' y='15' width='10' height='4' fill='#333333'/>`;
-    }
-
-    let tailSvg = '';
-    if (app.tail === "saiyan_belt") {
-        tailSvg = `<path d='M8 23h16v3H8z' fill='#663300'/>`;
-    } else if (app.tail === "freeza") {
-        tailSvg = `<path d='M22 24c4 0 6 4 4 7' stroke='${skinColor}' stroke-width='3' fill='none'/>`;
-    } else if (app.tail === "cell") {
-        tailSvg = `<path d='M22 22c5 2 5 8 0 10' stroke='#00aa44' stroke-width='4' fill='none'/>`;
-    }
-
-    let wingsSvg = '';
-    if (app.wings === "cell") {
-        wingsSvg = `<path d='M4 14L0 22l6-2M28 14l4 8-6-2' fill='#111111'/>`;
-    } else if (app.wings === "angel") {
-        wingsSvg = `<path d='M5 14L1 18l5 1M27 14l4 4-5 1' fill='#ffffff'/>`;
-    }
-
-    let backWeaponSvg = '';
-    if (app.backWeapon === "espada_trunks") {
-        backWeaponSvg = `<path d='M23 8l6-6M22 9l3 3' stroke='#cccccc' stroke-width='2'/>`;
-    } else if (app.backWeapon === "bastao") {
-        backWeaponSvg = `<path d='M24 6l-16 20' stroke='#ff0000' stroke-width='2'/>`;
-    }
-
-    let svgContent = `
-    <svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32' shape-rendering='crispEdges'>
-        ${backWeaponSvg}
-        ${wingsSvg}
-        ${tailSvg}
-        ${hairSvg}
-        <rect x='11' y='11' width='10' height='8' fill='${skinColor}' stroke='#000000' stroke-width='0.8'/>
-        ${earSvg}
-        
-        <rect x='11' y='13' width='10' height='3' fill='${app.scleraColor}'/>
-        <rect x='13' y='13' width='2' height='2' fill='${app.irisColor}'/>
-        <rect x='17' y='13' width='2' height='2' fill='${app.irisColor}'/>
-        
-        <rect x='14' y='17' width='4' height='1' fill='#000000'/>
-        
-        ${accSvg}
-
-        <rect x='9' y='19' width='14' height='7' fill='${app.primaryColor}' stroke='#000000' stroke-width='0.8'/>
-        <rect x='11' y='19' width='10' height='4' fill='${app.secondaryColor}' stroke='#000000' stroke-width='0.8'/>
-        <rect x='10' y='26' width='12' height='4' fill='${app.secondaryColor}' stroke='#000000' stroke-width='0.8'/>
-        <rect x='9' y='29' width='5' height='3' fill='${app.primaryColor}' stroke='#000000' stroke-width='0.8'/>
-        <rect x='18' y='29' width='5' height='3' fill='${app.primaryColor}' stroke='#000000' stroke-width='0.8'/>
-    </svg>`;
-
-    return `data:image/svg+xml;utf8,${encodeURIComponent(svgContent)}`;
-}
-
 // Imagem reserva (usada quando um personagem ainda não tem quadros ou a imagem dele não carrega).
 function getFallbackSpriteSvg() {
-    return generateDbzSpriteSvg(DEFAULT_APPEARANCE);
+    return generateSpriteFrameUrl(SPRITE_DEFAULT_APPEARANCE, "idle", 0);
 }
 
 function triggerScreenShake(intensity = 6, duration = 12) {
@@ -2119,14 +2003,16 @@ function loadCharacterData() {
                 Object.keys(character).forEach(property => {
                     if (/^(animation|img)(zoom|offset)/i.test(property)) delete character[property];
                 });
-                refreshDefaultCharacterStyle(k, character);
-                // Personagem do construtor sem animações salvas (foram descartadas para caber no localStorage,
-                // ver saveCharacterData): recria os quadros a partir da aparência guardada.
-                if (character.builderAppearance && (!character.animations || Object.keys(character.animations).length === 0)) {
+                // Personagem do construtor: as animações e a imagem são sempre refeitas com o desenho atual a partir
+                // da aparência guardada (não ficam salvas no localStorage, ver saveCharacterData; e um personagem salvo
+                // por versões antigas, no estilo antigo, passa a usar o desenho atual).
+                if (character.builderAppearance) {
+                    character.builderAppearance = normalizeAppearance(character.builderAppearance);
                     Object.assign(character, buildProceduralAnimations(character.builderAppearance));
+                    character.defaultUrl = generateSpriteFrameUrl(character.builderAppearance, "idle", 0);
                 }
                 characterDB[k] = character;
-                loadImageSecure(item.defaultUrl, (img) => {
+                loadImageSecure(character.defaultUrl, (img) => {
                     if (characterDB[k]) characterDB[k].imageObj = img;
                 });
             }
@@ -2163,34 +2049,6 @@ const DEFAULT_CHARACTERS = {
     broly: { name: "BROLY", presetKey: "broly", align: "VILÃO", aura: "verde", spec: "ERASER CANNON" },
     cell: { name: "CELL", presetKey: "cell", align: "VILÃO", aura: "verde", spec: "KAMEHAMEHA PERFEITO" }
 };
-const PRESET_VALUES_BEFORE_ANIME = {
-    freeza: { accessory: "chifres" },
-    majin: { build: "gigante", outerShirt: "none", shoes: "botas_marrons", gloves: "nenhuma" }
-};
-
-// Personagem inicial salvo antes de o modelo dele ganhar o estilo novo (ex.: proporções "anime" em pixel art):
-// se o jogador não mexeu na aparência, passa a usar a do modelo atual (senão continuaria com o desenho antigo,
-// porque a aparência fica gravada no navegador). Personagem editado pelo jogador fica como está.
-function refreshDefaultCharacterStyle(k, character) {
-    const d = DEFAULT_CHARACTERS[k];
-    const saved = character && character.builderAppearance;
-    if (!d || !saved || !SPRITE_PRESETS[d.presetKey]) return false;
-    const preset = SPRITE_PRESETS[d.presetKey].appearance;
-    // como o modelo era antes da mudança de estilo (campos que mudaram junto, ex.: Freeza perdeu os chifres)
-    if (saved.proporcao === "anime") return false;   // já está no estilo atual
-    const before = Object.assign({}, preset, PRESET_VALUES_BEFORE_ANIME[d.presetKey] || {});
-    const keys = new Set(Object.keys(saved).concat(Object.keys(before)));
-    keys.delete("proporcao");
-    let personalized = false;
-    for (const key of keys) if (saved[key] !== before[key]) personalized = true;
-    // igual ao modelo antigo: passa a usar o modelo novo inteiro; diferente (personalizado ou de uma versão mais
-    // antiga do modelo): mantém as escolhas salvas e só ganha o desenho novo (estilo anime)
-    character.builderAppearance = personalized ? Object.assign({}, saved, { proporcao: "anime" }) : preset;
-    character.animations = {};
-    character.defaultUrl = generateSpriteFrameUrl(character.builderAppearance, "idle", 0);
-    return true;
-}
-
 // Os 4 que já vinham nas versões antigas: perfis antigos já os receberam (se o jogador apagou algum, não volta).
 const ORIGINAL_DEFAULT_CHARACTER_KEYS = ["goku_adult", "vegeta", "piccolo", "freeza_1"];
 
@@ -2281,7 +2139,7 @@ let builderPreviewTimer = null;
 let builderPreviewFrame = 0;
 
 const BUILDER_FIELD_IDS = {
-    race: "build-race", build: "build-build", proporcao: "build-proporcao", hairStyle: "build-hair-style", hairColor: "build-hair-color",
+    race: "build-race", build: "build-build", hairStyle: "build-hair-style", hairColor: "build-hair-color",
     eyeType: "build-eye-type", irisColor: "build-iris-color", scleraColor: "build-sclera-color",
     earType: "build-ear-type", mouthType: "build-mouth-type", scar: "build-scar", accessory: "build-accessory",
     hat: "build-hat", symbol: "build-symbol", outerShirt: "build-outer-shirt", innerShirt: "build-inner-shirt",

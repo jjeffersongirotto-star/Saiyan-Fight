@@ -441,7 +441,7 @@ function getPixelArtSource(source, w, h) {
     if (!src.startsWith("data:image/svg")) return null;
     perSize[key] = null;
     const sized = new Image();
-    // cores chapadas só no estilo pixel art (desenho nítido); no clássico, os degradês continuam como são
+    // cores chapadas só nos desenhos em pixel art (nítidos); outros SVGs mantêm os degradês
     const pixelStyle = src.includes("crispEdges");
     sized.onload = () => { perSize[key] = buildPixelArt(sized, w, h, pixelStyle ? getSvgPalette(src) : null); };
     sized.src = src.replace(/width%3D%22[\d.]+%22%20height%3D%22[\d.]+%22/, `width%3D%22${w}%22%20height%3D%22${h}%22`);
