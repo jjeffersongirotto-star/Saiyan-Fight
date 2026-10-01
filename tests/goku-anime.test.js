@@ -1,6 +1,5 @@
-// tests/goku-anime.test.js — estilo novo "anime (pixel art)" (Goku, Vegeta, Freeza, Piccolo...): proporções de anime,
-// desenho nítido (sem suavização) só para quem usa o estilo, opção no construtor e atualização do Goku já salvo
-// no navegador de quem jogou antes (sem mexer em personagem que o jogador personalizou).
+// tests/goku-anime.test.js — desenho em pixel art no estilo do anime, o único que existe (o estilo clássico foi
+// removido): todos os modelos e personagens usam esse desenho, inclusive os salvos por versões antigas.
 //
 // Uso: node tests/goku-anime.test.js
 
@@ -11,38 +10,32 @@ const h = createHarness(__dirname + "/..", 800);
 const { run, check, summary } = h;
 
 const goku = sprites.SPRITE_PRESETS.goku.appearance;
-check("o modelo do Goku usa o estilo anime", goku.proporcao === "anime");
+check("o modelo do Goku existe", !!goku && goku.hairStyle === "goku");
 const svgGoku = sprites.generateSpriteFrameSvg(goku, "idle", 0);
-const svgClassico = sprites.generateSpriteFrameSvg(Object.assign({}, sprites.SPRITE_DEFAULT_APPEARANCE, { proporcao: "classico" }), "idle", 0);
-check("personagem novo do construtor já começa no estilo anime", sprites.SPRITE_DEFAULT_APPEARANCE.proporcao === "anime");
+check("o estilo antigo não existe mais (sem campo de estilo na aparência)", !("proporcao" in sprites.SPRITE_DEFAULT_APPEARANCE) && Object.values(sprites.SPRITE_PRESETS).every(p => !("proporcao" in p.appearance)));
 check("Goku: desenho nítido de pixel art (sem suavização de borda)", svgGoku.includes('shape-rendering="crispEdges"'));
-check("quem escolher o estilo Clássico continua com ele", !svgClassico.includes("crispEdges"));
+check("aparência salva com o estilo antigo sai no desenho atual", sprites.generateSpriteFrameSvg(Object.assign({}, goku, { proporcao: "classico" }), "idle", 0) === svgGoku);
+check("personagem novo do construtor já sai no desenho atual", sprites.generateSpriteFrameSvg(sprites.SPRITE_DEFAULT_APPEARANCE, "idle", 0).includes('shape-rendering="crispEdges"'));
 for (const k of Object.keys(sprites.SPRITE_PRESETS)) {
     const app = sprites.SPRITE_PRESETS[k].appearance;
-    check(`${k}: usa o estilo anime e gera todos os movimentos`, app.proporcao === "anime" && sprites.SPRITE_STATES.every(st => sprites.getProceduralFrameUrls(app, st).length === sprites.SPRITE_FRAME_COUNTS[st]));
+    check(`${k}: gera todos os movimentos`, sprites.SPRITE_STATES.every(st => sprites.getProceduralFrameUrls(app, st).length === sprites.SPRITE_FRAME_COUNTS[st]));
 }
 check("Freeza na forma final: sem chifres", sprites.SPRITE_PRESETS.freeza.appearance.accessory !== "chifres");
 check("todos os movimentos do Goku são gerados sem erro", sprites.SPRITE_STATES.every(st => sprites.getProceduralFrameUrls(goku, st).length === sprites.SPRITE_FRAME_COUNTS[st]));
 
-// construtor: opção ESTILO DO DESENHO
 const html = fs.readFileSync(__dirname + "/../index.html", "utf8");
-check("o construtor tem a opção ESTILO DO DESENHO (clássico/anime)", html.includes('id="build-proporcao"') && html.includes('value="anime"'));
+check("o construtor não tem mais a opção de estilo (clássico)", !html.includes("build-proporcao") && !html.includes('value="classico"'));
+check("o gerador antigo de sprites (8 bits) foi apagado", run("typeof generateDbzSpriteSvg") === "undefined" && run("typeof refreshDefaultCharacterStyle") === "undefined");
+check("imagem reserva usa o desenho atual", run("getFallbackSpriteSvg()").startsWith("data:image/svg") && decodeURIComponent(run("getFallbackSpriteSvg()")).includes("crispEdges"));
 
-// perfil antigo: Goku salvo com a aparência antiga passa para o estilo novo
-run(`var __velho = Object.assign({}, SPRITE_PRESETS.goku.appearance); delete __velho.proporcao;
-     var __c = { builderAppearance: __velho, animations: { idle: ["x"] }, defaultUrl: "antigo" };`);
-check("Goku salvo antes da mudança é atualizado para o estilo novo", run("refreshDefaultCharacterStyle('goku_adult', __c)") === true && run("__c.builderAppearance.proporcao") === "anime");
-check("e a imagem dele é refeita", run("__c.defaultUrl") !== "antigo");
-run(`var __editado = Object.assign({}, __velho, { primaryColor: "#00ff00" }); var __c2 = { builderAppearance: __editado };`);
-check("Goku que o jogador personalizou ganha o desenho novo mas mantém as escolhas dele", run("refreshDefaultCharacterStyle('goku_adult', __c2)") === true && run("__c2.builderAppearance.primaryColor") === "#00ff00" && run("__c2.builderAppearance.proporcao") === "anime");
-check("e não é atualizado de novo depois", run("refreshDefaultCharacterStyle('goku_adult', __c2)") === false);
-run(`var __fz = Object.assign({}, SPRITE_PRESETS.freeza.appearance, { accessory: "chifres" }); delete __fz.proporcao; var __cf = { builderAppearance: __fz };`);
-check("Freeza salvo antes (com chifres) também passa para o estilo novo", run("refreshDefaultCharacterStyle('freeza_1', __cf)") === true && run("__cf.builderAppearance.accessory") === "none");
+// perfil antigo: personagem do construtor salvo no estilo antigo passa a usar o desenho atual ao carregar
+run(`var __velho = Object.assign({}, SPRITE_PRESETS.goku.appearance, { proporcao: "classico", primaryColor: "#00ff00" });
+     writeStorage("saiyan_db_v8_8bit", JSON.stringify({ meu_goku: { name: "MEU GOKU", defaultUrl: "data:image/svg+xml;utf8,antigo", builderAppearance: __velho } }));
+     characterDB = {}; loadCharacterData();`);
+check("personagem salvo no estilo antigo carrega no desenho atual", run("decodeURIComponent(characterDB.meu_goku.defaultUrl).includes('crispEdges')") && run("characterDB.meu_goku.animations.idle.length") > 0);
+check("e mantém as escolhas do jogador (sem o campo de estilo)", run("characterDB.meu_goku.builderAppearance.primaryColor") === "#00ff00" && run("'proporcao' in characterDB.meu_goku.builderAppearance") === false);
 check("Majin Boo é o Boo gordo (barriga, colete e luvas)", (() => { const m = sprites.SPRITE_PRESETS.majin.appearance; return m.build === "gordo" && m.outerShirt === "colete_buu"; })());
-run(`var __mb = Object.assign({}, SPRITE_PRESETS.majin.appearance, { build: "gigante", outerShirt: "none", shoes: "botas_marrons", gloves: "nenhuma" }); delete __mb.proporcao; var __cm = { builderAppearance: __mb };`);
-check("Majin Boo salvo antes (musculoso) passa para o Boo gordo", run("refreshDefaultCharacterStyle('majin_buu', __cm)") === true && run("__cm.builderAppearance.build") === "gordo");
-check("o Cell entra no elenco inicial", run("!!characterDB.cell && characterDB.cell.name === 'CELL'"));
+check("o Cell entra no elenco inicial", run("!!SPRITE_PRESETS.cell && DEFAULT_CHARACTERS.cell.name === 'CELL'"));
 check("construtor tem as peças do Cell e do Boo", ["cell_crista", "armadura_cell", "botas_cell", "Bio-Androide", 'value="gordo"', "colete_buu"].every(v => html.includes(v)));
-check("personagem que não é dos iniciais não é tocado", run("refreshDefaultCharacterStyle('meu_personagem', __c)") === false);
 
 process.exit(summary());
