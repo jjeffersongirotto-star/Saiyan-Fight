@@ -338,7 +338,7 @@ function getCharacterAnimationFrame(charKey, actionState, animTimer, transformed
 // transformar, congelava o jogo por quase um segundo no celular. Cada movimento vira uma tarefa que só calcula
 // os desenhos (rápido); as imagens normais são carregadas uma por tarefa. As do cabelo amarelo só são calculadas
 // — viram imagem quando aparecem (carregar ~100 imagens a mais no começo da luta derrubava o FPS).
-const backgroundWork = { frames: [], images: [], pixelArt: [] };
+const backgroundWork = { frames: [], images: [], pixelArt: [], light: [] };
 function preloadCharacterFrames(charKey, transformed) {
     if (!characterDB[charKey] || typeof Image === "undefined") return;
     SUB_ANIM_KEYS.forEach(state => backgroundWork.frames.push([charKey, state, !!transformed]));
@@ -348,17 +348,70 @@ function preloadOneState(charKey, state, transformed) {
     const char = characterDB[charKey];
     if (!char) return;
     const frames = getCharacterAnimationFrames(charKey, state, transformed);
-    if (!transformed) frames.forEach(src => backgroundWork.images.push(() => getOrCacheGameplayImage(src, char.imageObj, char.bgRemoval)));
+    if (!transformed) frames.forEach(src => backgroundWork.images.push(() => warmFrameArt(charKey, state, src, 0)));
+}
+
+// Caixa do lutador na luta (52x56 × escala do personagem). Usada pela luta e pela preparação da pixel art.
+function getFighterBoxSize(charKey) {
+    const c = characterDB[charKey];
+    const k = c && c.scale ? c.scale : 1;
+    return [52 * k, 56 * k];
+}
+
+// Carrega o quadro e, quando ele estiver pronto, já pede a pixel art no tamanho exato em que aparece na luta
+// (o mesmo cálculo de drawPlayerEntity: caixa do lutador × crescimento do movimento × PIXEL_SPRITE_SCALE).
+function warmFrameArt(charKey, state, src, tries) {
+    const char = characterDB[charKey];
+    if (!char) return;
+    const img = getOrCacheGameplayImage(src, char.imageObj, char.bgRemoval);
+    if (!isDrawableSource(img)) {   // imagem comum (sprite sheet): espera carregar
+        if (tries < 120) backgroundWork.images.push(() => warmFrameArt(charKey, state, src, tries + 1));
+        return;
+    }
+    if (!img.__svgImage || typeof ACTION_SPRITE_SCALE === "undefined") return;   // só desenhos em pixel art
+    const k = ACTION_SPRITE_SCALE[state] || 1, [bw, bh] = getFighterBoxSize(charKey);
+    getPixelArtSource(img, bw * k * PIXEL_SPRITE_SCALE, bh * k * PIXEL_SPRITE_SCALE);
+}
+
+// Nos menus, já prepara os lutadores escolhidos (quadros + pixel art): o primeiro segundo da luta não precisa
+// mais montar desenho nenhum. Refaz quando a escolha muda; não mexe em nada com uma janela (editor) aberta.
+function warmSelectedFighters() {
+    const key = selectedCharacter + "|" + selectedBoss;
+    if (backgroundWork.warmedFor === key || !characterDB[selectedCharacter]) return;
+    backgroundWork.warmedFor = key;
+    backgroundWork.frames.length = 0;
+    backgroundWork.images.length = 0;
+    backgroundWork.light.length = 0;
+    preloadCharacterFrames(selectedCharacter, false);
+    preloadCharacterFrames(selectedBoss, false);
+    preloadCharacterFrames(selectedCharacter, true);
+    preloadCharacterFrames(selectedBoss, true);
+    // quadros da aura de ki (cor de cada lutador + dourada da transformação), um por tarefa
+    if (typeof getKiAuraFrame === "function") {
+        const auras = [[selectedCharacter, 0], [selectedBoss, 0.37]];
+        auras.forEach(([k, seed]) => {
+            const c = characterDB[k];
+            [(c && c.aura) || "gelo", "amarelo"].forEach(tipo => {
+                const pal = KI_AURA_PALETTES[tipo] || KI_AURA_PALETTES.gelo;
+                for (let f = 0; f < KI_AURA_FRAMES; f++) backgroundWork.light.push(() => getKiAuraFrame(pal, f, seed));
+            });
+        });
+    }
 }
 
 // Chamado uma vez por quadro (menu.js/render): adianta, sem passar de ~4 ms, o que pode ser preparado antes de
 // aparecer na tela — quadros dos personagens e a pixel art de cada quadro já carregado. Sempre anda pelo menos um passo.
 function runBackgroundWork(budgetMs = 4) {
+    if (gameState !== "playing" && gameState !== "tutorial" && gameState !== "paused") {
+        if (typeof isModalCoveringScreen === "function" && isModalCoveringScreen()) return;
+        warmSelectedFighters();
+    }
     const start = performance.now();
     let feito = 0;
     while (feito === 0 || performance.now() - start < budgetMs) {
         if (backgroundWork.pixelArt.length) backgroundWork.pixelArt.shift()();
         else if (backgroundWork.images.length) { backgroundWork.images.shift()(); break; }   // 1 imagem por quadro: o navegador decodifica depois
+        else if (backgroundWork.light.length) backgroundWork.light.shift()();                // tarefas leves (aura): várias por quadro
         else if (backgroundWork.frames.length) preloadOneState(...backgroundWork.frames.shift());
         else break;
         feito++;
@@ -386,7 +439,7 @@ function getCutoutSource(img, bgOpts) {
 
     let result = img;
     try {
-        const isSvg = String(img.src || "").startsWith("data:image/svg");
+        const isSvg = isSvgImage(img);
         if (!(isSvg && cfg.mode === "auto")) {
             const w = img.naturalWidth || img.width;
             const h = img.naturalHeight || img.height;
@@ -420,9 +473,17 @@ function getCutoutSource(img, bgOpts) {
 // lentos no celular. Aqui cada SVG vira uma imagem pronta (canvas) uma única vez, no tamanho dele (que já é
 // maior que o tamanho em que aparece no jogo, então não perde nitidez).
 const svgRasterCache = new WeakMap();
+// Ler img.src copia o texto inteiro do desenho (~16 KB): a tela de personagens fazia isso dezenas de vezes por
+// quadro. A resposta fica guardada na própria imagem (como em spriteCutoutCache/svgRasterCache, que também
+// guardam por imagem: o src de uma imagem já carregada não muda).
+function isSvgImage(img) {
+    if (img.__isSvg === undefined) img.__isSvg = String(img.src || "").startsWith("data:image/svg");
+    return img.__isSvg;
+}
+
 function getRasterSource(img) {
     if (!img || typeof HTMLCanvasElement === "undefined" || img instanceof HTMLCanvasElement) return img;
-    if (!String(img.src || "").startsWith("data:image/svg") || !isDrawableSource(img)) return img;
+    if (!isSvgImage(img) || !isDrawableSource(img)) return img;
     if (svgRasterCache.has(img)) return svgRasterCache.get(img);
     let result = img;
     try {
@@ -504,13 +565,18 @@ function buildPixelArt(svg, w, h, palette) {
         for (let k = 0; k < edge.length; k += 2) { d[edge[k] * 4 + 3] = edge[k + 1]; if (edge[k + 1]) solid[edge[k]] = 1; }
         // cor chapada: cada pixel do corpo vai para a cor mais próxima da paleta do desenho
         if (palette && palette.length) {
+            const memo = new Map();   // a mesma cor aparece em muitos pixels: procura na paleta uma vez só
             for (let i = 0; i < W * H; i++) {
                 if (!solid[i]) continue;
-                const r = d[i * 4], gg = d[i * 4 + 1], b = d[i * 4 + 2];
-                let best = palette[0], bd = Infinity;
-                for (const c of palette) {
-                    const dd = (c[0] - r) * (c[0] - r) * 0.3 + (c[1] - gg) * (c[1] - gg) * 0.59 + (c[2] - b) * (c[2] - b) * 0.11;
-                    if (dd < bd) { bd = dd; best = c; }
+                const r = d[i * 4], gg = d[i * 4 + 1], b = d[i * 4 + 2], cor = (r << 16) | (gg << 8) | b;
+                let best = memo.get(cor);
+                if (!best) {
+                    let bd = Infinity;
+                    for (const c of palette) {
+                        const dd = (c[0] - r) * (c[0] - r) * 0.3 + (c[1] - gg) * (c[1] - gg) * 0.59 + (c[2] - b) * (c[2] - b) * 0.11;
+                        if (dd < bd) { bd = dd; best = c; }
+                    }
+                    memo.set(cor, best);
                 }
                 d[i * 4] = best[0]; d[i * 4 + 1] = best[1]; d[i * 4 + 2] = best[2];
             }
@@ -532,19 +598,28 @@ function buildPixelArt(svg, w, h, palette) {
     return result;
 }
 
+// Desenho em pixel art (nítido): a luta só usa a versão pixel art, feita direto do SVG no tamanho da tela
+// (getPixelArtSource). Por isso nem carrega a imagem grande — devolve só uma "ficha" com o endereço do desenho.
+// Carregar a imagem grande também era o trabalho mais pesado de cada quadro novo.
+const pixelSvgStubs = new Map();
+function getPixelSvgStub(src) {
+    let stub = pixelSvgStubs.get(src);
+    if (!stub) {
+        stub = { __pixelSvg: true, __svgImage: { src }, complete: true, naturalWidth: 1, naturalHeight: 1 };
+        pixelSvgStubs.set(src, stub);
+    }
+    return stub;
+}
+
 function getOrCacheGameplayImage(src, fallbackObj, bgOpts) {
     if (!src) return getCutoutSource(fallbackObj, bgOpts);
+    if (typeof src === "string" && src.startsWith("data:image/svg") && src.includes("crispEdges")) return getPixelSvgStub(src);
     if (!gameplayImageCache[src]) {
         let img = new Image();
         img.src = src;
         gameplayImageCache[src] = img;
     }
-    const img = gameplayImageCache[src];
-    // Desenho em pixel art (nítido): o jogo desenha a versão pixel art feita direto do SVG (getPixelArtSource);
-    // converter o SVG também para uma imagem do tamanho original era um trabalho a mais em cada quadro novo.
-    if (img.__pixelSvg === undefined) img.__pixelSvg = src.startsWith("data:image/svg") && src.includes("crispEdges");
-    if (img.__pixelSvg) { img.__svgImage = img; return img; }
-    return getCutoutSource(img, bgOpts);
+    return getCutoutSource(gameplayImageCache[src], bgOpts);
 }
 
 function isDrawableSource(source) {
@@ -630,12 +705,8 @@ function startGame() {
     totalReflects = 0;
     takenDamageInRun = false;
     
-    backgroundWork.frames.length = 0;
-    backgroundWork.images.length = 0;
-    preloadCharacterFrames(selectedCharacter, false);
-    preloadCharacterFrames(selectedBoss, false);
-    preloadCharacterFrames(selectedCharacter, true);   // já deixa pronto o cabelo amarelo (transformar sem travar)
-    preloadCharacterFrames(selectedBoss, true);
+    // o que os menus ainda não deixaram pronto (ver warmSelectedFighters) termina aos poucos durante a luta
+    warmSelectedFighters();
     let waveParams = getWaveParams(waveNumber);
 
     world.obstacles = [];
@@ -1780,14 +1851,10 @@ function update(dt) {
     }
 
     let pChar = characterDB[selectedCharacter];
-    let pScale = pChar && pChar.scale ? pChar.scale : 1;
-    player.w = 52 * pScale;
-    player.h = 56 * pScale;
+    [player.w, player.h] = getFighterBoxSize(selectedCharacter);
 
     let bChar = characterDB[selectedBoss];
-    let bScale = bChar && bChar.scale ? bChar.scale : 1;
-    player2.w = 52 * bScale;
-    player2.h = 56 * bScale;
+    [player2.w, player2.h] = getFighterBoxSize(selectedBoss);
 
     updateAura(player, pChar && pChar.aura ? pChar.aura : "gelo");
     if (gameMode !== "coop") updateAura(player2, bChar && bChar.aura ? bChar.aura : "gelo", true);
