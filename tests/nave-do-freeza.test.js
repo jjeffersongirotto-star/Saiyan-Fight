@@ -10,13 +10,20 @@ const { run, check, summary } = h;
 const menu = fs.readFileSync(__dirname + "/../menu.js", "utf8");
 
 check("a Nave de Freeza desenha a nave girando pela volta da fase", menu.includes("drawFreezaShipStage(getFreezaShipOrbitAngle(scroll))"));
-check("tem casco, faixa preta com escotilhas, cúpula listrada, cabine roxa, ovos amarelos e pernas", ["drawFreezaShipScene", "nvDrawLeg", "nvDrawPod", "nvFaixa"].every(f => menu.includes("function " + f)) && menu.includes("cabine roxa"));
-check("pernas de aço com braço, junta, canela e pé com garras (atrás dos ovos)", menu.includes("Perna de aço") && menu.indexOf("if (naFrente(a)) nvDrawLeg(a, ang, true)") < menu.indexOf("if (naFrente(a)) nvDrawPod(a, ang)"));
-check("janela da cabine: meio ovo de vidro roxo saltado do casco, com moldura", menu.includes("function nvDrawCockpit") && menu.includes("saliencia") && menu.includes("function nvEnvoltorio"));
-check("a janela tem um encaixe da cor do casco prendendo-a na cúpula (não fica solta de lado)", menu.includes("encaixe de metal") && menu.includes("const contornoColar"));
-check("o contorno do meio ovo é sempre um polígono fechado e válido", run(`(() => {
-    const h = nvEnvoltorio([[0, 0], [10, 0], [10, 10], [0, 10], [5, 5], [2, 8]]);
-    return h.length === 4;
+check("tem casco, faixa preta com escotilhas, cúpula listrada, janela roxa, calombos amarelos e pernas", ["drawFreezaShipScene", "nvDrawLeg", "nvDrawPod", "nvDrawCockpit", "nvFaixa"].every(f => menu.includes("function " + f)));
+check("pernas de aço em forma de pata de aranha (braço, junta, pata afiada e haste de reforço)", menu.includes("pata de aranha") && menu.includes("reforcoPata"));
+check("calombos amarelos são relevo do próprio casco (presos na superfície, não peças soltas)", menu.includes("function nvRaioCascoBaixo") && menu.includes("Calombo amarelo do casco"));
+check("janela: vidro roxo curvado na cúpula com um suporte em volta", menu.includes("function nvRaioCupula") && menu.includes("suporte em volta do vidro"));
+check("o calombo amarelo fica colado no casco em qualquer ângulo da volta", run(`(() => {
+    trCam = NV_CAM;
+    let ok = true;
+    for (let i = 0; i < 24; i++) {
+        const ang = i / 24 * Math.PI * 2, yc = 37, r0 = nvRaioCascoBaixo(yc);
+        const p = trProj(0, yc, r0 + 12, ang), q = trProj(0, yc, r0, ang);
+        if (Math.hypot(p[0] - q[0], p[1] - q[1]) > 12 * p[3] + 1) ok = false;
+    }
+    trCam = TR_CAM;
+    return ok;
 })()`));
 check("chão de Namek com lagos, pedras e tufos fixos no mundo e paisagem de 360°", menu.includes("const NV_CHAO") && menu.includes("function getFreezaShipPanorama") && menu.includes("function drawFreezaShipGround"));
 
