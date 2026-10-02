@@ -788,14 +788,14 @@
                             <div class="form-group">
                                 <label for="char-aura">Cor da Aura</label>
                                 <select id="char-aura">
-                                    <option value="gelo">Gelo / Branca</option>
-                                    <option value="amarelo">Amarela (SSJ)</option>
-                                    <option value="vermelho">Vermelha (Kaioken)</option>
-                                    <option value="rosa">Rosa (SSJ Rosé)</option>
-                                    <option value="azul">Azul (SSJ Blue)</option>
-                                    <option value="verde">Verde (Broly)</option>
-                                    <option value="preto">Preta (Sombria)</option>
-                                    <option value="roxo">Roxa (Destruição)</option>
+                                    <option value="gelo">Branca</option>
+                                    <option value="amarelo">Amarela</option>
+                                    <option value="vermelho">Vermelha</option>
+                                    <option value="rosa">Rosa</option>
+                                    <option value="azul">Azul</option>
+                                    <option value="verde">Verde</option>
+                                    <option value="preto">Preta</option>
+                                    <option value="roxo">Roxa</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -1010,7 +1010,7 @@
                                     <option value="attackKi">ATAQUE</option>
                                     <option value="parry">PARRY</option>
                                     <option value="chargeKi">CARREGAR</option>
-                                    <option value="transform">TRANSFORMAR (SSJ)</option>
+                                    <option value="transform">TRANSFORMAR</option>
                                 </select>
                             </div>
                         </div>
@@ -1022,22 +1022,22 @@
                 <div class="sprite-control-row">
                     <div class="form-group"><label for="build-gender">GÊNERO</label>
                         <select id="build-gender" onchange="refreshBuilderPreview()">
-                            <option value="masculino">Masculino</option><option value="feminino">Feminino (ex.: Androide 18)</option>
+                            <option value="masculino">Masculino</option><option value="feminino">Feminino</option>
                         </select>
                     </div>
                     <div class="form-group"><label for="build-race">RAÇA</label>
                         <select id="build-race" onchange="refreshBuilderPreview()">
-                            <option value="Saiyajin">Saiyajin (Goku, Vegeta, Gohan...)</option><option value="Humano">Humano</option>
-                            <option value="Namekuseijin">Namekuseijin (Piccolo)</option><option value="Raça Freeza">Raça do Freeza</option>
-                            <option value="Majin">Majin (Majin Boo)</option><option value="Android">Androide (17 e 18)</option><option value="Bio-Androide">Bio-Androide (Cell)</option>
-                            <option value="Kaioshin">Kaioshin (Supremo Sr. Kaio)</option><option value="Alienígena">Alienígena genérico</option>
+                            <option value="Saiyajin">Saiyajin</option><option value="Humano">Humano</option>
+                            <option value="Namekuseijin">Namekuseijin</option><option value="Raça Freeza">Alienígena de pele lisa</option>
+                            <option value="Majin">Majin</option><option value="Android">Androide</option><option value="Bio-Androide">Bio-Androide</option>
+                            <option value="Kaioshin">Kaioshin</option><option value="Alienígena">Alienígena genérico</option>
                         </select>
                     </div>
                     <div class="form-group"><label for="build-build">PORTE FÍSICO</label>
                         <select id="build-build" onchange="refreshBuilderPreview()">
-                            <option value="normal">Normal (Vegeta, Trunks)</option><option value="magro">Magro (Freeza, Androide 18)</option>
-                            <option value="musculoso">Musculoso (Goku, Piccolo)</option><option value="gigante">Gigante (Broly)</option>
-                            <option value="jovem">Jovem/Criança</option><option value="gordo">Gordo (Majin Boo)</option>
+                            <option value="normal">Normal</option><option value="magro">Magro</option>
+                            <option value="musculoso">Musculoso</option><option value="gigante">Gigante</option>
+                            <option value="jovem">Jovem/Criança</option><option value="gordo">Gordo</option>
                         </select>
                     </div>
                     <div class="form-group"><label for="build-skin">COR DA PELE (vazio = da raça)</label>
@@ -1050,42 +1050,42 @@
                 <div class="sprite-control-row">
                     <div class="form-group"><label for="build-hair-style">CABELO</label>
                         <select id="build-hair-style" onchange="refreshBuilderPreview()">
-                            <option value="careca">Careca / sem cabelo (Piccolo, Freeza, Majin Boo)</option>
-                            <option value="goku">Espetado (Goku, Gogeta)</option><option value="vegeta">Chamas (Vegeta)</option>
-                            <option value="gohan">Repicado (Gohan)</option><option value="cell_crista">Crista (Cell)</option><option value="bardock">Longo p/trás (Bardock)</option>
-                            <option value="raditz">Longo solto (Raditz)</option><option value="broly">Selvagem (Broly)</option>
-                            <option value="gotenks">3 picos (Gotenks)</option>
-                            <option value="trunks_futuro">Liso c/franja (Trunks do Futuro)</option><option value="trunks_kid">Liso curto (Trunks criança)</option>
-                            <option value="android17">Liso longo (Androide 17)</option><option value="android18">Curto loiro (Androide 18)</option>
-                            <option value="kaioshin_moicano">Moicano (Supremo Sr. Kaio)</option><option value="ssj_longo">Longo de Super Saiyajin (Goku fase 3)</option>
+                            <option value="careca">Careca / sem cabelo</option>
+                            <option value="goku">Espetado</option><option value="vegeta">Em chamas, para cima</option>
+                            <option value="gohan">Repicado com mecha</option><option value="cell_crista">Crista com pintas</option><option value="bardock">Espetado para trás</option>
+                            <option value="raditz">Longo solto</option><option value="broly">Selvagem</option>
+                            <option value="gotenks">3 picos</option>
+                            <option value="trunks_futuro">Liso com franja</option><option value="trunks_kid">Liso curto</option>
+                            <option value="android17">Liso até o ombro</option><option value="android18">Curto com franja lateral</option>
+                            <option value="kaioshin_moicano">Moicano</option><option value="ssj_longo">Longo espetado até a cintura</option>
                         </select>
                     </div>
                     <div class="form-group"><label for="build-hair-color">COR DO CABELO</label><input type="color" id="build-hair-color" value="#16110f" oninput="refreshBuilderPreview()"></div>
                     <div class="form-group"><label for="build-ear-type">ORELHAS</label>
                         <select id="build-ear-type" onchange="refreshBuilderPreview()">
-                            <option value="normal">Normais</option><option value="pontuda">Pontudas (Piccolo, Supremo Sr. Kaio)</option>
-                            <option value="majin">Furinhos do Majin Boo</option><option value="nenhuma">Sem orelha (Freeza, Cell)</option>
+                            <option value="normal">Normais</option><option value="pontuda">Pontudas</option>
+                            <option value="majin">Furinhos</option><option value="nenhuma">Sem orelha</option>
                         </select>
                     </div>
                     <div class="form-group"><label for="build-head-feature">CARACTERÍSTICA DA CABEÇA</label>
                         <select id="build-head-feature" onchange="refreshBuilderPreview()">
-                            <option value="none">Nenhuma</option><option value="antenas">Antenas (Piccolo)</option>
-                            <option value="majin_antena">Antena do Majin Boo</option><option value="chifres">Chifres (Freeza, 1ª forma)</option>
+                            <option value="none">Nenhuma</option><option value="antenas">Antenas</option>
+                            <option value="majin_antena">Antena curva com ponta</option><option value="chifres">Chifres</option>
                         </select>
                     </div>
                 </div>
                 <div class="sprite-control-row">
                     <div class="form-group"><label for="build-eye-type">OLHOS</label>
                         <select id="build-eye-type" onchange="refreshBuilderPreview()">
-                            <option value="normal">Normal (Goku)</option><option value="gentil">Gentil (Gohan, Supremo Sr. Kaio)</option><option value="serio">Sério (Vegeta, Trunks)</option>
-                            <option value="bravo">Bravo/franzido (Piccolo, Broly)</option><option value="wide">Arregalado</option>
-                            <option value="freeza">Sem sobrancelha (Freeza)</option><option value="android">Androide (17 e 18)</option><option value="fechado">Fechados</option>
+                            <option value="normal">Normal</option><option value="gentil">Gentil</option><option value="serio">Sério</option>
+                            <option value="bravo">Bravo/franzido</option><option value="wide">Arregalado</option>
+                            <option value="freeza">Sem sobrancelha</option><option value="android">Frio, pupila pequena</option><option value="fechado">Fechados</option>
                         </select>
                     </div>
                     <div class="form-group"><label for="build-iris-color">COR DA ÍRIS</label><input type="color" id="build-iris-color" value="#1a1210" oninput="refreshBuilderPreview()"></div>
                     <div class="form-group"><label for="build-sclera-color">COR DO OLHO (fundo)</label><input type="color" id="build-sclera-color" value="#ffffff" oninput="refreshBuilderPreview()"></div>
                     <div class="form-group"><label for="build-mouth-type">BOCA / EXPRESSÃO</label>
-                        <select id="build-mouth-type" onchange="refreshBuilderPreview()"><option value="smile">Sorridente (Goku)</option><option value="serio">Séria (Vegeta)</option><option value="grito">Gritando</option><option value="maligno">Maligna (Raditz, Bardock)</option></select>
+                        <select id="build-mouth-type" onchange="refreshBuilderPreview()"><option value="smile">Sorridente</option><option value="serio">Séria</option><option value="grito">Gritando</option><option value="maligno">Maligna</option></select>
                     </div>
                 </div>
 
@@ -1093,92 +1093,92 @@
                 <div class="sprite-control-row">
                     <div class="form-group"><label for="build-body-marks">MARCAS DA RAÇA</label>
                         <select id="build-body-marks" onchange="refreshBuilderPreview()">
-                            <option value="none">Nenhuma</option><option value="namek">Linhas na testa (Piccolo)</option>
-                            <option value="cell">Marcas no rosto (Cell)</option><option value="freeza">Domo e placas roxas (Freeza)</option>
+                            <option value="none">Nenhuma</option><option value="namek">Linhas na testa</option>
+                            <option value="cell">Marcas no rosto</option><option value="freeza">Domo e placas roxas</option>
                         </select>
                     </div>
                     <div class="form-group"><label for="build-scar">CICATRIZ</label>
-                        <select id="build-scar" onchange="refreshBuilderPreview()"><option value="none">Nenhuma</option><option value="olho">No olho</option><option value="bochecha">Na bochecha (Bardock)</option><option value="peito">No peito (aparece sem camisa)</option></select>
+                        <select id="build-scar" onchange="refreshBuilderPreview()"><option value="none">Nenhuma</option><option value="olho">No olho</option><option value="bochecha">Na bochecha</option><option value="peito">No peito (aparece sem camisa)</option></select>
                     </div>
                     <div class="form-group"><label for="build-tail">RABO</label>
-                        <select id="build-tail" onchange="refreshBuilderPreview()"><option value="none">Nenhum</option><option value="saiyajin">De macaco, solto (Raditz)</option><option value="cinto_saiyajin">De macaco, na cintura (Bardock)</option><option value="freeza">Do Freeza</option></select>
+                        <select id="build-tail" onchange="refreshBuilderPreview()"><option value="none">Nenhum</option><option value="saiyajin">De macaco, solto</option><option value="cinto_saiyajin">De macaco, na cintura</option><option value="freeza">Longo e liso, de réptil</option></select>
                     </div>
                     <div class="form-group"><label for="build-wings">ASAS</label>
-                        <select id="build-wings" onchange="refreshBuilderPreview()"><option value="none">Nenhuma</option><option value="cell">Asas de inseto (Cell)</option><option value="morcego">Asas de morcego</option><option value="anjo">Asas de anjo</option></select>
+                        <select id="build-wings" onchange="refreshBuilderPreview()"><option value="none">Nenhuma</option><option value="cell">Asas de inseto</option><option value="morcego">Asas de morcego</option><option value="anjo">Asas de anjo</option></select>
                     </div>
                 </div>
 
                 <div class="build-section-title">ROUPAS</div>
                 <div class="sprite-control-row">
                     <div class="form-group"><label for="build-inner-shirt">CAMISA (por baixo)</label>
-                        <select id="build-inner-shirt" onchange="refreshBuilderPreview()"><option value="camiseta">Camiseta de manguinha (Goku)</option><option value="regata">Regata, sem manga (Gogeta)</option><option value="malha">Malha de manga comprida (Vegeta, Trunks, Bardock)</option><option value="nenhuma">Nenhuma (pele à mostra)</option></select>
+                        <select id="build-inner-shirt" onchange="refreshBuilderPreview()"><option value="camiseta">Camiseta de manguinha</option><option value="regata">Regata, sem manga</option><option value="malha">Malha de manga comprida</option><option value="nenhuma">Nenhuma (pele à mostra)</option></select>
                     </div>
                     <div class="form-group"><label for="build-shirt-color">COR DA CAMISA</label><input type="color" id="build-shirt-color" value="#1f4fbf" oninput="refreshBuilderPreview()"></div>
                     <div class="form-group"><label for="build-outer-shirt">ROUPA DE CIMA / CASACO</label>
                         <select id="build-outer-shirt" onchange="refreshBuilderPreview()">
-                            <option value="none">Nenhuma (Broly)</option>
+                            <option value="none">Nenhuma</option>
                             <optgroup label="Uniformes de luta">
-                                <option value="kimono">Gi tradicional (Goku)</option>
-                                <option value="gi_piccolo">Gi do Piccolo (Piccolo, Gohan)</option>
-                                <option value="roupa_kaioshin">Roupa dos Supremos Kaio</option>
+                                <option value="kimono">Gi tradicional</option>
+                                <option value="gi_piccolo">Gi com faixa na cintura</option>
+                                <option value="roupa_kaioshin">Túnica com gola e faixa</option>
                             </optgroup>
                             <optgroup label="Armaduras">
-                                <option value="armadura_saiyajin">Armadura Saiyajin (Vegeta, Bardock, Raditz)</option>
+                                <option value="armadura_saiyajin">Armadura de combate</option>
                             </optgroup>
                             <optgroup label="Casacos e coletes">
-                                <option value="jaqueta_trunks">Casaco do Trunks do Futuro</option>
-                                <option value="colete_fusao">Colete da Fusão (Gogeta)</option>
-                                <option value="colete_buu">Colete do Majin Boo</option>
+                                <option value="jaqueta_trunks">Jaqueta curta</option>
+                                <option value="colete_fusao">Colete aberto com faixa</option>
+                                <option value="colete_buu">Colete curto com cinto</option>
                             </optgroup>
                             <optgroup label="Trajes">
-                                <option value="traje_android">Traje de Androide (17 e 18)</option>
+                                <option value="traje_android">Traje com gola</option>
                             </optgroup>
                             <optgroup label="Corpo natural">
-                                <option value="armadura_cell">Carapaça do Cell</option>
-                                <option value="armadura_freeza">Armadura orgânica (Freeza)</option>
+                                <option value="armadura_cell">Carapaça com pintas</option>
+                                <option value="armadura_freeza">Armadura orgânica</option>
                             </optgroup>
                         </select>
                     </div>
                     <div class="form-group"><label for="build-pants">CALÇA</label>
-                        <select id="build-pants" onchange="refreshBuilderPreview()"><option value="larga">Larga (Goku, Piccolo, Broly)</option><option value="justa">Justa (Vegeta, Trunks, Cell)</option><option value="nenhuma">Nenhuma (fica de cueca)</option></select>
+                        <select id="build-pants" onchange="refreshBuilderPreview()"><option value="larga">Larga</option><option value="justa">Justa</option><option value="nenhuma">Nenhuma (fica de cueca)</option></select>
                     </div>
                     <div class="form-group"><label for="build-pants-color">COR DA CALÇA</label><input type="color" id="build-pants-color" value="#f26a0f" oninput="refreshBuilderPreview()"></div>
                     <div class="form-group"><label for="build-symbol">SÍMBOLO NO PEITO</label>
                         <select id="build-symbol" onchange="refreshBuilderPreview()">
-                            <option value="none">Nenhum</option><option value="kame">Kame (tartaruga)</option><option value="kai">Kai (Goku)</option>
-                            <option value="cc">Corporação Cápsula (Trunks)</option><option value="redribbon">Exército Red Ribbon</option><option value="saiyajin">Símbolo Saiyajin</option>
+                            <option value="none">Nenhum</option><option value="kame">Kame (tartaruga)</option><option value="kai">Kai</option>
+                            <option value="cc">Corporação Cápsula</option><option value="redribbon">Exército Red Ribbon</option><option value="saiyajin">Símbolo Saiyajin</option>
                         </select>
                     </div>
                 </div>
                 <div class="sprite-control-row">
                     <div class="form-group"><label for="build-shoes">CALÇADO</label>
                         <select id="build-shoes" onchange="refreshBuilderPreview()">
-                            <option value="botas_artes">Botas de artes marciais (Goku)</option><option value="botas_saiyajin">Botas brancas Saiyajin (Vegeta)</option>
-                            <option value="botas_trunks">Botas marrons (Trunks)</option><option value="botas_kaioshin">Sandálias (Supremo Sr. Kaio, Majin Boo)</option>
-                            <option value="botas_marrons">Botas simples (Piccolo, Androides)</option><option value="botas_cell">Botas do Cell</option><option value="descalco">Descalço (Freeza, Broly)</option>
+                            <option value="botas_artes">Botas de artes marciais</option><option value="botas_saiyajin">Botas brancas</option>
+                            <option value="botas_trunks">Botas marrons altas</option><option value="botas_kaioshin">Sandálias</option>
+                            <option value="botas_marrons">Botas simples</option><option value="botas_cell">Botas escuras</option><option value="descalco">Descalço</option>
                         </select>
                     </div>
                     <div class="form-group"><label for="build-gloves">LUVAS</label>
-                        <select id="build-gloves" onchange="refreshBuilderPreview()"><option value="pulseiras">Munhequeiras (Goku, Broly)</option><option value="luvas_saiyajin">Luvas brancas (Vegeta, Majin Boo)</option><option value="luvas_pretas">Luvas pretas (Bardock, Cell)</option><option value="nenhuma">Nenhuma</option></select>
+                        <select id="build-gloves" onchange="refreshBuilderPreview()"><option value="pulseiras">Munhequeiras</option><option value="luvas_saiyajin">Luvas brancas</option><option value="luvas_pretas">Luvas pretas</option><option value="nenhuma">Nenhuma</option></select>
                     </div>
                     <div class="form-group"><label for="build-hat">NA CABEÇA</label>
-                        <select id="build-hat" onchange="refreshBuilderPreview()"><option value="none">Nada</option><option value="turbante">Turbante (Piccolo)</option><option value="faixa">Faixa na testa (Bardock)</option></select>
+                        <select id="build-hat" onchange="refreshBuilderPreview()"><option value="none">Nada</option><option value="turbante">Turbante</option><option value="faixa">Faixa na testa</option></select>
                     </div>
-                    <div class="form-group"><label for="build-cape">CAPA / OMBREIRAS</label>
-                        <select id="build-cape" onchange="refreshBuilderPreview()"><option value="none">Nenhuma</option><option value="capa">Capa (Majin Boo)</option><option value="ombreiras">Ombreiras</option><option value="capa_ombreiras">Capa + ombreiras (Piccolo, Gohan)</option></select>
-                    </div>
-                    <div class="form-group"><label for="build-cape-color">COR DA CAPA</label><input type="color" id="build-cape-color" value="#ffffff" oninput="refreshBuilderPreview()"></div>
                 </div>
 
                 <div class="build-section-title">ACESSÓRIOS</div>
                 <div class="sprite-control-row">
                     <div class="form-group"><label for="build-accessory">NO ROSTO / ORELHA</label>
                         <select id="build-accessory" onchange="refreshBuilderPreview()">
-                            <option value="none">Nenhum</option><option value="potara">Brincos Potara (Gogeta, Supremo Sr. Kaio)</option><option value="scouter">Scouter (Bardock, Raditz)</option>
+                            <option value="none">Nenhum</option><option value="potara">Brincos Potara</option><option value="scouter">Scouter</option>
                         </select>
                     </div>
-                    <div class="form-group"><label for="build-back-weapon">NAS COSTAS</label>
-                        <select id="build-back-weapon" onchange="refreshBuilderPreview()"><option value="none">Nada</option><option value="espada_trunks">Espada do Trunks</option><option value="bastao">Bastão sagrado</option></select>
+                    <div class="form-group"><label for="build-cape">NAS COSTAS: CAPA / OMBREIRAS</label>
+                        <select id="build-cape" onchange="refreshBuilderPreview()"><option value="none">Nenhuma</option><option value="capa">Capa</option><option value="ombreiras">Ombreiras</option><option value="capa_ombreiras">Capa + ombreiras</option></select>
+                    </div>
+                    <div class="form-group"><label for="build-cape-color">COR DA CAPA</label><input type="color" id="build-cape-color" value="#ffffff" oninput="refreshBuilderPreview()"></div>
+                    <div class="form-group"><label for="build-back-weapon">NAS COSTAS: ARMA</label>
+                        <select id="build-back-weapon" onchange="refreshBuilderPreview()"><option value="none">Nada</option><option value="espada_trunks">Espada</option><option value="bastao">Bastão sagrado</option></select>
                     </div>
                 </div>
 
@@ -1223,6 +1223,7 @@
                 Novidades e correções do jogo.
             </p>
             <ul style="margin: 0 0 18px; color: #ddd; line-height: 1.6; padding-left: 18px; max-height: 50vh; overflow-y: auto;">
+                <li>Editor: a capa fica em NAS COSTAS (junto com a arma), e as opções só descrevem a peça, sem nomes de personagens.</li>
                 <li>Nova aba TRANSFORMAÇÃO no editor: várias transformações por personagem, na ordem que você quiser (cada TRANSFORMAR com o ki cheio leva à próxima), editadas no próprio construtor. Raios de ki em volta de quem está transformado. Goku ganhou a Transformação 2 com o novo cabelo longo de Super Saiyajin.</li>
                 <li>Transformação só quando você aperta TRANSFORMAR com o ki cheio (não transforma mais sozinho ao fazer pontos).</li>
                 <li>Primeiro segundo da luta liso: os lutadores escolhidos são preparados ainda nos menus.</li>
