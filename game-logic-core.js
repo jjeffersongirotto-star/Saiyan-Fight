@@ -538,11 +538,13 @@ function stepSaibamanMotion(s, dt) {
     return s;
 }
 
-// Música de cada fase no estilo de uma época do anime (temas originais, não as músicas da série).
+// Música de cada fase no ritmo da abertura de uma época do anime (mesmo andamento e batida; a melodia é
+// original — as músicas da série têm direitos autorais e não são copiadas).
+// classico = Dragon Ball; cell = 1ª abertura do Z (até a saga Cell); boo = 2ª abertura do Z; gt = Dragon Ball GT.
 const STAGE_MUSIC_ERA = {
     terra: "classico", kaio: "classico",
-    namek: "freeza", freeza_ship: "freeza", namek_explosao: "freeza",
-    time_room: "boo", cell_games: "boo",
+    namek: "cell", freeza_ship: "cell", namek_explosao: "cell", cell_games: "cell",
+    time_room: "boo",
     kaioshin: "gt"
 };
 function getStageMusicEra(stageId) {
