@@ -568,3 +568,20 @@ test("música de cada fase segue a época do anime", () => {
     assert.equal(getStageMusicEra("kaioshin"), "gt");
     assert.equal(getStageMusicEra("desconhecida"), "classico");
 });
+
+test("Saibaman: passando perto do herói parte para cima dele; longe segue reto", () => {
+    const { createSaibaman, shouldSaibamanLunge, stepSaibamanLunge, SAIBAMAN_LUNGE_RADIUS, SAIBAMAN_LUNGE_MAX_FRAMES } = require("../game-logic-core.js");
+    const s = createSaibaman(300, 306, 100, 2);
+    s.phase = "voar"; s.x = 300; s.y = 100;
+    const cx = s.x + s.w / 2, cy = s.y + s.h / 2;
+    assert.equal(shouldSaibamanLunge(s, cx + SAIBAMAN_LUNGE_RADIUS - 5, cy), true);
+    assert.equal(shouldSaibamanLunge(s, cx + SAIBAMAN_LUNGE_RADIUS + 5, cy), false);
+    s.phase = "brotar";
+    assert.equal(shouldSaibamanLunge(s, cx, cy), false, "só avança quando já está voando");
+    s.phase = "investir"; s.phaseTime = 0;
+    const antes = Math.hypot(cx + 60 - (s.x + s.w / 2), cy - (s.y + s.h / 2));
+    stepSaibamanLunge(s, cx + 60, cy, 1 / 60);
+    assert.ok(Math.hypot(cx + 60 - (s.x + s.w / 2), cy - (s.y + s.h / 2)) < antes, "aproximou do alvo");
+    for (let i = 0; i < SAIBAMAN_LUNGE_MAX_FRAMES; i++) stepSaibamanLunge(s, 9999, cy, 1 / 60);
+    assert.equal(s.phase, "voar", "não alcançou: desiste e volta a voar");
+});

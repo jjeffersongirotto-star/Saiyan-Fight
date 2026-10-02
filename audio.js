@@ -152,19 +152,16 @@ function playBgmStep(theme, step, t, stepSec) {
     }
 }
 
-function startBGM() {
-    stopBGM();
-    if (isMuted || bgmVolume <= 0 || !audioCtx) return;
-
-    const theme = getCurrentBgmTheme();
+// Toca um tema em laço enquanto `ativo()` for verdade. As notas são agendadas um pouco à frente no relógio
+// do áudio: o ritmo fica certinho mesmo se o jogo atrasar um quadro. Fora do ativo (pausa) fica em silêncio
+// e retoma no tempo certo depois.
+function startThemeLoop(theme, ativo) {
     const stepSec = 60 / theme.bpm / 4;   // semicolcheia
     bgmStep = 0;
     bgmNextTime = 0;
-
-    // Agenda as notas um pouco à frente no relógio do áudio: o ritmo fica certinho mesmo se o jogo atrasar um quadro.
     bgmInterval = setInterval(() => {
         if (!audioCtx || isMuted) return;
-        if (gameState !== "playing") { bgmNextTime = 0; return; }   // pausa: retoma no tempo certo depois
+        if (!ativo()) { bgmNextTime = 0; return; }
         try {
             const now = audioCtx.currentTime;
             if (bgmNextTime < now) bgmNextTime = now + 0.03;
@@ -179,11 +176,42 @@ function startBGM() {
     }, 25);
 }
 
+function startBGM() {
+    stopBGM();
+    if (isMuted || bgmVolume <= 0 || !audioCtx) return;
+    startThemeLoop(getCurrentBgmTheme(), () => gameState === "playing");
+}
+
+// TRILHAS SONORAS (Opções > Áudio): ouvir a música de cada época. Só uma toca por vez — tocar outra pausa a
+// anterior. Sair da tela (setGameState → stopBGM) para tudo.
+const BGM_TRACK_LIST = [
+    { era: "classico", nome: "DRAGON BALL CLÁSSICO", fases: "Torneio, Sr. Kaioh" },
+    { era: "cell", nome: "DRAGON BALL Z: ATÉ A SAGA CELL", fases: "Namek, Nave de Freeza, Torneio de Cell" },
+    { era: "boo", nome: "DRAGON BALL Z: SAGA BOO", fases: "Sala do Tempo" },
+    { era: "gt", nome: "DRAGON BALL GT", fases: "Planeta Supremo Kaioh" }
+];
+let bgmPreviewEra = null;
+
+function playTrackPreview(era) {
+    stopBGM();
+    if (!BGM_THEMES[era] || !initAudio() || !audioCtx) return false;
+    bgmPreviewEra = era;
+    startThemeLoop(BGM_THEMES[era], () => gameState === "options_tracks");
+    return true;
+}
+
+// Botão de uma trilha: se ela está tocando, pausa; senão toca ela (e pausa a que estava tocando).
+function toggleTrackPreview(era) {
+    if (bgmPreviewEra === era) { stopBGM(); return false; }
+    return playTrackPreview(era);
+}
+
 function stopBGM() {
     if (bgmInterval) {
         clearInterval(bgmInterval);
         bgmInterval = null;
     }
+    bgmPreviewEra = null;
 }
 
 function playSound(type) {
