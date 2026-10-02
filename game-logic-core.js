@@ -561,6 +561,15 @@ function stepSaibamanLunge(s, tx, ty, dt) {
     return s;
 }
 
+// Sala do Tempo: o cenário é só o pavilhão no vazio branco, e conforme o herói avança a câmera dá a volta
+// nele (frente → lateral → fundos → outra lateral → frente de novo). Uma volta completa a cada
+// TIME_ROOM_LAP_SCROLL de avanço (~2 minutos de luta) e depois recomeça pela frente.
+const TIME_ROOM_LAP_SCROLL = 10800;
+function getTimeRoomOrbitAngle(scroll) {
+    const v = ((scroll % TIME_ROOM_LAP_SCROLL) + TIME_ROOM_LAP_SCROLL) % TIME_ROOM_LAP_SCROLL;
+    return v / TIME_ROOM_LAP_SCROLL * Math.PI * 2;
+}
+
 // Música de cada fase: um tema original do jogo para cada uma das 8 fases — ver BGM_THEMES em audio.js.
 const STAGE_MUSIC_ERA = {
     terra: "classico", kaio: "kaio", namek: "namek", freeza_ship: "freeza",
@@ -636,6 +645,8 @@ if (typeof module !== "undefined" && module.exports) {
         createSaibaman,
         isSaibamanActive,
         stepSaibamanMotion,
-        getStageMusicEra
+        getStageMusicEra,
+        TIME_ROOM_LAP_SCROLL,
+        getTimeRoomOrbitAngle
     };
 }

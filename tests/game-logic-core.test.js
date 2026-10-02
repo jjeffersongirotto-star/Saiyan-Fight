@@ -587,3 +587,12 @@ test("Saibaman: passando perto do herói parte para cima dele; longe segue reto"
     for (let i = 0; i < SAIBAMAN_LUNGE_MAX_FRAMES; i++) stepSaibamanLunge(s, 9999, cy, 1 / 60);
     assert.equal(s.phase, "voar", "não alcançou: desiste e volta a voar");
 });
+
+test("Sala do Tempo: a câmera dá uma volta completa no pavilhão e volta para a frente", () => {
+    const { getTimeRoomOrbitAngle, TIME_ROOM_LAP_SCROLL } = require("../game-logic-core.js");
+    assert.equal(getTimeRoomOrbitAngle(0), 0, "começa de frente");
+    assert.ok(Math.abs(getTimeRoomOrbitAngle(TIME_ROOM_LAP_SCROLL / 2) - Math.PI) < 1e-9, "na metade está nos fundos");
+    assert.ok(getTimeRoomOrbitAngle(TIME_ROOM_LAP_SCROLL - 1) > 6.2, "quase completando a volta");
+    assert.equal(getTimeRoomOrbitAngle(TIME_ROOM_LAP_SCROLL), 0, "volta completa: de frente de novo");
+    assert.ok(Math.abs(getTimeRoomOrbitAngle(TIME_ROOM_LAP_SCROLL * 3 + 100) - getTimeRoomOrbitAngle(100)) < 1e-9, "e repete");
+});
