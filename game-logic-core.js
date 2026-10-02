@@ -495,6 +495,60 @@ function getDefaultTouchHudLayout(viewportWidth) {
 }
 
 // Exporta para Node (testes) sem quebrar o uso como <script> global no navegador.
+// ==================== SAIBAMAN: BROTA DO CHÃO, SALTA E VOA ====================
+// Como no anime: o Saibaman nasce da terra (brotar), dá um salto para cima (saltar) e depois avança voando
+// para a esquerda (voar). "agarrar" (abraço que explode) é tratado em gameplay.js, que conhece o jogador.
+const SAIBAMAN_SPROUT_FRAMES = 28;   // tempo saindo da terra (sem acertar ninguém)
+const SAIBAMAN_GRAB_FRAMES = 40;     // tempo abraçado antes de explodir (~0,7 s: dá tempo de atirar nele)
+const SAIBAMAN_GRAVITY = 0.32;
+
+function createSaibaman(x, groundY, targetY, speed) {
+    return {
+        x, y: groundY, w: 32, h: 40, speed,
+        hp: 2, maxHp: 2, hoverTime: 0,
+        phase: "brotar", phaseTime: 0,
+        groundY, targetY,
+        // velocidade do salto para chegar logo acima da altura alvo (v² = 2·g·altura)
+        jumpVy: -Math.sqrt(2 * SAIBAMAN_GRAVITY * Math.max(30, groundY - targetY)),
+        vy: 0
+    };
+}
+
+// O Saibaman só pode acertar/ser acertado depois de sair da terra.
+function isSaibamanActive(s) {
+    return s.phase !== "brotar";
+}
+
+function stepSaibamanMotion(s, dt) {
+    const f = dt * 60;
+    s.phaseTime += f;
+    if (s.phase === "brotar") {
+        s.y = s.groundY;
+        if (s.phaseTime >= SAIBAMAN_SPROUT_FRAMES) { s.phase = "saltar"; s.phaseTime = 0; s.vy = s.jumpVy; }
+    } else if (s.phase === "saltar") {
+        s.x -= s.speed * 0.4 * f;
+        s.y += s.vy * f;
+        s.vy += SAIBAMAN_GRAVITY * f;
+        if (s.vy >= 0 || s.y <= s.targetY) { s.phase = "voar"; s.phaseTime = 0; s.vy = 0; }
+    } else if (s.phase === "voar") {
+        s.x -= s.speed * f;
+        s.hoverTime += 0.05 * f;
+        s.y += Math.sin(s.hoverTime) * 1.5 * f;
+    }
+    return s;
+}
+
+// Música de cada fase no estilo de uma época do anime (temas originais, não as músicas da série).
+const STAGE_MUSIC_ERA = {
+    terra: "classico", kaio: "classico",
+    namek: "freeza", freeza_ship: "freeza", namek_explosao: "freeza",
+    time_room: "boo", cell_games: "boo",
+    kaioshin: "gt"
+};
+function getStageMusicEra(stageId) {
+    return STAGE_MUSIC_ERA[stageId] || "classico";
+}
+
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
         getScrollToRevealRow,
@@ -551,6 +605,12 @@ if (typeof module !== "undefined" && module.exports) {
         circleHitsEntity,
         BOSS_ATTACK_PATTERNS,
         getAvailableBossPatterns,
-        shuffleArray
+        shuffleArray,
+        SAIBAMAN_SPROUT_FRAMES,
+        SAIBAMAN_GRAB_FRAMES,
+        createSaibaman,
+        isSaibamanActive,
+        stepSaibamanMotion,
+        getStageMusicEra
     };
 }

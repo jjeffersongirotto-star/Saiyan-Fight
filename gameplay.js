@@ -127,6 +127,7 @@ function startTutorial() {
     world.obstacles = [];
     world.pickups = [];
     world.saibamans = [];
+    world.blasts = [];
     world.auraParticles = [];
     world.impactParticles = [];
     world.floatingTexts = [];
@@ -401,6 +402,13 @@ function warmSelectedFighters() {
     // calculadas. O rival: só a primeira (é a única que ele faz sozinho).
     getCharacterTransformations(selectedCharacter).forEach((t, i) => preloadCharacterFrames(selectedCharacter, i + 1, i < 2));
     preloadCharacterFrames(selectedBoss, 1);
+    // desenhos do Saibaman (andando, saltando, abraçando): prontos antes do primeiro aparecer
+    if (typeof getSaibamanSprite === "function") {
+        for (let f = 0; f < 4; f++) backgroundWork.light.push(() => getSaibamanSprite("voar", f, false));
+        backgroundWork.light.push(() => getSaibamanSprite("saltar", 0, false));
+        backgroundWork.light.push(() => getSaibamanSprite("agarrar", 0, false));
+        backgroundWork.light.push(() => getSaibamanSprite("agarrar", 0, true));
+    }
     // quadros da aura de ki (cor de cada lutador + dourada da transformação), um por tarefa
     if (typeof getKiAuraFrame === "function") {
         const auras = [[selectedCharacter, 0], [selectedBoss, 0.37]];
@@ -671,7 +679,7 @@ let player2 = {
 // agrupá-los exigiria uma reescrita ampla e arriscada sem testes em navegador
 // (ver AGENTS.md: "evitar grandes refatorações").
 let world = {
-    saibamans: [], obstacles: [], pickups: [], auraParticles: [], impactParticles: [],
+    saibamans: [], obstacles: [], pickups: [], auraParticles: [], impactParticles: [], blasts: [],
     mountainsFar: [], floatingTexts: [],
     beamActive: 0, currentBeamType: "KAMEHAMEHA", beamOwner: "p1", lastPlayerHp: 3,
     saibamanSpawnTimer: 0, pickupSpawnTimer: 0, stageScrollX: 0
@@ -730,6 +738,7 @@ function startGame() {
     world.auraParticles = [];
     world.impactParticles = [];
     world.saibamans = [];
+    world.blasts = [];
     world.pickups = [];
     world.floatingTexts = [];
     world.beamActive = 0;
@@ -921,6 +930,7 @@ function startNextVersusRound(lastRoundWinner) {
     world.versusRound++;
     world.obstacles = [];
     world.saibamans = [];
+    world.blasts = [];
     world.beamActive = 0;
     world.beamOwner = "p1";
     world.beamClashPush = 0;
@@ -1043,16 +1053,42 @@ function updateTransformPower(p, isP2, dt) {
 function spawnSaibaman() {
     if (world.saibamans.length >= MAX_SAIBAMANS) return;
     
-    world.saibamans.push({
-        x: canvas.width + 20,
-        y: 40 + Math.random() * 200,
-        w: 32,
-        h: 40,
-        speed: 2 + Math.random() * 1.5,
-        hp: 2,
-        maxHp: 2,
-        hoverTime: 0
-    });
+    // Brota da terra na metade direita da tela, longe do jogador, e salta até uma altura de voo.
+    const x = 470 + Math.random() * (canvas.width - 520);
+    const groundY = canvas.height - 40 - 4;
+    const s = createSaibaman(x, groundY, 40 + Math.random() * 180, 2 + Math.random() * 1.5);
+    world.saibamans.push(s);
+    // terra voando de onde ele nasce
+    createImpactParticles(x + s.w / 2, canvas.height - 4, "#7a5a32", 8);
+}
+
+// Abraço do Saibaman: ele se agarra no jogador, pisca e explode. O jogador continua com todo o controle
+// (pode fugir de outros golpes e atirar nele para soltá-lo antes da explosão).
+function explodeSaibaman(s) {
+    const cx = s.x + s.w / 2, cy = s.y + s.h / 2;
+    world.blasts.push({ x: cx, y: cy, r: 6, maxR: 46, life: 1 });
+    createImpactParticles(cx, cy, "#ffd34d", 14);
+    createImpactParticles(cx, cy, "#7dff5a", 6);
+    triggerScreenShake(7, 14);
+    playSound("hit");
+    if (player.invulnerableTimer === 0) {
+        if (player.shield) {
+            player.shield = false;
+            playSound("reflect");
+        } else {
+            player.hp--;
+            runStats.hitsReceived++;
+            takenDamageInRun = true;
+            player.parryCombo = 0;
+            player.parryComboTimer = 0;
+            player.lastParryComboBonus = 0;
+
+            if (player.hp <= 0 && !attemptZenkaiRevival()) {
+                triggerGameOver();
+            }
+        }
+        player.invulnerableTimer = 30;
+    }
 }
 
 function spawnPickup() {
@@ -1673,7 +1709,7 @@ function update(dt) {
         if (obs.fromPlayer) {
             for (let j = world.saibamans.length - 1; j >= 0; j--) {
                 let s = world.saibamans[j];
-                if (circleHitsEntity(obs.x, obs.y, obs.radius, s)) {
+                if (isSaibamanActive(s) && circleHitsEntity(obs.x, obs.y, obs.radius, s)) {
                     s.hp--;
                     createImpactParticles(obs.x, obs.y, obs.color, 10);
                     playSound("hit");
@@ -1749,37 +1785,40 @@ function update(dt) {
         spawnSaibaman();
     }
 
+    const someoneGrabbing = world.saibamans.some(s => s.phase === "agarrar");
     for (let i = world.saibamans.length - 1; i >= 0; i--) {
         let s = world.saibamans[i];
-        s.x -= s.speed * dt * 60;
-        s.hoverTime += 0.05 * dt * 60;
-        s.y += Math.sin(s.hoverTime) * 1.5 * dt * 60;
-
-        if (rectsOverlap(getHitboxRect(s), getHitboxRect(player))) {
-            if (player.invulnerableTimer === 0) {
-                if (player.shield) {
-                    player.shield = false;
-                    playSound("reflect");
-                } else {
-                    player.hp--;
-                    runStats.hitsReceived++;
-                    playSound("hit");
-                    takenDamageInRun = true;
-                    player.parryCombo = 0;
-                    player.parryComboTimer = 0;
-                    player.lastParryComboBonus = 0;
-
-                    if (player.hp <= 0 && !attemptZenkaiRevival()) {
-                        triggerGameOver();
-                    }
-                }
-                player.invulnerableTimer = 30;
+        if (s.phase === "agarrar") {
+            // fica grudado nas costas do jogador enquanto a contagem corre
+            s.x = player.x + s.grabOffsetX;
+            s.y = player.y + s.grabOffsetY;
+            s.grabTimer -= dt * 60;
+            if (s.grabTimer <= 0) {
                 world.saibamans.splice(i, 1);
-                continue;
+                explodeSaibaman(s);
             }
+            continue;
+        }
+        stepSaibamanMotion(s, dt);
+
+        if (isSaibamanActive(s) && !someoneGrabbing && player.invulnerableTimer === 0 &&
+            rectsOverlap(getHitboxRect(s), getHitboxRect(player))) {
+            s.phase = "agarrar";
+            s.grabTimer = SAIBAMAN_GRAB_FRAMES;
+            s.grabOffsetX = (player.w - s.w) / 2 - player.w * 0.28;
+            s.grabOffsetY = (player.h - s.h) / 2;
+            addFloatingText({ text: "AGARROU!", x: player.x + player.w / 2, y: player.y - 8, alpha: 1, color: "#7dff5a" });
+            continue;
         }
 
         if (s.x < -30) world.saibamans.splice(i, 1);
+    }
+
+    for (let i = world.blasts.length - 1; i >= 0; i--) {
+        const b = world.blasts[i];
+        b.life -= 0.06 * dt * 60;
+        b.r += (b.maxR - b.r) * Math.min(1, 0.3 * dt * 60);
+        if (b.life <= 0) world.blasts.splice(i, 1);
     }
 
     // MAPEAMENTO DAS ANIMAÇÕES DE ACORDO COM O MOVIMENTO E AÇÕES

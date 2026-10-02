@@ -8,12 +8,14 @@ const { createHarness } = require("./harness.js");
 const h = createHarness(__dirname + "/..", 800);
 const { run, check, summary } = h;
 
-const todosCarregados = (key, transformed) => run(`SUB_ANIM_KEYS.every(st => getCharacterAnimationFrames("${key}", st, ${transformed}).every(src => !!gameplayImageCache[src]))`);
+// quadro pronto para desenhar (desenhos do jogo viram pixel art direto, sem carregar a imagem em tamanho cheio)
+const todosCarregados = (key, transformed) => run(`SUB_ANIM_KEYS.every(st => getCharacterAnimationFrames("${key}", st, ${transformed}).every(src => isDrawableSource(getOrCacheGameplayImage(src, characterDB["${key}"].imageObj, characterDB["${key}"].bgRemoval))))`);
+const tamanhoFila = () => run("backgroundWork.frames.length + backgroundWork.images.length + backgroundWork.pixelArt.length + backgroundWork.light.length");
 
 run(`var terminarFila = () => { while (backgroundWork.frames.length || backgroundWork.images.length || backgroundWork.pixelArt.length || backgroundWork.light.length) runBackgroundWork(1e9); };`);
 run(`selectedCharacter = "gohan"; selectedBoss = "vegeta"; gameMode = "singleplayer"; startGame();`);
 check("começar a luta não prepara tudo de uma vez (vai para a fila, sem travar)", run("backgroundWork.frames.length") >= 13 * 4);
-check("cada quadro do jogo adianta só um pedaço da fila", (() => { const antes = run("backgroundWork.frames.length"); run("runBackgroundWork(0)"); return run("backgroundWork.frames.length") === antes - 1; })());
+check("cada quadro do jogo adianta só um pedaço da fila", (() => { const antes = tamanhoFila(); run("runBackgroundWork(0)"); return tamanhoFila() === antes - 1; })());
 run("terminarFila()");
 const ssjPronto = (key) => run(`SUB_ANIM_KEYS.every(st => _spriteFrameCache.has(JSON.stringify([normalizeAppearance(characterDB["${key}"].builderAppearance), st, true, "", true])))`);
 check("a fila já calcula o cabelo amarelo dos dois (transformar não trava)", run("backgroundWork.frames.length") === 0 && ssjPronto("gohan") && ssjPronto("vegeta"));
