@@ -3338,7 +3338,7 @@ function drawCellArenaStage(ang) {
 // Como na Sala do Tempo: a nave fica parada no meio e os lutadores dão a volta nela. O chão de Namek (azul-
 // esverdeado, com lagos, pedras e tufos) passa perto da câmera; o céu verde e os morros de pedra giram ao fundo.
 // A nave: casco branco embaixo, faixa preta com escotilhas azuis, cúpula branca com a faixa listrada cor de
-// madeira, escotilha escura no topo, a cabine roxa redonda, os "ovos" amarelos em volta e as pernas mecânicas.
+// madeira, escotilha escura no topo, a janela roxa curvada, os calombos amarelos do casco e as patas de aço.
 const NV_CAM = { CX: 400, HY: 138, D: 620, H: 112, F: 620, PERTO: 30 };
 const nvCena = { passo: null, canvas: null };
 
@@ -3358,132 +3358,119 @@ function nvFaixa(a1, a2, cor) {
     trG.fill();
 }
 
-// Perna de aço (como as da nave do anime): sai de baixo do casco, um braço grosso vai para fora e para baixo
-// até a junta, e a canela desce até o pé, que abre em garras no chão. Desenhada com contorno escuro, corpo
-// metálico e um brilho, para parecer aço.
+// Perna de aço em forma de pata de aranha (como na nave do anime): um braço largo e firme sai de baixo do
+// casco, entre os calombos amarelos, e vai para fora; na junta a pata desce reta e afina até uma ponta
+// cravada no chão; uma haste fina faz o reforço em triângulo entre o casco e a pata.
 function nvDrawLeg(a, ang, frente) {
     const ox = Math.sin(a), oz = Math.cos(a);
     const P = (r, y) => trProj(ox * r, y, oz * r, ang);
-    const quadril = P(92, 30), junta = P(168, 34), tornozelo = P(196, 10), pe = P(204, 0);
-    const k = junta[3];
-    const tubo = (pts, larg, corBorda, corMeio, corBrilho) => {
-        trG.lineCap = "round"; trG.lineJoin = "round";
-        trG.beginPath(); pts.forEach((q, i) => i ? trG.lineTo(q[0], q[1]) : trG.moveTo(q[0], q[1]));
-        trG.strokeStyle = corBorda; trG.lineWidth = larg * k; trG.stroke();
-        trG.strokeStyle = corMeio; trG.lineWidth = larg * 0.62 * k; trG.stroke();
-        trG.strokeStyle = corBrilho; trG.lineWidth = Math.max(1, larg * 0.18 * k);
-        trG.beginPath(); pts.forEach((q, i) => i ? trG.lineTo(q[0] - larg * 0.12 * k, q[1] - larg * 0.12 * k) : trG.moveTo(q[0] - larg * 0.12 * k, q[1] - larg * 0.12 * k)); trG.stroke();
-    };
-    const escuro = frente ? "#3a414c" : "#2c323b", medio = frente ? "#a3adb9" : "#7d8794", brilho = frente ? "#eef2f6" : "#b8c0ca";
-    // braço (pistão grosso) do casco até a junta
-    tubo([quadril, junta], 13, escuro, medio, brilho);
-    // canela (mais fina) da junta até o tornozelo
-    tubo([junta, tornozelo], 8, escuro, medio, brilho);
-    // junta: cilindro com parafuso
-    trG.fillStyle = escuro;
-    trG.beginPath(); trG.arc(junta[0], junta[1], 7.5 * k, 0, Math.PI * 2); trG.fill();
-    trG.fillStyle = medio;
-    trG.beginPath(); trG.arc(junta[0], junta[1], 5 * k, 0, Math.PI * 2); trG.fill();
-    trG.fillStyle = brilho;
-    trG.beginPath(); trG.arc(junta[0] - 1.5 * k, junta[1] - 1.5 * k, 1.8 * k, 0, Math.PI * 2); trG.fill();
-    // pé: base apoiada no chão com três garras abertas
-    const kp = pe[3];
-    trG.strokeStyle = escuro; trG.lineWidth = Math.max(1.5, 3.2 * kp); trG.lineCap = "round";
+    const quadril = P(104, 18), joelho = P(162, 26), ponta = P(210, 0), reforcoBase = P(98, 8), reforcoPata = P(190, 11);
+    const k = joelho[3];
+    const claro = frente ? "#f3f6f8" : "#c9d0d7", meio = frente ? "#bcc5cf" : "#98a1ab", escuro = frente ? "#56606c" : "#414852";
+    trG.lineCap = "round"; trG.lineJoin = "round";
+    // haste de reforço (fina, por trás)
+    trG.strokeStyle = escuro; trG.lineWidth = Math.max(1, 2.6 * k);
+    trG.beginPath(); trG.moveTo(reforcoBase[0], reforcoBase[1]); trG.lineTo(reforcoPata[0], reforcoPata[1]); trG.stroke();
+    trG.strokeStyle = meio; trG.lineWidth = Math.max(0.8, 1.3 * k); trG.stroke();
+    // pata: desce inclinada da junta, afinando até a ponta cravada no chão
+    const lp = 6.5 * k;
+    const dx = ponta[0] - joelho[0], dy = ponta[1] - joelho[1], dl = Math.hypot(dx, dy) || 1;
+    const nx = -dy / dl, ny = dx / dl;
+    trG.fillStyle = meio;
     trG.beginPath();
-    trG.moveTo(tornozelo[0], tornozelo[1]); trG.lineTo(pe[0] - 13 * kp, pe[1] + 2 * kp);
-    trG.moveTo(tornozelo[0], tornozelo[1]); trG.lineTo(pe[0] + 13 * kp, pe[1] + 2 * kp);
-    trG.moveTo(tornozelo[0], tornozelo[1]); trG.lineTo(pe[0], pe[1] + 4 * kp);
+    trG.moveTo(joelho[0] + nx * lp, joelho[1] + ny * lp); trG.lineTo(ponta[0], ponta[1]); trG.lineTo(joelho[0] - nx * lp, joelho[1] - ny * lp);
+    trG.closePath(); trG.fill();
+    trG.fillStyle = claro;
+    trG.beginPath();
+    trG.moveTo(joelho[0] - nx * lp, joelho[1] - ny * lp); trG.lineTo(ponta[0], ponta[1]); trG.lineTo(joelho[0], joelho[1]);
+    trG.closePath(); trG.fill();
+    trG.strokeStyle = escuro; trG.lineWidth = 1;
+    trG.beginPath();
+    trG.moveTo(joelho[0] + nx * lp, joelho[1] + ny * lp); trG.lineTo(ponta[0], ponta[1]); trG.lineTo(joelho[0] - nx * lp, joelho[1] - ny * lp);
     trG.stroke();
-    trG.fillStyle = medio;
-    trG.beginPath(); trG.ellipse(tornozelo[0], tornozelo[1], 5 * kp, 3.5 * kp, 0, 0, Math.PI * 2); trG.fill();
+    // braço: curto e grosso, do casco até a junta
+    trG.strokeStyle = escuro; trG.lineWidth = 13 * k;
+    trG.beginPath(); trG.moveTo(quadril[0], quadril[1]); trG.lineTo(joelho[0], joelho[1]); trG.stroke();
+    trG.strokeStyle = meio; trG.lineWidth = 10 * k; trG.stroke();
+    trG.strokeStyle = claro; trG.lineWidth = 4.5 * k;
+    trG.beginPath(); trG.moveTo(quadril[0], quadril[1] - 2.5 * k); trG.lineTo(joelho[0], joelho[1] - 2.5 * k); trG.stroke();
+    // junta redonda
+    trG.fillStyle = escuro;
+    trG.beginPath(); trG.arc(joelho[0], joelho[1], 7.5 * k, 0, Math.PI * 2); trG.fill();
+    trG.fillStyle = claro;
+    trG.beginPath(); trG.arc(joelho[0], joelho[1], 5.5 * k, 0, Math.PI * 2); trG.fill();
+    trG.fillStyle = meio;
+    trG.beginPath(); trG.arc(joelho[0] + 1 * k, joelho[1] + 1 * k, 2.5 * k, 0, Math.PI * 2); trG.fill();
 }
 
+// Calombo amarelo do casco: não é peça solta, é um relevo arredondado da parte de baixo do casco (abaixo da
+// faixa preta), que acompanha a curva da nave. Montado sobre a superfície do casco e projetado.
+function nvRaioCascoBaixo(y) { return 100 + (y - 14) / 46 * 58; }   // casco de baixo afunila: y 14 -> 60
 function nvDrawPod(a, ang) {
-    // "ovo" amarelo em volta da base
-    const p = trProj(Math.sin(a) * 146, 46, Math.cos(a) * 146, ang), k = p[3];
-    const g = trG.createRadialGradient(p[0] - 6 * k, p[1] - 10 * k, 2, p[0], p[1], 22 * k);
-    g.addColorStop(0, "#fff7b0"); g.addColorStop(0.5, "#f5d020"); g.addColorStop(1, "#c79a0a");
+    const normal = trRot(Math.sin(a), Math.cos(a), ang)[1];
+    if (normal < 0.02) return;                               // virado para longe: escondido pelo casco
+    const meiaLarg = 0.19, yc = 37, meiaAlt = 21;
+    const pts = [];
+    for (let i = 0; i < 28; i++) {
+        const t = i / 28 * Math.PI * 2;
+        // retângulo de cantos bem arredondados (superelipse)
+        const u = Math.sign(Math.cos(t)) * Math.pow(Math.abs(Math.cos(t)), 0.6);
+        const v = Math.sign(Math.sin(t)) * Math.pow(Math.abs(Math.sin(t)), 0.6);
+        const y = yc + v * meiaAlt, th = a + u * meiaLarg;
+        const r = nvRaioCascoBaixo(Math.min(60, y)) + 3 + 9 * (1 - u * u) * (1 - v * v);   // estufado no meio
+        pts.push(trProj(Math.sin(th) * r, y, Math.cos(th) * r, ang));
+    }
+    const centro = trProj(Math.sin(a) * (nvRaioCascoBaixo(yc) + 12), yc, Math.cos(a) * (nvRaioCascoBaixo(yc) + 12), ang);
+    const luz = trProj(Math.sin(a - meiaLarg * 0.35) * (nvRaioCascoBaixo(yc + 5) + 12), yc + 6, Math.cos(a - meiaLarg * 0.35) * (nvRaioCascoBaixo(yc + 5) + 12), ang);
+    const k = centro[3];
+    const g = trG.createRadialGradient(luz[0], luz[1], 1, centro[0], centro[1], 26 * k);
+    g.addColorStop(0, "#fff8c4"); g.addColorStop(0.45, "#f6d63c"); g.addColorStop(1, "#c99a12");
     trG.fillStyle = g;
-    trG.beginPath(); trG.ellipse(p[0], p[1], 13 * k, 20 * k, 0, 0, Math.PI * 2); trG.fill();
-    trG.strokeStyle = "#8a6a00"; trG.lineWidth = 1; trG.stroke();
+    trG.beginPath(); pts.forEach((q, i) => i ? trG.lineTo(q[0], q[1]) : trG.moveTo(q[0], q[1])); trG.closePath(); trG.fill();
+    trG.strokeStyle = "rgba(140, 105, 10, 0.7)"; trG.lineWidth = 1; trG.stroke();
 }
 
-// Janela da cabine: meio ovo de vidro roxo saltado para fora da cúpula. É montada em 3D (pontos de um meio
-// elipsoide preso ao casco) e projetada: de frente aparece redonda e estufada; de lado, dá para ver o relevo
-// saindo da nave. A moldura de metal acompanha a curva do casco.
-const NV_CABINE = { a: -0.5, r: 144, y: 101, larg: 25, alt: 17, saliencia: 19, incl: 0.32 };
+// Janela da cabine: vidro roxo curvado sobre a cúpula (acompanha a curva dela), com um pequeno suporte
+// claro em volta do vidro. Fica colado na nave em qualquer ângulo.
+const NV_CABINE = { a: -0.55, meiaLarg: 0.17, yc: 116, meiaAlt: 14, borda: 3.5 };
+function nvRaioCupula(y) { const t = Math.min(1, Math.max(0, (y - 82) / 70)); return 158 * Math.sqrt(1 - t * t); }
 function nvDrawCockpit(ang) {
     const c = NV_CABINE;
-    const nx = Math.sin(c.a), nz = Math.cos(c.a);          // direção para fora do casco (no plano)
-    const tx = Math.cos(c.a), tz = -Math.sin(c.a);         // direção ao longo do casco (horizontal)
-    const vis = trRot(nx, nz, ang)[1];                     // > 0: virada para a câmera
-    if (vis < -0.35) return;                               // atrás da nave: escondida pela cúpula
-    // a janela acompanha a curva da cúpula: fica inclinada para cima (incl)
-    const ci = Math.cos(c.incl), si = Math.sin(c.incl);
-    const N = [nx * ci, si, nz * ci], V = [-nx * si, ci, -nz * si];
-    const cx = nx * c.r, cz = nz * c.r;
-    const ponto = (u, v, w) => trProj(cx + tx * u + V[0] * v + N[0] * w, c.y + V[1] * v + N[1] * w, cz + tz * u + V[2] * v + N[2] * w, ang);
-    // contorno do meio ovo: pontos da borda e da casca, depois o envoltório convexo na tela
-    const pts = [];
-    for (let i = 0; i < 16; i++) {
-        const t = i / 16 * Math.PI * 2;
-        for (let j = 0; j <= 4; j++) {
-            const e = j / 4 * Math.PI / 2;                 // 0 = borda, 90° = ponta do ovo
-            pts.push(ponto(Math.cos(t) * c.larg * Math.cos(e), Math.sin(t) * c.alt * Math.cos(e), c.saliencia * Math.sin(e)));
+    const normal = trRot(Math.sin(c.a), Math.cos(c.a), ang)[1];
+    if (normal < 0.02) return;
+    const contorno = (extra, inchar) => {
+        const pts = [];
+        for (let i = 0; i < 32; i++) {
+            const t = i / 32 * Math.PI * 2, u = Math.cos(t), v = Math.sin(t);
+            const y = c.yc + v * (c.meiaAlt + extra), th = c.a + u * (c.meiaLarg + extra / 140);
+            const r = nvRaioCupula(y) + 1 + inchar * (1 - u * u) * (1 - v * v);
+            pts.push(trProj(Math.sin(th) * r, y, Math.cos(th) * r, ang));
         }
-    }
-    const casca = nvEnvoltorio(pts.map(p => [p[0], p[1]]));
-    const ponta = ponto(0, 0, c.saliencia), centro = ponto(0, 0, 0), k = centro[3];
-    // encaixe de metal: um colar que sai de dentro do casco até a moldura, prendendo a janela na nave
-    // (sem ele, vista de lado a janela parecia solta na beirada da cúpula)
-    const colar = [];
-    for (let i = 0; i < 20; i++) {
-        const t = i / 20 * Math.PI * 2;
-        colar.push(ponto(Math.cos(t) * (c.larg + 13), Math.sin(t) * (c.alt + 7), -14));
-        colar.push(ponto(Math.cos(t) * (c.larg + 8), Math.sin(t) * (c.alt + 5), -4));
-        colar.push(ponto(Math.cos(t) * (c.larg + 4), Math.sin(t) * (c.alt + 3), 2));
-    }
-    const contornoColar = nvEnvoltorio(colar.map(p => [p[0], p[1]]));
-    // mesma cor branca do casco: o encaixe parece um calombo saindo da própria cúpula
-    const metal = trG.createLinearGradient(centro[0] - (c.larg + 18) * k, 0, centro[0] + (c.larg + 18) * k, 0);
-    metal.addColorStop(0, "#c3cad2"); metal.addColorStop(0.45, "#f6f8fa"); metal.addColorStop(1, "#bcc4cd");
-    trG.fillStyle = metal;
-    trG.beginPath(); contornoColar.forEach((q, i) => i ? trG.lineTo(q[0], q[1]) : trG.moveTo(q[0], q[1])); trG.closePath(); trG.fill();
-    // vidro roxo com volume (claro onde bate a luz, escuro na borda)
-    const luzX = ponta[0] * 0.6 + centro[0] * 0.4 - c.larg * 0.3 * k, luzY = ponta[1] * 0.6 + centro[1] * 0.4 - c.alt * 0.35 * k;
-    const vidro = trG.createRadialGradient(luzX, luzY, 1, (ponta[0] + centro[0]) / 2, (ponta[1] + centro[1]) / 2, c.larg * 1.25 * k);
-    vidro.addColorStop(0, "#f6e3ff"); vidro.addColorStop(0.3, "#c48ae8"); vidro.addColorStop(0.7, "#7a35b0"); vidro.addColorStop(1, "#3a1460");
-    trG.fillStyle = vidro;
-    trG.beginPath(); casca.forEach((q, i) => i ? trG.lineTo(q[0], q[1]) : trG.moveTo(q[0], q[1])); trG.closePath(); trG.fill();
-    trG.strokeStyle = "rgba(40, 10, 70, 0.7)"; trG.lineWidth = 1; trG.stroke();
-    // reflexos do vidro (presos dentro do contorno do vidro)
+        return pts;
+    };
+    const desenha = (pts) => { trG.beginPath(); pts.forEach((q, i) => i ? trG.lineTo(q[0], q[1]) : trG.moveTo(q[0], q[1])); trG.closePath(); };
+    // suporte em volta do vidro
+    desenha(contorno(c.borda, 1));
+    trG.fillStyle = "#e9edf1"; trG.fill();
+    trG.strokeStyle = "#8d96a1"; trG.lineWidth = 1; trG.stroke();
+    // vidro roxo curvado
+    const vidro = contorno(0, 4);
+    const centro = trProj(Math.sin(c.a) * (nvRaioCupula(c.yc) + 5), c.yc, Math.cos(c.a) * (nvRaioCupula(c.yc) + 5), ang);
+    const k = centro[3];
+    const brilhoP = trProj(Math.sin(c.a - c.meiaLarg * 0.4) * (nvRaioCupula(c.yc + 6) + 5), c.yc + 6, Math.cos(c.a - c.meiaLarg * 0.4) * (nvRaioCupula(c.yc + 6) + 5), ang);
+    const g = trG.createRadialGradient(brilhoP[0], brilhoP[1], 1, centro[0], centro[1], 26 * k);
+    g.addColorStop(0, "#efd9ff"); g.addColorStop(0.35, "#a970d8"); g.addColorStop(0.8, "#5e2a90"); g.addColorStop(1, "#3c1663");
+    desenha(vidro);
+    trG.fillStyle = g; trG.fill();
+    trG.strokeStyle = "#4a2470"; trG.lineWidth = 1; trG.stroke();
+    // reflexo curvo do vidro (preso dentro dele)
     trG.save();
-    trG.beginPath(); casca.forEach((q, i) => i ? trG.lineTo(q[0], q[1]) : trG.moveTo(q[0], q[1])); trG.closePath(); trG.clip();
-    trG.fillStyle = "rgba(255, 255, 255, 0.85)";
-    trG.beginPath(); trG.ellipse(luzX, luzY, c.larg * 0.22 * k, c.alt * 0.14 * k, -0.5, 0, Math.PI * 2); trG.fill();
-    trG.fillStyle = "rgba(255, 255, 255, 0.35)";
-    trG.beginPath(); trG.ellipse(ponta[0] + c.larg * 0.25 * k, ponta[1] + c.alt * 0.3 * k, c.larg * 0.12 * k, c.alt * 0.08 * k, -0.5, 0, Math.PI * 2); trG.fill();
-    trG.restore();
-    // moldura de metal em volta da base do vidro (na curva do casco)
-    trG.strokeStyle = "#8e96a2"; trG.lineWidth = Math.max(2, 4.5 * k);
+    desenha(vidro); trG.clip();
+    trG.strokeStyle = "rgba(255, 255, 255, 0.75)"; trG.lineWidth = Math.max(1.5, 3 * k); trG.lineCap = "round";
     trG.beginPath();
-    for (let i = 0; i <= 24; i++) {
-        const t = i / 24 * Math.PI * 2;
-        const q = ponto(Math.cos(t) * (c.larg + 2), Math.sin(t) * (c.alt + 2), 0);
-        i ? trG.lineTo(q[0], q[1]) : trG.moveTo(q[0], q[1]);
-    }
+    trG.arc(centro[0] + 4 * k, centro[1] + 3 * k, 13 * k, Math.PI * 1.05, Math.PI * 1.45);
     trG.stroke();
-    trG.strokeStyle = "#d8dde3"; trG.lineWidth = Math.max(1, 1.5 * k); trG.stroke();
-}
-
-// Envoltório convexo de pontos 2D (contorno de uma forma vista de qualquer ângulo).
-function nvEnvoltorio(pts) {
-    const p = pts.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
-    const cruz = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
-    const baixo = [], cima = [];
-    for (const q of p) { while (baixo.length >= 2 && cruz(baixo[baixo.length - 2], baixo[baixo.length - 1], q) <= 0) baixo.pop(); baixo.push(q); }
-    for (let i = p.length - 1; i >= 0; i--) { const q = p[i]; while (cima.length >= 2 && cruz(cima[cima.length - 2], cima[cima.length - 1], q) <= 0) cima.pop(); cima.push(q); }
-    return baixo.slice(0, -1).concat(cima.slice(0, -1));
+    trG.restore();
 }
 
 function drawFreezaShipScene(ang) {
@@ -3494,17 +3481,15 @@ function drawFreezaShipScene(ang) {
     trPoly(sombra);
     trG.fill();
 
-    // pernas e ovos de trás (ficam atrás do casco)
-    const pernas = [], ovos = [];
-    for (let i = 0; i < 8; i++) pernas.push(i * Math.PI / 4 + Math.PI / 8);
-    for (let i = 0; i < 12; i++) ovos.push(i * Math.PI / 6);
+    // pernas de trás (ficam atrás do casco); 10 pernas entre os 10 calombos amarelos
+    const pernas = [], calombos = [];
+    for (let i = 0; i < 10; i++) { calombos.push(i * Math.PI / 5); pernas.push(i * Math.PI / 5 + Math.PI / 10); }
     const naFrente = (a) => trRot(Math.sin(a), Math.cos(a), ang)[1] > 0;
     const porProfundidade = (lista) => lista.slice().sort((a, b) => trRot(Math.sin(a), Math.cos(a), ang)[1] - trRot(Math.sin(b), Math.cos(b), ang)[1]);
     porProfundidade(pernas).forEach(a => { if (!naFrente(a)) nvDrawLeg(a, ang, false); });
-    porProfundidade(ovos).forEach(a => { if (!naFrente(a)) nvDrawPod(a, ang); });
 
     // casco de baixo (branco acinzentado, afunilando para baixo)
-    const a30 = nvAnel(30, 108, ang), a60 = nvAnel(60, 158, ang), a82 = nvAnel(82, 162, ang);
+    const a30 = nvAnel(14, 100, ang), a60 = nvAnel(60, 158, ang), a82 = nvAnel(82, 162, ang);
     trG.fillStyle = "#c9d1da";
     trG.beginPath(); trG.ellipse(a60.cx, a60.cy, a60.rx, a60.ry, 0, 0, Math.PI * 2); trG.fill();
     nvFaixa(a30, a60, "#e6ebf0");
@@ -3524,6 +3509,9 @@ function drawFreezaShipScene(ang) {
         trG.fillStyle = "#d6ecff";
         trG.beginPath(); trG.ellipse(p[0] - 1.5 * k * r[1], p[1] - 2 * k, 2 * k * r[1], 2 * k, 0, 0, Math.PI * 2); trG.fill();
     }
+
+    // calombos amarelos: relevo do próprio casco de baixo, encostados embaixo da faixa preta
+    porProfundidade(calombos).forEach(a => nvDrawPod(a, ang));
 
     // cúpula branca com a faixa cor de madeira listrada
     const d0 = nvAnel(82, 158, ang), d1 = nvAnel(100, 150, ang), d2 = nvAnel(124, 124, ang), dTopo = nvAnel(146, 70, ang);
@@ -3552,17 +3540,17 @@ function drawFreezaShipScene(ang) {
     }
     trG.stroke();
     // escotilha escura no topo
-    trG.fillStyle = "#3b3f4a";
+    trG.fillStyle = "#eef1f4";
+    trG.beginPath(); trG.ellipse(dTopo.cx, d0.cy - alturaDomo * 0.93, dTopo.rx * 0.78, Math.max(3, dTopo.ry * 0.8), 0, 0, Math.PI * 2); trG.fill();
+    trG.strokeStyle = "#a9b2bc"; trG.lineWidth = 1.5; trG.stroke();
+    trG.fillStyle = "#2c3038";
     trG.beginPath(); trG.ellipse(dTopo.cx, d0.cy - alturaDomo * 0.93, dTopo.rx * 0.55, Math.max(2, dTopo.ry * 0.55), 0, 0, Math.PI * 2); trG.fill();
-    trG.strokeStyle = "#9aa3ad"; trG.lineWidth = 2; trG.stroke();
 
-    // cabine roxa: janela de vidro saltada para fora do casco, como meio ovo, com moldura de metal
+    // cabine: vidro roxo curvado na cúpula, com o suporte em volta
     nvDrawCockpit(ang);
 
-    // ovos e pernas da frente
-    // as pernas saem de baixo do casco, por trás dos ovos amarelos
+    // pernas da frente (saem de baixo do casco, entre os calombos)
     porProfundidade(pernas).forEach(a => { if (naFrente(a)) nvDrawLeg(a, ang, true); });
-    porProfundidade(ovos).forEach(a => { if (naFrente(a)) nvDrawPod(a, ang); });
 }
 
 // Paisagem de Namek ao fundo (360°): céu verde-amarelado, mar azul no horizonte, morros de pedra altos de
