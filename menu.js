@@ -2733,20 +2733,27 @@ function handleMenuClick(x, y) {
 // areia verde (que escorre de verdade), postes com globo verde-água e piso de azulejos em degraus. Tudo é
 // descrito em coordenadas de "planta" (x para o lado, z para a frente, y para cima) e projetado com a
 // câmera girando o ângulo `ang` em volta do centro — assim a fase mostra frente, lateral, fundos e volta.
+// A câmera tem perspectiva de verdade (fica a TR_D do centro, a TR_H de altura) e o chão branco tem rejuntes
+// até o horizonte: o chão perto dos lutadores passa rápido e o pavilhão lá longe gira devagar — quem parece
+// andar em volta do pavilhão são os lutadores, não o pavilhão girando como um prato.
 const TR_K = 1.12, TR_CX = 400, TR_GY = 236, TR_TILT = 0.3;
+const TR_D = 700, TR_H = 210, TR_F = TR_K * TR_D, TR_HY = TR_GY - TR_K * TR_H, TR_PERTO = 40;
+let trG = ctx;   // onde o pavilhão é desenhado (a imagem guardada; ver drawTimeRoomStage)
 
 function trRot(x, z, ang) {
     const c = Math.cos(ang), s = Math.sin(ang);
     return [x * c - z * s, x * s + z * c];   // [lado, profundidade (+ = mais perto da câmera)]
 }
+// planta -> tela, com perspectiva: [x, y, profundidade (+ = perto), escala naquele ponto]
 function trProj(x, y, z, ang) {
     const r = trRot(x, z, ang);
-    return [TR_CX + r[0] * TR_K, TR_GY - y * TR_K + r[1] * TR_TILT * TR_K, r[1]];
+    const esc = TR_F / Math.max(TR_PERTO, TR_D - r[1]);
+    return [TR_CX + r[0] * esc, TR_HY + (TR_H - y) * esc, r[1], esc];
 }
 function trPoly(pts) {
-    ctx.beginPath();
-    pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
-    ctx.closePath();
+    trG.beginPath();
+    pts.forEach((p, i) => i ? trG.lineTo(p[0], p[1]) : trG.moveTo(p[0], p[1]));
+    trG.closePath();
 }
 
 // Laje do piso (retângulo da planta com altura h): lados visíveis, tampo e o rejunte dos azulejos.
@@ -2761,29 +2768,29 @@ function trDrawSlab(sl, ang) {
         const cx = (sl.x0 + sl.x1) / 2, cz = (sl.z0 + sl.z1) / 2;
         const n = trRot(mx - cx, mz - cz, ang);
         if (n[1] <= 0) continue;
-        ctx.fillStyle = "#a9c2cc";
+        trG.fillStyle = "#a9c2cc";
         trPoly([topo[i], topo[j], base[j], base[i]]);
-        ctx.fill();
+        trG.fill();
     }
-    ctx.fillStyle = "#dceaf0";
+    trG.fillStyle = "#dceaf0";
     trPoly(topo);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(120, 150, 165, 0.35)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
+    trG.fill();
+    trG.strokeStyle = "rgba(120, 150, 165, 0.35)";
+    trG.lineWidth = 1;
+    trG.beginPath();
     const passo = 22;
     for (let x = Math.ceil(sl.x0 / passo) * passo; x < sl.x1; x += passo) {
         const p0 = trProj(x, sl.h, sl.z0, ang), p1 = trProj(x, sl.h, sl.z1, ang);
-        ctx.moveTo(p0[0], p0[1]); ctx.lineTo(p1[0], p1[1]);
+        trG.moveTo(p0[0], p0[1]); trG.lineTo(p1[0], p1[1]);
     }
     for (let z = Math.ceil(sl.z0 / passo) * passo; z < sl.z1; z += passo) {
         const p0 = trProj(sl.x0, sl.h, z, ang), p1 = trProj(sl.x1, sl.h, z, ang);
-        ctx.moveTo(p0[0], p0[1]); ctx.lineTo(p1[0], p1[1]);
+        trG.moveTo(p0[0], p0[1]); trG.lineTo(p1[0], p1[1]);
     }
-    ctx.stroke();
-    ctx.strokeStyle = "#8fadb9";
+    trG.stroke();
+    trG.strokeStyle = "#8fadb9";
     trPoly(topo);
-    ctx.stroke();
+    trG.stroke();
 }
 
 // Ala de telhado rosa: caixa branca com a janela comprida na frente e o telhado arredondado.
@@ -2797,98 +2804,97 @@ function trDrawWing(wx, ang) {
         const n = trRot(mx, mz, ang);
         if (n[1] <= 0) continue;
         const luz = 0.93 + 0.07 * (n[0] / Math.hypot(n[0], n[1]));   // paredes brancas, um lado um pouco mais claro
-        ctx.fillStyle = `rgb(${Math.round(250 * luz)}, ${Math.round(251 * luz)}, ${Math.round(253 * luz)})`;
+        trG.fillStyle = `rgb(${Math.round(250 * luz)}, ${Math.round(251 * luz)}, ${Math.round(253 * luz)})`;
         trPoly([P(cantos[i], y1), P(cantos[j], y1), P(cantos[j], y0), P(cantos[i], y0)]);
-        ctx.fill();
-        ctx.strokeStyle = "#9aa7b4"; ctx.lineWidth = 1; ctx.stroke();
+        trG.fill();
+        trG.strokeStyle = "#9aa7b4"; trG.lineWidth = 1; trG.stroke();
         // telhado: faixa rosa mais escura dos lados
-        ctx.fillStyle = "#d9799f";
+        trG.fillStyle = "#d9799f";
         trPoly([P(cantos[i], yr), P(cantos[j], yr), P(cantos[j], y1), P(cantos[i], y1)]);
-        ctx.fill();
+        trG.fill();
         // janela comprida só nas paredes da frente e de trás (as compridas)
         if (Math.abs(mz) > 1) {
             const A = cantos[i], B = cantos[j];
             const L = (u, y) => trProj(A[0] + (B[0] - A[0]) * u, y, A[1] + (B[1] - A[1]) * u, ang);
-            ctx.fillStyle = "#2f3b4c";
+            trG.fillStyle = "#2f3b4c";
             trPoly([L(0.22, 33), L(0.78, 33), L(0.78, 25), L(0.22, 25)]);
-            ctx.fill();
-            ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.5; ctx.stroke();
+            trG.fill();
+            trG.strokeStyle = "#ffffff"; trG.lineWidth = 1.5; trG.stroke();
         }
     }
-    ctx.fillStyle = "#f4a9c9";
+    trG.fillStyle = "#f4a9c9";
     trPoly(cantos.map(c => P(c, yr)));
-    ctx.fill();
-    ctx.strokeStyle = "#c86890"; ctx.lineWidth = 1; ctx.stroke();
+    trG.fill();
+    trG.strokeStyle = "#c86890"; trG.lineWidth = 1; trG.stroke();
 }
 
 // Ampulheta gigante (igual de todos os lados): base e tampa douradas, vidro e a areia verde escorrendo.
-function trDrawHourglass(px, py, fase) {
-    const k = TR_K, w = 17 * k, meio = py - 50 * k, topoVidro = py - 92 * k, baseVidro = py - 10 * k;
+function trDrawHourglass(px, py, fase, k) {
+    const w = 17 * k, meio = py - 50 * k, topoVidro = py - 92 * k, baseVidro = py - 10 * k;
     // base dourada
-    ctx.fillStyle = "#d4a52a";
-    ctx.beginPath(); ctx.ellipse(px, py - 5 * k, w * 1.25, 5 * k, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillRect(px - w * 1.25, py - 11 * k, w * 2.5, 6 * k);
-    ctx.fillStyle = "#f2cf5b";
-    ctx.beginPath(); ctx.ellipse(px, py - 11 * k, w * 1.25, 5 * k, 0, 0, Math.PI * 2); ctx.fill();
+    trG.fillStyle = "#d4a52a";
+    trG.beginPath(); trG.ellipse(px, py - 5 * k, w * 1.25, 5 * k, 0, 0, Math.PI * 2); trG.fill();
+    trG.fillRect(px - w * 1.25, py - 11 * k, w * 2.5, 6 * k);
+    trG.fillStyle = "#f2cf5b";
+    trG.beginPath(); trG.ellipse(px, py - 11 * k, w * 1.25, 5 * k, 0, 0, Math.PI * 2); trG.fill();
     // forma do vidro (dois bulbos e a cintura fina)
     const vidro = () => {
-        ctx.beginPath();
-        ctx.moveTo(px - w, topoVidro);
-        ctx.bezierCurveTo(px - w * 1.15, meio - 18 * k, px - 3 * k, meio - 6 * k, px - 2.5 * k, meio);
-        ctx.bezierCurveTo(px - 3 * k, meio + 6 * k, px - w * 1.15, meio + 18 * k, px - w, baseVidro);
-        ctx.lineTo(px + w, baseVidro);
-        ctx.bezierCurveTo(px + w * 1.15, meio + 18 * k, px + 3 * k, meio + 6 * k, px + 2.5 * k, meio);
-        ctx.bezierCurveTo(px + 3 * k, meio - 6 * k, px + w * 1.15, meio - 18 * k, px + w, topoVidro);
-        ctx.closePath();
+        trG.beginPath();
+        trG.moveTo(px - w, topoVidro);
+        trG.bezierCurveTo(px - w * 1.15, meio - 18 * k, px - 3 * k, meio - 6 * k, px - 2.5 * k, meio);
+        trG.bezierCurveTo(px - 3 * k, meio + 6 * k, px - w * 1.15, meio + 18 * k, px - w, baseVidro);
+        trG.lineTo(px + w, baseVidro);
+        trG.bezierCurveTo(px + w * 1.15, meio + 18 * k, px + 3 * k, meio + 6 * k, px + 2.5 * k, meio);
+        trG.bezierCurveTo(px + 3 * k, meio - 6 * k, px + w * 1.15, meio - 18 * k, px + w, topoVidro);
+        trG.closePath();
     };
-    ctx.save();
+    trG.save();
     vidro();
-    ctx.fillStyle = "rgba(225, 240, 245, 0.85)";
-    ctx.fill();
-    ctx.clip();
+    trG.fillStyle = "rgba(225, 240, 245, 0.85)";
+    trG.fill();
+    trG.clip();
     // areia: em cima esvazia, embaixo enche (a fase vai de 0 a 1 e recomeça)
     const cima = (1 - fase) * 34 * k, baixo = fase * 34 * k;
-    ctx.fillStyle = "#4fb85a";
-    ctx.fillRect(px - w * 1.3, meio - 4 * k - cima, w * 2.6, cima);
-    ctx.fillStyle = "#3e9f4b";
-    ctx.beginPath();
-    ctx.moveTo(px - w * 1.3, baseVidro);
-    ctx.lineTo(px - w * 1.3, baseVidro - baixo * 0.75);
-    ctx.quadraticCurveTo(px, baseVidro - baixo * 1.25, px + w * 1.3, baseVidro - baixo * 0.75);
-    ctx.lineTo(px + w * 1.3, baseVidro);
-    ctx.closePath();
-    ctx.fill();
-    if (fase < 0.97) { ctx.fillStyle = "#4fb85a"; ctx.fillRect(px - 1, meio - 3 * k, 2, (baseVidro - meio) - baixo * 0.9); }
+    trG.fillStyle = "#4fb85a";
+    trG.fillRect(px - w * 1.3, meio - 4 * k - cima, w * 2.6, cima);
+    trG.fillStyle = "#3e9f4b";
+    trG.beginPath();
+    trG.moveTo(px - w * 1.3, baseVidro);
+    trG.lineTo(px - w * 1.3, baseVidro - baixo * 0.75);
+    trG.quadraticCurveTo(px, baseVidro - baixo * 1.25, px + w * 1.3, baseVidro - baixo * 0.75);
+    trG.lineTo(px + w * 1.3, baseVidro);
+    trG.closePath();
+    trG.fill();
+    if (fase < 0.97) { trG.fillStyle = "#4fb85a"; trG.fillRect(px - 1, meio - 3 * k, 2, (baseVidro - meio) - baixo * 0.9); }
     // brilho do vidro
-    ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
-    ctx.fillRect(px - w * 0.75, topoVidro + 6 * k, 3 * k, 22 * k);
-    ctx.fillRect(px - w * 0.75, meio + 10 * k, 3 * k, 18 * k);
-    ctx.restore();
+    trG.fillStyle = "rgba(255, 255, 255, 0.55)";
+    trG.fillRect(px - w * 0.75, topoVidro + 6 * k, 3 * k, 22 * k);
+    trG.fillRect(px - w * 0.75, meio + 10 * k, 3 * k, 18 * k);
+    trG.restore();
     vidro();
-    ctx.strokeStyle = "rgba(120, 150, 165, 0.8)"; ctx.lineWidth = 1.2; ctx.stroke();
+    trG.strokeStyle = "rgba(120, 150, 165, 0.8)"; trG.lineWidth = 1.2; trG.stroke();
     // tampa: cúpula dourada com ponta
-    ctx.fillStyle = "#d4a52a";
-    ctx.fillRect(px - w * 1.2, topoVidro - 5 * k, w * 2.4, 6 * k);
-    const tampa = ctx.createLinearGradient(px - w, 0, px + w, 0);
+    trG.fillStyle = "#d4a52a";
+    trG.fillRect(px - w * 1.2, topoVidro - 5 * k, w * 2.4, 6 * k);
+    const tampa = trG.createLinearGradient(px - w, 0, px + w, 0);
     tampa.addColorStop(0, "#f7d76b"); tampa.addColorStop(0.5, "#e8b83a"); tampa.addColorStop(1, "#b88a1c");
-    ctx.fillStyle = tampa;
-    ctx.beginPath(); ctx.ellipse(px, topoVidro - 5 * k, w * 1.15, 20 * k, 0, Math.PI, 0); ctx.fill();
-    ctx.fillStyle = "#c99a26";
-    ctx.beginPath(); ctx.moveTo(px - 2.5 * k, topoVidro - 24 * k); ctx.lineTo(px, topoVidro - 36 * k); ctx.lineTo(px + 2.5 * k, topoVidro - 24 * k); ctx.fill();
+    trG.fillStyle = tampa;
+    trG.beginPath(); trG.ellipse(px, topoVidro - 5 * k, w * 1.15, 20 * k, 0, Math.PI, 0); trG.fill();
+    trG.fillStyle = "#c99a26";
+    trG.beginPath(); trG.moveTo(px - 2.5 * k, topoVidro - 24 * k); trG.lineTo(px, topoVidro - 36 * k); trG.lineTo(px + 2.5 * k, topoVidro - 24 * k); trG.fill();
 }
 
 // Poste com globo verde-água.
-function trDrawLamp(px, py) {
-    const k = TR_K;
-    ctx.fillStyle = "#c99a26";
-    ctx.beginPath(); ctx.ellipse(px, py - 2 * k, 7 * k, 2.5 * k, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillRect(px - 1.5 * k, py - 60 * k, 3 * k, 58 * k);
-    ctx.fillRect(px - 4 * k, py - 62 * k, 8 * k, 3 * k);
-    const globo = ctx.createRadialGradient(px - 3 * k, py - 73 * k, 1, px, py - 70 * k, 10 * k);
+function trDrawLamp(px, py, k) {
+    trG.fillStyle = "#c99a26";
+    trG.beginPath(); trG.ellipse(px, py - 2 * k, 7 * k, 2.5 * k, 0, 0, Math.PI * 2); trG.fill();
+    trG.fillRect(px - 1.5 * k, py - 60 * k, 3 * k, 58 * k);
+    trG.fillRect(px - 4 * k, py - 62 * k, 8 * k, 3 * k);
+    const globo = trG.createRadialGradient(px - 3 * k, py - 73 * k, 1, px, py - 70 * k, 10 * k);
     globo.addColorStop(0, "#ffffff"); globo.addColorStop(0.5, "#c8f2e4"); globo.addColorStop(1, "#7fcfb8");
-    ctx.fillStyle = globo;
-    ctx.beginPath(); ctx.arc(px, py - 70 * k, 10 * k, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = "#7bb3a3"; ctx.lineWidth = 1; ctx.stroke();
+    trG.fillStyle = globo;
+    trG.beginPath(); trG.arc(px, py - 70 * k, 10 * k, 0, Math.PI * 2); trG.fill();
+    trG.strokeStyle = "#7bb3a3"; trG.lineWidth = 1; trG.stroke();
 }
 
 // Pavilhão central: colunas em volta, cortinas e mesinha dentro, cúpula dourada com gomos e o relógio na frente.
@@ -2904,107 +2910,146 @@ function trDrawGazebo(ang) {
     }
     const desenhaColuna = (p) => {
         const alto = (yTopo - yPiso) * k;
-        ctx.fillStyle = "#f4f6f8";
-        ctx.fillRect(p[0] - 3 * k, p[1] - alto, 6 * k, alto);
-        ctx.fillStyle = "#c9d3dc";
-        ctx.fillRect(p[0] + 1 * k, p[1] - alto, 2 * k, alto);
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(p[0] - 4.5 * k, p[1] - alto, 9 * k, 3 * k);
-        ctx.fillRect(p[0] - 4.5 * k, p[1] - 3 * k, 9 * k, 3 * k);
+        trG.fillStyle = "#f4f6f8";
+        trG.fillRect(p[0] - 3 * k, p[1] - alto, 6 * k, alto);
+        trG.fillStyle = "#c9d3dc";
+        trG.fillRect(p[0] + 1 * k, p[1] - alto, 2 * k, alto);
+        trG.fillStyle = "#ffffff";
+        trG.fillRect(p[0] - 4.5 * k, p[1] - alto, 9 * k, 3 * k);
+        trG.fillRect(p[0] - 4.5 * k, p[1] - 3 * k, 9 * k, 3 * k);
     };
     // interior: parede do fundo com cortinas lilás e a mesinha
-    ctx.fillStyle = "#cfd7e6";
-    ctx.beginPath();
-    ctx.ellipse(centro[0], centro[1], rx, ry, 0, Math.PI, 0, true);
-    ctx.lineTo(centroTopo[0] + rx, centroTopo[1]);
-    ctx.ellipse(centroTopo[0], centroTopo[1], rx, ry, 0, 0, Math.PI, true);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = "rgba(150, 110, 190, 0.55)";
+    trG.fillStyle = "#cfd7e6";
+    trG.beginPath();
+    trG.ellipse(centro[0], centro[1], rx, ry, 0, Math.PI, 0, true);
+    trG.lineTo(centroTopo[0] + rx, centroTopo[1]);
+    trG.ellipse(centroTopo[0], centroTopo[1], rx, ry, 0, 0, Math.PI, true);
+    trG.closePath();
+    trG.fill();
+    trG.fillStyle = "rgba(150, 110, 190, 0.55)";
     for (let i = 0; i < 6; i++) {
         const a = ang * 0.0 + i * Math.PI / 3;   // cortinas penduradas em volta (giram com o pavilhão)
         const r = trRot(Math.sin(a) * R * 0.9, Math.cos(a) * R * 0.9, ang);
         if (r[1] > 0) continue;                 // só as do fundo aparecem por trás da mesa
         const x = TR_CX + r[0] * k, yTop = centroTopo[1] + r[1] * TR_TILT * k;
-        ctx.beginPath();
-        ctx.moveTo(x - 9 * k, yTop); ctx.quadraticCurveTo(x, yTop + 30 * k, x - 4 * k, yTop + 55 * k);
-        ctx.lineTo(x + 4 * k, yTop + 55 * k); ctx.quadraticCurveTo(x, yTop + 30 * k, x + 9 * k, yTop);
-        ctx.fill();
+        trG.beginPath();
+        trG.moveTo(x - 9 * k, yTop); trG.quadraticCurveTo(x, yTop + 30 * k, x - 4 * k, yTop + 55 * k);
+        trG.lineTo(x + 4 * k, yTop + 55 * k); trG.quadraticCurveTo(x, yTop + 30 * k, x + 9 * k, yTop);
+        trG.fill();
     }
-    ctx.fillStyle = "#8a5a33";
-    ctx.beginPath(); ctx.ellipse(centro[0], centro[1] - 16 * k, 10 * k, 3 * k, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillRect(centro[0] - 1.5 * k, centro[1] - 16 * k, 3 * k, 15 * k);
+    trG.fillStyle = "#8a5a33";
+    trG.beginPath(); trG.ellipse(centro[0], centro[1] - 16 * k, 10 * k, 3 * k, 0, 0, Math.PI * 2); trG.fill();
+    trG.fillRect(centro[0] - 1.5 * k, centro[1] - 16 * k, 3 * k, 15 * k);
     // colunas: as de trás, depois as da frente
     const ordem = colunas.map((p, i) => i).sort((a, b) => colunas[a][2] - colunas[b][2]);
     ordem.forEach(i => { if (colunas[i][2] < 0) desenhaColuna(colunas[i]); });
     // mureta baixa na frente, entre as colunas
-    ctx.fillStyle = "rgba(240, 244, 248, 0.92)";
-    ctx.beginPath();
-    ctx.ellipse(centro[0], centro[1] - 7 * k, rx, ry, 0, 0, Math.PI);
-    ctx.lineTo(centro[0] - rx, centro[1]);
-    ctx.ellipse(centro[0], centro[1], rx, ry, 0, Math.PI, 0, true);
-    ctx.closePath();
-    ctx.fill();
+    trG.fillStyle = "rgba(240, 244, 248, 0.92)";
+    trG.beginPath();
+    trG.ellipse(centro[0], centro[1] - 7 * k, rx, ry, 0, 0, Math.PI);
+    trG.lineTo(centro[0] - rx, centro[1]);
+    trG.ellipse(centro[0], centro[1], rx, ry, 0, Math.PI, 0, true);
+    trG.closePath();
+    trG.fill();
     ordem.forEach(i => { if (colunas[i][2] >= 0) desenhaColuna(colunas[i]); });
     // faixa branca sob a cúpula
-    ctx.fillStyle = "#f7f9fb";
-    ctx.beginPath();
-    ctx.ellipse(centroTopo[0], centroTopo[1] - 6 * k, rx + 4 * k, ry + 1, 0, Math.PI, 0);
-    ctx.lineTo(centroTopo[0] + rx + 4 * k, centroTopo[1]);
-    ctx.ellipse(centroTopo[0], centroTopo[1], rx + 4 * k, ry + 1, 0, 0, Math.PI);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = "#b9c4ce"; ctx.lineWidth = 1; ctx.stroke();
+    trG.fillStyle = "#f7f9fb";
+    trG.beginPath();
+    trG.ellipse(centroTopo[0], centroTopo[1] - 6 * k, rx + 4 * k, ry + 1, 0, Math.PI, 0);
+    trG.lineTo(centroTopo[0] + rx + 4 * k, centroTopo[1]);
+    trG.ellipse(centroTopo[0], centroTopo[1], rx + 4 * k, ry + 1, 0, 0, Math.PI);
+    trG.closePath();
+    trG.fill();
+    trG.strokeStyle = "#b9c4ce"; trG.lineWidth = 1; trG.stroke();
     // cúpula dourada
     const yBase = centroTopo[1] - 6 * k, alturaDomo = 58 * k, rDomo = rx + 4 * k;
-    const ouro = ctx.createRadialGradient(centroTopo[0] - rDomo * 0.35, yBase - alturaDomo * 0.7, 4, centroTopo[0], yBase - alturaDomo * 0.4, rDomo * 1.1);
+    const ouro = trG.createRadialGradient(centroTopo[0] - rDomo * 0.35, yBase - alturaDomo * 0.7, 4, centroTopo[0], yBase - alturaDomo * 0.4, rDomo * 1.1);
     ouro.addColorStop(0, "#fff1a8"); ouro.addColorStop(0.45, "#f0c53f"); ouro.addColorStop(1, "#b5841b");
-    ctx.fillStyle = ouro;
-    ctx.beginPath();
-    ctx.moveTo(centroTopo[0] - rDomo, yBase);
-    ctx.bezierCurveTo(centroTopo[0] - rDomo, yBase - alturaDomo * 0.9, centroTopo[0] - rDomo * 0.35, yBase - alturaDomo, centroTopo[0], yBase - alturaDomo);
-    ctx.bezierCurveTo(centroTopo[0] + rDomo * 0.35, yBase - alturaDomo, centroTopo[0] + rDomo, yBase - alturaDomo * 0.9, centroTopo[0] + rDomo, yBase);
-    ctx.ellipse(centroTopo[0], yBase, rDomo, ry + 1, 0, 0, Math.PI);
-    ctx.closePath();
-    ctx.fill();
+    trG.fillStyle = ouro;
+    trG.beginPath();
+    trG.moveTo(centroTopo[0] - rDomo, yBase);
+    trG.bezierCurveTo(centroTopo[0] - rDomo, yBase - alturaDomo * 0.9, centroTopo[0] - rDomo * 0.35, yBase - alturaDomo, centroTopo[0], yBase - alturaDomo);
+    trG.bezierCurveTo(centroTopo[0] + rDomo * 0.35, yBase - alturaDomo, centroTopo[0] + rDomo, yBase - alturaDomo * 0.9, centroTopo[0] + rDomo, yBase);
+    trG.ellipse(centroTopo[0], yBase, rDomo, ry + 1, 0, 0, Math.PI);
+    trG.closePath();
+    trG.fill();
     // gomos da cúpula (giram junto com a câmera)
-    ctx.strokeStyle = "rgba(150, 105, 20, 0.55)";
-    ctx.lineWidth = 1.2;
+    trG.strokeStyle = "rgba(150, 105, 20, 0.55)";
+    trG.lineWidth = 1.2;
     for (let j = 0; j < 12; j++) {
         const a = j * Math.PI / 6;
         const r = trRot(Math.sin(a), Math.cos(a), ang);
         if (r[1] < 0.05) continue;
         const bx = centroTopo[0] + r[0] * rDomo, by = yBase + r[1] * (ry + 1);
-        ctx.beginPath();
-        ctx.moveTo(bx, by);
-        ctx.quadraticCurveTo(centroTopo[0] + r[0] * rDomo * 0.95, yBase - alturaDomo * 0.85, centroTopo[0], yBase - alturaDomo);
-        ctx.stroke();
+        trG.beginPath();
+        trG.moveTo(bx, by);
+        trG.quadraticCurveTo(centroTopo[0] + r[0] * rDomo * 0.95, yBase - alturaDomo * 0.85, centroTopo[0], yBase - alturaDomo);
+        trG.stroke();
     }
     // ponta com a bola dourada
-    ctx.fillStyle = "#e0b23a";
-    ctx.beginPath(); ctx.arc(centroTopo[0], yBase - alturaDomo - 6 * k, 6 * k, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(centroTopo[0] - 2 * k, yBase - alturaDomo - 11 * k); ctx.lineTo(centroTopo[0], yBase - alturaDomo - 24 * k); ctx.lineTo(centroTopo[0] + 2 * k, yBase - alturaDomo - 11 * k); ctx.fill();
+    trG.fillStyle = "#e0b23a";
+    trG.beginPath(); trG.arc(centroTopo[0], yBase - alturaDomo - 6 * k, 6 * k, 0, Math.PI * 2); trG.fill();
+    trG.beginPath(); trG.moveTo(centroTopo[0] - 2 * k, yBase - alturaDomo - 11 * k); trG.lineTo(centroTopo[0], yBase - alturaDomo - 24 * k); trG.lineTo(centroTopo[0] + 2 * k, yBase - alturaDomo - 11 * k); trG.fill();
     // relógio na frente da cúpula (some quando a câmera está atrás e fica fino de lado)
     const rel = trRot(0, 1, ang);
     if (rel[1] > 0.08) {
         const cxr = centroTopo[0] + rel[0] * rDomo * 0.82, cyr = yBase - alturaDomo * 0.38;
         const larg = 15 * k * rel[1];
-        ctx.fillStyle = "#fbf6e8";
-        ctx.fillRect(cxr - larg, cyr - 13 * k, larg * 2, 26 * k);
-        ctx.strokeStyle = "#c99a26"; ctx.lineWidth = 1.5; ctx.strokeRect(cxr - larg, cyr - 13 * k, larg * 2, 26 * k);
-        ctx.fillStyle = "#ffffff";
-        ctx.beginPath(); ctx.ellipse(cxr, cyr, 10 * k * rel[1], 10 * k, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = "#8a6a20"; ctx.lineWidth = 1.2; ctx.stroke();
-        ctx.strokeStyle = "#333333"; ctx.lineWidth = 1.4;
-        ctx.beginPath(); ctx.moveTo(cxr, cyr); ctx.lineTo(cxr, cyr - 7 * k); ctx.moveTo(cxr, cyr); ctx.lineTo(cxr + 4 * k * rel[1], cyr + 1 * k); ctx.stroke();
+        trG.fillStyle = "#fbf6e8";
+        trG.fillRect(cxr - larg, cyr - 13 * k, larg * 2, 26 * k);
+        trG.strokeStyle = "#c99a26"; trG.lineWidth = 1.5; trG.strokeRect(cxr - larg, cyr - 13 * k, larg * 2, 26 * k);
+        trG.fillStyle = "#ffffff";
+        trG.beginPath(); trG.ellipse(cxr, cyr, 10 * k * rel[1], 10 * k, 0, 0, Math.PI * 2); trG.fill();
+        trG.strokeStyle = "#8a6a20"; trG.lineWidth = 1.2; trG.stroke();
+        trG.strokeStyle = "#333333"; trG.lineWidth = 1.4;
+        trG.beginPath(); trG.moveTo(cxr, cyr); trG.lineTo(cxr, cyr - 7 * k); trG.moveTo(cxr, cyr); trG.lineTo(cxr + 4 * k * rel[1], cyr + 1 * k); trG.stroke();
     }
 }
 
-// O pavilhão gira devagar (uma volta a cada ~2 min): em vez de redesenhar tudo a cada quadro, a imagem é guardada
-// e só refeita quando a câmera anda meio grau (~6 vezes por segundo) — custa uma fração do desenho completo.
-const TR_PASSOS_POR_VOLTA = 720;
+// Vazio branco e chão infinito com rejuntes, desenhados a cada quadro (barato: ~90 linhas retas). É o chão
+// perto da câmera passando rápido que dá a sensação de que os lutadores estão andando em volta do pavilhão.
+function drawTimeRoomFloor(ang) {
+    const fundo = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    fundo.addColorStop(0, "#fdfbf6");
+    fundo.addColorStop(0.5, "#f5f0e6");
+    fundo.addColorStop(1, "#e8e1d3");
+    ctx.fillStyle = fundo;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const S = 90, L = 2000, perto = TR_D - TR_PERTO * 2;
+    ctx.strokeStyle = "rgba(160, 148, 125, 0.42)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    const linha = (x0, z0, x1, z1) => {
+        // corta a parte que ficaria atrás da câmera e projeta as duas pontas (reta continua reta)
+        const r0 = trRot(x0, z0, ang), r1 = trRot(x1, z1, ang);
+        let t0 = 0, t1 = 1;
+        if (r0[1] > perto && r1[1] > perto) return;
+        if (r0[1] > perto) t0 = (perto - r0[1]) / (r1[1] - r0[1]);
+        if (r1[1] > perto) t1 = (perto - r0[1]) / (r1[1] - r0[1]);
+        const pa = trProj(x0 + (x1 - x0) * t0, 0, z0 + (z1 - z0) * t0, ang);
+        const pb = trProj(x0 + (x1 - x0) * t1, 0, z0 + (z1 - z0) * t1, ang);
+        ctx.moveTo(pa[0], pa[1]);
+        ctx.lineTo(pb[0], pb[1]);
+    };
+    for (let v = -L; v <= L; v += S) {
+        linha(v, -L, v, L);
+        linha(-L, v, L, v);
+    }
+    ctx.stroke();
+    // névoa branca no horizonte: o chão some ao longe no vazio
+    const nevoa = ctx.createLinearGradient(0, TR_HY, 0, TR_HY + 150);
+    nevoa.addColorStop(0, "rgba(253, 251, 246, 1)");
+    nevoa.addColorStop(1, "rgba(253, 251, 246, 0)");
+    ctx.fillStyle = nevoa;
+    ctx.fillRect(0, 0, canvas.width, TR_HY + 150);
+}
+
+// O pavilhão gira devagar (uma volta a cada ~2 min): ele é desenhado numa imagem guardada, com fundo
+// transparente, e só refeito quando a câmera anda 1/4 de grau (a cada ~5 quadros); o chão é a cada quadro.
+const TR_PASSOS_POR_VOLTA = 1440;
 const trCena = { passo: null, canvas: null };
 function drawTimeRoomStage(ang) {
+    drawTimeRoomFloor(ang);
     const passo = Math.round(ang / (Math.PI * 2) * TR_PASSOS_POR_VOLTA) % TR_PASSOS_POR_VOLTA;
     if (!trCena.canvas) {
         trCena.canvas = document.createElement("canvas");
@@ -3012,35 +3057,18 @@ function drawTimeRoomStage(ang) {
         trCena.canvas.height = canvas.height;
     }
     const g = trCena.canvas.getContext && trCena.canvas.getContext("2d");
-    if (!g) { drawTimeRoomScene(ang); return; }
+    if (!g) { trG = ctx; drawTimeRoomScene(ang); return; }
     if (trCena.passo !== passo) {
-        // desenha na tela sem o tremor e guarda uma cópia
-        ctx.save();
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        drawTimeRoomScene(passo / TR_PASSOS_POR_VOLTA * Math.PI * 2);
-        ctx.restore();
         g.clearRect(0, 0, trCena.canvas.width, trCena.canvas.height);
-        g.drawImage(canvas, 0, 0);
+        trG = g;
+        try { drawTimeRoomScene(passo / TR_PASSOS_POR_VOLTA * Math.PI * 2); } finally { trG = ctx; }
         trCena.passo = passo;
     }
     ctx.drawImage(trCena.canvas, 0, 0);
 }
 
+// Só o pavilhão (fundo transparente). O vazio branco e o chão infinito são desenhados por drawTimeRoomFloor.
 function drawTimeRoomScene(ang) {
-    // o vazio branco infinito
-    const ceu = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    ceu.addColorStop(0, "#fdfbf6");
-    ceu.addColorStop(0.55, "#f6f1e8");
-    ceu.addColorStop(1, "#e9e2d5");
-    ctx.fillStyle = ceu;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    // sombra suave do pavilhão no "chão" branco
-    const c = Math.abs(Math.cos(ang)), s = Math.abs(Math.sin(ang));
-    ctx.fillStyle = "rgba(150, 140, 125, 0.18)";
-    ctx.beginPath();
-    ctx.ellipse(TR_CX, TR_GY + 6, (250 * c + 110 * s) * TR_K + 20, (110 * c + 250 * s) * TR_TILT * TR_K + 14, 0, 0, Math.PI * 2);
-    ctx.fill();
-
     // piso em degraus (das lajes mais baixas para as mais altas)
     const lajes = [
         { x0: -132, x1: 132, z0: 88, z1: 124, h: 2 },
@@ -3049,6 +3077,13 @@ function drawTimeRoomScene(ang) {
         { x0: -250, x1: 250, z0: -38, z1: 38, h: 7 },
         { x0: -95, x1: 95, z0: -58, z1: 58, h: 9 }
     ];
+    // sombra de verdade: o contorno das lajes no chão, um pouco deslocado (luz vindo do alto, à esquerda)
+    trG.fillStyle = "rgba(120, 110, 95, 0.16)";
+    lajes.forEach(sl => {
+        const chao = [[sl.x0, sl.z0], [sl.x1, sl.z0], [sl.x1, sl.z1], [sl.x0, sl.z1]].map(c => trProj(c[0] + 10, 0, c[1] + 8, ang));
+        trPoly(chao);
+        trG.fill();
+    });
     lajes.forEach(sl => trDrawSlab(sl, ang));
 
     // objetos em pé, do mais longe para o mais perto da câmera
@@ -3056,10 +3091,10 @@ function drawTimeRoomScene(ang) {
         { x: 0, z: 0, d: (a) => trDrawGazebo(a) },
         { x: -100, z: 0, d: (a) => trDrawWing(-100, a) },
         { x: 100, z: 0, d: (a) => trDrawWing(100, a) },
-        { x: -178, z: 0, d: (a, p) => trDrawHourglass(p[0], p[1], (gameplayClock * 0.02) % 1) },
-        { x: 178, z: 0, d: (a, p) => trDrawHourglass(p[0], p[1], (gameplayClock * 0.02 + 0.5) % 1) },
-        { x: -228, z: 0, d: (a, p) => trDrawLamp(p[0], p[1]) },
-        { x: 228, z: 0, d: (a, p) => trDrawLamp(p[0], p[1]) }
+        { x: -178, z: 0, d: (a, p) => trDrawHourglass(p[0], p[1], (gameplayClock * 0.02) % 1, p[3]) },
+        { x: 178, z: 0, d: (a, p) => trDrawHourglass(p[0], p[1], (gameplayClock * 0.02 + 0.5) % 1, p[3]) },
+        { x: -228, z: 0, d: (a, p) => trDrawLamp(p[0], p[1], p[3]) },
+        { x: 228, z: 0, d: (a, p) => trDrawLamp(p[0], p[1], p[3]) }
     ];
     objetos
         .map(o => ({ o, p: trProj(o.x, 7, o.z, ang) }))
