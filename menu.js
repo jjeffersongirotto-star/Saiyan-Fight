@@ -42,7 +42,8 @@ const MENU_LAYOUT = {
     optionsAudio: {
         sfxMinus: rect(560, 105, 34, 34), sfxPlus: rect(604, 105, 34, 34),
         bgmMinus: rect(560, 160, 34, 34), bgmPlus: rect(604, 160, 34, 34),
-        mute: rect(250, 205, 300, 38)
+        mute: rect(250, 205, 300, 38),
+        tracks: rect(250, 252, 300, 38)
     },
     ranking: { tabGeneral: rect(220, 52, 170, 30), tabStage: rect(410, 52, 170, 30) },
     stageVictory: { continue: rect(canvas.width / 2 - 90, 300, 180, 34) },
@@ -91,6 +92,13 @@ function getGamepadBindingRect(i) {
 }
 function getRankingStageTabRect(i) {
     return rect(40 + (i % 8) * 92, 90, 84, 30);
+}
+// TRILHAS SONORAS: uma linha por época, com o botão TOCAR/PAUSAR à direita.
+function getTrackRowRect(i) {
+    return rect(170, 109 + i * 47, 460, 41);
+}
+function getTrackPlayRect(i) {
+    return rect(522, 113 + i * 47, 100, 32);
 }
 function hitRect(x, y, r) {
     return inRect(x, y, r.x, r.y, r.w, r.h);
@@ -2528,7 +2536,14 @@ function handleMenuClick(x, y) {
         else if (hitRect(x, y, MENU_LAYOUT.optionsAudio.bgmMinus)) { bgmVolume = Math.max(0, bgmVolume - 0.1); saveAudioSettings(); }
         else if (hitRect(x, y, MENU_LAYOUT.optionsAudio.bgmPlus)) { bgmVolume = Math.min(1, bgmVolume + 0.1); saveAudioSettings(); }
         else if (hitRect(x, y, MENU_LAYOUT.optionsAudio.mute)) { isMuted = !isMuted; saveAudioSettings(); }
+        else if (hitRect(x, y, MENU_LAYOUT.optionsAudio.tracks)) setGameState("options_tracks");
         else if (hitRect(x, y, MENU_LAYOUT.back)) setGameState("options_main");
+    }
+    else if (gameState === "options_tracks") {
+        if (hitRect(x, y, MENU_LAYOUT.back)) setGameState("options_audio");
+        else BGM_TRACK_LIST.forEach((t, i) => {
+            if (hitRect(x, y, getTrackPlayRect(i)) || hitRect(x, y, getTrackRowRect(i))) toggleTrackPreview(t.era);
+        });
     }
     else if (gameState === "ranking") {
         if (hitRect(x, y, MENU_LAYOUT.back)) setGameState("menu");
@@ -3255,9 +3270,8 @@ function drawKiLightning(entity, cx, bottomY, w, h, forte) {
 const SAIBAMAN_SPRITE_SCALE = 2, SAIBAMAN_SPRITE_PAD = 8;
 const saibamanSpriteCache = new Map();
 
-function traceSaibamanFigure(g, pose, frame, flash) {
-    const skin = flash ? "#d9ffb0" : "#6cc43a", dark = flash ? "#8fd45a" : "#2f7a1c",
-          shade = flash ? "#b6f27e" : "#4b9b2a", light = flash ? "#ffffff" : "#a9ea6e", line = "#173d0d";
+function traceSaibamanFigure(g, pose, frame) {
+    const skin = "#6cc43a", dark = "#2f7a1c", shade = "#4b9b2a", light = "#a9ea6e", line = "#173d0d";
     const sway = pose === "voar" ? Math.sin(frame / 4 * Math.PI * 2) : 0;
     g.lineJoin = "round"; g.lineCap = "round";
 
@@ -3323,8 +3337,8 @@ function traceSaibamanFigure(g, pose, frame, flash) {
     for (let k = -1; k <= 1; k++) { g.beginPath(); g.moveTo(hx, hy); g.lineTo(hx - 2.2, hy + k * 1.8); g.stroke(); }
 }
 
-function getSaibamanSprite(pose, frame, flash) {
-    const key = pose + frame + (flash ? "f" : "");
+function getSaibamanSprite(pose, frame) {
+    const key = pose + frame;
     let c = saibamanSpriteCache.get(key);
     if (c) return c;
     c = document.createElement("canvas");
@@ -3334,14 +3348,14 @@ function getSaibamanSprite(pose, frame, flash) {
     if (g) {
         g.scale(SAIBAMAN_SPRITE_SCALE, SAIBAMAN_SPRITE_SCALE);
         g.translate(SAIBAMAN_SPRITE_PAD, SAIBAMAN_SPRITE_PAD + 1);
-        traceSaibamanFigure(g, pose, frame, flash);
+        traceSaibamanFigure(g, pose, frame);
     }
     saibamanSpriteCache.set(key, c);
     return c;
 }
 
-function drawSaibamanSprite(s, pose, frame, flash, offsetY = 0) {
-    const img = getSaibamanSprite(pose, frame, flash);
+function drawSaibamanSprite(s, pose, frame, offsetY = 0) {
+    const img = getSaibamanSprite(pose, frame);
     ctx.drawImage(img, s.x - SAIBAMAN_SPRITE_PAD, s.y - SAIBAMAN_SPRITE_PAD + offsetY,
         32 + SAIBAMAN_SPRITE_PAD * 2, 40 + SAIBAMAN_SPRITE_PAD * 2);
 }
@@ -3357,7 +3371,7 @@ function drawSaibamans() {
             const rise = 1 - Math.pow(1 - p, 2);
             ctx.save();
             ctx.beginPath(); ctx.rect(s.x - 20, 0, s.w + 40, groundLine); ctx.clip();
-            drawSaibamanSprite(s, "saltar", 0, false, (1 - rise) * (s.h + 4));
+            drawSaibamanSprite(s, "saltar", 0, (1 - rise) * (s.h + 4));
             ctx.restore();
             ctx.fillStyle = "#4a3418";
             ctx.beginPath(); ctx.ellipse(cx, groundLine, 16 + rise * 4, 4, 0, 0, Math.PI * 2); ctx.fill();
@@ -3373,25 +3387,48 @@ function drawSaibamans() {
             ctx.moveTo(cx - 6, s.y + s.h + 4); ctx.lineTo(cx - 6, s.y + s.h + 18);
             ctx.moveTo(cx + 6, s.y + s.h + 2); ctx.lineTo(cx + 6, s.y + s.h + 14);
             ctx.stroke();
-            drawSaibamanSprite(s, "saltar", 0, false);
+            drawSaibamanSprite(s, "saltar", 0);
         } else if (s.phase === "agarrar") {
-            // pisca cada vez mais rápido até explodir
-            const left = Math.max(0, s.grabTimer) / SAIBAMAN_GRAB_FRAMES;
-            const period = 4 + left * 10;
-            const flash = Math.floor(s.grabTimer / period) % 2 === 0;
-            const glow = 1 - left;
-            ctx.globalAlpha = 0.25 + glow * 0.45;
-            ctx.fillStyle = "#fff3a0";
-            ctx.beginPath(); ctx.arc(cx, s.y + s.h / 2, 14 + glow * 14, 0, Math.PI * 2); ctx.fill();
-            ctx.globalAlpha = 1;
-            drawSaibamanSprite(s, "agarrar", 0, flash);
+            // desenhado depois do herói (drawGrabbingSaibamans), para ficar na frente das pernas
+        } else if (s.phase === "investir") {
+            // partindo para cima do herói, braços para a frente
+            ctx.strokeStyle = "rgba(190, 255, 150, 0.5)"; ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(s.x + s.w + 2, s.y + 14); ctx.lineTo(s.x + s.w + 16, s.y + 14);
+            ctx.moveTo(s.x + s.w + 2, s.y + 26); ctx.lineTo(s.x + s.w + 12, s.y + 26);
+            ctx.stroke();
+            drawSaibamanSprite(s, "agarrar", 0);
         } else {
             const frame = Math.floor((s.hoverTime || 0) * 2.4) % 4;
-            drawSaibamanSprite(s, "voar", frame, false);
+            drawSaibamanSprite(s, "voar", frame);
         }
         ctx.restore();
     });
 
+}
+
+// Saibaman abraçado nas pernas do herói: desenhado por cima do herói (na frente dele), com o corpo normal
+// (sem transparência), tremendo cada vez mais e com uma luz no peito piscando mais rápido até explodir.
+function drawGrabbingSaibamans() {
+    const hover = Math.sin(player.hoverTime || 0) * 3;   // acompanha a flutuação do desenho do herói
+    world.saibamans.forEach(s => {
+        if (s.phase !== "agarrar") return;
+        const left = Math.max(0, s.grabTimer) / SAIBAMAN_GRAB_FRAMES;
+        const treme = (1 - left) * 2;
+        const jx = (Math.floor(s.grabTimer) % 2 ? 1 : -1) * treme;
+        const x = s.x + jx, y = s.y + hover;
+        ctx.save();
+        drawSaibamanSprite({ x, y }, "agarrar", 0);
+        const period = 3 + left * 9;
+        if (Math.floor(s.grabTimer / period) % 2 === 0) {
+            ctx.fillStyle = "#fff6b0";
+            ctx.beginPath(); ctx.arc(x + s.w / 2 - 1, y + 23, 2.5 + (1 - left) * 2.5, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.restore();
+    });
+}
+
+function drawSaibamanBlasts() {
     // explosões dos abraços
     world.blasts.forEach(b => {
         const a = Math.max(0, b.life);
@@ -3970,6 +4007,8 @@ function render() {
         });
 
         drawPlayerEntity(player, characterDB[selectedCharacter], false);
+        drawGrabbingSaibamans();
+        drawSaibamanBlasts();   // explosão por cima do herói
         drawPlayerEntity(player2, characterDB[selectedBoss], true);
 
         drawObstacles();
@@ -4429,7 +4468,36 @@ function render() {
         drawBtnAt(MENU_LAYOUT.optionsAudio.bgmPlus, "+", "#86efac");
 
         drawBtnAt(MENU_LAYOUT.optionsAudio.mute, isMuted ? "ÁUDIO: MUTADO" : "ÁUDIO: ATIVADO", isMuted ? "#fca5a5" : "#86efac");
+        drawBtnAt(MENU_LAYOUT.optionsAudio.tracks, "♪ TRILHAS SONORAS", "#fde68a");
 
+        drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
+    }
+    else if (gameState === "options_tracks") {
+        drawDragonBallMenuBackdrop(false);
+        drawDragonBallPanel(150, 50, 500, 260, "TRILHAS SONORAS", "Toque para ouvir a música de cada fase");
+        BGM_TRACK_LIST.forEach((t, i) => {
+            const row = getTrackRowRect(i);
+            const tocando = bgmPreviewEra === t.era;
+            ctx.fillStyle = tocando ? "rgba(253, 230, 138, 0.18)" : "rgba(15, 23, 42, 0.55)";
+            ctx.fillRect(row.x, row.y, row.w, row.h);
+            ctx.strokeStyle = tocando ? "#fde68a" : "rgba(148, 163, 184, 0.4)";
+            ctx.lineWidth = tocando ? 2 : 1;
+            ctx.strokeRect(row.x, row.y, row.w, row.h);
+            ctx.textAlign = "left";
+            ctx.fillStyle = tocando ? "#fde68a" : "#e2e8f0";
+            ctx.font = "bold 13px 'Segoe UI', sans-serif";
+            ctx.fillText((tocando ? "♪ " : "") + t.nome, row.x + 12, row.y + 18);
+            ctx.fillStyle = "#94a3b8";
+            ctx.font = "11px 'Segoe UI', sans-serif";
+            ctx.fillText("Fases: " + t.fases, row.x + 12, row.y + 34);
+            drawBtnAt(getTrackPlayRect(i), tocando ? "❚❚ PAUSAR" : "▶ TOCAR", tocando ? "#fca5a5" : "#86efac");
+        });
+        if (isMuted || bgmVolume <= 0) {
+            ctx.textAlign = "center";
+            ctx.fillStyle = "#fca5a5";
+            ctx.font = "12px 'Segoe UI', sans-serif";
+            ctx.fillText(isMuted ? "O áudio está mutado: ative em VOLUME E ÁUDIO para ouvir" : "O volume BGM está em 0%: aumente para ouvir", canvas.width / 2, 302);
+        }
         drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
     }
     else if (gameState === "ranking") {

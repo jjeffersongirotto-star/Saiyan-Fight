@@ -499,7 +499,10 @@ function getDefaultTouchHudLayout(viewportWidth) {
 // Como no anime: o Saibaman nasce da terra (brotar), dá um salto para cima (saltar) e depois avança voando
 // para a esquerda (voar). "agarrar" (abraço que explode) é tratado em gameplay.js, que conhece o jogador.
 const SAIBAMAN_SPROUT_FRAMES = 28;   // tempo saindo da terra (sem acertar ninguém)
-const SAIBAMAN_GRAB_FRAMES = 40;     // tempo abraçado antes de explodir (~0,7 s: dá tempo de atirar nele)
+const SAIBAMAN_GRAB_FRAMES = 40;     // tempo abraçado nas pernas antes de explodir (~0,7 s; não tem como escapar)
+const SAIBAMAN_LUNGE_RADIUS = 90;    // passou perto assim do herói: avança para agarrar
+const SAIBAMAN_LUNGE_SPEED = 5.5;
+const SAIBAMAN_LUNGE_MAX_FRAMES = 50; // não alcançou nesse tempo: desiste e volta a voar
 const SAIBAMAN_GRAVITY = 0.32;
 
 function createSaibaman(x, groundY, targetY, speed) {
@@ -535,6 +538,26 @@ function stepSaibamanMotion(s, dt) {
         s.hoverTime += 0.05 * f;
         s.y += Math.sin(s.hoverTime) * 1.5 * f;
     }
+    return s;
+}
+
+// Avanço para agarrar: se o Saibaman voando passa a menos de SAIBAMAN_LUNGE_RADIUS do alvo (centro do herói),
+// ele parte para cima dele. Devolve true enquanto estiver avançando.
+function shouldSaibamanLunge(s, tx, ty) {
+    if (s.phase !== "voar") return false;
+    const dx = tx - (s.x + s.w / 2), dy = ty - (s.y + s.h / 2);
+    return dx * dx + dy * dy <= SAIBAMAN_LUNGE_RADIUS * SAIBAMAN_LUNGE_RADIUS;
+}
+
+function stepSaibamanLunge(s, tx, ty, dt) {
+    const f = dt * 60;
+    s.phaseTime += f;
+    const dx = tx - (s.x + s.w / 2), dy = ty - (s.y + s.h / 2);
+    const d = Math.hypot(dx, dy) || 1;
+    const passo = Math.min(d, SAIBAMAN_LUNGE_SPEED * f);
+    s.x += dx / d * passo;
+    s.y += dy / d * passo;
+    if (s.phaseTime >= SAIBAMAN_LUNGE_MAX_FRAMES) { s.phase = "voar"; s.phaseTime = 0; }
     return s;
 }
 
@@ -610,6 +633,10 @@ if (typeof module !== "undefined" && module.exports) {
         shuffleArray,
         SAIBAMAN_SPROUT_FRAMES,
         SAIBAMAN_GRAB_FRAMES,
+        SAIBAMAN_LUNGE_RADIUS,
+        SAIBAMAN_LUNGE_MAX_FRAMES,
+        shouldSaibamanLunge,
+        stepSaibamanLunge,
         createSaibaman,
         isSaibamanActive,
         stepSaibamanMotion,

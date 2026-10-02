@@ -404,10 +404,9 @@ function warmSelectedFighters() {
     preloadCharacterFrames(selectedBoss, 1);
     // desenhos do Saibaman (andando, saltando, abraçando): prontos antes do primeiro aparecer
     if (typeof getSaibamanSprite === "function") {
-        for (let f = 0; f < 4; f++) backgroundWork.light.push(() => getSaibamanSprite("voar", f, false));
-        backgroundWork.light.push(() => getSaibamanSprite("saltar", 0, false));
-        backgroundWork.light.push(() => getSaibamanSprite("agarrar", 0, false));
-        backgroundWork.light.push(() => getSaibamanSprite("agarrar", 0, true));
+        for (let f = 0; f < 4; f++) backgroundWork.light.push(() => getSaibamanSprite("voar", f));
+        backgroundWork.light.push(() => getSaibamanSprite("saltar", 0));
+        backgroundWork.light.push(() => getSaibamanSprite("agarrar", 0));
     }
     // quadros da aura de ki (cor de cada lutador + dourada da transformação), um por tarefa
     if (typeof getKiAuraFrame === "function") {
@@ -1062,8 +1061,8 @@ function spawnSaibaman() {
     createImpactParticles(x + s.w / 2, canvas.height - 4, "#7a5a32", 8);
 }
 
-// Abraço do Saibaman: ele se agarra no jogador, pisca e explode. O jogador continua com todo o controle
-// (pode fugir de outros golpes e atirar nele para soltá-lo antes da explosão).
+// Abraço do Saibaman: ele agarra as pernas do herói pela frente e explode. O herói continua com os braços
+// livres (atira, carrega ki, defende outros golpes), mas não tem como se soltar: a explosão sempre tira 1 de vida.
 function explodeSaibaman(s) {
     const cx = s.x + s.w / 2, cy = s.y + s.h / 2;
     world.blasts.push({ x: cx, y: cy, r: 6, maxR: 46, life: 1 });
@@ -1071,23 +1070,15 @@ function explodeSaibaman(s) {
     createImpactParticles(cx, cy, "#7dff5a", 6);
     triggerScreenShake(7, 14);
     playSound("hit");
-    if (player.invulnerableTimer === 0) {
-        if (player.shield) {
-            player.shield = false;
-            playSound("reflect");
-        } else {
-            player.hp--;
-            runStats.hitsReceived++;
-            takenDamageInRun = true;
-            player.parryCombo = 0;
-            player.parryComboTimer = 0;
-            player.lastParryComboBonus = 0;
-
-            if (player.hp <= 0 && !attemptZenkaiRevival()) {
-                triggerGameOver();
-            }
-        }
-        player.invulnerableTimer = 30;
+    player.hp--;
+    runStats.hitsReceived++;
+    takenDamageInRun = true;
+    player.parryCombo = 0;
+    player.parryComboTimer = 0;
+    player.lastParryComboBonus = 0;
+    player.invulnerableTimer = 30;
+    if (player.hp <= 0 && !attemptZenkaiRevival()) {
+        triggerGameOver();
     }
 }
 
@@ -1709,7 +1700,8 @@ function update(dt) {
         if (obs.fromPlayer) {
             for (let j = world.saibamans.length - 1; j >= 0; j--) {
                 let s = world.saibamans[j];
-                if (isSaibamanActive(s) && circleHitsEntity(obs.x, obs.y, obs.radius, s)) {
+                // agarrado nas pernas ele não pode mais ser derrubado: a explosão é certa
+                if (isSaibamanActive(s) && s.phase !== "agarrar" && circleHitsEntity(obs.x, obs.y, obs.radius, s)) {
                     s.hp--;
                     createImpactParticles(obs.x, obs.y, obs.color, 10);
                     playSound("hit");
@@ -1789,7 +1781,7 @@ function update(dt) {
     for (let i = world.saibamans.length - 1; i >= 0; i--) {
         let s = world.saibamans[i];
         if (s.phase === "agarrar") {
-            // fica grudado nas costas do jogador enquanto a contagem corre
+            // fica grudado nas pernas do herói, pela frente, enquanto a contagem corre
             s.x = player.x + s.grabOffsetX;
             s.y = player.y + s.grabOffsetY;
             s.grabTimer -= dt * 60;
@@ -1799,14 +1791,27 @@ function update(dt) {
             }
             continue;
         }
-        stepSaibamanMotion(s, dt);
+        // passou perto do herói: parte para cima dele (mira nas pernas)
+        const alvoX = player.x + player.w / 2, alvoY = player.y + player.h * 0.7;
+        const podeAgarrar = !someoneGrabbing && player.invulnerableTimer === 0;
+        if (s.phase === "investir") {
+            if (podeAgarrar) stepSaibamanLunge(s, alvoX, alvoY, dt);
+            else { s.phase = "voar"; s.phaseTime = 0; }
+        } else if (podeAgarrar && shouldSaibamanLunge(s, alvoX, alvoY)) {
+            s.phase = "investir";
+            s.phaseTime = 0;
+        } else {
+            stepSaibamanMotion(s, dt);
+        }
 
-        if (isSaibamanActive(s) && !someoneGrabbing && player.invulnerableTimer === 0 &&
+        if (isSaibamanActive(s) && podeAgarrar &&
             rectsOverlap(getHitboxRect(s), getHitboxRect(player))) {
             s.phase = "agarrar";
             s.grabTimer = SAIBAMAN_GRAB_FRAMES;
-            s.grabOffsetX = (player.w - s.w) / 2 - player.w * 0.28;
-            s.grabOffsetY = (player.h - s.h) / 2;
+            // na frente do herói, na altura das pernas (os braços dele ficam livres)
+            // (o desenho do herói é maior que a caixa, com os pés perto da base: braços do Saibaman nas canelas/joelhos)
+            s.grabOffsetX = player.w * 0.46;
+            s.grabOffsetY = player.h * 0.25;
             addFloatingText({ text: "AGARROU!", x: player.x + player.w / 2, y: player.y - 8, alpha: 1, color: "#7dff5a" });
             continue;
         }
