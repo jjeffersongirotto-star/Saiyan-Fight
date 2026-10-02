@@ -29,7 +29,7 @@ run("for (let i = 0; i < 10; i++) { world.stageScrollX = 3000 + i * 1.5; drawSta
 check("avançando 10 quadros, o pavilhão é redesenhado só 1 ou 2 vezes (o resto é a imagem guardada)", run("__n") <= 2);
 run("drawTimeRoomScene = __orig;");
 
-check("câmera com perspectiva e chão infinito redesenhado a cada quadro (o chão perto passa rápido)", menu.includes("function drawTimeRoomFloor") && menu.includes("drawTimeRoomFloor(ang);") && menu.includes("TR_F / Math.max(TR_PERTO, TR_D - r[1])"));
+check("câmera com perspectiva e chão infinito redesenhado a cada quadro (o chão perto passa rápido)", menu.includes("function drawTimeRoomFloor") && menu.includes("drawTimeRoomFloor(ang);") && menu.includes("trCam.F / Math.max(trCam.PERTO, trCam.D - r[1])"));
 check("sem a sombra oval que parecia um prato girando", !menu.slice(menu.indexOf("function drawTimeRoomScene"), menu.indexOf("// ==================== DESENHO DAS ARENAS")).includes("ellipse(TR_CX, TR_GY"));
 // o chão perto da câmera anda bem mais que o pavilhão quando a câmera gira um pouco
 check("o chão perto dos lutadores se mexe mais que o pavilhão (parece que eles andam em volta)", run(`(() => {

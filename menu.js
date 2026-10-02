@@ -2739,6 +2739,9 @@ function handleMenuClick(x, y) {
 const TR_K = 1.12, TR_CX = 400, TR_GY = 236, TR_TILT = 0.3;
 const TR_D = 700, TR_H = 210, TR_F = TR_K * TR_D, TR_HY = TR_GY - TR_K * TR_H, TR_PERTO = 40;
 let trG = ctx;   // onde o pavilhão é desenhado (a imagem guardada; ver drawTimeRoomStage)
+// Câmera usada por trProj. A Sala do Tempo usa TR_CAM; a Nave de Freeza troca para NV_CAM enquanto desenha.
+const TR_CAM = { CX: TR_CX, HY: TR_HY, D: TR_D, H: TR_H, F: TR_F, PERTO: TR_PERTO };
+let trCam = TR_CAM;
 
 function trRot(x, z, ang) {
     const c = Math.cos(ang), s = Math.sin(ang);
@@ -2747,8 +2750,8 @@ function trRot(x, z, ang) {
 // planta -> tela, com perspectiva: [x, y, profundidade (+ = perto), escala naquele ponto]
 function trProj(x, y, z, ang) {
     const r = trRot(x, z, ang);
-    const esc = TR_F / Math.max(TR_PERTO, TR_D - r[1]);
-    return [TR_CX + r[0] * esc, TR_HY + (TR_H - y) * esc, r[1], esc];
+    const esc = trCam.F / Math.max(trCam.PERTO, trCam.D - r[1]);
+    return [trCam.CX + r[0] * esc, trCam.HY + (trCam.H - y) * esc, r[1], esc];
 }
 function trPoly(pts) {
     trG.beginPath();
@@ -3048,23 +3051,28 @@ function drawTimeRoomFloor(ang) {
 // transparente, e só refeito quando a câmera anda 1/4 de grau (a cada ~5 quadros); o chão é a cada quadro.
 const TR_PASSOS_POR_VOLTA = 1440;
 const trCena = { passo: null, canvas: null };
+// Camada guardada (fundo transparente) de uma construção que a câmera rodeia: só é refeita quando o ângulo
+// anda 1/4 de grau. Usada pela Sala do Tempo e pela Nave de Freeza.
+function drawCachedOrbitLayer(cena, ang, desenhar) {
+    const passo = Math.round(ang / (Math.PI * 2) * TR_PASSOS_POR_VOLTA) % TR_PASSOS_POR_VOLTA;
+    if (!cena.canvas) {
+        cena.canvas = document.createElement("canvas");
+        cena.canvas.width = canvas.width;
+        cena.canvas.height = canvas.height;
+    }
+    const g = cena.canvas.getContext && cena.canvas.getContext("2d");
+    if (!g) { trG = ctx; desenhar(ang); return; }
+    if (cena.passo !== passo) {
+        g.clearRect(0, 0, cena.canvas.width, cena.canvas.height);
+        trG = g;
+        try { desenhar(passo / TR_PASSOS_POR_VOLTA * Math.PI * 2); } finally { trG = ctx; }
+        cena.passo = passo;
+    }
+    ctx.drawImage(cena.canvas, 0, 0);
+}
 function drawTimeRoomStage(ang) {
     drawTimeRoomFloor(ang);
-    const passo = Math.round(ang / (Math.PI * 2) * TR_PASSOS_POR_VOLTA) % TR_PASSOS_POR_VOLTA;
-    if (!trCena.canvas) {
-        trCena.canvas = document.createElement("canvas");
-        trCena.canvas.width = canvas.width;
-        trCena.canvas.height = canvas.height;
-    }
-    const g = trCena.canvas.getContext && trCena.canvas.getContext("2d");
-    if (!g) { trG = ctx; drawTimeRoomScene(ang); return; }
-    if (trCena.passo !== passo) {
-        g.clearRect(0, 0, trCena.canvas.width, trCena.canvas.height);
-        trG = g;
-        try { drawTimeRoomScene(passo / TR_PASSOS_POR_VOLTA * Math.PI * 2); } finally { trG = ctx; }
-        trCena.passo = passo;
-    }
-    ctx.drawImage(trCena.canvas, 0, 0);
+    drawCachedOrbitLayer(trCena, ang, drawTimeRoomScene);
 }
 
 // Só o pavilhão (fundo transparente). O vazio branco e o chão infinito são desenhados por drawTimeRoomFloor.
@@ -3326,6 +3334,291 @@ function drawCellArenaStage(ang) {
         .forEach(p => caDrawPillar(p[0], p[1], p[3]));
 }
 
+// ==================== NAVE DE FREEZA: NAVE POUSADA EM NAMEK, CÂMERA DÁ A VOLTA ====================
+// Como na Sala do Tempo: a nave fica parada no meio e os lutadores dão a volta nela. O chão de Namek (azul-
+// esverdeado, com lagos, pedras e tufos) passa perto da câmera; o céu verde e os morros de pedra giram ao fundo.
+// A nave: casco branco embaixo, faixa preta com escotilhas azuis, cúpula branca com a faixa listrada cor de
+// madeira, escotilha escura no topo, a cabine roxa redonda, os "ovos" amarelos em volta e as pernas mecânicas.
+const NV_CAM = { CX: 400, HY: 138, D: 620, H: 112, F: 620, PERTO: 30 };
+const nvCena = { passo: null, canvas: null };
+
+// elipse de uma "latitude" da nave (círculo de raio r na altura y), já em perspectiva
+function nvAnel(y, r, ang) {
+    const c = trProj(0, y, 0, ang), fr = trProj(0, y, r, 0), tr = trProj(0, y, -r, 0);
+    return { cx: c[0], cy: c[1], rx: r * c[3], ry: Math.max(1, (fr[1] - tr[1]) / 2) };
+}
+// faixa entre duas latitudes (só a metade da frente aparece)
+function nvFaixa(a1, a2, cor) {
+    trG.fillStyle = cor;
+    trG.beginPath();
+    trG.ellipse(a1.cx, a1.cy, a1.rx, a1.ry, 0, Math.PI, 0, true);
+    trG.lineTo(a2.cx + a2.rx, a2.cy);
+    trG.ellipse(a2.cx, a2.cy, a2.rx, a2.ry, 0, 0, Math.PI, false);
+    trG.closePath();
+    trG.fill();
+}
+
+function nvDrawLeg(a, ang, frente) {
+    // perna mecânica dobrada: quadril no casco, joelho para fora, pé no chão
+    const ox = Math.sin(a), oz = Math.cos(a);
+    const P = (r, y) => trProj(ox * r, y, oz * r, ang);
+    const quadril = P(118, 44), joelho = P(178, 58), pe = P(196, 0);
+    const k = quadril[3];
+    trG.lineCap = "round";
+    trG.strokeStyle = frente ? "#6b7280" : "#525866";
+    trG.lineWidth = 9 * k;
+    trG.beginPath(); trG.moveTo(quadril[0], quadril[1]); trG.lineTo(joelho[0], joelho[1]); trG.lineTo(pe[0], pe[1]); trG.stroke();
+    trG.strokeStyle = frente ? "#c7ccd4" : "#9aa1ab";
+    trG.lineWidth = 4 * k;
+    trG.beginPath(); trG.moveTo(quadril[0], quadril[1]); trG.lineTo(joelho[0], joelho[1]); trG.lineTo(pe[0], pe[1]); trG.stroke();
+    trG.fillStyle = "#4b5563";
+    trG.beginPath(); trG.ellipse(pe[0], pe[1], 12 * pe[3], 4 * pe[3], 0, 0, Math.PI * 2); trG.fill();
+    trG.fillStyle = "#9ca3af";
+    trG.beginPath(); trG.arc(joelho[0], joelho[1], 5 * joelho[3], 0, Math.PI * 2); trG.fill();
+}
+
+function nvDrawPod(a, ang) {
+    // "ovo" amarelo em volta da base
+    const p = trProj(Math.sin(a) * 146, 46, Math.cos(a) * 146, ang), k = p[3];
+    const g = trG.createRadialGradient(p[0] - 6 * k, p[1] - 10 * k, 2, p[0], p[1], 22 * k);
+    g.addColorStop(0, "#fff7b0"); g.addColorStop(0.5, "#f5d020"); g.addColorStop(1, "#c79a0a");
+    trG.fillStyle = g;
+    trG.beginPath(); trG.ellipse(p[0], p[1], 13 * k, 20 * k, 0, 0, Math.PI * 2); trG.fill();
+    trG.strokeStyle = "#8a6a00"; trG.lineWidth = 1; trG.stroke();
+}
+
+function drawFreezaShipScene(ang) {
+    // sombra da nave no chão
+    const sombra = [];
+    for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2; sombra.push(trProj(Math.sin(a) * 175 + 12, 0, Math.cos(a) * 175 + 10, ang)); }
+    trG.fillStyle = "rgba(20, 60, 80, 0.28)";
+    trPoly(sombra);
+    trG.fill();
+
+    // pernas e ovos de trás (ficam atrás do casco)
+    const pernas = [], ovos = [];
+    for (let i = 0; i < 8; i++) pernas.push(i * Math.PI / 4 + Math.PI / 8);
+    for (let i = 0; i < 12; i++) ovos.push(i * Math.PI / 6);
+    const naFrente = (a) => trRot(Math.sin(a), Math.cos(a), ang)[1] > 0;
+    const porProfundidade = (lista) => lista.slice().sort((a, b) => trRot(Math.sin(a), Math.cos(a), ang)[1] - trRot(Math.sin(b), Math.cos(b), ang)[1]);
+    porProfundidade(pernas).forEach(a => { if (!naFrente(a)) nvDrawLeg(a, ang, false); });
+    porProfundidade(ovos).forEach(a => { if (!naFrente(a)) nvDrawPod(a, ang); });
+
+    // casco de baixo (branco acinzentado, afunilando para baixo)
+    const a30 = nvAnel(30, 108, ang), a60 = nvAnel(60, 158, ang), a82 = nvAnel(82, 162, ang);
+    trG.fillStyle = "#c9d1da";
+    trG.beginPath(); trG.ellipse(a60.cx, a60.cy, a60.rx, a60.ry, 0, 0, Math.PI * 2); trG.fill();
+    nvFaixa(a30, a60, "#e6ebf0");
+    trG.fillStyle = "#d5dce3";
+    trG.beginPath(); trG.ellipse(a30.cx, a30.cy, a30.rx, a30.ry, 0, 0, Math.PI * 2); trG.fill();
+    // faixa preta com as escotilhas azuis
+    nvFaixa(a60, a82, "#1c1c2a");
+    trG.fillStyle = "#26263a";
+    trG.beginPath(); trG.ellipse(a82.cx, a82.cy, a82.rx, a82.ry, 0, 0, Math.PI * 2); trG.fill();
+    for (let i = 0; i < 18; i++) {
+        const a = i / 18 * Math.PI * 2;
+        const r = trRot(Math.sin(a), Math.cos(a), ang);
+        if (r[1] < 0.15) continue;
+        const p = trProj(Math.sin(a) * 162, 71, Math.cos(a) * 162, ang), k = p[3];
+        trG.fillStyle = "#7fb2e6";
+        trG.beginPath(); trG.ellipse(p[0], p[1], 6 * k * r[1], 6 * k, 0, 0, Math.PI * 2); trG.fill();
+        trG.fillStyle = "#d6ecff";
+        trG.beginPath(); trG.ellipse(p[0] - 1.5 * k * r[1], p[1] - 2 * k, 2 * k * r[1], 2 * k, 0, 0, Math.PI * 2); trG.fill();
+    }
+
+    // cúpula branca com a faixa cor de madeira listrada
+    const d0 = nvAnel(82, 158, ang), d1 = nvAnel(100, 150, ang), d2 = nvAnel(124, 124, ang), dTopo = nvAnel(146, 70, ang);
+    const alturaDomo = (a82.cy - dTopo.cy) + dTopo.ry * 0.6;
+    const branco = trG.createLinearGradient(d0.cx - d0.rx, 0, d0.cx + d0.rx, 0);
+    branco.addColorStop(0, "#c7ced6"); branco.addColorStop(0.35, "#f7f9fb"); branco.addColorStop(1, "#b9c1ca");
+    trG.fillStyle = branco;
+    trG.beginPath();
+    trG.moveTo(d0.cx - d0.rx, d0.cy);
+    trG.bezierCurveTo(d0.cx - d0.rx, d0.cy - alturaDomo * 0.7, d0.cx - d0.rx * 0.45, d0.cy - alturaDomo, d0.cx, d0.cy - alturaDomo);
+    trG.bezierCurveTo(d0.cx + d0.rx * 0.45, d0.cy - alturaDomo, d0.cx + d0.rx, d0.cy - alturaDomo * 0.7, d0.cx + d0.rx, d0.cy);
+    trG.ellipse(d0.cx, d0.cy, d0.rx, d0.ry, 0, 0, Math.PI);
+    trG.closePath();
+    trG.fill();
+    nvFaixa(d1, d2, "#c98a52");
+    // listras da faixa (giram com a câmera)
+    trG.strokeStyle = "rgba(120, 70, 30, 0.6)";
+    trG.lineWidth = 1;
+    trG.beginPath();
+    for (let i = 0; i < 40; i++) {
+        const a = i / 40 * Math.PI * 2;
+        const r = trRot(Math.sin(a), Math.cos(a), ang);
+        if (r[1] < 0.05) continue;
+        const p1 = trProj(Math.sin(a) * 150, 100, Math.cos(a) * 150, ang), p2 = trProj(Math.sin(a) * 124, 124, Math.cos(a) * 124, ang);
+        trG.moveTo(p1[0], p1[1]); trG.lineTo(p2[0], p2[1]);
+    }
+    trG.stroke();
+    // escotilha escura no topo
+    trG.fillStyle = "#3b3f4a";
+    trG.beginPath(); trG.ellipse(dTopo.cx, d0.cy - alturaDomo * 0.93, dTopo.rx * 0.55, Math.max(2, dTopo.ry * 0.55), 0, 0, Math.PI * 2); trG.fill();
+    trG.strokeStyle = "#9aa3ad"; trG.lineWidth = 2; trG.stroke();
+
+    // cabine roxa (bolha) na lateral da cúpula, só quando está virada para a câmera
+    const aCab = -0.85;
+    const rc = trRot(Math.sin(aCab), Math.cos(aCab), ang);
+    if (rc[1] > -0.1) {
+        const p = trProj(Math.sin(aCab) * 138, 104, Math.cos(aCab) * 138, ang), k = p[3];
+        const larg = 26 * k * Math.max(0.25, Math.abs(rc[1]) * 0.6 + 0.4);
+        trG.fillStyle = "#9aa1ab";
+        trG.beginPath(); trG.ellipse(p[0], p[1], larg + 4 * k, 24 * k, 0, 0, Math.PI * 2); trG.fill();
+        const roxo = trG.createRadialGradient(p[0] - larg * 0.3, p[1] - 8 * k, 2, p[0], p[1], 24 * k);
+        roxo.addColorStop(0, "#f3d9ff"); roxo.addColorStop(0.45, "#a15bd6"); roxo.addColorStop(1, "#4b1d74");
+        trG.fillStyle = roxo;
+        trG.beginPath(); trG.ellipse(p[0], p[1], larg, 20 * k, 0, 0, Math.PI * 2); trG.fill();
+        trG.fillStyle = "rgba(255, 255, 255, 0.7)";
+        trG.beginPath(); trG.ellipse(p[0] - larg * 0.35, p[1] - 8 * k, larg * 0.22, 5 * k, -0.4, 0, Math.PI * 2); trG.fill();
+    }
+
+    // ovos e pernas da frente
+    porProfundidade(ovos).forEach(a => { if (naFrente(a)) nvDrawPod(a, ang); });
+    porProfundidade(pernas).forEach(a => { if (naFrente(a)) nvDrawLeg(a, ang, true); });
+}
+
+// Paisagem de Namek ao fundo (360°): céu verde-amarelado, mar azul no horizonte, morros de pedra altos de
+// topo reto e as árvores de bolinha. Desenhada uma vez numa faixa e só deslocada a cada quadro.
+const NV_PANO_W = Math.round(Math.PI * 2 * NV_CAM.F);
+let nvPanorama = null;
+function getFreezaShipPanorama() {
+    if (nvPanorama) return nvPanorama;
+    const c = document.createElement("canvas");
+    c.width = NV_PANO_W;
+    c.height = NV_CAM.HY + 8;
+    const g = c.getContext && c.getContext("2d");
+    if (!g) return null;
+    const W = c.width, base = NV_CAM.HY + 4;
+    const ceu = g.createLinearGradient(0, 0, 0, base);
+    ceu.addColorStop(0, "#7ccf5a"); ceu.addColorStop(0.6, "#c4e87a"); ceu.addColorStop(1, "#e9f6b4");
+    g.fillStyle = ceu;
+    g.fillRect(0, 0, W, c.height);
+    // nuvens claras
+    g.fillStyle = "rgba(245, 255, 220, 0.75)";
+    for (let i = 0; i < 12; i++) {
+        const x = (i * 331.7) % W, y = 20 + (i * 29) % 46, r = 10 + (i * 5) % 12;
+        [-W, 0, W].forEach(dx => { g.beginPath(); g.ellipse(x + dx, y, r * 3, r, 0, 0, Math.PI * 2); g.fill(); });
+    }
+    // mar azul no horizonte
+    g.fillStyle = "#4fb3c9";
+    g.fillRect(0, base - 8, W, 12);
+    // morros de pedra de Namek (altos, de topo reto e arredondado), com faixas de camadas
+    const morros = [[0.05, 60, 70], [0.14, 40, 46], [0.27, 80, 88], [0.4, 50, 58], [0.55, 90, 76], [0.66, 44, 52], [0.8, 70, 96], [0.92, 54, 60]];
+    morros.forEach(([pos, larg, alt]) => {
+        const x = pos * W;
+        [-W, 0, W].forEach(dx => {
+            const x0 = x + dx;
+            if (x0 + larg < 0 || x0 - larg > W) return;
+            g.fillStyle = "#e3c3b0";
+            g.beginPath();
+            g.moveTo(x0 - larg / 2, base);
+            g.lineTo(x0 - larg / 2 + 6, base - alt + 10);
+            g.quadraticCurveTo(x0, base - alt - 6, x0 + larg / 2 - 6, base - alt + 10);
+            g.lineTo(x0 + larg / 2, base);
+            g.closePath(); g.fill();
+            g.fillStyle = "#c79f8a";
+            g.fillRect(x0 + larg * 0.12, base - alt + 10, larg * 0.38 - 6, alt - 10);
+            g.fillStyle = "rgba(150, 110, 95, 0.5)";
+            for (let k = 1; k <= 3; k++) g.fillRect(x0 - larg / 2 + 6, base - alt * k / 4, larg - 12, 2);
+            g.fillStyle = "#5cbf6a";
+            g.beginPath(); g.ellipse(x0, base - alt + 4, larg / 2 - 6, 5, 0, Math.PI, 0); g.fill();
+        });
+    });
+    // árvores de Namek (tronco fino com bolinha em cima)
+    for (let i = 0; i < 16; i++) {
+        const x = (i * 241.3 + 90) % W, h = 18 + (i * 7) % 14;
+        [-W, 0, W].forEach(dx => {
+            const x0 = x + dx;
+            g.strokeStyle = "#7b8b4a"; g.lineWidth = 2;
+            g.beginPath(); g.moveTo(x0, base); g.lineTo(x0, base - h); g.stroke();
+            g.fillStyle = "#3f9b4f";
+            g.beginPath(); g.arc(x0, base - h - 5, 6, 0, Math.PI * 2); g.fill();
+        });
+    }
+    nvPanorama = c;
+    return c;
+}
+
+// Detalhes do chão de Namek (fixos no mundo): lagos, manchas de grama, pedras quebradas e tufos.
+const NV_CHAO = (() => {
+    const itens = [];
+    let semente = 7;
+    const rnd = () => { semente = (semente * 9301 + 49297) % 233280; return semente / 233280; };
+    for (let i = 0; i < 46; i++) {
+        const a = rnd() * Math.PI * 2, r = 250 + rnd() * 1500;
+        const tipo = i % 5 === 0 ? "lago" : i % 5 === 1 ? "grama" : i % 5 === 2 ? "tufo" : "pedra";
+        itens.push({ x: Math.sin(a) * r, z: Math.cos(a) * r, tipo, tam: 20 + rnd() * 50, giro: rnd() * Math.PI });
+    }
+    return itens;
+})();
+
+function drawFreezaShipGround(ang) {
+    const pano = getFreezaShipPanorama();
+    const phi0 = ang + Math.PI;
+    if (pano) {
+        let u0 = (-phi0 * NV_CAM.F) % NV_PANO_W;
+        if (u0 < 0) u0 += NV_PANO_W;
+        const x0 = NV_CAM.CX - u0;
+        ctx.drawImage(pano, x0, 0);
+        ctx.drawImage(pano, x0 + NV_PANO_W, 0);
+        if (x0 > 0) ctx.drawImage(pano, x0 - NV_PANO_W, 0);
+    } else {
+        ctx.fillStyle = "#c4e87a";
+        ctx.fillRect(0, 0, canvas.width, NV_CAM.HY);
+    }
+    // chão azul-esverdeado de Namek, mais claro lá longe
+    const chao = ctx.createLinearGradient(0, NV_CAM.HY, 0, canvas.height);
+    chao.addColorStop(0, "#9fd8d0"); chao.addColorStop(0.3, "#68bccb"); chao.addColorStop(1, "#3f93b0");
+    ctx.fillStyle = chao;
+    ctx.fillRect(0, NV_CAM.HY + 3, canvas.width, canvas.height - NV_CAM.HY);
+    // detalhes do chão, do mais longe para o mais perto (é o que passa rápido perto dos lutadores)
+    const lim = NV_CAM.D - NV_CAM.PERTO * 2;
+    NV_CHAO
+        .map(it => ({ it, r: trRot(it.x, it.z, ang) }))
+        .filter(o => o.r[1] < lim)
+        .sort((a, b) => a.r[1] - b.r[1])
+        .forEach(({ it }) => {
+            const p = trProj(it.x, 0, it.z, ang), k = p[3], t = it.tam;
+            if (p[1] < NV_CAM.HY) return;
+            if (it.tipo === "lago") {
+                ctx.fillStyle = "#8fe3f2";
+                ctx.beginPath(); ctx.ellipse(p[0], p[1], t * 1.6 * k, t * 0.35 * k, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+                ctx.beginPath(); ctx.ellipse(p[0] - t * 0.4 * k, p[1] - t * 0.06 * k, t * 0.5 * k, t * 0.06 * k, 0, 0, Math.PI * 2); ctx.fill();
+            } else if (it.tipo === "grama") {
+                ctx.fillStyle = "rgba(60, 150, 120, 0.55)";
+                ctx.beginPath(); ctx.ellipse(p[0], p[1], t * 2 * k, t * 0.4 * k, 0, 0, Math.PI * 2); ctx.fill();
+            } else if (it.tipo === "tufo") {
+                ctx.strokeStyle = "#2f8a6a"; ctx.lineWidth = Math.max(1, 1.5 * k);
+                ctx.beginPath();
+                for (let j = -2; j <= 2; j++) { ctx.moveTo(p[0] + j * 3 * k, p[1]); ctx.lineTo(p[0] + j * 5 * k, p[1] - 10 * k); }
+                ctx.stroke();
+            } else {
+                // pedra quebrada (lascas cor-de-rosa acinzentadas)
+                const h = t * 0.5 * k, w = t * 0.6 * k;
+                ctx.fillStyle = "#d9b8ad";
+                ctx.beginPath();
+                ctx.moveTo(p[0] - w, p[1]); ctx.lineTo(p[0] - w * 0.5, p[1] - h); ctx.lineTo(p[0] + w * 0.3, p[1] - h * 0.8); ctx.lineTo(p[0] + w, p[1]);
+                ctx.closePath(); ctx.fill();
+                ctx.fillStyle = "#b08e85";
+                ctx.beginPath();
+                ctx.moveTo(p[0] + w * 0.3, p[1] - h * 0.8); ctx.lineTo(p[0] + w, p[1]); ctx.lineTo(p[0] + w * 0.1, p[1]);
+                ctx.closePath(); ctx.fill();
+            }
+        });
+}
+
+function drawFreezaShipStage(ang) {
+    trCam = NV_CAM;
+    try {
+        drawFreezaShipGround(ang);
+        drawCachedOrbitLayer(nvCena, ang, drawFreezaShipScene);
+    } finally {
+        trCam = TR_CAM;
+    }
+}
+
 // ==================== DESENHO DAS ARENAS DBZ POLIDAS HD ====================
 function drawStageBackground() {
     ctx.save();
@@ -3457,38 +3750,8 @@ function drawStageBackground() {
         drawTimeRoomStage(getTimeRoomOrbitAngle(scroll));
     } 
     else if (selectedStage === "freeza_ship") {
-        ctx.fillStyle = "#0a0a14";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        ctx.fillStyle = "#1a1a2e";
-        ctx.fillRect(0, 0, canvas.width, 180);
-        ctx.strokeStyle = "#00ffff";
-        ctx.lineWidth = 1;
-
-        for (let x = - (scroll * 0.5 % 80); x < canvas.width + 80; x += 80) {
-            ctx.strokeRect(x, 20, 70, 120);
-            ctx.fillStyle = Math.sin(scroll * 0.1 + x) > 0 ? "#ff0055" : "#00ff55";
-            ctx.fillRect(x + 10, 30, 8, 8);
-            ctx.fillStyle = Math.cos(scroll * 0.1 + x) > 0 ? "#ffcc00" : "#00ffff";
-            ctx.fillRect(x + 24, 30, 8, 8);
-        }
-
-        let winX = 350 - (scroll * 0.3 % 300);
-        ctx.fillStyle = "#000005";
-        ctx.beginPath(); ctx.arc(winX, 80, 45, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = "#444466"; ctx.lineWidth = 6; ctx.stroke();
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(winX - 15, 70, 2, 2); ctx.fillRect(winX + 20, 90, 2, 2); ctx.fillRect(winX + 5, 60, 3, 3);
-
-        let floorGrad = ctx.createLinearGradient(0, 180, 0, canvas.height);
-        floorGrad.addColorStop(0, "#2a2a3a");
-        floorGrad.addColorStop(1, "#11111a");
-        ctx.fillStyle = floorGrad;
-        ctx.fillRect(0, 180, canvas.width, canvas.height - 180);
-
-        ctx.strokeStyle = "#00ffff"; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(0, 180); ctx.lineTo(canvas.width, 180); ctx.stroke();
-    } 
+        drawFreezaShipStage(getFreezaShipOrbitAngle(scroll));
+    }
     else if (selectedStage === "kaioshin") {
         let skyGrad = ctx.createLinearGradient(0, 0, 0, 220);
         skyGrad.addColorStop(0, "#ffb6c1");
@@ -4355,7 +4618,7 @@ function drawScreenFlash() {
 
 // Fases de fundo claro (Sala do Tempo, toda branca): placas escuras translúcidas atrás do placar do topo,
 // senão os textos brancos/claros somem no fundo.
-const STAGES_FUNDO_CLARO = ["time_room", "cell_games"];
+const STAGES_FUNDO_CLARO = ["time_room", "cell_games", "freeza_ship"];
 
 function drawHUD() {
     ctx.save();

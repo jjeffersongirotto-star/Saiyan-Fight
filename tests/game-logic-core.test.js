@@ -603,3 +603,10 @@ test("Torneio de Cell: a câmera dá a volta na arena e recomeça", () => {
     assert.ok(Math.abs(getCellArenaOrbitAngle(CELL_ARENA_LAP_SCROLL / 4) - Math.PI / 2) < 1e-9);
     assert.equal(getCellArenaOrbitAngle(CELL_ARENA_LAP_SCROLL), 0);
 });
+
+test("Nave de Freeza: a câmera dá a volta na nave e recomeça pela frente", () => {
+    const { getFreezaShipOrbitAngle, FREEZA_SHIP_LAP_SCROLL } = require("../game-logic-core.js");
+    assert.equal(getFreezaShipOrbitAngle(0), 0);
+    assert.ok(Math.abs(getFreezaShipOrbitAngle(FREEZA_SHIP_LAP_SCROLL / 2) - Math.PI) < 1e-9);
+    assert.equal(getFreezaShipOrbitAngle(FREEZA_SHIP_LAP_SCROLL), 0);
+});

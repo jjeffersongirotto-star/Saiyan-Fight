@@ -27,7 +27,7 @@ check("o piso perto da câmera e a paisagem distante andam em sentidos opostos (
     return perto < -1 && longe > 1;
 })()`));
 check("pilares atrás da câmera não são desenhados (cortados no plano perto)", menu.includes(".filter(p => CA_D - p[2] > CA_PERTO * 2)"));
-check("placar com fundo escuro também no céu claro da arena", menu.includes('const STAGES_FUNDO_CLARO = ["time_room", "cell_games"]'));
+check("placar com fundo escuro também no céu claro da arena", /const STAGES_FUNDO_CLARO = \[[^\]]*"cell_games"/.test(menu));
 
 run("selectedCharacter = 'goku_adult'; selectedStage = 'cell_games'; gameMode = 'coop'; startGame(); world.saibamanSpawnTimer = -1e9;");
 h.step(60);
