@@ -38,7 +38,7 @@ check("o chão perto dos lutadores se mexe mais que o pavilhão (parece que eles
     const pav0 = trProj(0, 100, 0, a0), pav1 = trProj(0, 100, 0, a1);
     return Math.abs(chao1[0] - chao0[0]) > 5 * Math.abs(pav1[0] - pav0[0]) + 1;
 })()`));
-check("placar com fundo escuro na fase clara (textos legíveis)", menu.includes('const STAGES_FUNDO_CLARO = ["time_room"]'));
+check("placar com fundo escuro na fase clara (textos legíveis)", /const STAGES_FUNDO_CLARO = \[[^\]]*"time_room"/.test(menu));
 
 run("selectedCharacter = 'goku_adult'; selectedStage = 'time_room'; gameMode = 'coop'; startGame(); world.saibamanSpawnTimer = -1e9;");
 h.step(60);

@@ -570,6 +570,14 @@ function getTimeRoomOrbitAngle(scroll) {
     return v / TIME_ROOM_LAP_SCROLL * Math.PI * 2;
 }
 
+// Torneio de Cell: os lutadores ficam no meio da arena e a câmera gira em volta do centro, na altura deles —
+// o piso passa por baixo, os pilares dos cantos passam pela frente e a paisagem dá a volta ao fundo.
+const CELL_ARENA_LAP_SCROLL = 9000;   // ~100 s de luta por volta
+function getCellArenaOrbitAngle(scroll) {
+    const v = ((scroll % CELL_ARENA_LAP_SCROLL) + CELL_ARENA_LAP_SCROLL) % CELL_ARENA_LAP_SCROLL;
+    return v / CELL_ARENA_LAP_SCROLL * Math.PI * 2;
+}
+
 // Música de cada fase: um tema original do jogo para cada uma das 8 fases — ver BGM_THEMES em audio.js.
 const STAGE_MUSIC_ERA = {
     terra: "classico", kaio: "kaio", namek: "namek", freeza_ship: "freeza",
@@ -647,6 +655,8 @@ if (typeof module !== "undefined" && module.exports) {
         stepSaibamanMotion,
         getStageMusicEra,
         TIME_ROOM_LAP_SCROLL,
-        getTimeRoomOrbitAngle
+        getTimeRoomOrbitAngle,
+        CELL_ARENA_LAP_SCROLL,
+        getCellArenaOrbitAngle
     };
 }

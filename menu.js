@@ -3102,6 +3102,230 @@ function drawTimeRoomScene(ang) {
         .forEach(({ o, p }) => o.d(ang, p));
 }
 
+// ==================== TORNEIO DE CELL: ARENA EM 3D, CÂMERA GIRANDO NO MEIO DELA ====================
+// Os lutadores ficam no meio da arena e a câmera, na altura deles, dá a volta em torno do centro: o piso de
+// azulejos passa por baixo, os 4 pilares brancos dos cantos passam pela frente e por trás e a paisagem
+// (montanhas, morros de pedra, céu) gira ao fundo. Planta: x para o lado, z para a frente, y para cima.
+const CA_CX = 400, CA_HY = 118, CA_D = 330, CA_H = 80, CA_F = 400, CA_PERTO = 30;
+const CA_W = 240;            // meia largura do piso da arena
+const CA_CHAO = -26;         // altura do gramado (a arena é um tablado acima dele)
+
+function caRot(x, z, ang) {
+    const c = Math.cos(ang), s = Math.sin(ang);
+    return [x * c - z * s, x * s + z * c];
+}
+function caProj(x, y, z, ang) {
+    const r = caRot(x, z, ang);
+    const esc = CA_F / Math.max(CA_PERTO, CA_D - r[1]);
+    return [CA_CX + r[0] * esc, CA_HY + (CA_H - y) * esc, r[1], esc];
+}
+// Polígono no chão/tampo (pontos [x, y, z]) cortado no plano perto da câmera e projetado.
+function caPoly(pts, ang) {
+    const lim = CA_D - CA_PERTO;
+    const rot = pts.map(p => { const r = caRot(p[0], p[2], ang); return [r[0], p[1], r[1]]; });
+    const out = [];
+    for (let i = 0; i < rot.length; i++) {
+        const A = rot[i], B = rot[(i + 1) % rot.length];
+        const aIn = A[2] <= lim, bIn = B[2] <= lim;
+        if (aIn) out.push(A);
+        if (aIn !== bIn) {
+            const t = (lim - A[2]) / (B[2] - A[2]);
+            out.push([A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, lim]);
+        }
+    }
+    if (out.length < 3) return false;
+    ctx.beginPath();
+    out.forEach((p, i) => {
+        const esc = CA_F / Math.max(CA_PERTO, CA_D - p[2]);
+        const x = CA_CX + p[0] * esc, y = CA_HY + (CA_H - p[1]) * esc;
+        i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    });
+    ctx.closePath();
+    return true;
+}
+// Linha reta no chão cortada no plano perto da câmera.
+function caLine(x0, y0, z0, x1, y1, z1, ang) {
+    const lim = CA_D - CA_PERTO;
+    const r0 = caRot(x0, z0, ang), r1 = caRot(x1, z1, ang);
+    if (r0[1] > lim && r1[1] > lim) return;
+    let t0 = 0, t1 = 1;
+    if (r0[1] > lim) t0 = (lim - r0[1]) / (r1[1] - r0[1]);
+    if (r1[1] > lim) t1 = (lim - r0[1]) / (r1[1] - r0[1]);
+    const pa = caProj(x0 + (x1 - x0) * t0, y0 + (y1 - y0) * t0, z0 + (z1 - z0) * t0, ang);
+    const pb = caProj(x0 + (x1 - x0) * t1, y0 + (y1 - y0) * t1, z0 + (z1 - z0) * t1, ang);
+    ctx.moveTo(pa[0], pa[1]);
+    ctx.lineTo(pb[0], pb[1]);
+}
+
+// Paisagem distante (céu, nuvens, montanhas, morros de pedra) desenhada uma vez numa faixa de 360°; a cada
+// quadro só é copiada deslocada conforme o ângulo da câmera (barato e liso).
+const CA_PANO_W = Math.round(Math.PI * 2 * CA_F);
+let caPanorama = null;
+function getCellArenaPanorama() {
+    if (caPanorama) return caPanorama;
+    const c = document.createElement("canvas");
+    c.width = CA_PANO_W;
+    c.height = CA_HY + 40;
+    const g = c.getContext && c.getContext("2d");
+    if (!g) return null;
+    const W = c.width, base = CA_HY + 6;
+    // altura de uma serra que dá a volta certinho (soma de senos com períodos inteiros)
+    const serra = (u, amp, fases) => fases.reduce((h, f) => h + Math.sin(u / W * Math.PI * 2 * f[0] + f[1]) * f[2], 0) * amp;
+    // céu
+    const ceu = g.createLinearGradient(0, 0, 0, base);
+    ceu.addColorStop(0, "#3d8fe0"); ceu.addColorStop(0.65, "#8cc8f2"); ceu.addColorStop(1, "#d6eefb");
+    g.fillStyle = ceu;
+    g.fillRect(0, 0, W, c.height);
+    // nuvens
+    g.fillStyle = "rgba(255, 255, 255, 0.92)";
+    for (let i = 0; i < 14; i++) {
+        const x = (i * 197.3 + (i % 3) * 61) % W, y = 18 + (i * 37) % 52, r = 12 + (i * 7) % 14;
+        [[0, 0, 1], [r * 1.1, -r * 0.35, 1.2], [r * 2.3, 0, 0.95], [r * 1.2, r * 0.2, 1]].forEach(b => {
+            // desenha também uma volta antes e depois: a nuvem na emenda da faixa não fica cortada
+            [-W, 0, W].forEach(dx => { g.beginPath(); g.arc(x + b[0] + dx, y + b[1], r * b[2], 0, Math.PI * 2); g.fill(); });
+        });
+    }
+    // serra azulada bem longe
+    g.fillStyle = "#8fb3c9";
+    g.beginPath(); g.moveTo(0, base);
+    for (let u = 0; u <= W; u += 8) g.lineTo(u, base - 22 - serra(u, 1, [[5, 0.3, 9], [11, 1.1, 6], [23, 2, 3]]));
+    g.lineTo(W, base); g.closePath(); g.fill();
+    // morros verdes mais perto
+    g.fillStyle = "#4f9a52";
+    g.beginPath(); g.moveTo(0, base);
+    for (let u = 0; u <= W; u += 6) g.lineTo(u, base - 8 - Math.max(0, serra(u, 1, [[7, 1.4, 10], [13, 0.2, 6], [29, 2.2, 3]])));
+    g.lineTo(W, base); g.closePath(); g.fill();
+    // morros de pedra marrons de topo reto (como os da arena do anime), em alguns pontos da volta
+    [[0.08, 120, 46], [0.31, 90, 34], [0.47, 150, 52], [0.72, 110, 40], [0.9, 70, 28]].forEach(([pos, larg, alt]) => {
+        const x = pos * W;
+        const desenha = (dx) => {
+            const x0 = x + dx;
+            g.fillStyle = "#b07a45";
+            g.beginPath();
+            g.moveTo(x0 - larg / 2, base);
+            g.lineTo(x0 - larg / 2 + 10, base - alt);
+            g.lineTo(x0 + larg / 2 - 14, base - alt - 4);
+            g.lineTo(x0 + larg / 2, base);
+            g.closePath(); g.fill();
+            g.fillStyle = "#8c5a2e";   // faixas das camadas de rocha
+            for (let k = 1; k <= 3; k++) g.fillRect(x0 - larg / 2 + 8, base - alt * k / 4, larg - 18, 2);
+            g.fillStyle = "#5e9b4c";   // grama no topo
+            g.fillRect(x0 - larg / 2 + 10, base - alt - 6, larg - 24, 6);
+        };
+        desenha(0);
+        if (x + larg / 2 > W) desenha(-W);
+        if (x - larg / 2 < 0) desenha(W);
+    });
+    caPanorama = c;
+    return c;
+}
+
+// Pilar branco pontudo de canto (igual de todos os lados).
+function caDrawPillar(px, py, esc) {
+    const alto = 210 * esc, larg = 9 * esc;
+    const topoY = py - alto;
+    // base quadrada
+    ctx.fillStyle = "#e8edf2";
+    ctx.fillRect(px - larg * 1.6, py - 10 * esc, larg * 3.2, 10 * esc);
+    ctx.fillStyle = "#b9c5cf";
+    ctx.fillRect(px + larg * 0.4, py - 10 * esc, larg * 1.2, 10 * esc);
+    // corpo afinando até a ponta
+    ctx.fillStyle = "#f4f7fa";
+    ctx.beginPath();
+    ctx.moveTo(px - larg, py - 10 * esc);
+    ctx.lineTo(px - larg * 0.55, topoY + alto * 0.25);
+    ctx.lineTo(px, topoY);
+    ctx.lineTo(px + larg * 0.55, topoY + alto * 0.25);
+    ctx.lineTo(px + larg, py - 10 * esc);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#c3ced8";   // lado na sombra
+    ctx.beginPath();
+    ctx.moveTo(px + larg * 0.15, py - 10 * esc);
+    ctx.lineTo(px + larg * 0.1, topoY + alto * 0.25);
+    ctx.lineTo(px, topoY);
+    ctx.lineTo(px + larg * 0.55, topoY + alto * 0.25);
+    ctx.lineTo(px + larg, py - 10 * esc);
+    ctx.closePath();
+    ctx.fill();
+    // anéis
+    ctx.fillStyle = "#d5dde5";
+    ctx.fillRect(px - larg * 1.05, py - 22 * esc, larg * 2.1, 4 * esc);
+    ctx.fillRect(px - larg * 0.62, topoY + alto * 0.27, larg * 1.24, 3 * esc);
+}
+
+function drawCellArenaStage(ang) {
+    // paisagem ao fundo: posição na faixa de 360° conforme o ângulo da câmera
+    const pano = getCellArenaPanorama();
+    const phi0 = ang + Math.PI;                       // direção que está no meio da tela
+    if (pano) {
+        let u0 = (-phi0 * CA_F) % CA_PANO_W;
+        if (u0 < 0) u0 += CA_PANO_W;
+        const x0 = CA_CX - u0;
+        ctx.drawImage(pano, x0, 0);
+        ctx.drawImage(pano, x0 + CA_PANO_W, 0);
+        if (x0 > 0) ctx.drawImage(pano, x0 - CA_PANO_W, 0);
+    } else {
+        ctx.fillStyle = "#8cc8f2";
+        ctx.fillRect(0, 0, canvas.width, CA_HY + 6);
+    }
+    // gramado até o horizonte (mais claro e enevoado lá longe)
+    const grama = ctx.createLinearGradient(0, CA_HY, 0, canvas.height);
+    grama.addColorStop(0, "#8fc56d"); grama.addColorStop(0.25, "#6fb04f"); grama.addColorStop(1, "#4f8f37");
+    ctx.fillStyle = grama;
+    ctx.fillRect(0, CA_HY + 5, canvas.width, canvas.height - CA_HY);
+
+    // manchas de terra e a estrada de terra saindo da arena
+    ctx.fillStyle = "#c9a46a";
+    [[-520, -380, 120, 70], [610, 260, 140, 80], [-300, 720, 160, 90], [480, -760, 200, 110], [-900, 100, 180, 100]].forEach(([x, z, rx, rz]) => {
+        const pts = [];
+        for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2; pts.push([x + Math.cos(a) * rx, CA_CHAO, z + Math.sin(a) * rz]); }
+        if (caPoly(pts, ang)) ctx.fill();
+    });
+    const estrada = [[0, -CA_W - 30], [-60, -520], [140, -900], [-80, -1400], [60, -2200]];
+    ctx.fillStyle = "#d4b07a";
+    for (let i = 0; i < estrada.length - 1; i++) {
+        const [ax, az] = estrada[i], [bx, bz] = estrada[i + 1];
+        const len = Math.hypot(bx - ax, bz - az), nx = -(bz - az) / len * 26, nz = (bx - ax) / len * 26;
+        if (caPoly([[ax + nx, CA_CHAO, az + nz], [bx + nx, CA_CHAO, bz + nz], [bx - nx, CA_CHAO, bz - nz], [ax - nx, CA_CHAO, az - nz]], ang)) ctx.fill();
+    }
+
+    // tablado: degrau (borda mais larga e baixa) e o piso de azulejos
+    const W = CA_W, B = CA_W + 22;
+    const ladoVisivel = (mx, mz) => caRot(mx, mz, ang)[1] > 0;
+    const faces = (w, yTop, yBase, cor) => {
+        const cantos = [[-w, -w], [w, -w], [w, w], [-w, w]];
+        for (let i = 0; i < 4; i++) {
+            const A = cantos[i], C = cantos[(i + 1) % 4];
+            if (!ladoVisivel((A[0] + C[0]) / 2, (A[1] + C[1]) / 2)) continue;
+            ctx.fillStyle = cor;
+            if (caPoly([[A[0], yTop, A[1]], [C[0], yTop, C[1]], [C[0], yBase, C[1]], [A[0], yBase, A[1]]], ang)) ctx.fill();
+        }
+    };
+    faces(B, -12, CA_CHAO, "#9aa6ae");
+    ctx.fillStyle = "#cfd8de";
+    if (caPoly([[-B, -12, -B], [B, -12, -B], [B, -12, B], [-B, -12, B]], ang)) ctx.fill();
+    faces(W, 0, -12, "#aeb9c1");
+    ctx.fillStyle = "#e3eaee";
+    if (caPoly([[-W, 0, -W], [W, 0, -W], [W, 0, W], [-W, 0, W]], ang)) ctx.fill();
+    // rejunte dos azulejos
+    ctx.strokeStyle = "rgba(120, 140, 155, 0.55)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let v = -W; v <= W; v += 30) {
+        caLine(v, 0, -W, v, 0, W, ang);
+        caLine(-W, 0, v, W, 0, v, ang);
+    }
+    ctx.stroke();
+
+    // pilares dos cantos, do mais longe para o mais perto
+    [[-W + 6, -W + 6], [W - 6, -W + 6], [W - 6, W - 6], [-W + 6, W - 6]]
+        .map(([x, z]) => caProj(x, 0, z, ang))
+        .filter(p => CA_D - p[2] > CA_PERTO * 2)
+        .sort((a, b) => a[2] - b[2])
+        .forEach(p => caDrawPillar(p[0], p[1], p[3]));
+}
+
 // ==================== DESENHO DAS ARENAS DBZ POLIDAS HD ====================
 function drawStageBackground() {
     ctx.save();
@@ -3367,54 +3591,7 @@ function drawStageBackground() {
         }
     }
     else if (selectedStage === "cell_games") {
-        // Torneio de Cell: arena de torneio ao ar livre, plataforma de concreto isolada, arquibancadas ao fundo.
-        let skyGrad = ctx.createLinearGradient(0, 0, 0, 220);
-        skyGrad.addColorStop(0, "#2a7fd6");
-        skyGrad.addColorStop(0.6, "#6fb8f0");
-        skyGrad.addColorStop(1, "#cfe8ff");
-        ctx.fillStyle = skyGrad;
-        ctx.fillRect(0, 0, canvas.width, 220);
-
-        ctx.fillStyle = "rgba(255,255,240,0.95)";
-        ctx.beginPath(); ctx.arc(680, 40, 26, 0, Math.PI * 2); ctx.fill();
-
-        ctx.fillStyle = "#ffffff";
-        [[100, 60, 46], [260, 45, 36], [520, 55, 40]].forEach(([cx2, cy2, r]) => {
-            const x = ((cx2 - scroll * 0.25) % (canvas.width + 160)) - 80;
-            ctx.beginPath();
-            ctx.arc(x, cy2, r, 0, Math.PI * 2);
-            ctx.arc(x + r * 0.8, cy2 + 6, r * 0.7, 0, Math.PI * 2);
-            ctx.arc(x - r * 0.7, cy2 + 8, r * 0.6, 0, Math.PI * 2);
-            ctx.fill();
-        });
-
-        // arquibancadas/plateia esquemática ao longe
-        ctx.fillStyle = "#8899aa";
-        for (let i = 0; i < 5; i++) {
-            const bx = ((i * 165 - scroll * 0.5) % (canvas.width + 120)) - 50;
-            ctx.fillRect(bx, 150, 90, 40);
-            ctx.fillStyle = "#5a6a7a";
-            for (let d = 0; d < 4; d++) ctx.fillRect(bx + 6 + d * 20, 156, 4, 30);
-            ctx.fillStyle = "#8899aa";
-        }
-
-        // a plataforma quadrada característica do torneio, flutuando isolada
-        let floorGrad = ctx.createLinearGradient(0, 190, 0, canvas.height);
-        floorGrad.addColorStop(0, "#e8e4d8");
-        floorGrad.addColorStop(1, "#a8a290");
-        ctx.fillStyle = floorGrad;
-        ctx.fillRect(0, 190, canvas.width, canvas.height - 190);
-
-        ctx.strokeStyle = "#c0392b";
-        ctx.lineWidth = 4;
-        ctx.strokeRect(20, 196, canvas.width - 40, 8);
-
-        ctx.strokeStyle = "#9a9484";
-        ctx.lineWidth = 1;
-        for (let gx = 0; gx < canvas.width; gx += 40) {
-            const lx = ((gx - scroll) % (canvas.width + 40));
-            ctx.beginPath(); ctx.moveTo(lx, 210); ctx.lineTo(lx, canvas.height); ctx.stroke();
-        }
+        drawCellArenaStage(getCellArenaOrbitAngle(scroll));
     }
 
     ctx.restore();
@@ -4178,7 +4355,7 @@ function drawScreenFlash() {
 
 // Fases de fundo claro (Sala do Tempo, toda branca): placas escuras translúcidas atrás do placar do topo,
 // senão os textos brancos/claros somem no fundo.
-const STAGES_FUNDO_CLARO = ["time_room"];
+const STAGES_FUNDO_CLARO = ["time_room", "cell_games"];
 
 function drawHUD() {
     ctx.save();

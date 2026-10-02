@@ -596,3 +596,10 @@ test("Sala do Tempo: a câmera dá uma volta completa no pavilhão e volta para 
     assert.equal(getTimeRoomOrbitAngle(TIME_ROOM_LAP_SCROLL), 0, "volta completa: de frente de novo");
     assert.ok(Math.abs(getTimeRoomOrbitAngle(TIME_ROOM_LAP_SCROLL * 3 + 100) - getTimeRoomOrbitAngle(100)) < 1e-9, "e repete");
 });
+
+test("Torneio de Cell: a câmera dá a volta na arena e recomeça", () => {
+    const { getCellArenaOrbitAngle, CELL_ARENA_LAP_SCROLL } = require("../game-logic-core.js");
+    assert.equal(getCellArenaOrbitAngle(0), 0);
+    assert.ok(Math.abs(getCellArenaOrbitAngle(CELL_ARENA_LAP_SCROLL / 4) - Math.PI / 2) < 1e-9);
+    assert.equal(getCellArenaOrbitAngle(CELL_ARENA_LAP_SCROLL), 0);
+});
