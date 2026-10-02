@@ -578,6 +578,13 @@ function getCellArenaOrbitAngle(scroll) {
     return v / CELL_ARENA_LAP_SCROLL * Math.PI * 2;
 }
 
+// Nave de Freeza: igual à Sala do Tempo — a nave pousada fica no meio e a câmera dá a volta nela.
+const FREEZA_SHIP_LAP_SCROLL = 10800;
+function getFreezaShipOrbitAngle(scroll) {
+    const v = ((scroll % FREEZA_SHIP_LAP_SCROLL) + FREEZA_SHIP_LAP_SCROLL) % FREEZA_SHIP_LAP_SCROLL;
+    return v / FREEZA_SHIP_LAP_SCROLL * Math.PI * 2;
+}
+
 // Música de cada fase: um tema original do jogo para cada uma das 8 fases — ver BGM_THEMES em audio.js.
 const STAGE_MUSIC_ERA = {
     terra: "classico", kaio: "kaio", namek: "namek", freeza_ship: "freeza",
@@ -657,6 +664,8 @@ if (typeof module !== "undefined" && module.exports) {
         TIME_ROOM_LAP_SCROLL,
         getTimeRoomOrbitAngle,
         CELL_ARENA_LAP_SCROLL,
-        getCellArenaOrbitAngle
+        getCellArenaOrbitAngle,
+        FREEZA_SHIP_LAP_SCROLL,
+        getFreezaShipOrbitAngle
     };
 }

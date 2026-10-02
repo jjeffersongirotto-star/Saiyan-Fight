@@ -2739,6 +2739,9 @@ function handleMenuClick(x, y) {
 const TR_K = 1.12, TR_CX = 400, TR_GY = 236, TR_TILT = 0.3;
 const TR_D = 700, TR_H = 210, TR_F = TR_K * TR_D, TR_HY = TR_GY - TR_K * TR_H, TR_PERTO = 40;
 let trG = ctx;   // onde o pavilhão é desenhado (a imagem guardada; ver drawTimeRoomStage)
+// Câmera usada por trProj. A Sala do Tempo usa TR_CAM; a Nave de Freeza troca para NV_CAM enquanto desenha.
+const TR_CAM = { CX: TR_CX, HY: TR_HY, D: TR_D, H: TR_H, F: TR_F, PERTO: TR_PERTO };
+let trCam = TR_CAM;
 
 function trRot(x, z, ang) {
     const c = Math.cos(ang), s = Math.sin(ang);
@@ -2747,8 +2750,8 @@ function trRot(x, z, ang) {
 // planta -> tela, com perspectiva: [x, y, profundidade (+ = perto), escala naquele ponto]
 function trProj(x, y, z, ang) {
     const r = trRot(x, z, ang);
-    const esc = TR_F / Math.max(TR_PERTO, TR_D - r[1]);
-    return [TR_CX + r[0] * esc, TR_HY + (TR_H - y) * esc, r[1], esc];
+    const esc = trCam.F / Math.max(trCam.PERTO, trCam.D - r[1]);
+    return [trCam.CX + r[0] * esc, trCam.HY + (trCam.H - y) * esc, r[1], esc];
 }
 function trPoly(pts) {
     trG.beginPath();
@@ -3048,23 +3051,28 @@ function drawTimeRoomFloor(ang) {
 // transparente, e só refeito quando a câmera anda 1/4 de grau (a cada ~5 quadros); o chão é a cada quadro.
 const TR_PASSOS_POR_VOLTA = 1440;
 const trCena = { passo: null, canvas: null };
+// Camada guardada (fundo transparente) de uma construção que a câmera rodeia: só é refeita quando o ângulo
+// anda 1/4 de grau. Usada pela Sala do Tempo e pela Nave de Freeza.
+function drawCachedOrbitLayer(cena, ang, desenhar) {
+    const passo = Math.round(ang / (Math.PI * 2) * TR_PASSOS_POR_VOLTA) % TR_PASSOS_POR_VOLTA;
+    if (!cena.canvas) {
+        cena.canvas = document.createElement("canvas");
+        cena.canvas.width = canvas.width;
+        cena.canvas.height = canvas.height;
+    }
+    const g = cena.canvas.getContext && cena.canvas.getContext("2d");
+    if (!g) { trG = ctx; desenhar(ang); return; }
+    if (cena.passo !== passo) {
+        g.clearRect(0, 0, cena.canvas.width, cena.canvas.height);
+        trG = g;
+        try { desenhar(passo / TR_PASSOS_POR_VOLTA * Math.PI * 2); } finally { trG = ctx; }
+        cena.passo = passo;
+    }
+    ctx.drawImage(cena.canvas, 0, 0);
+}
 function drawTimeRoomStage(ang) {
     drawTimeRoomFloor(ang);
-    const passo = Math.round(ang / (Math.PI * 2) * TR_PASSOS_POR_VOLTA) % TR_PASSOS_POR_VOLTA;
-    if (!trCena.canvas) {
-        trCena.canvas = document.createElement("canvas");
-        trCena.canvas.width = canvas.width;
-        trCena.canvas.height = canvas.height;
-    }
-    const g = trCena.canvas.getContext && trCena.canvas.getContext("2d");
-    if (!g) { trG = ctx; drawTimeRoomScene(ang); return; }
-    if (trCena.passo !== passo) {
-        g.clearRect(0, 0, trCena.canvas.width, trCena.canvas.height);
-        trG = g;
-        try { drawTimeRoomScene(passo / TR_PASSOS_POR_VOLTA * Math.PI * 2); } finally { trG = ctx; }
-        trCena.passo = passo;
-    }
-    ctx.drawImage(trCena.canvas, 0, 0);
+    drawCachedOrbitLayer(trCena, ang, drawTimeRoomScene);
 }
 
 // Só o pavilhão (fundo transparente). O vazio branco e o chão infinito são desenhados por drawTimeRoomFloor.
@@ -3326,6 +3334,366 @@ function drawCellArenaStage(ang) {
         .forEach(p => caDrawPillar(p[0], p[1], p[3]));
 }
 
+// ==================== NAVE DE FREEZA: NAVE POUSADA EM NAMEK, CÂMERA DÁ A VOLTA ====================
+// Como na Sala do Tempo: a nave fica parada no meio e os lutadores dão a volta nela. O chão de Namek (azul-
+// esverdeado, com lagos, pedras e tufos) passa perto da câmera; o céu verde e os morros de pedra giram ao fundo.
+// A nave: casco branco embaixo, faixa preta com escotilhas azuis, cúpula branca com a faixa listrada cor de
+// madeira, escotilha escura no topo, a janela roxa curvada, os calombos amarelos do casco e as patas de aço.
+const NV_CAM = { CX: 400, HY: 138, D: 620, H: 112, F: 620, PERTO: 30 };
+const nvCena = { passo: null, canvas: null };
+
+// elipse de uma "latitude" da nave (círculo de raio r na altura y), já em perspectiva
+function nvAnel(y, r, ang) {
+    const c = trProj(0, y, 0, ang), fr = trProj(0, y, r, 0), tr = trProj(0, y, -r, 0);
+    return { cx: c[0], cy: c[1], rx: r * c[3], ry: Math.max(1, (fr[1] - tr[1]) / 2) };
+}
+// faixa entre duas latitudes (só a metade da frente aparece)
+function nvFaixa(a1, a2, cor) {
+    trG.fillStyle = cor;
+    trG.beginPath();
+    trG.ellipse(a1.cx, a1.cy, a1.rx, a1.ry, 0, Math.PI, 0, true);
+    trG.lineTo(a2.cx + a2.rx, a2.cy);
+    trG.ellipse(a2.cx, a2.cy, a2.rx, a2.ry, 0, 0, Math.PI, false);
+    trG.closePath();
+    trG.fill();
+}
+
+// Perna de aço em forma de pata de aranha (como na nave do anime): um braço largo e firme sai de baixo do
+// casco, entre os calombos amarelos, e vai para fora; na junta a pata desce reta e afina até uma ponta
+// cravada no chão; uma haste fina faz o reforço em triângulo entre o casco e a pata.
+function nvDrawLeg(a, ang, frente) {
+    const ox = Math.sin(a), oz = Math.cos(a);
+    const P = (r, y) => trProj(ox * r, y, oz * r, ang);
+    const quadril = P(104, 18), joelho = P(162, 26), ponta = P(210, 0), reforcoBase = P(98, 8), reforcoPata = P(190, 11);
+    const k = joelho[3];
+    const claro = frente ? "#f3f6f8" : "#c9d0d7", meio = frente ? "#bcc5cf" : "#98a1ab", escuro = frente ? "#56606c" : "#414852";
+    trG.lineCap = "round"; trG.lineJoin = "round";
+    // haste de reforço (fina, por trás)
+    trG.strokeStyle = escuro; trG.lineWidth = Math.max(1, 2.6 * k);
+    trG.beginPath(); trG.moveTo(reforcoBase[0], reforcoBase[1]); trG.lineTo(reforcoPata[0], reforcoPata[1]); trG.stroke();
+    trG.strokeStyle = meio; trG.lineWidth = Math.max(0.8, 1.3 * k); trG.stroke();
+    // pata: desce inclinada da junta, afinando até a ponta cravada no chão
+    const lp = 6.5 * k;
+    const dx = ponta[0] - joelho[0], dy = ponta[1] - joelho[1], dl = Math.hypot(dx, dy) || 1;
+    const nx = -dy / dl, ny = dx / dl;
+    trG.fillStyle = meio;
+    trG.beginPath();
+    trG.moveTo(joelho[0] + nx * lp, joelho[1] + ny * lp); trG.lineTo(ponta[0], ponta[1]); trG.lineTo(joelho[0] - nx * lp, joelho[1] - ny * lp);
+    trG.closePath(); trG.fill();
+    trG.fillStyle = claro;
+    trG.beginPath();
+    trG.moveTo(joelho[0] - nx * lp, joelho[1] - ny * lp); trG.lineTo(ponta[0], ponta[1]); trG.lineTo(joelho[0], joelho[1]);
+    trG.closePath(); trG.fill();
+    trG.strokeStyle = escuro; trG.lineWidth = 1;
+    trG.beginPath();
+    trG.moveTo(joelho[0] + nx * lp, joelho[1] + ny * lp); trG.lineTo(ponta[0], ponta[1]); trG.lineTo(joelho[0] - nx * lp, joelho[1] - ny * lp);
+    trG.stroke();
+    // braço: curto e grosso, do casco até a junta
+    trG.strokeStyle = escuro; trG.lineWidth = 13 * k;
+    trG.beginPath(); trG.moveTo(quadril[0], quadril[1]); trG.lineTo(joelho[0], joelho[1]); trG.stroke();
+    trG.strokeStyle = meio; trG.lineWidth = 10 * k; trG.stroke();
+    trG.strokeStyle = claro; trG.lineWidth = 4.5 * k;
+    trG.beginPath(); trG.moveTo(quadril[0], quadril[1] - 2.5 * k); trG.lineTo(joelho[0], joelho[1] - 2.5 * k); trG.stroke();
+    // junta redonda
+    trG.fillStyle = escuro;
+    trG.beginPath(); trG.arc(joelho[0], joelho[1], 7.5 * k, 0, Math.PI * 2); trG.fill();
+    trG.fillStyle = claro;
+    trG.beginPath(); trG.arc(joelho[0], joelho[1], 5.5 * k, 0, Math.PI * 2); trG.fill();
+    trG.fillStyle = meio;
+    trG.beginPath(); trG.arc(joelho[0] + 1 * k, joelho[1] + 1 * k, 2.5 * k, 0, Math.PI * 2); trG.fill();
+}
+
+// Calombo amarelo do casco: não é peça solta, é um relevo arredondado da parte de baixo do casco (abaixo da
+// faixa preta), que acompanha a curva da nave. Montado sobre a superfície do casco e projetado.
+function nvRaioCascoBaixo(y) { return 100 + (y - 14) / 46 * 58; }   // casco de baixo afunila: y 14 -> 60
+function nvDrawPod(a, ang) {
+    const normal = trRot(Math.sin(a), Math.cos(a), ang)[1];
+    if (normal < 0.02) return;                               // virado para longe: escondido pelo casco
+    const meiaLarg = 0.19, yc = 37, meiaAlt = 21;
+    const pts = [];
+    for (let i = 0; i < 28; i++) {
+        const t = i / 28 * Math.PI * 2;
+        // retângulo de cantos bem arredondados (superelipse)
+        const u = Math.sign(Math.cos(t)) * Math.pow(Math.abs(Math.cos(t)), 0.6);
+        const v = Math.sign(Math.sin(t)) * Math.pow(Math.abs(Math.sin(t)), 0.6);
+        const y = yc + v * meiaAlt, th = a + u * meiaLarg;
+        const r = nvRaioCascoBaixo(Math.min(60, y)) + 3 + 9 * (1 - u * u) * (1 - v * v);   // estufado no meio
+        pts.push(trProj(Math.sin(th) * r, y, Math.cos(th) * r, ang));
+    }
+    const centro = trProj(Math.sin(a) * (nvRaioCascoBaixo(yc) + 12), yc, Math.cos(a) * (nvRaioCascoBaixo(yc) + 12), ang);
+    const luz = trProj(Math.sin(a - meiaLarg * 0.35) * (nvRaioCascoBaixo(yc + 5) + 12), yc + 6, Math.cos(a - meiaLarg * 0.35) * (nvRaioCascoBaixo(yc + 5) + 12), ang);
+    const k = centro[3];
+    const g = trG.createRadialGradient(luz[0], luz[1], 1, centro[0], centro[1], 26 * k);
+    g.addColorStop(0, "#fff8c4"); g.addColorStop(0.45, "#f6d63c"); g.addColorStop(1, "#c99a12");
+    trG.fillStyle = g;
+    trG.beginPath(); pts.forEach((q, i) => i ? trG.lineTo(q[0], q[1]) : trG.moveTo(q[0], q[1])); trG.closePath(); trG.fill();
+    trG.strokeStyle = "rgba(140, 105, 10, 0.7)"; trG.lineWidth = 1; trG.stroke();
+}
+
+// Janela da cabine: vidro roxo curvado sobre a cúpula (acompanha a curva dela), com um pequeno suporte
+// claro em volta do vidro. Fica colado na nave em qualquer ângulo.
+const NV_CABINE = { a: -0.55, meiaLarg: 0.17, yc: 116, meiaAlt: 14, borda: 3.5 };
+function nvRaioCupula(y) { const t = Math.min(1, Math.max(0, (y - 82) / 70)); return 158 * Math.sqrt(1 - t * t); }
+function nvDrawCockpit(ang) {
+    const c = NV_CABINE;
+    const normal = trRot(Math.sin(c.a), Math.cos(c.a), ang)[1];
+    if (normal < 0.02) return;
+    const contorno = (extra, inchar) => {
+        const pts = [];
+        for (let i = 0; i < 32; i++) {
+            const t = i / 32 * Math.PI * 2, u = Math.cos(t), v = Math.sin(t);
+            const y = c.yc + v * (c.meiaAlt + extra), th = c.a + u * (c.meiaLarg + extra / 140);
+            const r = nvRaioCupula(y) + 1 + inchar * (1 - u * u) * (1 - v * v);
+            pts.push(trProj(Math.sin(th) * r, y, Math.cos(th) * r, ang));
+        }
+        return pts;
+    };
+    const desenha = (pts) => { trG.beginPath(); pts.forEach((q, i) => i ? trG.lineTo(q[0], q[1]) : trG.moveTo(q[0], q[1])); trG.closePath(); };
+    // suporte em volta do vidro
+    desenha(contorno(c.borda, 1));
+    trG.fillStyle = "#e9edf1"; trG.fill();
+    trG.strokeStyle = "#8d96a1"; trG.lineWidth = 1; trG.stroke();
+    // vidro roxo curvado
+    const vidro = contorno(0, 4);
+    const centro = trProj(Math.sin(c.a) * (nvRaioCupula(c.yc) + 5), c.yc, Math.cos(c.a) * (nvRaioCupula(c.yc) + 5), ang);
+    const k = centro[3];
+    const brilhoP = trProj(Math.sin(c.a - c.meiaLarg * 0.4) * (nvRaioCupula(c.yc + 6) + 5), c.yc + 6, Math.cos(c.a - c.meiaLarg * 0.4) * (nvRaioCupula(c.yc + 6) + 5), ang);
+    const g = trG.createRadialGradient(brilhoP[0], brilhoP[1], 1, centro[0], centro[1], 26 * k);
+    g.addColorStop(0, "#efd9ff"); g.addColorStop(0.35, "#a970d8"); g.addColorStop(0.8, "#5e2a90"); g.addColorStop(1, "#3c1663");
+    desenha(vidro);
+    trG.fillStyle = g; trG.fill();
+    trG.strokeStyle = "#4a2470"; trG.lineWidth = 1; trG.stroke();
+    // reflexo curvo do vidro (preso dentro dele)
+    trG.save();
+    desenha(vidro); trG.clip();
+    trG.strokeStyle = "rgba(255, 255, 255, 0.75)"; trG.lineWidth = Math.max(1.5, 3 * k); trG.lineCap = "round";
+    trG.beginPath();
+    trG.arc(centro[0] + 4 * k, centro[1] + 3 * k, 13 * k, Math.PI * 1.05, Math.PI * 1.45);
+    trG.stroke();
+    trG.restore();
+}
+
+function drawFreezaShipScene(ang) {
+    // sombra da nave no chão
+    const sombra = [];
+    for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2; sombra.push(trProj(Math.sin(a) * 175 + 12, 0, Math.cos(a) * 175 + 10, ang)); }
+    trG.fillStyle = "rgba(20, 60, 80, 0.28)";
+    trPoly(sombra);
+    trG.fill();
+
+    // pernas de trás (ficam atrás do casco); 10 pernas entre os 10 calombos amarelos
+    const pernas = [], calombos = [];
+    for (let i = 0; i < 10; i++) { calombos.push(i * Math.PI / 5); pernas.push(i * Math.PI / 5 + Math.PI / 10); }
+    const naFrente = (a) => trRot(Math.sin(a), Math.cos(a), ang)[1] > 0;
+    const porProfundidade = (lista) => lista.slice().sort((a, b) => trRot(Math.sin(a), Math.cos(a), ang)[1] - trRot(Math.sin(b), Math.cos(b), ang)[1]);
+    porProfundidade(pernas).forEach(a => { if (!naFrente(a)) nvDrawLeg(a, ang, false); });
+
+    // casco de baixo (branco acinzentado, afunilando para baixo)
+    const a30 = nvAnel(14, 100, ang), a60 = nvAnel(60, 158, ang), a82 = nvAnel(82, 162, ang);
+    trG.fillStyle = "#c9d1da";
+    trG.beginPath(); trG.ellipse(a60.cx, a60.cy, a60.rx, a60.ry, 0, 0, Math.PI * 2); trG.fill();
+    nvFaixa(a30, a60, "#e6ebf0");
+    trG.fillStyle = "#d5dce3";
+    trG.beginPath(); trG.ellipse(a30.cx, a30.cy, a30.rx, a30.ry, 0, 0, Math.PI * 2); trG.fill();
+    // faixa preta com as escotilhas azuis
+    nvFaixa(a60, a82, "#1c1c2a");
+    trG.fillStyle = "#26263a";
+    trG.beginPath(); trG.ellipse(a82.cx, a82.cy, a82.rx, a82.ry, 0, 0, Math.PI * 2); trG.fill();
+    for (let i = 0; i < 18; i++) {
+        const a = i / 18 * Math.PI * 2;
+        const r = trRot(Math.sin(a), Math.cos(a), ang);
+        if (r[1] < 0.15) continue;
+        const p = trProj(Math.sin(a) * 162, 71, Math.cos(a) * 162, ang), k = p[3];
+        trG.fillStyle = "#7fb2e6";
+        trG.beginPath(); trG.ellipse(p[0], p[1], 6 * k * r[1], 6 * k, 0, 0, Math.PI * 2); trG.fill();
+        trG.fillStyle = "#d6ecff";
+        trG.beginPath(); trG.ellipse(p[0] - 1.5 * k * r[1], p[1] - 2 * k, 2 * k * r[1], 2 * k, 0, 0, Math.PI * 2); trG.fill();
+    }
+
+    // calombos amarelos: relevo do próprio casco de baixo, encostados embaixo da faixa preta
+    porProfundidade(calombos).forEach(a => nvDrawPod(a, ang));
+
+    // cúpula branca com a faixa cor de madeira listrada
+    const d0 = nvAnel(82, 158, ang), d1 = nvAnel(100, 150, ang), d2 = nvAnel(124, 124, ang), dTopo = nvAnel(146, 70, ang);
+    const alturaDomo = (a82.cy - dTopo.cy) + dTopo.ry * 0.6;
+    const branco = trG.createLinearGradient(d0.cx - d0.rx, 0, d0.cx + d0.rx, 0);
+    branco.addColorStop(0, "#c7ced6"); branco.addColorStop(0.35, "#f7f9fb"); branco.addColorStop(1, "#b9c1ca");
+    trG.fillStyle = branco;
+    trG.beginPath();
+    trG.moveTo(d0.cx - d0.rx, d0.cy);
+    trG.bezierCurveTo(d0.cx - d0.rx, d0.cy - alturaDomo * 0.7, d0.cx - d0.rx * 0.45, d0.cy - alturaDomo, d0.cx, d0.cy - alturaDomo);
+    trG.bezierCurveTo(d0.cx + d0.rx * 0.45, d0.cy - alturaDomo, d0.cx + d0.rx, d0.cy - alturaDomo * 0.7, d0.cx + d0.rx, d0.cy);
+    trG.ellipse(d0.cx, d0.cy, d0.rx, d0.ry, 0, 0, Math.PI);
+    trG.closePath();
+    trG.fill();
+    nvFaixa(d1, d2, "#c98a52");
+    // listras da faixa (giram com a câmera)
+    trG.strokeStyle = "rgba(120, 70, 30, 0.6)";
+    trG.lineWidth = 1;
+    trG.beginPath();
+    for (let i = 0; i < 40; i++) {
+        const a = i / 40 * Math.PI * 2;
+        const r = trRot(Math.sin(a), Math.cos(a), ang);
+        if (r[1] < 0.05) continue;
+        const p1 = trProj(Math.sin(a) * 150, 100, Math.cos(a) * 150, ang), p2 = trProj(Math.sin(a) * 124, 124, Math.cos(a) * 124, ang);
+        trG.moveTo(p1[0], p1[1]); trG.lineTo(p2[0], p2[1]);
+    }
+    trG.stroke();
+    // escotilha escura no topo
+    trG.fillStyle = "#eef1f4";
+    trG.beginPath(); trG.ellipse(dTopo.cx, d0.cy - alturaDomo * 0.93, dTopo.rx * 0.78, Math.max(3, dTopo.ry * 0.8), 0, 0, Math.PI * 2); trG.fill();
+    trG.strokeStyle = "#a9b2bc"; trG.lineWidth = 1.5; trG.stroke();
+    trG.fillStyle = "#2c3038";
+    trG.beginPath(); trG.ellipse(dTopo.cx, d0.cy - alturaDomo * 0.93, dTopo.rx * 0.55, Math.max(2, dTopo.ry * 0.55), 0, 0, Math.PI * 2); trG.fill();
+
+    // cabine: vidro roxo curvado na cúpula, com o suporte em volta
+    nvDrawCockpit(ang);
+
+    // pernas da frente (saem de baixo do casco, entre os calombos)
+    porProfundidade(pernas).forEach(a => { if (naFrente(a)) nvDrawLeg(a, ang, true); });
+}
+
+// Paisagem de Namek ao fundo (360°): céu verde-amarelado, mar azul no horizonte, morros de pedra altos de
+// topo reto e as árvores de bolinha. Desenhada uma vez numa faixa e só deslocada a cada quadro.
+const NV_PANO_W = Math.round(Math.PI * 2 * NV_CAM.F);
+let nvPanorama = null;
+function getFreezaShipPanorama() {
+    if (nvPanorama) return nvPanorama;
+    const c = document.createElement("canvas");
+    c.width = NV_PANO_W;
+    c.height = NV_CAM.HY + 8;
+    const g = c.getContext && c.getContext("2d");
+    if (!g) return null;
+    const W = c.width, base = NV_CAM.HY + 4;
+    const ceu = g.createLinearGradient(0, 0, 0, base);
+    ceu.addColorStop(0, "#7ccf5a"); ceu.addColorStop(0.6, "#c4e87a"); ceu.addColorStop(1, "#e9f6b4");
+    g.fillStyle = ceu;
+    g.fillRect(0, 0, W, c.height);
+    // nuvens claras
+    g.fillStyle = "rgba(245, 255, 220, 0.75)";
+    for (let i = 0; i < 12; i++) {
+        const x = (i * 331.7) % W, y = 20 + (i * 29) % 46, r = 10 + (i * 5) % 12;
+        [-W, 0, W].forEach(dx => { g.beginPath(); g.ellipse(x + dx, y, r * 3, r, 0, 0, Math.PI * 2); g.fill(); });
+    }
+    // mar azul no horizonte
+    g.fillStyle = "#4fb3c9";
+    g.fillRect(0, base - 8, W, 12);
+    // morros de pedra de Namek (altos, de topo reto e arredondado), com faixas de camadas
+    const morros = [[0.05, 60, 70], [0.14, 40, 46], [0.27, 80, 88], [0.4, 50, 58], [0.55, 90, 76], [0.66, 44, 52], [0.8, 70, 96], [0.92, 54, 60]];
+    morros.forEach(([pos, larg, alt]) => {
+        const x = pos * W;
+        [-W, 0, W].forEach(dx => {
+            const x0 = x + dx;
+            if (x0 + larg < 0 || x0 - larg > W) return;
+            g.fillStyle = "#e3c3b0";
+            g.beginPath();
+            g.moveTo(x0 - larg / 2, base);
+            g.lineTo(x0 - larg / 2 + 6, base - alt + 10);
+            g.quadraticCurveTo(x0, base - alt - 6, x0 + larg / 2 - 6, base - alt + 10);
+            g.lineTo(x0 + larg / 2, base);
+            g.closePath(); g.fill();
+            g.fillStyle = "#c79f8a";
+            g.fillRect(x0 + larg * 0.12, base - alt + 10, larg * 0.38 - 6, alt - 10);
+            g.fillStyle = "rgba(150, 110, 95, 0.5)";
+            for (let k = 1; k <= 3; k++) g.fillRect(x0 - larg / 2 + 6, base - alt * k / 4, larg - 12, 2);
+            g.fillStyle = "#5cbf6a";
+            g.beginPath(); g.ellipse(x0, base - alt + 4, larg / 2 - 6, 5, 0, Math.PI, 0); g.fill();
+        });
+    });
+    // árvores de Namek (tronco fino com bolinha em cima)
+    for (let i = 0; i < 16; i++) {
+        const x = (i * 241.3 + 90) % W, h = 18 + (i * 7) % 14;
+        [-W, 0, W].forEach(dx => {
+            const x0 = x + dx;
+            g.strokeStyle = "#7b8b4a"; g.lineWidth = 2;
+            g.beginPath(); g.moveTo(x0, base); g.lineTo(x0, base - h); g.stroke();
+            g.fillStyle = "#3f9b4f";
+            g.beginPath(); g.arc(x0, base - h - 5, 6, 0, Math.PI * 2); g.fill();
+        });
+    }
+    nvPanorama = c;
+    return c;
+}
+
+// Detalhes do chão de Namek (fixos no mundo): lagos, manchas de grama, pedras quebradas e tufos.
+const NV_CHAO = (() => {
+    const itens = [];
+    let semente = 7;
+    const rnd = () => { semente = (semente * 9301 + 49297) % 233280; return semente / 233280; };
+    for (let i = 0; i < 46; i++) {
+        const a = rnd() * Math.PI * 2, r = 250 + rnd() * 1500;
+        const tipo = i % 5 === 0 ? "lago" : i % 5 === 1 ? "grama" : i % 5 === 2 ? "tufo" : "pedra";
+        itens.push({ x: Math.sin(a) * r, z: Math.cos(a) * r, tipo, tam: 20 + rnd() * 50, giro: rnd() * Math.PI });
+    }
+    return itens;
+})();
+
+function drawFreezaShipGround(ang) {
+    const pano = getFreezaShipPanorama();
+    const phi0 = ang + Math.PI;
+    if (pano) {
+        let u0 = (-phi0 * NV_CAM.F) % NV_PANO_W;
+        if (u0 < 0) u0 += NV_PANO_W;
+        const x0 = NV_CAM.CX - u0;
+        ctx.drawImage(pano, x0, 0);
+        ctx.drawImage(pano, x0 + NV_PANO_W, 0);
+        if (x0 > 0) ctx.drawImage(pano, x0 - NV_PANO_W, 0);
+    } else {
+        ctx.fillStyle = "#c4e87a";
+        ctx.fillRect(0, 0, canvas.width, NV_CAM.HY);
+    }
+    // chão azul-esverdeado de Namek, mais claro lá longe
+    const chao = ctx.createLinearGradient(0, NV_CAM.HY, 0, canvas.height);
+    chao.addColorStop(0, "#9fd8d0"); chao.addColorStop(0.3, "#68bccb"); chao.addColorStop(1, "#3f93b0");
+    ctx.fillStyle = chao;
+    ctx.fillRect(0, NV_CAM.HY + 3, canvas.width, canvas.height - NV_CAM.HY);
+    // detalhes do chão, do mais longe para o mais perto (é o que passa rápido perto dos lutadores)
+    const lim = NV_CAM.D - NV_CAM.PERTO * 2;
+    NV_CHAO
+        .map(it => ({ it, r: trRot(it.x, it.z, ang) }))
+        .filter(o => o.r[1] < lim)
+        .sort((a, b) => a.r[1] - b.r[1])
+        .forEach(({ it }) => {
+            const p = trProj(it.x, 0, it.z, ang), k = p[3], t = it.tam;
+            if (p[1] < NV_CAM.HY) return;
+            if (it.tipo === "lago") {
+                ctx.fillStyle = "#8fe3f2";
+                ctx.beginPath(); ctx.ellipse(p[0], p[1], t * 1.6 * k, t * 0.35 * k, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+                ctx.beginPath(); ctx.ellipse(p[0] - t * 0.4 * k, p[1] - t * 0.06 * k, t * 0.5 * k, t * 0.06 * k, 0, 0, Math.PI * 2); ctx.fill();
+            } else if (it.tipo === "grama") {
+                ctx.fillStyle = "rgba(60, 150, 120, 0.55)";
+                ctx.beginPath(); ctx.ellipse(p[0], p[1], t * 2 * k, t * 0.4 * k, 0, 0, Math.PI * 2); ctx.fill();
+            } else if (it.tipo === "tufo") {
+                ctx.strokeStyle = "#2f8a6a"; ctx.lineWidth = Math.max(1, 1.5 * k);
+                ctx.beginPath();
+                for (let j = -2; j <= 2; j++) { ctx.moveTo(p[0] + j * 3 * k, p[1]); ctx.lineTo(p[0] + j * 5 * k, p[1] - 10 * k); }
+                ctx.stroke();
+            } else {
+                // pedra quebrada (lascas cor-de-rosa acinzentadas)
+                const h = t * 0.5 * k, w = t * 0.6 * k;
+                ctx.fillStyle = "#d9b8ad";
+                ctx.beginPath();
+                ctx.moveTo(p[0] - w, p[1]); ctx.lineTo(p[0] - w * 0.5, p[1] - h); ctx.lineTo(p[0] + w * 0.3, p[1] - h * 0.8); ctx.lineTo(p[0] + w, p[1]);
+                ctx.closePath(); ctx.fill();
+                ctx.fillStyle = "#b08e85";
+                ctx.beginPath();
+                ctx.moveTo(p[0] + w * 0.3, p[1] - h * 0.8); ctx.lineTo(p[0] + w, p[1]); ctx.lineTo(p[0] + w * 0.1, p[1]);
+                ctx.closePath(); ctx.fill();
+            }
+        });
+}
+
+function drawFreezaShipStage(ang) {
+    trCam = NV_CAM;
+    try {
+        drawFreezaShipGround(ang);
+        drawCachedOrbitLayer(nvCena, ang, drawFreezaShipScene);
+    } finally {
+        trCam = TR_CAM;
+    }
+}
+
 // ==================== DESENHO DAS ARENAS DBZ POLIDAS HD ====================
 function drawStageBackground() {
     ctx.save();
@@ -3457,38 +3825,8 @@ function drawStageBackground() {
         drawTimeRoomStage(getTimeRoomOrbitAngle(scroll));
     } 
     else if (selectedStage === "freeza_ship") {
-        ctx.fillStyle = "#0a0a14";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        ctx.fillStyle = "#1a1a2e";
-        ctx.fillRect(0, 0, canvas.width, 180);
-        ctx.strokeStyle = "#00ffff";
-        ctx.lineWidth = 1;
-
-        for (let x = - (scroll * 0.5 % 80); x < canvas.width + 80; x += 80) {
-            ctx.strokeRect(x, 20, 70, 120);
-            ctx.fillStyle = Math.sin(scroll * 0.1 + x) > 0 ? "#ff0055" : "#00ff55";
-            ctx.fillRect(x + 10, 30, 8, 8);
-            ctx.fillStyle = Math.cos(scroll * 0.1 + x) > 0 ? "#ffcc00" : "#00ffff";
-            ctx.fillRect(x + 24, 30, 8, 8);
-        }
-
-        let winX = 350 - (scroll * 0.3 % 300);
-        ctx.fillStyle = "#000005";
-        ctx.beginPath(); ctx.arc(winX, 80, 45, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = "#444466"; ctx.lineWidth = 6; ctx.stroke();
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(winX - 15, 70, 2, 2); ctx.fillRect(winX + 20, 90, 2, 2); ctx.fillRect(winX + 5, 60, 3, 3);
-
-        let floorGrad = ctx.createLinearGradient(0, 180, 0, canvas.height);
-        floorGrad.addColorStop(0, "#2a2a3a");
-        floorGrad.addColorStop(1, "#11111a");
-        ctx.fillStyle = floorGrad;
-        ctx.fillRect(0, 180, canvas.width, canvas.height - 180);
-
-        ctx.strokeStyle = "#00ffff"; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(0, 180); ctx.lineTo(canvas.width, 180); ctx.stroke();
-    } 
+        drawFreezaShipStage(getFreezaShipOrbitAngle(scroll));
+    }
     else if (selectedStage === "kaioshin") {
         let skyGrad = ctx.createLinearGradient(0, 0, 0, 220);
         skyGrad.addColorStop(0, "#ffb6c1");
@@ -4355,7 +4693,7 @@ function drawScreenFlash() {
 
 // Fases de fundo claro (Sala do Tempo, toda branca): placas escuras translúcidas atrás do placar do topo,
 // senão os textos brancos/claros somem no fundo.
-const STAGES_FUNDO_CLARO = ["time_room", "cell_games"];
+const STAGES_FUNDO_CLARO = ["time_room", "cell_games", "freeza_ship"];
 
 function drawHUD() {
     ctx.save();
