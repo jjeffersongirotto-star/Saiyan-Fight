@@ -2728,6 +2728,345 @@ function handleMenuClick(x, y) {
     }
 }
 
+// ==================== SALA DO TEMPO: PAVILHÃO EM 3D QUE A CÂMERA RODEIA ====================
+// O pavilhão no vazio branco: cúpula dourada com relógio, duas alas de telhado rosa, ampulhetas gigantes de
+// areia verde (que escorre de verdade), postes com globo verde-água e piso de azulejos em degraus. Tudo é
+// descrito em coordenadas de "planta" (x para o lado, z para a frente, y para cima) e projetado com a
+// câmera girando o ângulo `ang` em volta do centro — assim a fase mostra frente, lateral, fundos e volta.
+const TR_K = 1.12, TR_CX = 400, TR_GY = 236, TR_TILT = 0.3;
+
+function trRot(x, z, ang) {
+    const c = Math.cos(ang), s = Math.sin(ang);
+    return [x * c - z * s, x * s + z * c];   // [lado, profundidade (+ = mais perto da câmera)]
+}
+function trProj(x, y, z, ang) {
+    const r = trRot(x, z, ang);
+    return [TR_CX + r[0] * TR_K, TR_GY - y * TR_K + r[1] * TR_TILT * TR_K, r[1]];
+}
+function trPoly(pts) {
+    ctx.beginPath();
+    pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
+    ctx.closePath();
+}
+
+// Laje do piso (retângulo da planta com altura h): lados visíveis, tampo e o rejunte dos azulejos.
+function trDrawSlab(sl, ang) {
+    const cantos = [[sl.x0, sl.z0], [sl.x1, sl.z0], [sl.x1, sl.z1], [sl.x0, sl.z1]];
+    const topo = cantos.map(c => trProj(c[0], sl.h, c[1], ang));
+    const base = cantos.map(c => trProj(c[0], 0, c[1], ang));
+    for (let i = 0; i < 4; i++) {
+        const j = (i + 1) % 4;
+        // lado virado para a câmera: a normal da aresta (para fora) aponta para a frente depois de girar
+        const mx = (cantos[i][0] + cantos[j][0]) / 2, mz = (cantos[i][1] + cantos[j][1]) / 2;
+        const cx = (sl.x0 + sl.x1) / 2, cz = (sl.z0 + sl.z1) / 2;
+        const n = trRot(mx - cx, mz - cz, ang);
+        if (n[1] <= 0) continue;
+        ctx.fillStyle = "#a9c2cc";
+        trPoly([topo[i], topo[j], base[j], base[i]]);
+        ctx.fill();
+    }
+    ctx.fillStyle = "#dceaf0";
+    trPoly(topo);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(120, 150, 165, 0.35)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    const passo = 22;
+    for (let x = Math.ceil(sl.x0 / passo) * passo; x < sl.x1; x += passo) {
+        const p0 = trProj(x, sl.h, sl.z0, ang), p1 = trProj(x, sl.h, sl.z1, ang);
+        ctx.moveTo(p0[0], p0[1]); ctx.lineTo(p1[0], p1[1]);
+    }
+    for (let z = Math.ceil(sl.z0 / passo) * passo; z < sl.z1; z += passo) {
+        const p0 = trProj(sl.x0, sl.h, z, ang), p1 = trProj(sl.x1, sl.h, z, ang);
+        ctx.moveTo(p0[0], p0[1]); ctx.lineTo(p1[0], p1[1]);
+    }
+    ctx.stroke();
+    ctx.strokeStyle = "#8fadb9";
+    trPoly(topo);
+    ctx.stroke();
+}
+
+// Ala de telhado rosa: caixa branca com a janela comprida na frente e o telhado arredondado.
+function trDrawWing(wx, ang) {
+    const hx = 38, hz = 30, y0 = 9, y1 = 46, yr = 53;
+    const cantos = [[wx - hx, -hz], [wx + hx, -hz], [wx + hx, hz], [wx - hx, hz]];
+    const P = (c, y) => trProj(c[0], y, c[1], ang);
+    for (let i = 0; i < 4; i++) {
+        const j = (i + 1) % 4;
+        const mx = (cantos[i][0] + cantos[j][0]) / 2 - wx, mz = (cantos[i][1] + cantos[j][1]) / 2;
+        const n = trRot(mx, mz, ang);
+        if (n[1] <= 0) continue;
+        const luz = 0.93 + 0.07 * (n[0] / Math.hypot(n[0], n[1]));   // paredes brancas, um lado um pouco mais claro
+        ctx.fillStyle = `rgb(${Math.round(250 * luz)}, ${Math.round(251 * luz)}, ${Math.round(253 * luz)})`;
+        trPoly([P(cantos[i], y1), P(cantos[j], y1), P(cantos[j], y0), P(cantos[i], y0)]);
+        ctx.fill();
+        ctx.strokeStyle = "#9aa7b4"; ctx.lineWidth = 1; ctx.stroke();
+        // telhado: faixa rosa mais escura dos lados
+        ctx.fillStyle = "#d9799f";
+        trPoly([P(cantos[i], yr), P(cantos[j], yr), P(cantos[j], y1), P(cantos[i], y1)]);
+        ctx.fill();
+        // janela comprida só nas paredes da frente e de trás (as compridas)
+        if (Math.abs(mz) > 1) {
+            const A = cantos[i], B = cantos[j];
+            const L = (u, y) => trProj(A[0] + (B[0] - A[0]) * u, y, A[1] + (B[1] - A[1]) * u, ang);
+            ctx.fillStyle = "#2f3b4c";
+            trPoly([L(0.22, 33), L(0.78, 33), L(0.78, 25), L(0.22, 25)]);
+            ctx.fill();
+            ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.5; ctx.stroke();
+        }
+    }
+    ctx.fillStyle = "#f4a9c9";
+    trPoly(cantos.map(c => P(c, yr)));
+    ctx.fill();
+    ctx.strokeStyle = "#c86890"; ctx.lineWidth = 1; ctx.stroke();
+}
+
+// Ampulheta gigante (igual de todos os lados): base e tampa douradas, vidro e a areia verde escorrendo.
+function trDrawHourglass(px, py, fase) {
+    const k = TR_K, w = 17 * k, meio = py - 50 * k, topoVidro = py - 92 * k, baseVidro = py - 10 * k;
+    // base dourada
+    ctx.fillStyle = "#d4a52a";
+    ctx.beginPath(); ctx.ellipse(px, py - 5 * k, w * 1.25, 5 * k, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillRect(px - w * 1.25, py - 11 * k, w * 2.5, 6 * k);
+    ctx.fillStyle = "#f2cf5b";
+    ctx.beginPath(); ctx.ellipse(px, py - 11 * k, w * 1.25, 5 * k, 0, 0, Math.PI * 2); ctx.fill();
+    // forma do vidro (dois bulbos e a cintura fina)
+    const vidro = () => {
+        ctx.beginPath();
+        ctx.moveTo(px - w, topoVidro);
+        ctx.bezierCurveTo(px - w * 1.15, meio - 18 * k, px - 3 * k, meio - 6 * k, px - 2.5 * k, meio);
+        ctx.bezierCurveTo(px - 3 * k, meio + 6 * k, px - w * 1.15, meio + 18 * k, px - w, baseVidro);
+        ctx.lineTo(px + w, baseVidro);
+        ctx.bezierCurveTo(px + w * 1.15, meio + 18 * k, px + 3 * k, meio + 6 * k, px + 2.5 * k, meio);
+        ctx.bezierCurveTo(px + 3 * k, meio - 6 * k, px + w * 1.15, meio - 18 * k, px + w, topoVidro);
+        ctx.closePath();
+    };
+    ctx.save();
+    vidro();
+    ctx.fillStyle = "rgba(225, 240, 245, 0.85)";
+    ctx.fill();
+    ctx.clip();
+    // areia: em cima esvazia, embaixo enche (a fase vai de 0 a 1 e recomeça)
+    const cima = (1 - fase) * 34 * k, baixo = fase * 34 * k;
+    ctx.fillStyle = "#4fb85a";
+    ctx.fillRect(px - w * 1.3, meio - 4 * k - cima, w * 2.6, cima);
+    ctx.fillStyle = "#3e9f4b";
+    ctx.beginPath();
+    ctx.moveTo(px - w * 1.3, baseVidro);
+    ctx.lineTo(px - w * 1.3, baseVidro - baixo * 0.75);
+    ctx.quadraticCurveTo(px, baseVidro - baixo * 1.25, px + w * 1.3, baseVidro - baixo * 0.75);
+    ctx.lineTo(px + w * 1.3, baseVidro);
+    ctx.closePath();
+    ctx.fill();
+    if (fase < 0.97) { ctx.fillStyle = "#4fb85a"; ctx.fillRect(px - 1, meio - 3 * k, 2, (baseVidro - meio) - baixo * 0.9); }
+    // brilho do vidro
+    ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
+    ctx.fillRect(px - w * 0.75, topoVidro + 6 * k, 3 * k, 22 * k);
+    ctx.fillRect(px - w * 0.75, meio + 10 * k, 3 * k, 18 * k);
+    ctx.restore();
+    vidro();
+    ctx.strokeStyle = "rgba(120, 150, 165, 0.8)"; ctx.lineWidth = 1.2; ctx.stroke();
+    // tampa: cúpula dourada com ponta
+    ctx.fillStyle = "#d4a52a";
+    ctx.fillRect(px - w * 1.2, topoVidro - 5 * k, w * 2.4, 6 * k);
+    const tampa = ctx.createLinearGradient(px - w, 0, px + w, 0);
+    tampa.addColorStop(0, "#f7d76b"); tampa.addColorStop(0.5, "#e8b83a"); tampa.addColorStop(1, "#b88a1c");
+    ctx.fillStyle = tampa;
+    ctx.beginPath(); ctx.ellipse(px, topoVidro - 5 * k, w * 1.15, 20 * k, 0, Math.PI, 0); ctx.fill();
+    ctx.fillStyle = "#c99a26";
+    ctx.beginPath(); ctx.moveTo(px - 2.5 * k, topoVidro - 24 * k); ctx.lineTo(px, topoVidro - 36 * k); ctx.lineTo(px + 2.5 * k, topoVidro - 24 * k); ctx.fill();
+}
+
+// Poste com globo verde-água.
+function trDrawLamp(px, py) {
+    const k = TR_K;
+    ctx.fillStyle = "#c99a26";
+    ctx.beginPath(); ctx.ellipse(px, py - 2 * k, 7 * k, 2.5 * k, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillRect(px - 1.5 * k, py - 60 * k, 3 * k, 58 * k);
+    ctx.fillRect(px - 4 * k, py - 62 * k, 8 * k, 3 * k);
+    const globo = ctx.createRadialGradient(px - 3 * k, py - 73 * k, 1, px, py - 70 * k, 10 * k);
+    globo.addColorStop(0, "#ffffff"); globo.addColorStop(0.5, "#c8f2e4"); globo.addColorStop(1, "#7fcfb8");
+    ctx.fillStyle = globo;
+    ctx.beginPath(); ctx.arc(px, py - 70 * k, 10 * k, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "#7bb3a3"; ctx.lineWidth = 1; ctx.stroke();
+}
+
+// Pavilhão central: colunas em volta, cortinas e mesinha dentro, cúpula dourada com gomos e o relógio na frente.
+function trDrawGazebo(ang) {
+    const k = TR_K, R = 50, yPiso = 9, yTopo = 72;
+    const centro = trProj(0, yPiso, 0, ang), centroTopo = trProj(0, yTopo, 0, ang);
+    const rx = R * k, ry = R * TR_TILT * k;
+    const colunas = [];
+    for (let i = 0; i < 8; i++) {
+        const a = i * Math.PI / 4 + Math.PI / 8;
+        const p = trProj(Math.sin(a) * R, yPiso, Math.cos(a) * R, ang);
+        colunas.push(p);
+    }
+    const desenhaColuna = (p) => {
+        const alto = (yTopo - yPiso) * k;
+        ctx.fillStyle = "#f4f6f8";
+        ctx.fillRect(p[0] - 3 * k, p[1] - alto, 6 * k, alto);
+        ctx.fillStyle = "#c9d3dc";
+        ctx.fillRect(p[0] + 1 * k, p[1] - alto, 2 * k, alto);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(p[0] - 4.5 * k, p[1] - alto, 9 * k, 3 * k);
+        ctx.fillRect(p[0] - 4.5 * k, p[1] - 3 * k, 9 * k, 3 * k);
+    };
+    // interior: parede do fundo com cortinas lilás e a mesinha
+    ctx.fillStyle = "#cfd7e6";
+    ctx.beginPath();
+    ctx.ellipse(centro[0], centro[1], rx, ry, 0, Math.PI, 0, true);
+    ctx.lineTo(centroTopo[0] + rx, centroTopo[1]);
+    ctx.ellipse(centroTopo[0], centroTopo[1], rx, ry, 0, 0, Math.PI, true);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "rgba(150, 110, 190, 0.55)";
+    for (let i = 0; i < 6; i++) {
+        const a = ang * 0.0 + i * Math.PI / 3;   // cortinas penduradas em volta (giram com o pavilhão)
+        const r = trRot(Math.sin(a) * R * 0.9, Math.cos(a) * R * 0.9, ang);
+        if (r[1] > 0) continue;                 // só as do fundo aparecem por trás da mesa
+        const x = TR_CX + r[0] * k, yTop = centroTopo[1] + r[1] * TR_TILT * k;
+        ctx.beginPath();
+        ctx.moveTo(x - 9 * k, yTop); ctx.quadraticCurveTo(x, yTop + 30 * k, x - 4 * k, yTop + 55 * k);
+        ctx.lineTo(x + 4 * k, yTop + 55 * k); ctx.quadraticCurveTo(x, yTop + 30 * k, x + 9 * k, yTop);
+        ctx.fill();
+    }
+    ctx.fillStyle = "#8a5a33";
+    ctx.beginPath(); ctx.ellipse(centro[0], centro[1] - 16 * k, 10 * k, 3 * k, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillRect(centro[0] - 1.5 * k, centro[1] - 16 * k, 3 * k, 15 * k);
+    // colunas: as de trás, depois as da frente
+    const ordem = colunas.map((p, i) => i).sort((a, b) => colunas[a][2] - colunas[b][2]);
+    ordem.forEach(i => { if (colunas[i][2] < 0) desenhaColuna(colunas[i]); });
+    // mureta baixa na frente, entre as colunas
+    ctx.fillStyle = "rgba(240, 244, 248, 0.92)";
+    ctx.beginPath();
+    ctx.ellipse(centro[0], centro[1] - 7 * k, rx, ry, 0, 0, Math.PI);
+    ctx.lineTo(centro[0] - rx, centro[1]);
+    ctx.ellipse(centro[0], centro[1], rx, ry, 0, Math.PI, 0, true);
+    ctx.closePath();
+    ctx.fill();
+    ordem.forEach(i => { if (colunas[i][2] >= 0) desenhaColuna(colunas[i]); });
+    // faixa branca sob a cúpula
+    ctx.fillStyle = "#f7f9fb";
+    ctx.beginPath();
+    ctx.ellipse(centroTopo[0], centroTopo[1] - 6 * k, rx + 4 * k, ry + 1, 0, Math.PI, 0);
+    ctx.lineTo(centroTopo[0] + rx + 4 * k, centroTopo[1]);
+    ctx.ellipse(centroTopo[0], centroTopo[1], rx + 4 * k, ry + 1, 0, 0, Math.PI);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#b9c4ce"; ctx.lineWidth = 1; ctx.stroke();
+    // cúpula dourada
+    const yBase = centroTopo[1] - 6 * k, alturaDomo = 58 * k, rDomo = rx + 4 * k;
+    const ouro = ctx.createRadialGradient(centroTopo[0] - rDomo * 0.35, yBase - alturaDomo * 0.7, 4, centroTopo[0], yBase - alturaDomo * 0.4, rDomo * 1.1);
+    ouro.addColorStop(0, "#fff1a8"); ouro.addColorStop(0.45, "#f0c53f"); ouro.addColorStop(1, "#b5841b");
+    ctx.fillStyle = ouro;
+    ctx.beginPath();
+    ctx.moveTo(centroTopo[0] - rDomo, yBase);
+    ctx.bezierCurveTo(centroTopo[0] - rDomo, yBase - alturaDomo * 0.9, centroTopo[0] - rDomo * 0.35, yBase - alturaDomo, centroTopo[0], yBase - alturaDomo);
+    ctx.bezierCurveTo(centroTopo[0] + rDomo * 0.35, yBase - alturaDomo, centroTopo[0] + rDomo, yBase - alturaDomo * 0.9, centroTopo[0] + rDomo, yBase);
+    ctx.ellipse(centroTopo[0], yBase, rDomo, ry + 1, 0, 0, Math.PI);
+    ctx.closePath();
+    ctx.fill();
+    // gomos da cúpula (giram junto com a câmera)
+    ctx.strokeStyle = "rgba(150, 105, 20, 0.55)";
+    ctx.lineWidth = 1.2;
+    for (let j = 0; j < 12; j++) {
+        const a = j * Math.PI / 6;
+        const r = trRot(Math.sin(a), Math.cos(a), ang);
+        if (r[1] < 0.05) continue;
+        const bx = centroTopo[0] + r[0] * rDomo, by = yBase + r[1] * (ry + 1);
+        ctx.beginPath();
+        ctx.moveTo(bx, by);
+        ctx.quadraticCurveTo(centroTopo[0] + r[0] * rDomo * 0.95, yBase - alturaDomo * 0.85, centroTopo[0], yBase - alturaDomo);
+        ctx.stroke();
+    }
+    // ponta com a bola dourada
+    ctx.fillStyle = "#e0b23a";
+    ctx.beginPath(); ctx.arc(centroTopo[0], yBase - alturaDomo - 6 * k, 6 * k, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(centroTopo[0] - 2 * k, yBase - alturaDomo - 11 * k); ctx.lineTo(centroTopo[0], yBase - alturaDomo - 24 * k); ctx.lineTo(centroTopo[0] + 2 * k, yBase - alturaDomo - 11 * k); ctx.fill();
+    // relógio na frente da cúpula (some quando a câmera está atrás e fica fino de lado)
+    const rel = trRot(0, 1, ang);
+    if (rel[1] > 0.08) {
+        const cxr = centroTopo[0] + rel[0] * rDomo * 0.82, cyr = yBase - alturaDomo * 0.38;
+        const larg = 15 * k * rel[1];
+        ctx.fillStyle = "#fbf6e8";
+        ctx.fillRect(cxr - larg, cyr - 13 * k, larg * 2, 26 * k);
+        ctx.strokeStyle = "#c99a26"; ctx.lineWidth = 1.5; ctx.strokeRect(cxr - larg, cyr - 13 * k, larg * 2, 26 * k);
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath(); ctx.ellipse(cxr, cyr, 10 * k * rel[1], 10 * k, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = "#8a6a20"; ctx.lineWidth = 1.2; ctx.stroke();
+        ctx.strokeStyle = "#333333"; ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.moveTo(cxr, cyr); ctx.lineTo(cxr, cyr - 7 * k); ctx.moveTo(cxr, cyr); ctx.lineTo(cxr + 4 * k * rel[1], cyr + 1 * k); ctx.stroke();
+    }
+}
+
+// O pavilhão gira devagar (uma volta a cada ~2 min): em vez de redesenhar tudo a cada quadro, a imagem é guardada
+// e só refeita quando a câmera anda meio grau (~6 vezes por segundo) — custa uma fração do desenho completo.
+const TR_PASSOS_POR_VOLTA = 720;
+const trCena = { passo: null, canvas: null };
+function drawTimeRoomStage(ang) {
+    const passo = Math.round(ang / (Math.PI * 2) * TR_PASSOS_POR_VOLTA) % TR_PASSOS_POR_VOLTA;
+    if (!trCena.canvas) {
+        trCena.canvas = document.createElement("canvas");
+        trCena.canvas.width = canvas.width;
+        trCena.canvas.height = canvas.height;
+    }
+    const g = trCena.canvas.getContext && trCena.canvas.getContext("2d");
+    if (!g) { drawTimeRoomScene(ang); return; }
+    if (trCena.passo !== passo) {
+        // desenha na tela sem o tremor e guarda uma cópia
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        drawTimeRoomScene(passo / TR_PASSOS_POR_VOLTA * Math.PI * 2);
+        ctx.restore();
+        g.clearRect(0, 0, trCena.canvas.width, trCena.canvas.height);
+        g.drawImage(canvas, 0, 0);
+        trCena.passo = passo;
+    }
+    ctx.drawImage(trCena.canvas, 0, 0);
+}
+
+function drawTimeRoomScene(ang) {
+    // o vazio branco infinito
+    const ceu = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    ceu.addColorStop(0, "#fdfbf6");
+    ceu.addColorStop(0.55, "#f6f1e8");
+    ceu.addColorStop(1, "#e9e2d5");
+    ctx.fillStyle = ceu;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // sombra suave do pavilhão no "chão" branco
+    const c = Math.abs(Math.cos(ang)), s = Math.abs(Math.sin(ang));
+    ctx.fillStyle = "rgba(150, 140, 125, 0.18)";
+    ctx.beginPath();
+    ctx.ellipse(TR_CX, TR_GY + 6, (250 * c + 110 * s) * TR_K + 20, (110 * c + 250 * s) * TR_TILT * TR_K + 14, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // piso em degraus (das lajes mais baixas para as mais altas)
+    const lajes = [
+        { x0: -132, x1: 132, z0: 88, z1: 124, h: 2 },
+        { x0: -102, x1: 102, z0: 66, z1: 96, h: 4 },
+        { x0: -78, x1: 78, z0: 50, z1: 74, h: 6 },
+        { x0: -250, x1: 250, z0: -38, z1: 38, h: 7 },
+        { x0: -95, x1: 95, z0: -58, z1: 58, h: 9 }
+    ];
+    lajes.forEach(sl => trDrawSlab(sl, ang));
+
+    // objetos em pé, do mais longe para o mais perto da câmera
+    const objetos = [
+        { x: 0, z: 0, d: (a) => trDrawGazebo(a) },
+        { x: -100, z: 0, d: (a) => trDrawWing(-100, a) },
+        { x: 100, z: 0, d: (a) => trDrawWing(100, a) },
+        { x: -178, z: 0, d: (a, p) => trDrawHourglass(p[0], p[1], (gameplayClock * 0.02) % 1) },
+        { x: 178, z: 0, d: (a, p) => trDrawHourglass(p[0], p[1], (gameplayClock * 0.02 + 0.5) % 1) },
+        { x: -228, z: 0, d: (a, p) => trDrawLamp(p[0], p[1]) },
+        { x: 228, z: 0, d: (a, p) => trDrawLamp(p[0], p[1]) }
+    ];
+    objetos
+        .map(o => ({ o, p: trProj(o.x, 7, o.z, ang) }))
+        .sort((a, b) => a.p[2] - b.p[2])
+        .forEach(({ o, p }) => o.d(ang, p));
+}
+
 // ==================== DESENHO DAS ARENAS DBZ POLIDAS HD ====================
 function drawStageBackground() {
     ctx.save();
@@ -2856,39 +3195,7 @@ function drawStageBackground() {
         ctx.fillStyle = "#228b22"; ctx.beginPath(); ctx.arc(cx + 85, 115, 25, 0, Math.PI * 2); ctx.fill();
     } 
     else if (selectedStage === "time_room") {
-        let skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-        skyGrad.addColorStop(0, "#ffffff");
-        skyGrad.addColorStop(0.4, "#e6f2ff");
-        skyGrad.addColorStop(0.7, "#ccccff");
-        skyGrad.addColorStop(1, "#9999ff");
-        ctx.fillStyle = skyGrad;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        let palX = 260 - (scroll * 0.2 % 200);
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(palX, 100, 280, 90);
-        ctx.fillStyle = "#ffcc00";
-        ctx.beginPath(); ctx.arc(palX + 140, 100, 45, Math.PI, 0); ctx.fill();
-        ctx.beginPath(); ctx.arc(palX + 40, 100, 20, Math.PI, 0); ctx.fill();
-        ctx.beginPath(); ctx.arc(palX + 240, 100, 20, Math.PI, 0); ctx.fill();
-        
-        ctx.fillStyle = "#cc0000";
-        ctx.fillRect(palX + 20, 120, 12, 70);
-        ctx.fillRect(palX + 248, 120, 12, 70);
-
-        ctx.fillStyle = "#f5f5f5";
-        ctx.fillRect(0, 190, canvas.width, canvas.height - 190);
-        ctx.strokeStyle = "#ddddee";
-        ctx.lineWidth = 2;
-        let pOffset = (scroll * 2) % 40;
-        for (let x = -pOffset; x < canvas.width + 40; x += 40) {
-            ctx.beginPath();
-            ctx.moveTo(x, 190);
-            ctx.lineTo(x - 60, canvas.height);
-            ctx.stroke();
-        }
-        ctx.beginPath(); ctx.moveTo(0, 220); ctx.lineTo(canvas.width, 220); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(0, 270); ctx.lineTo(canvas.width, 270); ctx.stroke();
+        drawTimeRoomStage(getTimeRoomOrbitAngle(scroll));
     } 
     else if (selectedStage === "freeza_ship") {
         ctx.fillStyle = "#0a0a14";
@@ -3834,8 +4141,19 @@ function drawScreenFlash() {
     ctx.restore();
 }
 
+// Fases de fundo claro (Sala do Tempo, toda branca): placas escuras translúcidas atrás do placar do topo,
+// senão os textos brancos/claros somem no fundo.
+const STAGES_FUNDO_CLARO = ["time_room"];
+
 function drawHUD() {
     ctx.save();
+    if (STAGES_FUNDO_CLARO.includes(selectedStage)) {
+        ctx.fillStyle = "rgba(15, 23, 42, 0.55)";
+        roundRectPath(10, 8, 250, 66, 10);
+        ctx.fill();
+        roundRectPath(canvas.width - 236, 8, 228, 66, 10);
+        ctx.fill();
+    }
     ctx.fillStyle = "#222244";
     ctx.fillRect(20, 15, 150, 14);
     ctx.fillStyle = "#00ff55";
