@@ -28,7 +28,7 @@ function initAudio() {
 }
 
 // ==================== MÚSICAS DAS FASES ====================
-// Quatro temas originais do jogo, um por época (getStageMusicEra em game-logic-core.js), cada um com nome,
+// Oito temas originais do jogo, um por fase (getStageMusicEra em game-logic-core.js), cada um com nome,
 // compasso, andamento, escala e instrumentos próprios e um "gancho" de abertura fácil de reconhecer.
 // (As músicas da série têm direitos autorais e não são copiadas: estas são composições do próprio jogo.)
 //
@@ -91,6 +91,66 @@ const BGM_THEMES = {
         kick:  "x.....x...x.....",
         snare: "",
         hat:   "x.x.x.x.x.x.x.x."
+    },
+    kaio: {
+        nome: "GALOPE DO PLANETA KAIOH",
+        clima: "Polca cômica em Dó maior, xilofone saltitante com saltos engraçados e tuba \"pum-pá\"",
+        bpm: 150, compasso: 16, swing: 0,
+        lead: { wave: "triangle", vol: 0.1, staccato: 0.4 },
+        bassWave: "square", bassVol: 0.035,
+        acordes: ["C2", "G1", "F1", "C2", "C2", "C2", "G1", "C2"],
+        melodia: "C5:2 -:2 G4:2 -:2 E4:2 G4:2 C5:4 | B4:2 C5:2 D5:2 C5:2 B4:4 G4:4 | A4:2 -:2 F4:2 -:2 A4:2 C5:2 F5:4 | E5:2 D5:2 C5:2 B4:2 C5:8 |" +
+                 "C5:2 -:2 G4:2 -:2 E4:2 G4:2 C5:4 | D5:2 Eb5:2 E5:2 G5:2 E5:4 C5:4 | A4:2 B4:2 C5:2 D5:2 G4:2 A4:2 B4:2 D5:2 | C5:4 G4:2 E4:2 C4:4 -:4",
+        baixo: "R:2 -:2 O:2 -:2 R:2 -:2 Q:2 -:2",
+        kick:  "x...x...x...x...",
+        snare: "",
+        hat:   "..x...x...x...x."
+    },
+    namek: {
+        nome: "BRISA DE NAMEK",
+        clima: "Misteriosa e lenta em Ré dórico, notas longas com vibrato sobre um céu verde",
+        bpm: 84, compasso: 16, swing: 0,
+        lead: { wave: "sine", vol: 0.085, staccato: 1, vibrato: 4 },
+        bassWave: "triangle", bassVol: 0.07,
+        acordes: ["D2", "A1", "F1", "A1", "D2", "C2", "A#1", "D2"],
+        melodia: "A4:4 D5:4 C5:2 A4:2 G4:4 | A4:12 -:4 | F4:4 G4:4 A4:2 C5:2 B4:4 | A4:12 -:4 |" +
+                 "D5:4 E5:4 F5:2 E5:2 D5:4 | C5:6 A4:2 G4:8 | F4:4 E4:4 D4:2 E4:2 F4:4 | D4:12 -:4",
+        baixo: "R:8 Q:8",
+        kick:  "x...............",
+        snare: "",
+        hat:   "......x.......x."
+    },
+    explosao: {
+        nome: "CONTAGEM FINAL",
+        clima: "Urgente em Dó menor, ostinato de semicolcheias como um alarme e o tempo acabando",
+        bpm: 176, compasso: 16, swing: 0,
+        lead: { wave: "square", vol: 0.03, staccato: 0.55 },
+        bassWave: "sawtooth", bassVol: 0.045,
+        acordes: ["C2", "G#1", "G1", "C2", "C2", "G#1", "G1", "C2"],
+        melodia: "C5:1 C5:1 G4:1 C5:1 Eb5:1 C5:1 G4:1 C5:1 D5:1 C5:1 G4:1 C5:1 Eb5:1 C5:1 G4:1 C5:1 |" +
+                 "C5:1 C5:1 Ab4:1 C5:1 Eb5:1 C5:1 Ab4:1 C5:1 F5:1 C5:1 Ab4:1 C5:1 Eb5:1 C5:1 Ab4:1 C5:1 |" +
+                 "B4:1 B4:1 G4:1 B4:1 D5:1 B4:1 G4:1 B4:1 F5:1 D5:1 B4:1 G4:1 F5:1 D5:1 B4:1 G4:1 | C5:4 -:2 G4:2 Eb5:4 -:2 G5:2 |" +
+                 "C5:1 C5:1 G4:1 C5:1 Eb5:1 C5:1 G4:1 C5:1 D5:1 C5:1 G4:1 C5:1 Eb5:1 C5:1 G4:1 C5:1 |" +
+                 "C5:1 C5:1 Ab4:1 C5:1 Eb5:1 C5:1 Ab4:1 C5:1 F5:1 C5:1 Ab4:1 C5:1 Eb5:1 C5:1 Ab4:1 C5:1 |" +
+                 "Ab4:2 B4:2 D5:2 F5:2 Ab5:2 F5:2 D5:2 B4:2 | C5:8 G5:4 C6:4",
+        baixo: "R:2 R:2 O:2 R:2 R:2 R:2 O:2 R:2",
+        kick:  "x.x.x.x.x.x.x.x.",
+        snare: "....x.......x...",
+        hat:   ""
+    },
+    cell: {
+        nome: "TORNEIO DA PERFEIÇÃO",
+        clima: "Épica em Lá menor, compasso de 6/8 que balança em dois tempos fortes, metais solenes",
+        bpm: 126, compasso: 12, swing: 0,
+        lead: { wave: "square", vol: 0.035, staccato: 0.95 },
+        bassWave: "triangle", bassVol: 0.08,
+        acordes: ["A1", "G1", "A1", "E1", "F1", "D2", "E1", "A1"],
+        melodia: "A4:3 C5:3 E5:6 | D5:3 C5:3 B4:3 G4:3 | A4:3 C5:3 E5:3 A5:3 | G#5:9 E5:3 |" +
+                 "F5:3 E5:3 D5:3 C5:3 | D5:3 C5:3 B4:3 A4:3 | B4:3 C5:3 D5:3 E5:3 | A4:9 -:3",
+        baixo: "R:6 Q:3 O:3",
+        kick:  "x.....x.....",
+        snare: "......x.....",
+        hat:   "x..x..x..x.."
     }
 };
 let bgmNoiseBuffer = null;
@@ -244,12 +304,13 @@ function startBGM() {
 
 // TRILHAS SONORAS (Opções > Áudio): ouvir a música de cada época. Só uma toca por vez — tocar outra pausa a
 // anterior. Sair da tela (setGameState → stopBGM) para tudo.
-const BGM_TRACK_LIST = [
-    { era: "classico", nome: BGM_THEMES.classico.nome, fases: "Torneio, Sr. Kaioh" },
-    { era: "freeza", nome: BGM_THEMES.freeza.nome, fases: "Namek, Nave de Freeza, Torneio de Cell" },
-    { era: "boo", nome: BGM_THEMES.boo.nome, fases: "Sala do Tempo" },
-    { era: "gt", nome: BGM_THEMES.gt.nome, fases: "Planeta Supremo Kaioh" }
-];
+// Uma trilha por fase, na ordem das fases (montada na hora: audio.js carrega antes de game-logic-core.js).
+function getBgmTrackList() {
+    return STAGE_PROGRESSION.map(stg => {
+        const tema = getStageMusicEra(stg.id);
+        return { era: tema, nome: BGM_THEMES[tema].nome, fases: stg.name };
+    });
+}
 let bgmPreviewEra = null;
 
 function playTrackPreview(era) {

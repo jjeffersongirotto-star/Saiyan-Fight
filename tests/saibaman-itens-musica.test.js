@@ -93,14 +93,14 @@ check("abraçado ele é desenhado na frente do herói", (() => { const r = menu.
 check("abraçado ele não fica transparente (sem versão clara do desenho)", !menu.includes("flash ?") && !run("[...saibamanSpriteCache.keys()].some(k => k.endsWith('f'))"));
 
 // música por fase
-check("cada fase tem a música da sua época", run(`["terra","kaio","namek","freeza_ship","namek_explosao","time_room","cell_games","kaioshin"].map(getStageMusicEra).join()`) === "classico,classico,freeza,freeza,freeza,boo,freeza,gt");
-check("os 4 temas existem, com nome próprio, e melodia e baixo do mesmo tamanho", run(`["classico","freeza","boo","gt"].every(k => { const t = BGM_THEMES[k], c = getCompiledTheme(t); return t.nome && c.melodia.length === c.baixo.length && c.melodia.length === t.compasso * 8; })`));
+check("cada uma das 8 fases tem a sua própria música", run(`new Set(STAGE_PROGRESSION.map(s => getStageMusicEra(s.id))).size === 8 && STAGE_PROGRESSION.every(s => !!BGM_THEMES[getStageMusicEra(s.id)])`));
+check("os 8 temas existem, com nome próprio, e melodia e baixo do mesmo tamanho", run(`Object.keys(BGM_THEMES).length === 8 && Object.keys(BGM_THEMES).every(k => { const t = BGM_THEMES[k], c = getCompiledTheme(t); return t.nome && c.melodia.length === c.baixo.length && c.melodia.length === t.compasso * 8; })`));
 check("cada compasso da melodia fecha certinho e todas as notas são válidas", run(`Object.values(BGM_THEMES).every(t => t.melodia.split("|").every(b => b.trim().split(/\\s+/).reduce((s, tok) => s + Number(tok.split(":")[1]), 0) === t.compasso) && getCompiledTheme(t).melodia.every(e => !e || Number.isFinite(e.midi)))`));
 check("bateria com um passo por semicolcheia do compasso", run(`Object.values(BGM_THEMES).every(t => [t.kick, t.snare, t.hat].every(p => p === "" || p.length === t.compasso))`));
-check("as 4 músicas são diferentes: nome, andamento, compasso/instrumento e começo da melodia", run(`(() => { const ts = Object.values(BGM_THEMES);
-    const dif = f => new Set(ts.map(f)).size === 4;
-    return dif(t => t.nome) && dif(t => t.bpm) && dif(t => t.lead.wave + t.compasso) && dif(t => t.melodia.split("|")[0]); })()`));
-check("a música toca o tema da fase escolhida", run(`selectedStage = "namek"; getCurrentBgmTheme() === BGM_THEMES.freeza`) && run(`selectedStage = "kaioshin"; getCurrentBgmTheme() === BGM_THEMES.gt`));
+check("as 8 músicas são diferentes: nome, andamento, compasso/instrumento e começo da melodia", run(`(() => { const ts = Object.values(BGM_THEMES);
+    const dif = f => new Set(ts.map(f)).size === ts.length;
+    return dif(t => t.nome) && dif(t => t.bpm) && dif(t => t.melodia.split("|")[0]) && dif(t => t.lead.wave + t.compasso + t.bassWave + t.kick + t.hat); })()`));
+check("a música toca o tema da fase escolhida", run(`selectedStage = "namek"; getCurrentBgmTheme() === BGM_THEMES.namek`) && run(`selectedStage = "kaioshin"; getCurrentBgmTheme() === BGM_THEMES.boo`));
 
 // TRILHAS SONORAS em Opções > Áudio
 // áudio de mentira (o harness não tem Web Audio): só para os botões poderem ligar a música
@@ -111,12 +111,16 @@ run(`var __no = () => ({ connect() {}, start() {}, stop() {}, type: "", buffer: 
 const tr = run("JSON.stringify(MENU_LAYOUT.optionsAudio.tracks)"); const trR = JSON.parse(tr);
 run(`handleMenuClick(${trR.x + 5}, ${trR.y + 5})`);
 check("Áudio tem o botão TRILHAS SONORAS que abre a lista", run("gameState") === "options_tracks");
-check("a lista tem as 4 trilhas das fases", run("BGM_TRACK_LIST.map(t => t.era).join()") === "classico,freeza,boo,gt");
+check("a lista tem as 8 trilhas, uma por fase, na ordem das fases", run("getBgmTrackList().map(t => t.era).join()") === run("STAGE_PROGRESSION.map(s => getStageMusicEra(s.id)).join()") && run("getBgmTrackList().length") === 8);
+check("os 8 botões de tocar não se sobrepõem e cabem na tela", run(`(() => { const rs = [0,1,2,3,4,5,6,7].map(getTrackPlayRect);
+    const dentro = rs.every(r => r.x >= 0 && r.y >= 0 && r.x + r.w <= canvas.width && r.y + r.h <= canvas.height);
+    const sobre = rs.some((a, i) => rs.some((b, j) => i < j && a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h));
+    return dentro && !sobre; })()`));
 const clicar = (i) => { const r = JSON.parse(run(`JSON.stringify(getTrackPlayRect(${i}))`)); run(`handleMenuClick(${r.x + 5}, ${r.y + 5})`); };
 clicar(0);
 check("tocar uma trilha", run("bgmPreviewEra") === "classico" && run("!!bgmInterval"));
 clicar(2);
-check("tocar outra pausa a anterior e toca a nova", run("bgmPreviewEra") === "boo");
+check("tocar outra pausa a anterior e toca a nova", run("bgmPreviewEra") === run("getBgmTrackList()[2].era"));
 clicar(2);
 check("tocar de novo a mesma pausa", run("bgmPreviewEra") === null && run("!bgmInterval"));
 clicar(1);

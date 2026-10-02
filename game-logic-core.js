@@ -561,12 +561,10 @@ function stepSaibamanLunge(s, tx, ty, dt) {
     return s;
 }
 
-// Música de cada fase: um tema original do jogo por época (classico, freeza, boo, gt) — ver BGM_THEMES em audio.js.
+// Música de cada fase: um tema original do jogo para cada uma das 8 fases — ver BGM_THEMES em audio.js.
 const STAGE_MUSIC_ERA = {
-    terra: "classico", kaio: "classico",
-    namek: "freeza", freeza_ship: "freeza", namek_explosao: "freeza", cell_games: "freeza",
-    time_room: "boo",
-    kaioshin: "gt"
+    terra: "classico", kaio: "kaio", namek: "namek", freeza_ship: "freeza",
+    namek_explosao: "explosao", time_room: "gt", cell_games: "cell", kaioshin: "boo"
 };
 function getStageMusicEra(stageId) {
     return STAGE_MUSIC_ERA[stageId] || "classico";

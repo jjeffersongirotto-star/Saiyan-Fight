@@ -559,13 +559,15 @@ test("Saibaman: brota, salta até a altura de voo e voa para a esquerda", () => 
     assert.ok(s.x < x);
 });
 
-test("música de cada fase segue a época do anime", () => {
+test("cada fase tem a sua própria música", () => {
     const { getStageMusicEra } = require("../game-logic-core.js");
     assert.equal(getStageMusicEra("terra"), "classico");
     assert.equal(getStageMusicEra("freeza_ship"), "freeza");
-    assert.equal(getStageMusicEra("cell_games"), "freeza");
-    assert.equal(getStageMusicEra("time_room"), "boo");
-    assert.equal(getStageMusicEra("kaioshin"), "gt");
+    assert.equal(getStageMusicEra("cell_games"), "cell");
+    assert.equal(getStageMusicEra("time_room"), "gt");
+    assert.equal(getStageMusicEra("kaioshin"), "boo");
+    const { STAGE_PROGRESSION } = require("../game-logic-core.js");
+    assert.equal(new Set(STAGE_PROGRESSION.map(s => getStageMusicEra(s.id))).size, STAGE_PROGRESSION.length, "uma música por fase");
     assert.equal(getStageMusicEra("desconhecida"), "classico");
 });
 

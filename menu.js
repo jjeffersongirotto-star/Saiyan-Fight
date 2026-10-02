@@ -93,12 +93,13 @@ function getGamepadBindingRect(i) {
 function getRankingStageTabRect(i) {
     return rect(40 + (i % 8) * 92, 90, 84, 30);
 }
-// TRILHAS SONORAS: uma linha por época, com o botão TOCAR/PAUSAR à direita.
+// TRILHAS SONORAS: uma linha por fase (duas colunas de 4), com o botão TOCAR/PAUSAR à direita.
 function getTrackRowRect(i) {
-    return rect(170, 109 + i * 47, 460, 41);
+    return rect(86 + Math.floor(i / 4) * 322, 104 + (i % 4) * 50, 306, 44);
 }
 function getTrackPlayRect(i) {
-    return rect(522, 113 + i * 47, 100, 32);
+    const r = getTrackRowRect(i);
+    return rect(r.x + r.w - 92, r.y + 6, 84, 32);
 }
 function hitRect(x, y, r) {
     return inRect(x, y, r.x, r.y, r.w, r.h);
@@ -170,6 +171,53 @@ const STAGE_THEME_COLOR = {
 // Ícone de fase bloqueada (cinza e apagado). O filtro de cinza do canvas é caro no celular, então cada ícone
 // cinza é desenhado uma vez numa imagem guardada e depois só copiado a cada quadro.
 const lockedStageIconCache = {};
+// Cards da tela ARENAS: cada um mostra uma foto do cenário da fase. A foto é tirada uma vez (desenhando o
+// cenário na tela e copiando um recorte) — uma fase por quadro para não engasgar — e guardada colorida e em
+// cinza (para a fase bloqueada).
+const STAGE_CARD_W = 175, STAGE_CARD_H = 90;
+const stageCardThumbs = {};
+function prepareNextStageCardThumb() {
+    const stg = STAGE_PROGRESSION.find(st => !stageCardThumbs[st.id]);
+    if (!stg) return;
+    const antesFase = selectedStage, antesScroll = world.stageScrollX;
+    selectedStage = stg.id;
+    world.stageScrollX = 0;
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    try { drawStageBackground(); } finally { ctx.restore(); }
+    selectedStage = antesFase;
+    world.stageScrollX = antesScroll;
+
+    const w = STAGE_CARD_W * 2, h = STAGE_CARD_H * 2;
+    // recorte do meio do cenário com a mesma proporção do card
+    const srcH = canvas.height, srcW = Math.min(canvas.width, srcH * STAGE_CARD_W / STAGE_CARD_H);
+    const cor = document.createElement("canvas");
+    cor.width = w; cor.height = h;
+    const g = cor.getContext("2d");
+    if (g) g.drawImage(canvas, (canvas.width - srcW) / 2, 0, srcW, srcH, 0, 0, w, h);
+    const cinza = document.createElement("canvas");
+    cinza.width = w; cinza.height = h;
+    const gc = cinza.getContext("2d");
+    if (gc) {
+        gc.drawImage(cor, 0, 0);
+        try {
+            const px = gc.getImageData(0, 0, w, h), d = px.data;
+            for (let i = 0; i < d.length; i += 4) {
+                const l = (d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114) * 0.55;
+                d[i] = d[i + 1] = d[i + 2] = l;
+            }
+            gc.putImageData(px, 0, 0);
+        } catch (e) {}
+    }
+    stageCardThumbs[stg.id] = { cor, cinza };
+}
+
+function roundRectPath(x, y, w, h, r) {
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x, y, w, h, r);
+    else ctx.rect(x, y, w, h);
+}
+
 function drawLockedStageNodeIcon(cx, cy, r, stageId) {
     const key = stageId + "|" + r;
     let icon = lockedStageIconCache[key];
@@ -2541,7 +2589,7 @@ function handleMenuClick(x, y) {
     }
     else if (gameState === "options_tracks") {
         if (hitRect(x, y, MENU_LAYOUT.back)) setGameState("options_audio");
-        else BGM_TRACK_LIST.forEach((t, i) => {
+        else getBgmTrackList().forEach((t, i) => {
             if (hitRect(x, y, getTrackPlayRect(i)) || hitRect(x, y, getTrackRowRect(i))) toggleTrackPreview(t.era);
         });
     }
@@ -3428,6 +3476,92 @@ function drawGrabbingSaibamans() {
     });
 }
 
+// Aviso de conquista: pílula de pontas arredondadas no topo, no centro da tela, que desce rápido. O ícone
+// (medalha dourada com estrela) "salta" com um pequeno exagero no tamanho e solta um anel de brilho.
+function drawStarPath(g, cx, cy, rOut, rIn, pontas = 5) {
+    g.beginPath();
+    for (let i = 0; i < pontas * 2; i++) {
+        const r = i % 2 === 0 ? rOut : rIn;
+        const a = -Math.PI / 2 + i * Math.PI / pontas;
+        if (i === 0) g.moveTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+        else g.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+    }
+    g.closePath();
+}
+
+function drawAchievementBanner() {
+    const t = achievementBanner.timer;
+    const h = 44, iconR = 16;
+    ctx.save();
+    ctx.font = "bold 13px 'Segoe UI', sans-serif";
+    const tituloW = ctx.measureText(achievementBanner.title).width;
+    ctx.font = "bold 9px 'Segoe UI', sans-serif";
+    const rotuloW = ctx.measureText("CONQUISTA DESBLOQUEADA").width;
+    const w = Math.min(canvas.width - 40, Math.max(tituloW, rotuloW) + h + 34);
+    const x = canvas.width / 2 - w / 2, y = 8 + achievementBanner.yOffset;
+
+    // sombra e corpo da pílula
+    ctx.shadowColor = "rgba(0, 0, 0, 0.45)";
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetY = 3;
+    const fundo = ctx.createLinearGradient(0, y, 0, y + h);
+    fundo.addColorStop(0, "rgba(30, 27, 75, 0.96)");
+    fundo.addColorStop(1, "rgba(12, 10, 40, 0.96)");
+    ctx.fillStyle = fundo;
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(x, y, w, h, h / 2) : ctx.rect(x, y, w, h);
+    ctx.fill();
+    ctx.shadowColor = "transparent";
+    ctx.strokeStyle = "rgba(251, 191, 36, 0.9)";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // ícone em destaque: entra pequeno, passa um pouco do tamanho e assenta (efeito "pulo")
+    const icx = x + h / 2 + 2, icy = y + h / 2;
+    const p = Math.min(1, Math.max(0, (t - 6) / 16));
+    const escala = p <= 0 ? 0 : 1 + 0.35 * Math.sin(p * Math.PI) * (1 - p * 0.4);
+    if (t > 8 && t < 50) {
+        const q = (t - 8) / 42;
+        ctx.globalAlpha = 1 - q;
+        ctx.strokeStyle = "#fde68a";
+        ctx.lineWidth = 3 * (1 - q) + 0.5;
+        ctx.beginPath(); ctx.arc(icx, icy, iconR + q * 18, 0, Math.PI * 2); ctx.stroke();
+        ctx.globalAlpha = 1;
+    }
+    if (escala > 0) {
+        ctx.save();
+        ctx.translate(icx, icy);
+        ctx.scale(escala, escala);
+        ctx.shadowColor = "#fbbf24";
+        ctx.shadowBlur = 14;
+        const ouro = ctx.createRadialGradient(-5, -6, 2, 0, 0, iconR);
+        ouro.addColorStop(0, "#fff7c2");
+        ouro.addColorStop(0.55, "#fbbf24");
+        ouro.addColorStop(1, "#b45309");
+        ctx.fillStyle = ouro;
+        ctx.beginPath(); ctx.arc(0, 0, iconR, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "#ffffff";
+        drawStarPath(ctx, 0, 0.5, iconR * 0.62, iconR * 0.27);
+        ctx.fill();
+        ctx.strokeStyle = "#92400e";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    // textos
+    const tx = x + h + 8;
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#fbbf24";
+    ctx.font = "bold 9px 'Segoe UI', sans-serif";
+    ctx.fillText("CONQUISTA DESBLOQUEADA", tx, y + 17);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 13px 'Segoe UI', sans-serif";
+    ctx.fillText(achievementBanner.title, tx, y + 34, w - h - 22);
+    ctx.restore();
+}
+
 function drawSaibamanBlasts() {
     // explosões dos abraços
     world.blasts.forEach(b => {
@@ -4229,6 +4363,7 @@ function render() {
         drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
     }
     else if (gameState === "stages") {
+        prepareNextStageCardThumb();   // antes do fundo: a foto da fase é tirada desenhando o cenário dela
         drawStageBackground();
         ctx.fillStyle = "rgba(9, 9, 21, 0.85)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -4242,41 +4377,62 @@ function render() {
         ctx.fillText("COMPLETE O MODO NORMAL (5 ONDAS) PRA LIBERAR A PRÓXIMA FASE", canvas.width / 2, 42);
 
         STAGE_PROGRESSION.forEach((stg, i) => {
-            const card = getStageCardRect(i), sx = card.x, sy = card.y;
+            const card = getStageCardRect(i), sx = card.x, sy = card.y, cw = STAGE_CARD_W, ch = STAGE_CARD_H;
             const unlocked = isStageUnlockedByProgress(stg.id, stageProgress);
+            const tema = STAGE_THEME_COLOR[stg.id] || "#00ffff";
 
-            registerMenuTarget(sx, sy, 175, 90);
-            const pressed = beginButtonPress(sx, sy, 175, 90);
-            let isSel = selectedStage === stg.id && unlocked;
-            ctx.fillStyle = isSel ? "#1a3a5a" : unlocked ? "#111125" : "#0a0a12";
-            ctx.fillRect(sx, sy, 175, 90);
-            ctx.strokeStyle = isSel ? "#ffff00" : unlocked ? "#00ffff" : "#3a3a48";
-            ctx.lineWidth = isSel ? 3 : 1;
-            ctx.strokeRect(sx, sy, 175, 90);
+            registerMenuTarget(sx, sy, cw, ch);
+            const pressed = beginButtonPress(sx, sy, cw, ch);
+            const isSel = selectedStage === stg.id && unlocked;
 
+            // foto do cenário da fase (colorida se liberada, cinza e escura se bloqueada)
+            ctx.save();
+            roundRectPath(sx, sy, cw, ch, 8);
+            ctx.clip();
+            const thumb = stageCardThumbs[stg.id];
+            if (thumb) ctx.drawImage(unlocked ? thumb.cor : thumb.cinza, sx, sy, cw, ch);
+            else { ctx.fillStyle = unlocked ? "#111125" : "#0a0a12"; ctx.fillRect(sx, sy, cw, ch); }
+            // faixa escura embaixo para o nome ficar legível
+            const faixa = ctx.createLinearGradient(0, sy + ch * 0.45, 0, sy + ch);
+            faixa.addColorStop(0, "rgba(0, 0, 0, 0)");
+            faixa.addColorStop(1, "rgba(0, 0, 0, 0.85)");
+            ctx.fillStyle = faixa;
+            ctx.fillRect(sx, sy, cw, ch);
+            if (!unlocked) { ctx.fillStyle = "rgba(5, 5, 12, 0.35)"; ctx.fillRect(sx, sy, cw, ch); }
+            ctx.restore();
+
+            // borda: amarela na escolhida, cor da fase nas liberadas, cinza nas bloqueadas
+            roundRectPath(sx, sy, cw, ch, 8);
+            ctx.strokeStyle = isSel ? "#ffff00" : unlocked ? tema : "#3a3a48";
+            ctx.lineWidth = isSel ? 3 : unlocked ? 1.5 : 1;
+            ctx.stroke();
+
+            // etiqueta FASE N
+            ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+            roundRectPath(sx + 6, sy + 6, 46, 15, 7);
+            ctx.fill();
             ctx.font = "bold 8px monospace";
-            ctx.fillStyle = "#5a6a8a";
-            ctx.textAlign = "left";
-            ctx.fillText(`FASE ${i + 1}`, sx + 6, sy + 14);
+            ctx.fillStyle = unlocked ? tema : "#8892a8";
+            ctx.textAlign = "center";
+            ctx.fillText(`FASE ${i + 1}`, sx + 29, sy + 16);
 
+            ctx.textAlign = "center";
+            ctx.font = "bold 10px monospace";
+            ctx.shadowColor = "#000000";
+            ctx.shadowBlur = 4;
             if (unlocked) {
                 ctx.fillStyle = "#ffffff";
-                ctx.font = "bold 10px monospace";
-                ctx.textAlign = "center";
-                ctx.fillText(stg.name, sx + 87, sy + 50, 165);
+                ctx.fillText(stg.name, sx + cw / 2, sy + ch - 10, cw - 10);
+                ctx.shadowBlur = 0;
             } else {
-                ctx.globalAlpha = 0.55;
-                ctx.fillStyle = "#8892a8";
-                ctx.font = "bold 10px monospace";
-                ctx.textAlign = "center";
-                ctx.fillText(stg.name, sx + 87, sy + 42, 165);
-                ctx.globalAlpha = 1;
+                ctx.fillStyle = "#aab2c4";
+                ctx.fillText(stg.name, sx + cw / 2, sy + ch - 10, cw - 10);
+                ctx.shadowBlur = 0;
                 // Cadeado desenhado com formas básicas, sem depender de fonte com emoji.
-                const lockX = sx + 87, lockY = sy + 62;
-                drawPadlock(lockX, lockY - 2, 8);
-                ctx.fillStyle = "#3a2a10";
+                drawPadlock(sx + cw / 2, sy + 36, 9);
+                ctx.fillStyle = "#cbd5e1";
                 ctx.font = "bold 8px monospace";
-                ctx.fillText("BLOQUEADA", lockX, sy + 84);
+                ctx.fillText("BLOQUEADA", sx + cw / 2, sy + 62);
             }
             endButtonPress(pressed);
         });
@@ -4474,8 +4630,8 @@ function render() {
     }
     else if (gameState === "options_tracks") {
         drawDragonBallMenuBackdrop(false);
-        drawDragonBallPanel(150, 50, 500, 260, "TRILHAS SONORAS", "Toque para ouvir a música de cada fase");
-        BGM_TRACK_LIST.forEach((t, i) => {
+        drawDragonBallPanel(70, 46, 660, 280, "TRILHAS SONORAS", "Toque para ouvir a música de cada fase");
+        getBgmTrackList().forEach((t, i) => {
             const row = getTrackRowRect(i);
             const tocando = bgmPreviewEra === t.era;
             ctx.fillStyle = tocando ? "rgba(253, 230, 138, 0.18)" : "rgba(15, 23, 42, 0.55)";
@@ -4485,18 +4641,18 @@ function render() {
             ctx.strokeRect(row.x, row.y, row.w, row.h);
             ctx.textAlign = "left";
             ctx.fillStyle = tocando ? "#fde68a" : "#e2e8f0";
-            ctx.font = "bold 13px 'Segoe UI', sans-serif";
-            ctx.fillText((tocando ? "♪ " : "") + t.nome, row.x + 12, row.y + 18);
+            ctx.font = "bold 12px 'Segoe UI', sans-serif";
+            ctx.fillText((tocando ? "♪ " : "") + t.nome, row.x + 10, row.y + 18, row.w - 108);
             ctx.fillStyle = "#94a3b8";
-            ctx.font = "11px 'Segoe UI', sans-serif";
-            ctx.fillText("Fases: " + t.fases, row.x + 12, row.y + 34);
+            ctx.font = "10px 'Segoe UI', sans-serif";
+            ctx.fillText("Fase " + (i + 1) + ": " + t.fases, row.x + 10, row.y + 34, row.w - 108);
             drawBtnAt(getTrackPlayRect(i), tocando ? "❚❚ PAUSAR" : "▶ TOCAR", tocando ? "#fca5a5" : "#86efac");
         });
         if (isMuted || bgmVolume <= 0) {
             ctx.textAlign = "center";
             ctx.fillStyle = "#fca5a5";
             ctx.font = "12px 'Segoe UI', sans-serif";
-            ctx.fillText(isMuted ? "O áudio está mutado: ative em VOLUME E ÁUDIO para ouvir" : "O volume BGM está em 0%: aumente para ouvir", canvas.width / 2, 302);
+            ctx.fillText(isMuted ? "O áudio está mutado: ative em VOLUME E ÁUDIO para ouvir" : "O volume BGM está em 0%: aumente para ouvir", canvas.width / 2, 320);
         }
         drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
     }
@@ -5005,31 +5161,13 @@ function render() {
         // Só anima/conta o tempo enquanto o jogo não está pausado — senão a conquista podia aparecer, deslizar
         // e sumir sozinha até enquanto a partida estava congelada, sem o jogador nem ver direito.
         if (gameState !== "paused") {
-            // timer em "quadros a 60 fps": desce em 0,5 s, fica parado e sobe nos últimos 0,5 s
+            // timer em "quadros a 60 fps": desce rápido (~0,25 s, freando no fim), fica parado e sobe nos últimos 0,5 s
             achievementBanner.timer += deltaTime * 60;
             const t = achievementBanner.timer, endT = achievementBanner.maxTimer - 30;
-            achievementBanner.yOffset = t < 30 ? -60 + 2 * t : t > endT ? -2 * (t - endT) : 0;
+            achievementBanner.yOffset = t < 15 ? -60 * Math.pow(1 - t / 15, 3) : t > endT ? -2 * (t - endT) : 0;
         }
 
-        // Nas telas de resultado (derrota/fim do versus e vitória da fase) o título fica no topo: lá o aviso aparece
-        // no canto de baixo à esquerda (subindo), que está livre — senão cobria "JOGADOR 1 VENCEU!"/"VITÓRIA!".
-        const onResultScreen = gameState === "gameover" || gameState === "stage_victory";
-        const bannerX = onResultScreen ? 10 : canvas.width / 2 - 140;
-        const bannerY = onResultScreen ? canvas.height - 44 - achievementBanner.yOffset : achievementBanner.yOffset;
-        ctx.save();
-        ctx.fillStyle = "#111133";
-        ctx.fillRect(bannerX, bannerY, 280, 40);
-        ctx.strokeStyle = "#ffff00";
-        ctx.lineWidth = 2;
-        ctx.strokeRect(bannerX, bannerY, 280, 40);
-
-        ctx.fillStyle = "#ffff00";
-        ctx.font = "bold 10px monospace";
-        ctx.textAlign = "center";
-        ctx.fillText("CONQUISTA DESBLOQUEADA!", bannerX + 140, bannerY + 15);
-        ctx.fillStyle = "#ffffff";
-        ctx.fillText(achievementBanner.title, bannerX + 140, bannerY + 30);
-        ctx.restore();
+        drawAchievementBanner();
 
         if (achievementBanner.timer >= achievementBanner.maxTimer) achievementBanner.active = false;
     }
