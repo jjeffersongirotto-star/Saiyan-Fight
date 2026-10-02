@@ -11,6 +11,12 @@ const menu = fs.readFileSync(__dirname + "/../menu.js", "utf8");
 
 check("a Nave de Freeza desenha a nave girando pela volta da fase", menu.includes("drawFreezaShipStage(getFreezaShipOrbitAngle(scroll))"));
 check("tem casco, faixa preta com escotilhas, cúpula listrada, cabine roxa, ovos amarelos e pernas", ["drawFreezaShipScene", "nvDrawLeg", "nvDrawPod", "nvFaixa"].every(f => menu.includes("function " + f)) && menu.includes("cabine roxa"));
+check("pernas de aço com braço, junta, canela e pé com garras (atrás dos ovos)", menu.includes("Perna de aço") && menu.indexOf("if (naFrente(a)) nvDrawLeg(a, ang, true)") < menu.indexOf("if (naFrente(a)) nvDrawPod(a, ang)"));
+check("janela da cabine: meio ovo de vidro roxo saltado do casco, com moldura", menu.includes("function nvDrawCockpit") && menu.includes("saliencia") && menu.includes("function nvEnvoltorio"));
+check("o contorno do meio ovo é sempre um polígono fechado e válido", run(`(() => {
+    const h = nvEnvoltorio([[0, 0], [10, 0], [10, 10], [0, 10], [5, 5], [2, 8]]);
+    return h.length === 4;
+})()`));
 check("chão de Namek com lagos, pedras e tufos fixos no mundo e paisagem de 360°", menu.includes("const NV_CHAO") && menu.includes("function getFreezaShipPanorama") && menu.includes("function drawFreezaShipGround"));
 
 run("selectedStage = 'freeza_ship';");
