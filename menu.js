@@ -114,6 +114,12 @@ let touchChargeId = null;        // id do dedo que está segurando o botão CARR
 let lastInputWasTouch = false;   // true quando o último input foi toque (desliga o "seguir mouse")
 let lastTouchStartAt = 0;        // usado para ignorar o "mouse fantasma" que o navegador gera logo após um toque
 let pseudoFullscreen = false;   // tela cheia "falsa" (CSS) quando o navegador bloqueia a real (ex.: iPhone, iframes)
+// Tela cheia que o jogador ligou pelo botão. No celular, puxar a borda da tela (gesto de voltar do Android) faz o
+// navegador sair da tela cheia sem querer — a janela encolhe e aparece a barra cinza de cima. Nesse caso o jogo
+// volta para a tela cheia no próximo toque (o navegador só deixa entrar em tela cheia a partir de um toque).
+let telaCheiaDesejada = false;
+let voltarTelaCheiaNoToque = false;
+let telaCheiaVoltouEm = -1e9;   // quando a tela cheia voltou sozinha (o mesmo toque não pode desligá-la)
 const PAUSE_BUTTON = { w: 44, h: 28 };
 let touchAttackCooldown = 0;       // frames até o próximo tiro automático (dedo apoiado no analógico/tela)
 const TOUCH_AUTOFIRE_INTERVAL = 11; // frames entre tiros (~5 por segundo)
@@ -464,6 +470,8 @@ function isFullscreenActive() {
 function syncFullscreenState() {
     const container = document.getElementById("game-container");
     if (container) container.classList.toggle("is-fullscreen", isFullscreenActive());
+    // saiu da tela cheia sem ser pelo botão do jogo (ex.: gesto na borda do celular): volta no próximo toque
+    voltarTelaCheiaNoToque = telaCheiaDesejada && !isFullscreenActive() && isMobileDevice();
     if (typeof fitCanvasToViewport === "function") {
         fitCanvasToViewport();
         setTimeout(fitCanvasToViewport, 150);
@@ -474,8 +482,12 @@ function syncFullscreenState() {
 function toggleFullscreen() {
     const container = document.getElementById("game-container");
     if (!container) return;
+    // o toque que trouxe a tela cheia de volta pode ter sido no próprio botão: não desliga de novo
+    if (performance.now() - telaCheiaVoltouEm < 700) return;
 
     if (isFullscreenActive()) {
+        telaCheiaDesejada = false;
+        voltarTelaCheiaNoToque = false;
         if (pseudoFullscreen) {
             pseudoFullscreen = false;
             syncFullscreenState();
@@ -486,6 +498,7 @@ function toggleFullscreen() {
         return;
     }
 
+    telaCheiaDesejada = true;
     const enterPseudo = () => { pseudoFullscreen = true; syncFullscreenState(); };
     const requestFullscreen = container.requestFullscreen || container.webkitRequestFullscreen;
     if (!requestFullscreen) { enterPseudo(); return; }
@@ -496,7 +509,7 @@ function toggleFullscreen() {
         return;
     }
     try {
-        const result = requestFullscreen.call(container);
+        const result = requestFullscreen.call(container, { navigationUI: "hide" });
         if (result && result.then) {
             result.then(() => {
                 // Celular: tenta travar na horizontal (silenciosamente ignora se não for permitido).
@@ -562,6 +575,25 @@ function drawFullscreenButton() {
 
 document.addEventListener("fullscreenchange", syncFullscreenState);
 document.addEventListener("webkitfullscreenchange", syncFullscreenState);
+
+// Volta para a tela cheia no primeiro toque depois de ela ter saído sem querer (ver telaCheiaDesejada).
+function voltarParaTelaCheia() {
+    if (!voltarTelaCheiaNoToque || isFullscreenActive()) { voltarTelaCheiaNoToque = false; return; }
+    voltarTelaCheiaNoToque = false;
+    const container = document.getElementById("game-container");
+    const requestFullscreen = container && (container.requestFullscreen || container.webkitRequestFullscreen);
+    if (!requestFullscreen) return;
+    telaCheiaVoltouEm = performance.now();
+    try {
+        const result = requestFullscreen.call(container, { navigationUI: "hide" });
+        if (result && result.then) {
+            result.then(() => {
+                if (screen.orientation && screen.orientation.lock) screen.orientation.lock("landscape").catch(() => {});
+            }).catch(() => {});
+        }
+    } catch (e) {}
+}
+["pointerup", "touchend"].forEach(tipo => document.addEventListener(tipo, voltarParaTelaCheia, { capture: true, passive: true }));
 
 // Máximo de rolagem da tela Database. Único lugar que calcula isso — usado pelo mouse wheel, pelo arraste
 // por toque e pela navegação por controle, para não haver 3 fórmulas que podem se desalinhar.
