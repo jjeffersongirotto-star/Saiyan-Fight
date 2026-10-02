@@ -80,6 +80,25 @@ function reloadWhenSafe() {
     location.reload();
 }
 
+// Botão ATUALIZAR (flecha girando) da janela UPDATES: baixa de novo todos os arquivos do jogo, ignorando a
+// cópia guardada pelo navegador, e recarrega na hora — sem precisar fechar e abrir o jogo várias vezes.
+let atualizandoAgora = false;
+async function atualizarJogoAgora() {
+    if (atualizandoAgora) return;
+    atualizandoAgora = true;
+    const botao = document.getElementById("btn-atualizar-jogo");
+    if (botao) { botao.classList.add("girando"); botao.disabled = true; }
+    const rotulo = document.getElementById("btn-atualizar-rotulo");
+    if (rotulo) rotulo.textContent = "ATUALIZANDO...";
+    try {
+        if (typeof fetch === "function") {
+            await Promise.all(getGameFileUrls().map(url => fetch(url, { cache: "reload" }).catch(() => null)));
+        }
+    } catch (e) {}
+    try { sessionStorage.setItem("saiyan_atualizou_em", String(Date.now())); } catch (e) {}
+    location.reload();
+}
+
 if (typeof fetch === "function" && typeof location !== "undefined" && /^https?:/.test(location.protocol)) {
     setTimeout(() => checkForGameUpdate(true), 3000);
     setInterval(() => checkForGameUpdate(true), UPDATE_CHECK_INTERVAL_MS);

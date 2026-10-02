@@ -39,6 +39,7 @@
             min-height: 100vh;
             min-height: 100dvh;
             overflow-x: hidden;
+            overscroll-behavior: none;   /* arrastar o dedo na borda não "puxa" a página nem recarrega */
         }
 
         #game-container {
@@ -162,6 +163,38 @@
             border-bottom: 1px solid var(--border-color);
             padding-bottom: 10px;
             margin-bottom: 15px;
+        }
+
+        .modal-header-acoes {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Botão ATUALIZAR da janela UPDATES: flecha dando a volta, que gira enquanto baixa a versão nova */
+        .btn-atualizar {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 999px;
+            border: 1px solid #fbbf24;
+            background: rgba(251, 191, 36, 0.12);
+            color: #fde68a;
+            font-weight: bold;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+        }
+        .btn-atualizar:hover,
+        .btn-atualizar:focus-visible {
+            background: rgba(251, 191, 36, 0.25);
+        }
+        .btn-atualizar.girando svg {
+            animation: girar-atualizar 0.8s linear infinite;
+        }
+        @keyframes girar-atualizar {
+            to { transform: rotate(360deg); }
         }
 
         .modal-header h2 {
@@ -1217,12 +1250,19 @@
         <div class="modal-content" style="width: 500px; max-width: 90vw;">
             <div class="modal-header">
                 <h2 id="modal-updates-title">UPDATES</h2>
-                <button class="close-btn" onclick="closeUpdatesModal()" aria-label="Fechar janela de novidades">&times;</button>
+                <div class="modal-header-acoes">
+                    <button id="btn-atualizar-jogo" class="btn-atualizar" onclick="atualizarJogoAgora()" aria-label="Atualizar o jogo para a versão mais nova" title="Atualizar o jogo">
+                        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M20.5 3.5v5h-5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        <span id="btn-atualizar-rotulo">ATUALIZAR</span>
+                    </button>
+                    <button class="close-btn" onclick="closeUpdatesModal()" aria-label="Fechar janela de novidades">&times;</button>
+                </div>
             </div>
             <p style="margin: 0 0 12px; color: #ccc; font-size: 14px;">
                 Novidades e correções do jogo.
             </p>
             <ul style="margin: 0 0 18px; color: #ddd; line-height: 1.6; padding-left: 18px; max-height: 50vh; overflow-y: auto;">
+                <li>Botão ATUALIZAR (flecha girando) aqui na janela UPDATES: baixa a versão mais nova do jogo e recarrega na hora. No celular, se a tela cheia sair sem querer ao puxar a borda da tela, o jogo volta para a tela cheia no próximo toque.</li>
                 <li>Cada uma das 8 fases agora tem sua própria música: chegaram "Galope do Planeta Kaioh", "Brisa de Namek", "Contagem Final" e "Torneio da Perfeição". Os cards da tela ARENAS mostram o cenário de cada fase, e o aviso de conquista ficou moderno: pílula arredondada no topo da tela com a medalha em destaque.</li>
                 <li>Músicas novas, uma diferente para cada época: "Aventura nas Nuvens" (balanço saltitante, Torneio e Sr. Kaioh), "A Ameaça do Imperador" (marcha heroica, Namek, Nave e Torneio de Cell), "Valsa do Majin" (valsa travessa, Sala do Tempo) e "Estrada das Estrelas" (balada com flauta, Planeta Supremo Kaioh).</li>
                 <li>Opções &gt; Áudio &gt; TRILHAS SONORAS: ouça a música de cada fase (tocar/pausar; tocar outra pausa a anterior). Saibaman: se passar perto ele parte para cima do herói, abraça as pernas pela frente (os braços do herói ficam livres), aparece normal (sem ficar transparente) e, depois de agarrar, não tem como escapar: explode e tira 1 de vida.</li>
