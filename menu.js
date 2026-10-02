@@ -3411,7 +3411,7 @@ function nvDrawPod(a, ang) {
 // Janela da cabine: meio ovo de vidro roxo saltado para fora da cúpula. É montada em 3D (pontos de um meio
 // elipsoide preso ao casco) e projetada: de frente aparece redonda e estufada; de lado, dá para ver o relevo
 // saindo da nave. A moldura de metal acompanha a curva do casco.
-const NV_CABINE = { a: -0.5, r: 134, y: 106, larg: 27, alt: 21, saliencia: 26, incl: 0.45 };
+const NV_CABINE = { a: -0.5, r: 144, y: 101, larg: 25, alt: 17, saliencia: 19, incl: 0.32 };
 function nvDrawCockpit(ang) {
     const c = NV_CABINE;
     const nx = Math.sin(c.a), nz = Math.cos(c.a);          // direção para fora do casco (no plano)
@@ -3434,6 +3434,21 @@ function nvDrawCockpit(ang) {
     }
     const casca = nvEnvoltorio(pts.map(p => [p[0], p[1]]));
     const ponta = ponto(0, 0, c.saliencia), centro = ponto(0, 0, 0), k = centro[3];
+    // encaixe de metal: um colar que sai de dentro do casco até a moldura, prendendo a janela na nave
+    // (sem ele, vista de lado a janela parecia solta na beirada da cúpula)
+    const colar = [];
+    for (let i = 0; i < 20; i++) {
+        const t = i / 20 * Math.PI * 2;
+        colar.push(ponto(Math.cos(t) * (c.larg + 13), Math.sin(t) * (c.alt + 7), -14));
+        colar.push(ponto(Math.cos(t) * (c.larg + 8), Math.sin(t) * (c.alt + 5), -4));
+        colar.push(ponto(Math.cos(t) * (c.larg + 4), Math.sin(t) * (c.alt + 3), 2));
+    }
+    const contornoColar = nvEnvoltorio(colar.map(p => [p[0], p[1]]));
+    // mesma cor branca do casco: o encaixe parece um calombo saindo da própria cúpula
+    const metal = trG.createLinearGradient(centro[0] - (c.larg + 18) * k, 0, centro[0] + (c.larg + 18) * k, 0);
+    metal.addColorStop(0, "#c3cad2"); metal.addColorStop(0.45, "#f6f8fa"); metal.addColorStop(1, "#bcc4cd");
+    trG.fillStyle = metal;
+    trG.beginPath(); contornoColar.forEach((q, i) => i ? trG.lineTo(q[0], q[1]) : trG.moveTo(q[0], q[1])); trG.closePath(); trG.fill();
     // vidro roxo com volume (claro onde bate a luz, escuro na borda)
     const luzX = ponta[0] * 0.6 + centro[0] * 0.4 - c.larg * 0.3 * k, luzY = ponta[1] * 0.6 + centro[1] * 0.4 - c.alt * 0.35 * k;
     const vidro = trG.createRadialGradient(luzX, luzY, 1, (ponta[0] + centro[0]) / 2, (ponta[1] + centro[1]) / 2, c.larg * 1.25 * k);
