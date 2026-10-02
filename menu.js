@@ -3249,22 +3249,163 @@ function drawKiLightning(entity, cx, bottomY, w, h, forte) {
     ctx.restore();
 }
 
+// ==================== SAIBAMAN (VISUAL DO ANIME) ====================
+// Cabeça grande e bulbosa com sulcos, olhos vermelhos enormes, corpo magro e curvado e garras. Cada pose é
+// desenhada uma vez numa imagem guardada (2x, para ficar nítida) e só copiada a cada quadro.
+const SAIBAMAN_SPRITE_SCALE = 2, SAIBAMAN_SPRITE_PAD = 8;
+const saibamanSpriteCache = new Map();
+
+function traceSaibamanFigure(g, pose, frame, flash) {
+    const skin = flash ? "#d9ffb0" : "#6cc43a", dark = flash ? "#8fd45a" : "#2f7a1c",
+          shade = flash ? "#b6f27e" : "#4b9b2a", light = flash ? "#ffffff" : "#a9ea6e", line = "#173d0d";
+    const sway = pose === "voar" ? Math.sin(frame / 4 * Math.PI * 2) : 0;
+    g.lineJoin = "round"; g.lineCap = "round";
+
+    // pernas finas e dobradas (no salto ficam esticadas para baixo)
+    g.strokeStyle = line; g.lineWidth = 4.2;
+    const legs = pose === "saltar" ? [[13, 27, 11, 34, 12, 40], [19, 27, 21, 34, 20, 40]]
+        : [[13, 27, 9 + sway, 33, 12 + sway * 1.5, 39], [19, 27, 22 - sway, 32, 24 - sway * 1.5, 38]];
+    legs.forEach(l => { g.beginPath(); g.moveTo(l[0], l[1]); g.lineTo(l[2], l[3]); g.lineTo(l[4], l[5]); g.stroke(); });
+    g.strokeStyle = shade; g.lineWidth = 2.4;
+    legs.forEach(l => { g.beginPath(); g.moveTo(l[0], l[1]); g.lineTo(l[2], l[3]); g.lineTo(l[4], l[5]); g.stroke(); });
+
+    // braço de trás
+    const armBack = pose === "saltar" ? [20, 18, 28, 15, 31, 9] : pose === "agarrar" ? [19, 19, 26, 20, 31, 18] : [19, 19, 23, 24 + sway, 22, 29 + sway];
+    g.strokeStyle = line; g.lineWidth = 3.6;
+    g.beginPath(); g.moveTo(armBack[0], armBack[1]); g.lineTo(armBack[2], armBack[3]); g.lineTo(armBack[4], armBack[5]); g.stroke();
+    g.strokeStyle = dark; g.lineWidth = 1.8; g.stroke();
+
+    // tronco magro, curvado para a frente
+    g.fillStyle = skin; g.strokeStyle = line; g.lineWidth = 1.3;
+    g.beginPath();
+    g.moveTo(11, 17); g.quadraticCurveTo(8, 23, 12, 29); g.lineTo(20, 29); g.quadraticCurveTo(23, 22, 20, 16); g.closePath();
+    g.fill(); g.stroke();
+    g.fillStyle = dark;   // placas do peito
+    g.fillRect(13, 20, 6, 1.4); g.fillRect(13, 23, 6, 1.4); g.fillRect(14, 26, 4, 1.2);
+
+    // cabeça bulbosa (maior que o corpo), voltada para a esquerda
+    g.fillStyle = skin; g.strokeStyle = line; g.lineWidth = 1.5;
+    g.beginPath();
+    g.moveTo(4, 12);
+    g.bezierCurveTo(2, 2, 10, -2, 17, -1);
+    g.bezierCurveTo(27, 0, 29, 7, 26, 13);
+    g.bezierCurveTo(24, 18, 17, 19, 11, 18);
+    g.bezierCurveTo(7, 17, 5, 15, 4, 12);
+    g.closePath(); g.fill(); g.stroke();
+    // sombra de baixo e brilho em cima (volume)
+    g.fillStyle = shade;
+    g.beginPath(); g.moveTo(6, 14); g.bezierCurveTo(12, 18, 21, 18, 26, 12); g.bezierCurveTo(24, 18, 16, 19, 11, 18); g.closePath(); g.fill();
+    g.fillStyle = light;
+    g.beginPath(); g.ellipse(12, 3, 4.5, 1.8, -0.3, 0, Math.PI * 2); g.fill();
+    // sulcos do crânio
+    g.strokeStyle = dark; g.lineWidth = 1.1;
+    [[7, 8, 12, 2, 18, 3], [12, 10, 16, 4, 23, 5], [18, 11, 21, 6, 26, 9]].forEach(c => {
+        g.beginPath(); g.moveTo(c[0], c[1]); g.quadraticCurveTo(c[2], c[3], c[4], c[5]); g.stroke();
+    });
+    // olhos vermelhos enormes, sem pupila
+    g.fillStyle = "#e3262c"; g.strokeStyle = "#4a0508"; g.lineWidth = 0.9;
+    g.beginPath(); g.ellipse(7.6, 11.2, 2.9, 2.2, -0.35, 0, Math.PI * 2); g.fill(); g.stroke();
+    g.beginPath(); g.ellipse(14.4, 11.6, 3.1, 2.3, 0.25, 0, Math.PI * 2); g.fill(); g.stroke();
+    g.fillStyle = "#ffd0d0";
+    g.fillRect(6.4, 10, 1.3, 1); g.fillRect(13.2, 10.4, 1.3, 1);
+    // boca com dentinhos
+    g.strokeStyle = line; g.lineWidth = 0.9;
+    g.beginPath(); g.moveTo(8, 15.6); g.lineTo(13, 15.8); g.stroke();
+    g.fillStyle = "#f4f4e0"; g.fillRect(9, 15.7, 1, 0.9); g.fillRect(11.2, 15.8, 1, 0.9);
+
+    // braço da frente com garras
+    const armFront = pose === "saltar" ? [12, 19, 3, 17, -1, 10] : pose === "agarrar" ? [12, 19, 4, 20, -1, 18] : [12, 19, 8, 24 - sway, 7, 29 - sway];
+    g.strokeStyle = line; g.lineWidth = 3.8;
+    g.beginPath(); g.moveTo(armFront[0], armFront[1]); g.lineTo(armFront[2], armFront[3]); g.lineTo(armFront[4], armFront[5]); g.stroke();
+    g.strokeStyle = skin; g.lineWidth = 2; g.stroke();
+    g.strokeStyle = line; g.lineWidth = 1;
+    const hx = armFront[4], hy = armFront[5];
+    for (let k = -1; k <= 1; k++) { g.beginPath(); g.moveTo(hx, hy); g.lineTo(hx - 2.2, hy + k * 1.8); g.stroke(); }
+}
+
+function getSaibamanSprite(pose, frame, flash) {
+    const key = pose + frame + (flash ? "f" : "");
+    let c = saibamanSpriteCache.get(key);
+    if (c) return c;
+    c = document.createElement("canvas");
+    c.width = (32 + SAIBAMAN_SPRITE_PAD * 2) * SAIBAMAN_SPRITE_SCALE;
+    c.height = (40 + SAIBAMAN_SPRITE_PAD * 2) * SAIBAMAN_SPRITE_SCALE;
+    const g = c.getContext("2d");
+    if (g) {
+        g.scale(SAIBAMAN_SPRITE_SCALE, SAIBAMAN_SPRITE_SCALE);
+        g.translate(SAIBAMAN_SPRITE_PAD, SAIBAMAN_SPRITE_PAD + 1);
+        traceSaibamanFigure(g, pose, frame, flash);
+    }
+    saibamanSpriteCache.set(key, c);
+    return c;
+}
+
+function drawSaibamanSprite(s, pose, frame, flash, offsetY = 0) {
+    const img = getSaibamanSprite(pose, frame, flash);
+    ctx.drawImage(img, s.x - SAIBAMAN_SPRITE_PAD, s.y - SAIBAMAN_SPRITE_PAD + offsetY,
+        32 + SAIBAMAN_SPRITE_PAD * 2, 40 + SAIBAMAN_SPRITE_PAD * 2);
+}
+
 function drawSaibamans() {
+    const groundLine = canvas.height - 4;
     world.saibamans.forEach(s => {
         ctx.save();
-        ctx.fillStyle = "#32cd32";
-        ctx.fillRect(s.x, s.y + 10, s.w, s.h - 10);
-        
-        ctx.fillStyle = "#228b22";
-        ctx.fillRect(s.x + 4, s.y, s.w - 8, 12);
-        
-        ctx.fillStyle = "#ff0000";
-        ctx.fillRect(s.x + 6, s.y + 12, 5, 4);
-        ctx.fillRect(s.x + s.w - 11, s.y + 12, 5, 4);
+        const cx = s.x + s.w / 2;
+        if (s.phase === "brotar") {
+            // sai da terra: o corpo sobe por um buraco com terra em volta
+            const p = Math.min(1, s.phaseTime / SAIBAMAN_SPROUT_FRAMES);
+            const rise = 1 - Math.pow(1 - p, 2);
+            ctx.save();
+            ctx.beginPath(); ctx.rect(s.x - 20, 0, s.w + 40, groundLine); ctx.clip();
+            drawSaibamanSprite(s, "saltar", 0, false, (1 - rise) * (s.h + 4));
+            ctx.restore();
+            ctx.fillStyle = "#4a3418";
+            ctx.beginPath(); ctx.ellipse(cx, groundLine, 16 + rise * 4, 4, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = "#7a5a32";
+            for (let k = 0; k < 5; k++) {
+                const ang = Math.PI + (k / 4) * Math.PI;
+                ctx.fillRect(cx + Math.cos(ang) * (14 + p * 8) - 1.5, groundLine + Math.sin(ang) * (4 + p * 10) - 1.5, 3, 3);
+            }
+        } else if (s.phase === "saltar") {
+            // rastro de velocidade subindo
+            ctx.strokeStyle = "rgba(190, 255, 150, 0.55)"; ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(cx - 6, s.y + s.h + 4); ctx.lineTo(cx - 6, s.y + s.h + 18);
+            ctx.moveTo(cx + 6, s.y + s.h + 2); ctx.lineTo(cx + 6, s.y + s.h + 14);
+            ctx.stroke();
+            drawSaibamanSprite(s, "saltar", 0, false);
+        } else if (s.phase === "agarrar") {
+            // pisca cada vez mais rápido até explodir
+            const left = Math.max(0, s.grabTimer) / SAIBAMAN_GRAB_FRAMES;
+            const period = 4 + left * 10;
+            const flash = Math.floor(s.grabTimer / period) % 2 === 0;
+            const glow = 1 - left;
+            ctx.globalAlpha = 0.25 + glow * 0.45;
+            ctx.fillStyle = "#fff3a0";
+            ctx.beginPath(); ctx.arc(cx, s.y + s.h / 2, 14 + glow * 14, 0, Math.PI * 2); ctx.fill();
+            ctx.globalAlpha = 1;
+            drawSaibamanSprite(s, "agarrar", 0, flash);
+        } else {
+            const frame = Math.floor((s.hoverTime || 0) * 2.4) % 4;
+            drawSaibamanSprite(s, "voar", frame, false);
+        }
+        ctx.restore();
+    });
 
+    // explosões dos abraços
+    world.blasts.forEach(b => {
+        const a = Math.max(0, b.life);
+        ctx.save();
+        ctx.globalAlpha = a * 0.85;
+        ctx.fillStyle = "#ff8a1e";
+        ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#ffe066";
+        ctx.beginPath(); ctx.arc(b.x, b.y, b.r * 0.7, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = a;
         ctx.fillStyle = "#ffffff";
-        ctx.fillRect(s.x - 2, s.y + s.h - 6, 6, 6);
-        ctx.fillRect(s.x + s.w - 4, s.y + s.h - 6, 6, 6);
+        ctx.beginPath(); ctx.arc(b.x, b.y, b.r * 0.38, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(b.x, b.y, b.r * 1.15, 0, Math.PI * 2); ctx.stroke();
         ctx.restore();
     });
 }
@@ -3279,95 +3420,113 @@ function drawPickups() {
         ctx.rotate(Math.sin(item.spin) * 0.12);
         ctx.shadowBlur = 10;
 
+        ctx.scale(1.2, 1.2);   // um pouco maiores que antes, para dar para reconhecer cada item
+
         if (item.type === "senzu") {
-            ctx.shadowColor = "#8cff42";
-            ctx.fillStyle = "#8dcc3f";
-            ctx.strokeStyle = "#315d24";
-            ctx.lineWidth = 2;
+            // Semente dos Deuses (senzu): um único feijão verde-claro em forma de rim.
+            ctx.scale(1.1, 0.78);
+            ctx.shadowColor = "#9dff5a";
+            ctx.fillStyle = "#9ad84a";
+            ctx.strokeStyle = "#2f5e1a";
+            ctx.lineWidth = 1.6;
             ctx.beginPath();
-            ctx.ellipse(-5, 0, 6, 10, -0.45, 0, Math.PI * 2);
-            ctx.ellipse(5, 0, 6, 10, 0.45, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-            ctx.fillStyle = "#d9ff83";
-            ctx.fillRect(-7, -4, 3, 3);
-            ctx.fillRect(3, -5, 3, 3);
-        } else if (item.type === "capsule") {
-            ctx.shadowColor = "#35aaff";
-            ctx.fillStyle = "#d5b39a";
-            ctx.strokeStyle = "#6d4436";
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(0, -12);
-            ctx.arcTo(7, -12, 7, -5, 7);
-            ctx.lineTo(7, 5);
-            ctx.arcTo(7, 12, 0, 12, 7);
-            ctx.arcTo(-7, 12, -7, 5, 7);
-            ctx.lineTo(-7, -5);
-            ctx.arcTo(-7, -12, 0, -12, 7);
+            ctx.moveTo(-8, -2);
+            ctx.bezierCurveTo(-9, -9, 1, -11, 6, -7);
+            ctx.bezierCurveTo(11, -3, 10, 6, 4, 8);
+            ctx.bezierCurveTo(0, 9, -1, 4, -4, 4);
+            ctx.bezierCurveTo(-7, 4, -8, 1, -8, -2);
             ctx.closePath();
             ctx.fill();
             ctx.stroke();
-            ctx.fillStyle = "#167be8";
-            ctx.fillRect(-7, -6, 14, 6);
-            ctx.fillRect(-7, 3, 14, 6);
-            ctx.fillStyle = "#ffffff";
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = "#6aa830";
+            ctx.beginPath(); ctx.ellipse(3, 3, 4, 2.4, -0.6, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = "#e8ffb0";
+            ctx.beginPath(); ctx.ellipse(-2, -5, 3.2, 1.4, -0.3, 0, Math.PI * 2); ctx.fill();
+        } else if (item.type === "capsule") {
+            // Cápsula Hoipoi da Corporação Cápsula: branca, faixa cinza no meio, botão no topo e o logo "CC".
+            ctx.shadowColor = "#7fd0ff";
+            ctx.rotate(0.5);
+            ctx.fillStyle = "#f4f6f8";
+            ctx.strokeStyle = "#3a4250";
+            ctx.lineWidth = 1.5;
             ctx.beginPath();
-            ctx.arc(0, 0, 4, 0, Math.PI * 2);
+            ctx.moveTo(-5.5, -7);
+            ctx.arc(0, -7, 5.5, Math.PI, 0);
+            ctx.lineTo(5.5, 7);
+            ctx.arc(0, 7, 5.5, 0, Math.PI);
+            ctx.closePath();
             ctx.fill();
-            ctx.strokeStyle = "#167be8";
-            ctx.lineWidth = 1;
             ctx.stroke();
-            ctx.fillStyle = "#167be8";
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = "#c9ced6";
+            ctx.fillRect(-5.5, 4, 11, 8);
+            ctx.fillStyle = "#8d96a4";
+            ctx.fillRect(-5.5, -1, 11, 2.6);
+            ctx.fillStyle = "#e23a2e";   // botão
+            ctx.fillRect(-1.6, -14.5, 3.2, 2.4);
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(-3.6, -10, 1.6, 6);   // brilho
+            ctx.fillStyle = "#1c5fb8";
             ctx.font = "bold 5px monospace";
             ctx.textAlign = "center";
-            ctx.fillText("C", 0, 2);
+            ctx.fillText("CC", 0.4, -3);
+            ctx.fillStyle = "#3a4250";
+            ctx.font = "bold 4px monospace";
+            ctx.fillText("1", 0, 10);
         } else if (item.type === "cloud") {
-            // Nuvem voadora: nuvenzinha fofa com um brilho de velocidade atrás.
-            ctx.shadowColor = "#fff4c2";
-            ctx.strokeStyle = "#8a7a3a";
-            ctx.lineWidth = 1.5;
-            ctx.fillStyle = "#fffdf2";
+            // Nuvem Voadora (Kinto'un): nuvem amarelo-dourada fofinha com um rastro atrás.
+            ctx.shadowColor = "#ffd84a";
+            ctx.fillStyle = "#e9a91f";
             ctx.beginPath();
-            ctx.arc(-5, 2, 6, 0, Math.PI * 2);
-            ctx.arc(2, -1, 7, 0, Math.PI * 2);
-            ctx.arc(7, 3, 5, 0, Math.PI * 2);
-            ctx.arc(-2, 5, 5.5, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-            ctx.strokeStyle = "#ffe89a";
-            ctx.lineWidth = 1.5;
-            ctx.beginPath();
-            ctx.moveTo(-13, 0); ctx.lineTo(-9, 0);
-            ctx.moveTo(-14, 5); ctx.lineTo(-10, 5);
-            ctx.stroke();
-        } else if (item.type === "staff") {
-            // Bastão mágico: cajado com uma gema brilhando na ponta.
-            ctx.shadowColor = "#ff9d3d";
-            ctx.strokeStyle = "#5a3a1a";
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(-6, 11);
-            ctx.lineTo(6, -9);
-            ctx.stroke();
-            ctx.strokeStyle = "#caa24a";
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(-6, 11);
-            ctx.lineTo(6, -9);
-            ctx.stroke();
-            ctx.fillStyle = "#ff9d3d";
-            ctx.strokeStyle = "#7a3a0a";
-            ctx.lineWidth = 1.2;
-            ctx.beginPath();
-            ctx.moveTo(6, -13); ctx.lineTo(9.5, -8); ctx.lineTo(6, -3); ctx.lineTo(2.5, -8);
+            ctx.moveTo(-7, 6);
+            ctx.quadraticCurveTo(-15, 7, -17, 2);
+            ctx.quadraticCurveTo(-13, 4, -9, 0);
             ctx.closePath();
             ctx.fill();
-            ctx.stroke();
-            ctx.fillStyle = "#ffe1b0";
+            ctx.strokeStyle = "#a8670c";
+            ctx.lineWidth = 1.3;
+            ctx.fillStyle = "#ffd84a";
             ctx.beginPath();
-            ctx.arc(5, -9, 1.6, 0, Math.PI * 2);
+            ctx.arc(-6, 3, 5.5, 0, Math.PI * 2);
+            ctx.arc(0, -1, 7, 0, Math.PI * 2);
+            ctx.arc(7, 2, 6, 0, Math.PI * 2);
+            ctx.arc(1, 5, 5.5, 0, Math.PI * 2);
             ctx.fill();
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = "#ffd84a";
+            ctx.beginPath();
+            ctx.arc(-6, 3, 4.6, 0, Math.PI * 2);
+            ctx.arc(0, -1, 6.1, 0, Math.PI * 2);
+            ctx.arc(7, 2, 5.1, 0, Math.PI * 2);
+            ctx.arc(1, 5, 4.6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = "#f0b52a";
+            ctx.beginPath(); ctx.ellipse(1, 7, 9, 2.6, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = "#fff6c4";
+            ctx.beginPath(); ctx.ellipse(-1, -4, 3.4, 1.6, -0.2, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(6, -1, 2, 1.1, 0, 0, Math.PI * 2); ctx.fill();
+        } else if (item.type === "staff") {
+            // Bastão Mágico (Nyoibo): haste vermelha com as pontas douradas.
+            ctx.shadowColor = "#ff5a3d";
+            ctx.rotate(-0.6);
+            ctx.fillStyle = "#3a0c08";
+            ctx.fillRect(-14, -2.6, 28, 5.2);
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = "#d2281e";
+            ctx.fillRect(-10, -1.8, 20, 3.6);
+            ctx.fillStyle = "#ff7a5e";
+            ctx.fillRect(-10, -1.6, 20, 1);
+            ctx.fillStyle = "#e8b631";
+            ctx.fillRect(-13.4, -2, 4, 4);
+            ctx.fillRect(9.4, -2, 4, 4);
+            ctx.fillStyle = "#fff0a0";
+            ctx.fillRect(-13, -1.8, 3, 1);
+            ctx.fillRect(9.8, -1.8, 3, 1);
+            ctx.fillStyle = "#8a5a10";
+            ctx.fillRect(-9.6, -1.8, 0.8, 3.6);
+            ctx.fillRect(8.8, -1.8, 0.8, 3.6);
         }
         ctx.restore();
     });

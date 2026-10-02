@@ -27,33 +27,117 @@ function initAudio() {
     return true;
 }
 
+// ==================== MÚSICAS DAS FASES ====================
+// Cada fase toca um tema no clima de uma época do anime (clássico, saga Freeza, saga Boo, GT) — escolhido por
+// getStageMusicEra (game-logic-core.js). São composições originais feitas aqui (melodia + baixo + bateria
+// sintetizados); as músicas oficiais da série têm direitos autorais e não podem ser copiadas.
+// Notas em MIDI, uma por colcheia; null = pausa. 4 compassos que se repetem.
+const BGM_THEMES = (() => {
+const _ = null;
+return {
+    classico: {   // aventura alegre, tom maior
+        bpm: 140, lead: "square", leadVol: 0.05, bassWave: "triangle",
+        melody: [72,_,76,79, 81,79,76,_,  74,_,77,81, 79,_,77,76,  72,_,76,79, 84,_,83,81,  79,77,76,74, 72,_,_,_],
+        bass:   [48,_,55,_, 48,_,55,_,    50,_,57,_, 50,_,57,_,    53,_,60,_, 53,_,60,_,    55,_,55,_, 43,_,55,_]
+    },
+    freeza: {     // tenso e sombrio, tom menor com baixo pulsando
+        bpm: 150, lead: "sawtooth", leadVol: 0.032, bassWave: "sawtooth",
+        melody: [62,_,62,65, 64,_,62,_,  61,_,62,_, 69,_,68,_,  62,_,62,65, 67,_,65,64,  70,_,69,_, 68,_,61,_],
+        bass:   [38,38,50,38, 38,38,50,38,  37,37,49,37, 37,37,49,37,  38,38,50,38, 38,38,50,38,  34,34,46,34, 33,33,45,33]
+    },
+    boo: {        // saltitante e travesso, mas ameaçador
+        bpm: 132, lead: "square", leadVol: 0.042, bassWave: "square",
+        melody: [64,_,67,_, 71,70,71,_,  72,_,71,_, 67,_,66,_,  64,_,67,_, 71,_,75,_,  76,_,74,72, 71,_,_,_],
+        bass:   [40,_,47,_, 40,_,47,_,    45,_,52,_, 45,_,52,_,    48,_,47,_, 46,_,45,_,    47,_,47,_, 35,_,47,_]
+    },
+    gt: {         // rock animado de estrada
+        bpm: 156, lead: "triangle", leadVol: 0.07, bassWave: "sawtooth",
+        melody: [69,_,69,71, 73,_,76,_,  74,_,73,71, 69,_,67,_,  69,_,69,71, 73,_,78,76,  79,_,76,_, 74,73,71,_],
+        bass:   [45,45,57,45, 45,45,55,45,  43,43,55,43, 43,43,55,43,  45,45,57,45, 45,45,57,45,  50,50,62,50, 52,52,64,52]
+    }
+};
+})();
+let bgmNoiseBuffer = null;
+
+function midiToFreq(n) {
+    return 440 * Math.pow(2, (n - 69) / 12);
+}
+
+function playBgmTone(freq, wave, vol, dur, t) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = wave;
+    osc.frequency.setValueAtTime(freq, t);
+    gain.gain.setValueAtTime(vol, t);
+    gain.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(t);
+    osc.stop(t + dur + 0.02);
+}
+
+function playBgmDrum(kind, vol, t) {
+    if (kind === "kick") {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(140, t);
+        osc.frequency.exponentialRampToValueAtTime(45, t + 0.12);
+        gain.gain.setValueAtTime(vol * 1.6, t);
+        gain.gain.exponentialRampToValueAtTime(0.0008, t + 0.14);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(t); osc.stop(t + 0.16);
+        return;
+    }
+    if (!bgmNoiseBuffer) {
+        const len = Math.floor(audioCtx.sampleRate * 0.2);
+        bgmNoiseBuffer = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+        const data = bgmNoiseBuffer.getChannelData(0);
+        for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+    }
+    const src = audioCtx.createBufferSource();
+    const gain = audioCtx.createGain();
+    const dur = kind === "snare" ? 0.12 : 0.035;
+    src.buffer = bgmNoiseBuffer;
+    gain.gain.setValueAtTime(kind === "snare" ? vol : vol * 0.45, t);
+    gain.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+    src.connect(gain); gain.connect(audioCtx.destination);
+    src.start(t); src.stop(t + dur + 0.01);
+}
+
+function getCurrentBgmTheme() {
+    const era = typeof getStageMusicEra === "function" && typeof selectedStage !== "undefined"
+        ? getStageMusicEra(selectedStage) : "classico";
+    return BGM_THEMES[era] || BGM_THEMES.classico;
+}
+
 function startBGM() {
     stopBGM();
     if (isMuted || bgmVolume <= 0 || !audioCtx) return;
 
-    const notes = [220, 261.63, 293.66, 329.63, 392.00, 329.63, 293.66, 261.63];
+    const theme = getCurrentBgmTheme();
+    const stepSec = 60 / theme.bpm / 2;   // colcheia
     bgmStep = 0;
 
     bgmInterval = setInterval(() => {
         if (!audioCtx || isMuted || gameState !== "playing") return;
         try {
-            let osc = audioCtx.createOscillator();
-            let gain = audioCtx.createGain();
-            
-            osc.type = "square";
-            osc.frequency.setValueAtTime(notes[bgmStep % notes.length], audioCtx.currentTime);
-            gain.gain.setValueAtTime(0.04 * bgmVolume, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.18);
-            
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.18);
+            const t = audioCtx.currentTime + 0.01;
+            const i = bgmStep % theme.melody.length;
+            const v = bgmVolume;
+            const note = theme.melody[i];
+            if (note !== null) playBgmTone(midiToFreq(note), theme.lead, theme.leadVol * v, stepSec * 1.6, t);
+            const bass = theme.bass[i];
+            if (bass !== null) playBgmTone(midiToFreq(bass), theme.bassWave, 0.05 * v, stepSec * 0.9, t);
+            const beat = i % 8;
+            if (beat === 0 || beat === 4) playBgmDrum("kick", 0.06 * v, t);
+            else if (beat === 2 || beat === 6) playBgmDrum("snare", 0.035 * v, t);
+            else playBgmDrum("hat", 0.03 * v, t);
             bgmStep++;
         } catch (e) {
             console.warn("Erro ao tocar BGM:", e.message);
         }
-    }, 200);
+    }, stepSec * 1000);
 }
 
 function stopBGM() {

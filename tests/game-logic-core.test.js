@@ -543,3 +543,27 @@ test("registerVersusRoundWin: VERSUS em melhor de 3 — quem vence 2 rodadas lev
     assert.equal(registerVersusRoundWin({ p1: 1, p2: 0 }, "p1").matchWinner, "p1", "2 x 0 também acaba");
     assert.deepEqual(registerVersusRoundWin(undefined, "p1").score, { p1: 1, p2: 0 }, "placar ausente começa do 0 x 0");
 });
+
+test("Saibaman: brota, salta até a altura de voo e voa para a esquerda", () => {
+    const { createSaibaman, stepSaibamanMotion, isSaibamanActive, SAIBAMAN_SPROUT_FRAMES } = require("../game-logic-core.js");
+    const s = createSaibaman(600, 306, 100, 2);
+    assert.equal(s.phase, "brotar");
+    assert.equal(isSaibamanActive(s), false);
+    for (let i = 0; i <= SAIBAMAN_SPROUT_FRAMES; i++) stepSaibamanMotion(s, 1 / 60);
+    assert.equal(s.phase, "saltar");
+    for (let i = 0; i < 300 && s.phase === "saltar"; i++) stepSaibamanMotion(s, 1 / 60);
+    assert.equal(s.phase, "voar");
+    assert.ok(s.y < 140, "subiu perto da altura alvo");
+    const x = s.x;
+    stepSaibamanMotion(s, 1 / 60);
+    assert.ok(s.x < x);
+});
+
+test("música de cada fase segue a época do anime", () => {
+    const { getStageMusicEra } = require("../game-logic-core.js");
+    assert.equal(getStageMusicEra("terra"), "classico");
+    assert.equal(getStageMusicEra("freeza_ship"), "freeza");
+    assert.equal(getStageMusicEra("cell_games"), "boo");
+    assert.equal(getStageMusicEra("kaioshin"), "gt");
+    assert.equal(getStageMusicEra("desconhecida"), "classico");
+});

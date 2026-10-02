@@ -34,7 +34,10 @@ check("carregar ki ainda aumenta a aura depois do tempo", (() => {
     return run("player.kiAuraLevel") > 0.9;
 })());
 check("o cabelo continua amarelo depois do tempo", decodeURIComponent(String(run(`getCharacterAnimationFrame("goku_adult", "idle", 0, true) && getCharacterAnimationFrames("goku_adult", "idle", !!player.isSSJ)[0]`))).includes("ffe34d"));
-check("não dá para transformar de novo na mesma luta (já está transformado)", run("player.ki = 100; transformPlayer(player, false)") === false);
+check("depois da última transformação não dá para transformar de novo", (() => {
+    run("for (let n = 0; n < 10; n++) { player.ki = 100; if (!transformPlayer(player, false)) break; }");
+    return run("getTransformLevel(player)") === run("getCharacterTransformations('goku_adult').length") && run("player.ki = 100; transformPlayer(player, false)") === false;
+})());
 
 run("startGame()");
 check("nova luta: começa sem transformação e sem bônus", run("player.isSSJ") === false && run("player.speed") === velNormal);

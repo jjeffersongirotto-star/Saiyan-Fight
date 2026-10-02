@@ -91,7 +91,8 @@ function createHarness(dir, width = 800, height = 360) {
     let fails = 0;
     const check = (name, ok, extra = "") => { if (!ok) fails++; console.log(`${ok ? "PASS" : "FAIL"}  ${name} ${extra}`); };
     const step = (n = 1) => { for (let i = 0; i < n; i++) run("update(1/60)"); };
-    const summary = () => { console.log(fails === 0 ? "\nTUDO OK" : `\n${fails} FALHA(S)`); return fails; };
+    // falha marca o processo como erro (o GitHub Actions fica vermelho mesmo que o teste não chame process.exit)
+    const summary = () => { console.log(fails === 0 ? "\nTUDO OK" : `\n${fails} FALHA(S)`); if (fails) process.exitCode = 1; return fails; };
 
     return { context, document, els, store, run, canvas, touch, fire, check, step, summary, calls, MQ, scripts };
 }
