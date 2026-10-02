@@ -561,12 +561,10 @@ function stepSaibamanLunge(s, tx, ty, dt) {
     return s;
 }
 
-// Música de cada fase no ritmo da abertura de uma época do anime (mesmo andamento e batida; a melodia é
-// original — as músicas da série têm direitos autorais e não são copiadas).
-// classico = Dragon Ball; cell = 1ª abertura do Z (até a saga Cell); boo = 2ª abertura do Z; gt = Dragon Ball GT.
+// Música de cada fase: um tema original do jogo por época (classico, freeza, boo, gt) — ver BGM_THEMES em audio.js.
 const STAGE_MUSIC_ERA = {
     terra: "classico", kaio: "classico",
-    namek: "cell", freeza_ship: "cell", namek_explosao: "cell", cell_games: "cell",
+    namek: "freeza", freeza_ship: "freeza", namek_explosao: "freeza", cell_games: "freeza",
     time_room: "boo",
     kaioshin: "gt"
 };
