@@ -93,11 +93,14 @@ check("abraçado ele é desenhado na frente do herói", (() => { const r = menu.
 check("abraçado ele não fica transparente (sem versão clara do desenho)", !menu.includes("flash ?") && !run("[...saibamanSpriteCache.keys()].some(k => k.endsWith('f'))"));
 
 // música por fase
-check("cada fase tem a música da sua época", run(`["terra","kaio","namek","freeza_ship","namek_explosao","time_room","cell_games","kaioshin"].map(getStageMusicEra).join()`) === "classico,classico,cell,cell,cell,boo,cell,gt");
-check("os 4 temas existem e têm melodia e baixo do mesmo tamanho", run(`["classico","cell","boo","gt"].every(k => BGM_THEMES[k] && BGM_THEMES[k].melody.length === BGM_THEMES[k].bass.length && BGM_THEMES[k].melody.length >= 16)`));
-check("cada tema tem a batida da sua abertura (bateria de 16 tempos por compasso)", run(`Object.values(BGM_THEMES).every(t => t.kick.length === 16 && t.snare.length === 16 && t.hat.length === 16 && (t.stab === "" || t.stab.length === 16) && t.bpm >= 120 && t.bpm <= 180)`));
-check("os ritmos são diferentes entre as épocas", run(`new Set(Object.values(BGM_THEMES).map(t => t.kick + t.hat + t.bpm)).size === 4`));
-check("a música toca o tema da fase escolhida", run(`selectedStage = "namek"; getCurrentBgmTheme() === BGM_THEMES.cell`) && run(`selectedStage = "kaioshin"; getCurrentBgmTheme() === BGM_THEMES.gt`));
+check("cada fase tem a música da sua época", run(`["terra","kaio","namek","freeza_ship","namek_explosao","time_room","cell_games","kaioshin"].map(getStageMusicEra).join()`) === "classico,classico,freeza,freeza,freeza,boo,freeza,gt");
+check("os 4 temas existem, com nome próprio, e melodia e baixo do mesmo tamanho", run(`["classico","freeza","boo","gt"].every(k => { const t = BGM_THEMES[k], c = getCompiledTheme(t); return t.nome && c.melodia.length === c.baixo.length && c.melodia.length === t.compasso * 8; })`));
+check("cada compasso da melodia fecha certinho e todas as notas são válidas", run(`Object.values(BGM_THEMES).every(t => t.melodia.split("|").every(b => b.trim().split(/\\s+/).reduce((s, tok) => s + Number(tok.split(":")[1]), 0) === t.compasso) && getCompiledTheme(t).melodia.every(e => !e || Number.isFinite(e.midi)))`));
+check("bateria com um passo por semicolcheia do compasso", run(`Object.values(BGM_THEMES).every(t => [t.kick, t.snare, t.hat].every(p => p === "" || p.length === t.compasso))`));
+check("as 4 músicas são diferentes: nome, andamento, compasso/instrumento e começo da melodia", run(`(() => { const ts = Object.values(BGM_THEMES);
+    const dif = f => new Set(ts.map(f)).size === 4;
+    return dif(t => t.nome) && dif(t => t.bpm) && dif(t => t.lead.wave + t.compasso) && dif(t => t.melodia.split("|")[0]); })()`));
+check("a música toca o tema da fase escolhida", run(`selectedStage = "namek"; getCurrentBgmTheme() === BGM_THEMES.freeza`) && run(`selectedStage = "kaioshin"; getCurrentBgmTheme() === BGM_THEMES.gt`));
 
 // TRILHAS SONORAS em Opções > Áudio
 // áudio de mentira (o harness não tem Web Audio): só para os botões poderem ligar a música
@@ -108,7 +111,7 @@ run(`var __no = () => ({ connect() {}, start() {}, stop() {}, type: "", buffer: 
 const tr = run("JSON.stringify(MENU_LAYOUT.optionsAudio.tracks)"); const trR = JSON.parse(tr);
 run(`handleMenuClick(${trR.x + 5}, ${trR.y + 5})`);
 check("Áudio tem o botão TRILHAS SONORAS que abre a lista", run("gameState") === "options_tracks");
-check("a lista tem as 4 trilhas das fases", run("BGM_TRACK_LIST.map(t => t.era).join()") === "classico,cell,boo,gt");
+check("a lista tem as 4 trilhas das fases", run("BGM_TRACK_LIST.map(t => t.era).join()") === "classico,freeza,boo,gt");
 const clicar = (i) => { const r = JSON.parse(run(`JSON.stringify(getTrackPlayRect(${i}))`)); run(`handleMenuClick(${r.x + 5}, ${r.y + 5})`); };
 clicar(0);
 check("tocar uma trilha", run("bgmPreviewEra") === "classico" && run("!!bgmInterval"));

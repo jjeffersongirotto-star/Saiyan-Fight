@@ -28,65 +28,132 @@ function initAudio() {
 }
 
 // ==================== MÚSICAS DAS FASES ====================
-// Cada fase toca no ritmo da abertura de uma época do anime — escolhida por getStageMusicEra
-// (game-logic-core.js): mesmo andamento, mesma batida de bateria e mesmo tipo de baixo, para lembrar a abertura.
-// A melodia por cima é original: as músicas da série têm direitos autorais e não podem ser copiadas.
-// Bateria: 16 semicolcheias por compasso ("x" = toca). Melodia e baixo: uma nota MIDI por colcheia
-// (null = pausa), 4 compassos que se repetem. A cada 4 compassos entra um prato no começo.
-const BGM_THEMES = (() => {
-const _ = null;
-return {
-    classico: {   // aventura saltitante e alegre (abertura do Dragon Ball clássico)
-        bpm: 152, lead: "square", leadVol: 0.045, bassWave: "triangle", bassVol: 0.07,
+// Quatro temas originais do jogo, um por época (getStageMusicEra em game-logic-core.js), cada um com nome,
+// compasso, andamento, escala e instrumentos próprios e um "gancho" de abertura fácil de reconhecer.
+// (As músicas da série têm direitos autorais e não são copiadas: estas são composições do próprio jogo.)
+//
+// Notação: "Nota+oitava:duração" em semicolcheias (ex.: "D5:4" = Ré da 5ª oitava por uma semínima),
+// "-:n" = pausa. Na linha de baixo, "R"/"Q"/"O" = fundamental, quinta e oitava do acorde do compasso.
+// Bateria: um caractere por semicolcheia de cada compasso ("x" = toca).
+const BGM_THEMES = {
+    classico: {
+        nome: "AVENTURA NAS NUVENS",
+        clima: "Pentatônica saltitante com balanço (shuffle), flautinha de 8 bits e baixo \"pum-pá\"",
+        bpm: 132, compasso: 16, swing: 0.32,
+        lead: { wave: "square", vol: 0.045, staccato: 0.6 },
+        bassWave: "triangle", bassVol: 0.08,
+        acordes: ["G2", "G2", "E2", "D2", "G2", "C3", "D2", "G2"],
+        melodia: "G4:2 A4:2 B4:2 D5:4 B4:2 D5:2 E5:2 | D5:6 -:2 B4:2 A4:2 G4:4 | E4:2 G4:2 A4:2 B4:4 A4:2 G4:2 E4:2 | D4:8 -:4 D4:2 E4:2 |" +
+                 "G4:2 A4:2 B4:2 D5:4 E5:2 G5:4 | E5:2 D5:2 B4:2 D5:6 -:4 | E5:2 D5:2 B4:2 A4:2 G4:2 A4:2 B4:2 A4:2 | G4:8 -:4 D5:1 E5:1 G5:2",
+        baixo: "R:4 Q:4 R:4 Q:4",
+        kick:  "x.......x.......",
+        snare: "....x.......x...",
+        hat:   "..x...x...x...x."
+    },
+    freeza: {
+        nome: "A AMEAÇA DO IMPERADOR",
+        clima: "Marcha heroica em Ré menor, metais com ritmo pontuado e tambores de guerra",
+        bpm: 112, compasso: 16, swing: 0,
+        lead: { wave: "sawtooth", vol: 0.045, staccato: 0.9 },
+        bassWave: "sawtooth", bassVol: 0.06,
+        acordes: ["D2", "D2", "D2", "A1", "G1", "D2", "A1", "D2"],
+        melodia: "D4:3 D4:1 A4:4 G4:2 F4:2 E4:2 F4:2 | D4:8 -:4 A3:2 C4:2 | D4:3 D4:1 A4:4 Bb4:2 A4:2 G4:2 A4:2 | E4:8 -:4 E4:2 F4:2 |" +
+                 "G4:3 G4:1 Bb4:4 A4:2 G4:2 F4:2 G4:2 | A4:6 F4:2 D4:4 F4:4 | C#5:4 A4:2 Bb4:2 G4:4 E4:4 | D4:8 -:4 C#4:2 E4:2",
+        baixo: "R:3 R:1 R:4 O:4 Q:4",
+        kick:  "x.......x.......",
+        snare: "...x..x.x.xx..x.",
+        hat:   ""
+    },
+    boo: {
+        nome: "VALSA DO MAJIN",
+        clima: "Valsa travessa em 3/4, caixinha de música com cromatismos e baixo \"pum-pá-pá\"",
+        bpm: 168, compasso: 12, swing: 0,
+        lead: { wave: "triangle", vol: 0.085, staccato: 0.7 },
+        bassWave: "square", bassVol: 0.03,
+        acordes: ["E2", "E2", "E2", "E2", "A2", "B1", "A2", "E2"],
+        melodia: "E5:2 D#5:2 E5:2 G5:4 E5:2 | B4:6 C5:2 B4:2 A4:2 | G4:2 F#4:2 G4:2 B4:4 G4:2 | E4:8 -:4 |" +
+                 "A4:2 G#4:2 A4:2 C5:4 E5:2 | D#5:6 B4:4 -:2 | C5:2 B4:2 A4:2 F#4:2 D#4:2 F#4:2 | E4:8 -:2 B3:2",
+        baixo: "R:4 O:4 Q:4",
+        kick:  "x...........",
+        snare: "",
+        hat:   "....x...x..."
+    },
+    gt: {
+        nome: "ESTRADA DAS ESTRELAS",
+        clima: "Balada nostálgica em Fá maior, flauta suave com vibrato e baixo sincopado de bossa",
+        bpm: 100, compasso: 16, swing: 0,
+        lead: { wave: "sine", vol: 0.075, staccato: 1, vibrato: 5 },
+        bassWave: "triangle", bassVol: 0.06,
+        acordes: ["F2", "A#1", "A1", "G1", "F2", "A#1", "C2", "F2"],
+        melodia: "C5:3 A4:3 F5:2 E5:4 C5:4 | D5:3 Bb4:3 G5:2 F5:8 | E5:3 C5:3 A5:2 G5:4 E5:2 C5:2 | D5:12 -:4 |" +
+                 "C5:3 A4:3 F5:2 E5:4 C5:4 | D5:3 Bb4:3 D5:2 G5:4 A5:2 Bb5:2 | A5:4 G5:2 F5:2 E5:2 G5:2 C5:4 | F5:12 -:4",
+        baixo: "R:3 Q:3 O:2 Q:8",
         kick:  "x.....x...x.....",
-        snare: "....x.......x...",
-        hat:   "..x...x...x...x.",
-        stab:  "..x.......x.x...",   // metais curtos no contratempo
-        melody: [72,_,76,79, 81,79,76,_,  74,_,77,81, 79,_,77,76,  72,_,76,79, 84,_,83,81,  79,77,76,74, 72,_,_,_],
-        bass:   [48,_,55,_, 48,_,55,_,    50,_,57,_, 50,_,57,_,    53,_,60,_, 53,_,60,_,    55,_,55,_, 43,_,55,_]
-    },
-    cell: {       // rock animado de 8 batidas, baixo pulsando em colcheias (1ª abertura do Z)
-        bpm: 148, lead: "sawtooth", leadVol: 0.03, bassWave: "sawtooth", bassVol: 0.045,
-        kick:  "x.....x.x.....x.",
-        snare: "....x.......x...",
-        hat:   "x.x.x.x.x.x.x.x.",
-        stab:  "",
-        melody: [69,_,71,73, _,76,_,73,  74,_,73,71, 69,_,_,_,  66,_,69,71, _,73,_,71,  69,_,71,73, 76,_,_,_],
-        bass:   [45,45,45,45, 45,45,45,45,  50,50,50,50, 50,50,50,50,  42,42,42,42, 42,42,42,42,  40,40,40,40, 40,40,52,40]
-    },
-    boo: {        // hard rock rápido e pesado, bumbo dobrado (2ª abertura do Z)
-        bpm: 162, lead: "square", leadVol: 0.035, bassWave: "sawtooth", bassVol: 0.05,
-        kick:  "x.x...x.x.x...x.",
-        snare: "....x.......x...",
-        hat:   "x.x.x.x.x.x.x.x.",
-        stab:  "x.........x.....",
-        melody: [64,_,64,67, _,69,_,71,  72,_,71,69, 67,_,69,_,  64,_,64,67, _,69,_,74,  72,_,71,_, 69,_,_,_],
-        bass:   [40,40,52,40, 40,40,52,40,  48,48,60,48, 48,48,60,48,  50,50,62,50, 50,50,62,50,  47,47,59,47, 47,47,59,47]
-    },
-    gt: {         // pop-rock leve e embalado, chimbal em semicolcheias (abertura do GT)
-        bpm: 138, lead: "triangle", leadVol: 0.075, bassWave: "triangle", bassVol: 0.075,
-        kick:  "x.....x...x.....",
-        snare: "....x.......x..x",
-        hat:   "x.xxx.xxx.xxx.xx",
-        stab:  "",
-        melody: [69,_,69,71, 73,_,76,_,  74,_,73,71, 69,_,67,_,  69,_,69,71, 73,_,78,76,  79,_,76,_, 74,73,71,_],
-        bass:   [50,_,50,57, _,50,57,_,  47,_,47,54, _,47,54,_,  43,_,43,50, _,43,50,_,  45,_,45,52, _,45,49,52]
+        snare: "",
+        hat:   "x.x.x.x.x.x.x.x."
     }
 };
-})();
 let bgmNoiseBuffer = null;
 let bgmNextTime = 0;
+
+const NOTE_SEMITONES = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+// "C#5" / "Bb4" -> número MIDI
+function noteNameToMidi(nome) {
+    const m = /^([A-G])(#|b)?(-?\d)$/.exec(nome);
+    if (!m) return null;
+    return 12 * (Number(m[3]) + 1) + NOTE_SEMITONES[m[1]] + (m[2] === "#" ? 1 : m[2] === "b" ? -1 : 0);
+}
+
+// Transforma a notação em uma lista por semicolcheia: em cada passo, { nota, dur } quando começa uma nota.
+function parseBgmLine(texto) {
+    const passos = [];
+    texto.split(/[\s|]+/).filter(Boolean).forEach(tok => {
+        const [nome, d] = tok.split(":");
+        const dur = Number(d) || 1;
+        passos.push(nome === "-" ? null : { nota: nome, dur });
+        for (let i = 1; i < dur; i++) passos.push(null);
+    });
+    return passos;
+}
+
+// Prepara (uma vez) a melodia e o baixo do tema em passos de semicolcheia.
+function getCompiledTheme(theme) {
+    if (theme._compilado) return theme._compilado;
+    const melodia = parseBgmLine(theme.melodia).map(ev => ev && { midi: noteNameToMidi(ev.nota), dur: ev.dur });
+    const padraoBaixo = parseBgmLine(theme.baixo);
+    const baixo = [];
+    theme.acordes.forEach(acorde => {
+        const raiz = noteNameToMidi(acorde);
+        padraoBaixo.forEach(ev => baixo.push(ev && {
+            midi: raiz + (ev.nota === "Q" ? 7 : ev.nota === "O" ? 12 : 0), dur: ev.dur
+        }));
+    });
+    theme._compilado = { melodia, baixo, total: Math.max(melodia.length, baixo.length) };
+    return theme._compilado;
+}
 
 function midiToFreq(n) {
     return 440 * Math.pow(2, (n - 69) / 12);
 }
 
-function playBgmTone(freq, wave, vol, dur, t) {
+function playBgmTone(freq, wave, vol, dur, t, vibrato) {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.type = wave;
     osc.frequency.setValueAtTime(freq, t);
-    gain.gain.setValueAtTime(vol, t);
+    if (vibrato && audioCtx.createOscillator) {
+        // vibrato suave (a "flauta" do tema GT): balança a afinação alguns hertz
+        const lfo = audioCtx.createOscillator();
+        const lfoGain = audioCtx.createGain();
+        lfo.frequency.setValueAtTime(5.5, t);
+        lfoGain.gain.setValueAtTime(vibrato, t);
+        lfo.connect(lfoGain);
+        lfoGain.connect(osc.frequency);
+        lfo.start(t);
+        lfo.stop(t + dur + 0.05);
+    }
+    gain.gain.setValueAtTime(0.0008, t);
+    gain.gain.linearRampToValueAtTime(vol, t + 0.012);
     gain.gain.exponentialRampToValueAtTime(0.0008, t + dur);
     osc.connect(gain);
     gain.connect(audioCtx.destination);
@@ -130,31 +197,24 @@ function getCurrentBgmTheme() {
     return BGM_THEMES[era] || BGM_THEMES.classico;
 }
 
-// Toca um passo (semicolcheia) do tema no instante t. Passos pares levam a nota de melodia/baixo da colcheia.
+// Toca um passo (semicolcheia) do tema no instante t.
 function playBgmStep(theme, step, t, stepSec) {
     const v = bgmVolume;
-    const s16 = step % 16;
-    if (step % 2 === 0) {
-        const i = (step / 2) % theme.melody.length;
-        const note = theme.melody[i];
-        if (note !== null) playBgmTone(midiToFreq(note), theme.lead, theme.leadVol * v, stepSec * 3.2, t);
-        const bass = theme.bass[i];
-        if (bass !== null) playBgmTone(midiToFreq(bass), theme.bassWave, theme.bassVol * v, stepSec * 1.8, t);
-    }
-    if (s16 === 0 && step % 64 === 0) playBgmDrum("crash", 0.05 * v, t);
-    if (theme.kick[s16] === "x") playBgmDrum("kick", 0.06 * v, t);
-    if (theme.snare[s16] === "x") playBgmDrum("snare", 0.04 * v, t);
-    else if (theme.hat[s16] === "x") playBgmDrum("hat", 0.03 * v, t);
-    if (theme.stab[s16] === "x") {
-        // acorde curto de metais na nota do baixo (terça e quinta acima)
-        const root = theme.bass[Math.floor(step / 2) % theme.bass.length] || theme.bass[0];
-        [12, 16, 19].forEach(iv => playBgmTone(midiToFreq(root + iv), "square", 0.012 * v, stepSec * 1.2, t));
-    }
+    const c = getCompiledTheme(theme);
+    const i = step % c.total;
+    const noCompasso = step % theme.compasso;
+    // balanço (shuffle): a segunda colcheia de cada tempo chega um pouco atrasada
+    if (theme.swing && noCompasso % 4 === 2) t += theme.swing * stepSec;
+    const m = c.melodia[i];
+    if (m) playBgmTone(midiToFreq(m.midi), theme.lead.wave, theme.lead.vol * v, m.dur * stepSec * theme.lead.staccato + 0.05, t, theme.lead.vibrato);
+    const b = c.baixo[i];
+    if (b) playBgmTone(midiToFreq(b.midi), theme.bassWave, theme.bassVol * v, b.dur * stepSec * 0.85 + 0.03, t);
+    if (i === 0) playBgmDrum("crash", 0.04 * v, t);   // prato a cada volta da música
+    if (theme.kick[noCompasso] === "x") playBgmDrum("kick", 0.06 * v, t);
+    if (theme.snare[noCompasso] === "x") playBgmDrum("snare", 0.035 * v, t);
+    else if (theme.hat[noCompasso] === "x") playBgmDrum("hat", 0.03 * v, t);
 }
 
-// Toca um tema em laço enquanto `ativo()` for verdade. As notas são agendadas um pouco à frente no relógio
-// do áudio: o ritmo fica certinho mesmo se o jogo atrasar um quadro. Fora do ativo (pausa) fica em silêncio
-// e retoma no tempo certo depois.
 function startThemeLoop(theme, ativo) {
     const stepSec = 60 / theme.bpm / 4;   // semicolcheia
     bgmStep = 0;
@@ -185,10 +245,10 @@ function startBGM() {
 // TRILHAS SONORAS (Opções > Áudio): ouvir a música de cada época. Só uma toca por vez — tocar outra pausa a
 // anterior. Sair da tela (setGameState → stopBGM) para tudo.
 const BGM_TRACK_LIST = [
-    { era: "classico", nome: "DRAGON BALL CLÁSSICO", fases: "Torneio, Sr. Kaioh" },
-    { era: "cell", nome: "DRAGON BALL Z: ATÉ A SAGA CELL", fases: "Namek, Nave de Freeza, Torneio de Cell" },
-    { era: "boo", nome: "DRAGON BALL Z: SAGA BOO", fases: "Sala do Tempo" },
-    { era: "gt", nome: "DRAGON BALL GT", fases: "Planeta Supremo Kaioh" }
+    { era: "classico", nome: BGM_THEMES.classico.nome, fases: "Torneio, Sr. Kaioh" },
+    { era: "freeza", nome: BGM_THEMES.freeza.nome, fases: "Namek, Nave de Freeza, Torneio de Cell" },
+    { era: "boo", nome: BGM_THEMES.boo.nome, fases: "Sala do Tempo" },
+    { era: "gt", nome: BGM_THEMES.gt.nome, fases: "Planeta Supremo Kaioh" }
 ];
 let bgmPreviewEra = null;
 
