@@ -296,7 +296,10 @@ function getCharacterAnimationFrames(charKey, actionState, transformed) {
     const level = transformed === true ? 1 : (transformed | 0);
     if (level > 0) {
         const t = getCharacterTransformations(charKey)[level - 1];
-        const tFrames = getTransformedFrames(char, actionState || "idle", t);
+        // pose sem desenho próprio (ex.: "hit" do vilão levando golpe): usa a parada transformada, senão o
+        // cabelo voltava ao normal por um instante a cada golpe
+        const pose = SPRITE_FRAME_COUNTS[actionState || "idle"] ? (actionState || "idle") : "idle";
+        const tFrames = getTransformedFrames(char, pose, t);
         if (tFrames && tFrames.length) return tFrames;
     }
 
@@ -1992,14 +1995,12 @@ function update(dt) {
         player2.ki = Math.min(player2.maxKi, player2.ki + (0.8 * dt * 60));
     }
 
-    // Fora do coop, o boss acumula ki sozinho e transforma a partir da wave 3.
-    if (gameMode !== "coop" && !player2.isDying && !player2.isTransformed) {
-        if (waveNumber >= 3) {
-            player2.ki = Math.min(player2.maxKi, player2.ki + (0.35 * dt * 60));
-            if (player2.ki >= player2.maxKi) {
-                transformPlayer(player2, true, true);
-            }
-        }
+    // Fora do versus, o vilão acumula ki sozinho a partir da onda 3 e, como o herói, sobe um nível da sua lista
+    // de transformações (do editor) cada vez que o ki enche, até a última.
+    if (gameMode !== "coop" && !player2.isDying && waveNumber >= 3 &&
+        getTransformLevel(player2) < getCharacterTransformations(selectedBoss).length) {
+        player2.ki = Math.min(player2.maxKi, player2.ki + (0.35 * dt * 60));
+        if (player2.ki >= player2.maxKi && transformPlayer(player2, true, true)) player2.ki = 0;
     }
 
     player.hoverTime += 0.05 * dt * 60;
