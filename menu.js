@@ -4117,6 +4117,12 @@ function drawSaibamans() {
             ctx.moveTo(cx + 6, s.y + s.h + 2); ctx.lineTo(cx + 6, s.y + s.h + 14);
             ctx.stroke();
             drawSaibamanSprite(s, "saltar", 0);
+        } else if (s.phase === "arremessado") {
+            // girando para trás depois de ser solto
+            ctx.translate(cx, s.y + s.h / 2);
+            ctx.rotate(s.phaseTime * 0.35);
+            ctx.translate(-cx, -(s.y + s.h / 2));
+            drawSaibamanSprite(s, "saltar", 0);
         } else if (s.phase === "agarrar") {
             // desenhado depois do herói (drawGrabbingSaibamans), para ficar na frente das pernas
         } else if (s.phase === "investir") {

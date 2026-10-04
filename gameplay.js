@@ -1784,6 +1784,12 @@ function update(dt) {
             // fica grudado nas pernas do herói, pela frente, enquanto a contagem corre
             s.x = player.x + s.grabOffsetX;
             s.y = player.y + s.grabOffsetY;
+            if (player.isCharging || player.parryHighlightTimer > 0) {
+                // parry ou carregar o ki joga o Saibaman para trás; ele solta e pode ser destruído antes de voltar
+                throwSaibaman(s);
+                addFloatingText({ text: "SOLTOU!", x: player.x + player.w / 2, y: player.y - 8, alpha: 1, color: "#ffffff" });
+                continue;
+            }
             s.grabTimer -= dt * 60;
             if (s.grabTimer <= 0) {
                 world.saibamans.splice(i, 1);
@@ -1804,7 +1810,7 @@ function update(dt) {
             stepSaibamanMotion(s, dt);
         }
 
-        if (isSaibamanActive(s) && podeAgarrar &&
+        if (isSaibamanActive(s) && s.phase !== "arremessado" && podeAgarrar &&
             rectsOverlap(getHitboxRect(s), getHitboxRect(player))) {
             s.phase = "agarrar";
             s.grabTimer = SAIBAMAN_GRAB_FRAMES;

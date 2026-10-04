@@ -627,3 +627,15 @@ test("Fases que andam para frente (Namek): o caminho só cresce", () => {
     assert.equal(getForwardTravel(-50), 0);
     assert.ok(getForwardTravel(1000) > getForwardTravel(500));
 });
+
+test("Saibaman arremessado: vai para trás e depois volta a voar", () => {
+    const { createSaibaman, throwSaibaman, stepSaibamanMotion, SAIBAMAN_THROWN_FRAMES } = require("../game-logic-core.js");
+    const s = createSaibaman(300, 300, 150, 2);
+    s.phase = "agarrar";
+    throwSaibaman(s);
+    assert.equal(s.phase, "arremessado");
+    const x0 = s.x;
+    for (let i = 0; i < SAIBAMAN_THROWN_FRAMES + 1; i++) stepSaibamanMotion(s, 1 / 60);
+    assert.ok(s.x > x0 + 30, "foi para trás");
+    assert.equal(s.phase, "voar");
+});

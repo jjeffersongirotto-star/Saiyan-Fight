@@ -504,6 +504,8 @@ const SAIBAMAN_LUNGE_RADIUS = 90;    // passou perto assim do herói: avança pa
 const SAIBAMAN_LUNGE_SPEED = 5.5;
 const SAIBAMAN_LUNGE_MAX_FRAMES = 50; // não alcançou nesse tempo: desiste e volta a voar
 const SAIBAMAN_GRAVITY = 0.32;
+const SAIBAMAN_THROWN_FRAMES = 32;   // tempo voando para trás depois de ser arremessado (parry ou carregar ki)
+const SAIBAMAN_THROW_SPEED = 9;
 
 function createSaibaman(x, groundY, targetY, speed) {
     return {
@@ -533,11 +535,27 @@ function stepSaibamanMotion(s, dt) {
         s.y += s.vy * f;
         s.vy += SAIBAMAN_GRAVITY * f;
         if (s.vy >= 0 || s.y <= s.targetY) { s.phase = "voar"; s.phaseTime = 0; s.vy = 0; }
+    } else if (s.phase === "arremessado") {
+        // jogado para trás girando; depois volta a voar (e a investir de novo se passar perto do herói)
+        s.x += s.vx * f;
+        s.vx *= Math.pow(0.9, f);
+        s.y += s.vy * f;
+        s.vy += SAIBAMAN_GRAVITY * 0.6 * f;
+        if (s.phaseTime >= SAIBAMAN_THROWN_FRAMES) { s.phase = "voar"; s.phaseTime = 0; s.vy = 0; }
     } else if (s.phase === "voar") {
         s.x -= s.speed * f;
         s.hoverTime += 0.05 * f;
         s.y += Math.sin(s.hoverTime) * 1.5 * f;
     }
+    return s;
+}
+
+// Herói deu parry ou carregou o ki com o Saibaman agarrado: ele é arremessado para trás e solta.
+function throwSaibaman(s) {
+    s.phase = "arremessado";
+    s.phaseTime = 0;
+    s.vx = SAIBAMAN_THROW_SPEED;
+    s.vy = -4;
     return s;
 }
 
@@ -669,6 +687,8 @@ if (typeof module !== "undefined" && module.exports) {
         SAIBAMAN_GRAB_FRAMES,
         SAIBAMAN_LUNGE_RADIUS,
         SAIBAMAN_LUNGE_MAX_FRAMES,
+        SAIBAMAN_THROWN_FRAMES,
+        throwSaibaman,
         shouldSaibamanLunge,
         stepSaibamanLunge,
         createSaibaman,
