@@ -4483,9 +4483,9 @@ function drawScreenFlash() {
     ctx.restore();
 }
 
-// Fases de fundo claro (Sala do Tempo, toda branca): placas escuras translúcidas atrás do placar do topo,
+// Fases de fundo claro (céu claro, nuvens, luas ou a Sala do Tempo toda branca): placas escuras translúcidas atrás do placar do topo,
 // senão os textos brancos/claros somem no fundo.
-const STAGES_FUNDO_CLARO = ["time_room", "cell_games", "freeza_ship"];
+const STAGES_FUNDO_CLARO = ["terra", "kaio", "namek", "time_room", "cell_games", "freeza_ship", "kaioshin"];
 
 function drawHUD() {
     ctx.save();
