@@ -25,7 +25,7 @@ check("mapa de fases: o 7º nó já é o Torneio de Cell", nodes[6].id === "cell
 run("isTouchDevice = true; startTutorial(); tutorialStepIndex = 1; setupTutorialStep()");
 const ui = run("getTutorialUiLayout()");
 const bubbleRect = { x: ui.bubbleX, y: ui.bubbleY, w: ui.bubbleW, h: ui.bubbleH };
-const hudButtons = ["attack", "charge", "parry", "transform", "special"];
+const hudButtons = ["attack", "charge", "parry", "special"];
 const overlapsBanner = (r) => r.x < bubbleRect.x + bubbleRect.w && r.x + r.w > bubbleRect.x && r.y < bubbleRect.y + bubbleRect.h && r.y + r.h > bubbleRect.y;
 hudButtons.forEach(key => {
     const r = run(`getHudButtonRect("${key}")`);

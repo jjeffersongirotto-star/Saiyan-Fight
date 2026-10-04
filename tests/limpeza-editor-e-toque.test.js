@@ -1,5 +1,5 @@
 // tests/limpeza-editor-e-toque.test.js — limpeza de código antigo/duplicado:
-// - botões de toque (ataque, parry, especial, transformar) passam pelo mesmo caminho do teclado (triggerAction),
+// - botões de toque (ataque, parry, especial; o CARREGAR vira transformar com o ki cheio) passam pelo mesmo caminho do teclado (triggerAction),
 //   então o aviso "ENCHA O KI PARA TRANSFORMAR" agora aparece em qualquer controle, não só no toque;
 // - "ADICIONAR QUADRO AO MOVIMENTO" e "SALVAR FRAMES NA PRÉVIA" faziam o mesmo: ficou um botão só;
 // - o editor sem imagem nenhuma continua mostrando/salvando a imagem reserva.
@@ -19,10 +19,11 @@ check("teclado/controle: transformar sem ki mostra o aviso", avisos().some(t => 
 check("teclado/controle: sem ki não transforma", run("player.isSSJ") === false);
 
 run("world.floatingTexts = []; player.ki = 0");
-const r = run("getHudButtonRect('transform')");
+// toque: não há mais botão TRANSF.; sem o ki cheio o CARREGAR só carrega (vira TRANSFORMAR quando enche)
+const r = run("getHudButtonRect('charge')");
 fire("touchstart", [touch(1, r.x + r.w / 2, r.y + r.h / 2)], [touch(1, r.x + r.w / 2, r.y + r.h / 2)]);
+check("toque: sem o ki cheio o CARREGAR carrega (não tenta transformar)", run("touchChargeId") === 1 && run("player.isSSJ") === false);
 fire("touchend", [], [touch(1, r.x + r.w / 2, r.y + r.h / 2)]);
-check("toque: o botão TRANSF. continua mostrando o aviso", avisos().some(t => t.startsWith("ENCHA O KI")));
 
 run("world.floatingTexts = []; player.ki = 100");
 run("triggerAction('transform', player, false)");

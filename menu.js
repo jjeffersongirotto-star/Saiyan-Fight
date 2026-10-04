@@ -2057,7 +2057,10 @@ canvas.addEventListener("touchstart", (e) => {
         if (hudKey) {
             // botões da partida agem NA HORA (velocidade importa); o afundado aparece enquanto o dedo segura
             hudPressHeld[touch.identifier] = hudKey;
-            if (hudKey === "charge") touchChargeId = touch.identifier;
+            // CARREGAR com o ki cheio vira TRANSFORMAR: só transforma num toque novo (quem já estava segurando
+            // para carregar precisa soltar e apertar de novo)
+            if (hudKey === "charge" && canTouchTransform()) triggerAction("transform", player, false);
+            else if (hudKey === "charge") touchChargeId = touch.identifier;
             else triggerAction(hudKey, player, false);
             continue;
         }
@@ -2355,8 +2358,9 @@ function getTutorialInstructionLines(stepKey) {
             // mostrar "toque no botão" aqui seria pedir algo que nem aparece na tela.
             lines.push("TOQUE 2 VEZES SEGUIDAS EM QUALQUER LUGAR LIVRE DA TELA");
         } else {
-            const names = { attack: "ATAQUE", charge: "CARREGAR", parry: "PARRY", transform: "TRANSF.", special: "ESPECIAL" };
-            lines.push(`TOQUE (OU SEGURE) NO BOTÃO "${names[stepKey]}" NA TELA`);
+            const names = { attack: "ATAQUE", charge: "CARREGAR", parry: "PARRY", special: "ESPECIAL" };
+            if (stepKey === "transform") lines.push(`COM O KI CHEIO O BOTÃO "CARREGAR" VIRA "TRANSFORMAR": TOQUE NELE`);
+            else lines.push(`TOQUE (OU SEGURE) NO BOTÃO "${names[stepKey]}" NA TELA`);
             if (stepKey === "charge") lines.push("(SEGURE POR UM INSTANTE)");
         }
     } else {
@@ -4865,6 +4869,27 @@ function drawPauseButton() {
     endButtonPress(pressed);
 }
 
+// Ícones dos botões de toque (desenhos do jogador, em icons/botoes/). Carregados uma vez; até ficarem prontos
+// o botão aparece no desenho simples (círculo com o nome).
+const HUD_ICON_FILES = { attack: "ataque", parry: "parry", charge: "carregar", special: "especial", transform: "transformar" };
+const hudIcons = {};
+if (typeof Image !== "undefined") {
+    for (const [key, nome] of Object.entries(HUD_ICON_FILES)) {
+        const img = new Image();
+        img.src = "icons/botoes/" + nome + ".png";
+        hudIcons[key] = img;
+    }
+}
+function getHudIcon(key) {
+    const img = hudIcons[key];
+    return img && img.complete && img.naturalWidth > 0 ? img : null;
+}
+
+// Toque: com o ki cheio (e ainda tendo transformação), o botão CARREGAR vira TRANSFORMAR.
+function canTouchTransform() {
+    return player.ki >= player.maxKi && getTransformLevel(player) < getCharacterTransformations(selectedCharacter).length;
+}
+
 function drawTouchHUD() {
     if (!isTouchDevice && gameState !== "options_hud") return;
 
@@ -4887,10 +4912,10 @@ function drawTouchHUD() {
         const btn = touchHudLayout[key];
         const isEditing = gameState === "options_hud";
         const isSelected = hudEditorSelectedBtn === key && isEditing;
-        // Botão TRANSF. acende (dourado) quando há ki suficiente e fica apagado quando não dá para usar.
-        const transformReady = key === "transform" && player.ki >= player.maxKi && getTransformLevel(player) < getCharacterTransformations(selectedCharacter).length;
+        // Com o ki cheio o CARREGAR vira TRANSFORMAR e acende (dourado); o ESPECIAL fica apagado quando não dá.
+        const transformReady = key === "charge" && !isEditing && canTouchTransform();
         const specialReady = key === "special" && canUseSpecial(player.ki, player.maxKi) && world.beamActive <= 0;
-        const transformDim = (key === "transform" && !transformReady && !isEditing) || (key === "special" && !specialReady && !isEditing);
+        const transformDim = key === "special" && !specialReady && !isEditing;
         const highlight = isSelected || transformReady || specialReady;
         const centerX = btnRect.x + btnRect.w / 2;
         const centerY = btnRect.y + btnRect.h / 2;
@@ -4910,17 +4935,34 @@ function drawTouchHUD() {
             ctx.fillStyle = highlight ? "rgba(255, 190, 40, 0.45)" : "rgba(94, 225, 255, 0.38)";
             ctx.shadowBlur = 0;
         }
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-
-        ctx.fillStyle = highlight ? "#fff1a8" : "#e8fbff";
-        ctx.font = "bold 8px 'Trebuchet MS', sans-serif";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(hudLabels[key] || key.toUpperCase(), centerX, centerY + 1);
+        const icon = getHudIcon(transformReady ? "transform" : key);
+        if (icon) {
+            // ícone do jogador (anel + círculo claro com o desenho); brilho dourado em volta quando pronto
+            if (highlight) {
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius * 1.02, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            }
+            ctx.shadowBlur = 0;
+            const lado = radius * 2.1;
+            ctx.drawImage(icon, centerX - lado / 2, centerY - lado / 2, lado, lado);
+            if (hudPressAmount > 0.5) {
+                ctx.fillStyle = "rgba(94, 225, 255, 0.25)";
+                ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, Math.PI * 2); ctx.fill();
+            }
+        } else {
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = highlight ? "#fff1a8" : "#e8fbff";
+            ctx.font = "bold 8px 'Trebuchet MS', sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(transformReady ? "TRANSF." : (hudLabels[key] || key.toUpperCase()), centerX, centerY + 1);
+        }
         if (hudPressed) ctx.restore();
     }
     ctx.restore();
