@@ -4372,36 +4372,47 @@ function drawPickups() {
             ctx.fillStyle = "#e8ffb0";
             ctx.beginPath(); ctx.ellipse(-2, -5, 3.2, 1.4, -0.3, 0, Math.PI * 2); ctx.fill();
         } else if (item.type === "capsule") {
-            // Cápsula Hoipoi da Corporação Cápsula: branca, faixa cinza no meio, botão no topo e o logo "CC".
+            // Cápsula da Corporação Cápsula: pílula curta deitada (pontas arredondadas iguais), corpo branco com
+            // volume de cilindro, anel metálico perto de uma ponta, botãozinho cinza em cima e o número.
             ctx.shadowColor = "#7fd0ff";
-            ctx.rotate(0.5);
-            ctx.fillStyle = "#f4f6f8";
+            ctx.rotate(-0.25);
+            const L = 12, R = 5.5;   // meia largura do corpo e raio das pontas
+            const corpo = ctx.createLinearGradient(0, -R, 0, R);
+            corpo.addColorStop(0, "#ffffff"); corpo.addColorStop(0.35, "#f1f4f8"); corpo.addColorStop(1, "#b9c2cf");
+            ctx.fillStyle = corpo;
             ctx.strokeStyle = "#3a4250";
-            ctx.lineWidth = 1.5;
+            ctx.lineWidth = 1.4;
             ctx.beginPath();
-            ctx.moveTo(-5.5, -7);
-            ctx.arc(0, -7, 5.5, Math.PI, 0);
-            ctx.lineTo(5.5, 7);
-            ctx.arc(0, 7, 5.5, 0, Math.PI);
+            ctx.moveTo(-L + R, -R);
+            ctx.lineTo(L - R, -R);
+            ctx.arc(L - R, 0, R, -Math.PI / 2, Math.PI / 2);
+            ctx.lineTo(-L + R, R);
+            ctx.arc(-L + R, 0, R, Math.PI / 2, Math.PI * 1.5);
             ctx.closePath();
             ctx.fill();
             ctx.stroke();
             ctx.shadowBlur = 0;
-            ctx.fillStyle = "#c9ced6";
-            ctx.fillRect(-5.5, 4, 11, 8);
+            // anel metálico perto da ponta direita
+            const anel = ctx.createLinearGradient(0, -R, 0, R);
+            anel.addColorStop(0, "#d7dde6"); anel.addColorStop(0.5, "#8d96a4"); anel.addColorStop(1, "#5d6674");
+            ctx.fillStyle = anel;
+            ctx.fillRect(4, -R + 0.7, 2.6, R * 2 - 1.4);
+            // botãozinho em cima, no meio do corpo
             ctx.fillStyle = "#8d96a4";
-            ctx.fillRect(-5.5, -1, 11, 2.6);
-            ctx.fillStyle = "#e23a2e";   // botão
-            ctx.fillRect(-1.6, -14.5, 3.2, 2.4);
-            ctx.fillStyle = "#ffffff";
-            ctx.fillRect(-3.6, -10, 1.6, 6);   // brilho
+            ctx.strokeStyle = "#3a4250";
+            ctx.lineWidth = 0.9;
+            ctx.beginPath(); ctx.ellipse(-1, -R, 2.4, 1.4, 0, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+            // brilho comprido em cima
+            ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
+            ctx.fillRect(-L + R - 1, -R + 1.4, 12, 1.3);
+            // número e o logo
             ctx.fillStyle = "#1c5fb8";
             ctx.font = "bold 5px monospace";
             ctx.textAlign = "center";
-            ctx.fillText("CC", 0.4, -3);
+            ctx.fillText("CC", -4.5, 2.6);
             ctx.fillStyle = "#3a4250";
-            ctx.font = "bold 4px monospace";
-            ctx.fillText("1", 0, 10);
+            ctx.font = "bold 4.5px monospace";
+            ctx.fillText("1", 9, 2);
         } else if (item.type === "cloud") {
             // Nuvem Voadora (Kinto'un): nuvem amarelo-dourada fofinha com um rastro atrás.
             ctx.shadowColor = "#ffd84a";
