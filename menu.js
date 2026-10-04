@@ -3703,44 +3703,8 @@ function drawStageBackground() {
         drawTerraArenaStage(getStageLapAngle(scroll, TERRA_ARENA_LAP_SCROLL));
     }
     else if (selectedStage === "namek") {
-        let skyGrad = ctx.createLinearGradient(0, 0, 0, 220);
-        skyGrad.addColorStop(0, "#44aa77");
-        skyGrad.addColorStop(0.6, "#77ddaa");
-        skyGrad.addColorStop(1, "#aaffcc");
-        ctx.fillStyle = skyGrad;
-        ctx.fillRect(0, 0, canvas.width, 220);
-
-        ctx.fillStyle = "rgba(255, 255, 200, 0.9)";
-        ctx.beginPath(); ctx.arc(150, 45, 25, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(220, 70, 15, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(680, 35, 18, 0, Math.PI * 2); ctx.fill();
-
-        ctx.fillStyle = "#226666";
-        world.mountainsFar.forEach(m => {
-            let x = ((m.x - scroll * 0.4) % (canvas.width + 200)) - 100;
-            ctx.beginPath();
-            ctx.ellipse(x + m.w / 2, 190, m.w / 2, m.h, 0, Math.PI, 0);
-            ctx.fill();
-        });
-
-        ctx.fillStyle = "#114444";
-        for (let i = 0; i < 6; i++) {
-            let ax = ((i * 180 - scroll * 0.8) % (canvas.width + 120)) - 40;
-            ctx.fillRect(ax + 12, 140, 6, 50);
-            ctx.beginPath();
-            ctx.arc(ax + 15, 135, 22, 0, Math.PI * 2);
-            ctx.fill();
-        }
-
-        let floorGrad = ctx.createLinearGradient(0, 190, 0, canvas.height);
-        floorGrad.addColorStop(0, "#20b2aa");
-        floorGrad.addColorStop(1, "#005555");
-        ctx.fillStyle = floorGrad;
-        ctx.fillRect(0, 190, canvas.width, canvas.height - 190);
-
-        ctx.fillStyle = "#00ffff";
-        ctx.fillRect(0, 310, canvas.width, 40);
-    } 
+        drawNamekStage(getForwardTravel(scroll));
+    }
     else if (selectedStage === "kaio") {
         drawKaioPlanetStage(getStageLapAngle(scroll, KAIO_PLANET_LAP_SCROLL));
     }

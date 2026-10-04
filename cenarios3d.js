@@ -525,3 +525,143 @@ function drawKaioshinStage(ang) {
             }
         });
 }
+
+// ==================== NAMEK: CÂMERA ANDANDO PARA A FRENTE ====================
+// A câmera avança em linha reta (getForwardTravel). O caminho é dividido em fileiras; cada fileira tem coisas
+// sorteadas por c3Hash a partir do número dela — sempre iguais para a mesma fileira, mas diferentes entre si
+// (tamanhos, alturas, posições), mantendo o mesmo estilo do ambiente.
+const NF = { CX: 400, HY: 150, H: 90, F: 420, PERTO: 26, FILEIRA: 90, LONGE: 2700 };
+
+// mundo -> tela (z = distância à frente da câmera)
+function nfProj(x, y, z) {
+    const esc = NF.F / Math.max(NF.PERTO, z);
+    return [NF.CX + x * esc, NF.HY + (NF.H - y) * esc, esc];
+}
+
+// Percorre as fileiras visíveis, da mais longe para a mais perto, e chama desenhar(item, z) para cada coisa.
+function nfPercorrer(andado, gerarFileira, desenhar) {
+    const primeira = Math.floor(andado / NF.FILEIRA), ultima = Math.floor((andado + NF.LONGE) / NF.FILEIRA);
+    for (let n = ultima; n >= primeira; n--) {
+        const z = n * NF.FILEIRA - andado;
+        if (z < NF.PERTO) continue;
+        gerarFileira(n).forEach(item => desenhar(item, z + (item.dz || 0)));
+    }
+}
+
+// Faixas suaves no chão que vêm em direção à câmera: é o que dá a sensação de estar andando.
+function nfFaixasDoChao(andado, cor) {
+    const passo = NF.FILEIRA * 2, primeira = Math.ceil((andado + NF.PERTO) / passo);
+    ctx.fillStyle = cor;
+    for (let n = primeira; n * passo - andado < NF.LONGE; n++) {
+        if (n % 2) continue;
+        const z0 = n * passo - andado, z1 = z0 + passo * 0.5;
+        const y0 = nfProj(0, 0, z0)[1], y1 = nfProj(0, 0, z1)[1];
+        ctx.fillRect(0, y1, canvas.width, Math.max(1, y0 - y1));
+    }
+}
+
+// ---------- Planeta Namek ----------
+let nmCeu = null;
+function getNamekSky() {
+    if (nmCeu) return nmCeu;
+    const f = c3NovaFaixa(canvas.width, NF.HY + 6);
+    if (!f) return null;
+    const { c, g } = f;
+    const ceu = g.createLinearGradient(0, 0, 0, NF.HY);
+    ceu.addColorStop(0, "#3fb34a"); ceu.addColorStop(0.55, "#9ad84f"); ceu.addColorStop(1, "#eef3b0");
+    g.fillStyle = ceu;
+    g.fillRect(0, 0, c.width, c.height);
+    // morros claros lá longe, apagados pela distância
+    g.fillStyle = "rgba(170, 205, 220, 0.75)";
+    g.beginPath(); g.moveTo(0, NF.HY + 2);
+    for (let x = 0; x <= c.width; x += 10) g.lineTo(x, NF.HY - 8 - Math.abs(Math.sin(x * 0.013)) * 16 - Math.abs(Math.sin(x * 0.031 + 1)) * 8);
+    g.lineTo(c.width, NF.HY + 2); g.closePath(); g.fill();
+    nmCeu = c;
+    return c;
+}
+
+// O que tem em cada fileira de Namek: árvores altas de copa azul nos lados, morros de pedra rosada com topo
+// azul, manchas de grama azul-escura e trechos de areia.
+function nmFileira(n) {
+    const itens = [], h = (k) => c3Hash(n * 13 + k);
+    if (h(1) < 0.3) {
+        const lado = h(2) < 0.5 ? -1 : 1;
+        itens.push({ tipo: "arvore", x: lado * (150 + h(3) * 520), alto: 230 + h(4) * 230, copa: 34 + h(5) * 26, dz: h(6) * 60 });
+    }
+    if (h(7) < 0.12) {
+        const lado = h(8) < 0.5 ? -1 : 1;
+        itens.push({ tipo: "arvore", x: lado * (700 + h(9) * 700), alto: 260 + h(10) * 260, copa: 40 + h(11) * 30, dz: h(12) * 60 });
+    }
+    if (h(13) < 0.26) {
+        const lado = h(14) < 0.5 ? -1 : 1;
+        itens.push({ tipo: "morro", x: lado * (380 + h(15) * 900), larg: 220 + h(16) * 300, alto: 120 + h(17) * 180, dz: h(18) * 60, inclina: h(19) });
+    }
+    if (h(20) < 0.7) itens.push({ tipo: h(21) < 0.3 ? "areia" : "mancha", x: (h(22) * 2 - 1) * 900, larg: 60 + h(23) * 160, dz: h(24) * 80 });
+    return itens;
+}
+
+function nmDesenhar(it, z) {
+    if (z < NF.PERTO) return;
+    const [x, y, k] = nfProj(it.x, 0, z);
+    if (it.tipo === "mancha" || it.tipo === "areia") {
+        ctx.fillStyle = it.tipo === "areia" ? "rgba(240, 220, 170, 0.55)" : "rgba(40, 80, 170, 0.35)";
+        ctx.beginPath(); ctx.ellipse(x, y, it.larg * k, it.larg * 0.12 * k + 0.5, 0, 0, Math.PI * 2); ctx.fill();
+    } else if (it.tipo === "arvore") {
+        const topo = nfProj(it.x, it.alto, z), larg = Math.max(1.5, 8 * k);
+        if (x + it.copa * 1.4 * k < -50 || x - it.copa * 1.4 * k > canvas.width + 50) return;
+        // tronco alto e fino
+        const tronco = ctx.createLinearGradient(x - larg, 0, x + larg, 0);
+        tronco.addColorStop(0, "#c98a5e"); tronco.addColorStop(0.5, "#e2a878"); tronco.addColorStop(1, "#9c6440");
+        ctx.fillStyle = tronco;
+        ctx.fillRect(x - larg / 2, topo[1], larg, y - topo[1]);
+        // copa azul redonda e fofa (vários tufos), escura embaixo e clara em cima
+        const r = it.copa * k, cy = topo[1] - r * 0.5;
+        const tufos = [[0, 0.1, 1], [-0.55, 0.05, 0.6], [0.55, 0.08, 0.6], [-0.3, -0.45, 0.6], [0.3, -0.45, 0.6], [0, -0.7, 0.45], [-0.6, 0.45, 0.45], [0.6, 0.45, 0.45]];
+        ctx.fillStyle = "#1a4596";
+        tufos.forEach(([dx, dy, rr]) => { ctx.beginPath(); ctx.arc(x + dx * r, cy + dy * r + r * 0.12, rr * r * 0.75, 0, Math.PI * 2); ctx.fill(); });
+        ctx.fillStyle = "#3a76dc";
+        tufos.forEach(([dx, dy, rr]) => { ctx.beginPath(); ctx.arc(x + dx * r - r * 0.06, cy + dy * r, rr * r * 0.62, 0, Math.PI * 2); ctx.fill(); });
+        ctx.fillStyle = "#86b5f6";
+        [[-0.3, -0.5, 0.28], [0.15, -0.65, 0.2], [-0.62, -0.05, 0.18]].forEach(([dx, dy, rr]) => { ctx.beginPath(); ctx.arc(x + dx * r, cy + dy * r, rr * r, 0, Math.PI * 2); ctx.fill(); });
+        ctx.fillStyle = "#0f2a62";
+        ctx.beginPath(); ctx.arc(x, cy + r * 0.72, r * 0.22, 0, Math.PI * 2); ctx.fill();
+    } else if (it.tipo === "morro") {
+        const L = it.larg * k, A = it.alto * k;
+        if (x + L < -50 || x - L > canvas.width + 50) return;
+        // paredão de pedra rosada com faixas, topo coberto de grama azul
+        ctx.fillStyle = "#e7b59a";
+        ctx.beginPath();
+        ctx.moveTo(x - L / 2, y); ctx.lineTo(x - L / 2 + L * 0.08, y - A); ctx.lineTo(x + L / 2 - L * 0.1 * it.inclina, y - A * 0.94); ctx.lineTo(x + L / 2, y);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = "#cf8f78";
+        ctx.fillRect(x + L * 0.12, y - A * 0.92, L * 0.3, A * 0.92);
+        ctx.strokeStyle = "rgba(160, 95, 80, 0.55)"; ctx.lineWidth = Math.max(1, 1.5 * k);
+        ctx.beginPath();
+        for (let i = 1; i < 6; i++) { const xx = x - L / 2 + L * i / 6; ctx.moveTo(xx, y - A * 0.9); ctx.lineTo(xx - L * 0.02, y); }
+        ctx.stroke();
+        ctx.fillStyle = "#4f86d8";
+        ctx.beginPath();
+        ctx.moveTo(x - L / 2 - L * 0.02, y - A + A * 0.08); ctx.quadraticCurveTo(x, y - A - A * 0.12, x + L / 2 + L * 0.02, y - A * 0.9);
+        ctx.lineTo(x + L / 2 - L * 0.06, y - A * 0.78); ctx.quadraticCurveTo(x, y - A * 0.9, x - L / 2 + L * 0.04, y - A * 0.82);
+        ctx.closePath(); ctx.fill();
+    }
+}
+
+function drawNamekStage(andado) {
+    const ceu = getNamekSky();
+    if (ceu) ctx.drawImage(ceu, 0, 0); else { ctx.fillStyle = "#9ad84f"; ctx.fillRect(0, 0, canvas.width, NF.HY); }
+    // nuvens amareladas passando devagar
+    const t = typeof gameplayClock === "number" ? gameplayClock : 0;
+    ctx.fillStyle = "rgba(250, 245, 170, 0.6)";
+    for (let i = 0; i < 5; i++) {
+        const x = ((i * 190 - t * 6) % 1000 + 1000) % 1000 - 100, y = 24 + (i % 3) * 22;
+        ctx.beginPath(); ctx.ellipse(x, y, 70, 16, 0, 0, Math.PI * 2); ctx.ellipse(x + 40, y - 8, 46, 14, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    // chão azul de Namek, mais claro lá longe
+    const chao = ctx.createLinearGradient(0, NF.HY, 0, canvas.height);
+    chao.addColorStop(0, "#b8d3f2"); chao.addColorStop(0.2, "#79a8ea"); chao.addColorStop(1, "#3567c9");
+    ctx.fillStyle = chao;
+    ctx.fillRect(0, NF.HY + 2, canvas.width, canvas.height - NF.HY);
+    nfFaixasDoChao(andado, "rgba(30, 70, 160, 0.16)");
+    nfPercorrer(andado, nmFileira, nmDesenhar);
+}
