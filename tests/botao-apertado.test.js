@@ -57,6 +57,7 @@ check("e logo depois volta ao lugar", !pressed("MENU_LAYOUT.optionsAudio.sfxPlus
 
 // ---------- partida: botão ATAQUE age na hora e afunda enquanto o dedo segura ----------
 run("gameMode = 'singleplayer'; stageMode = 'normal'; startGame(); runStats.attacks = 0");
+run("touchAutoFire = false");   // com o tiro automático ligado o botão ATAQUE fica escondido
 const a = run("getHudButtonRect('attack')");
 const [ax, ay] = [a.x + a.w / 2, a.y + a.h / 2];
 fire("touchstart", [touch(3, ax, ay)], [touch(3, ax, ay)]);

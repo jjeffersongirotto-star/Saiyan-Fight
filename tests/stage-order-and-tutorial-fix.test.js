@@ -47,6 +47,7 @@ hudButtons.forEach(key => {
 
 // ---------- tutorial: tocar de verdade no botão de ATAQUE (passo 2) funciona, sem nada bloqueando ----------
 run("tutorialStepIndex = 1; setupTutorialStep(); world.obstacles = []");
+run("touchAutoFire = false");   // com o tiro automático ligado o botão ATAQUE fica escondido
 const [ax, ay] = (() => { const r = run('getHudButtonRect("attack")'); return [r.x + r.w / 2, r.y + r.h / 2]; })();
 fire("touchstart", [touch(1, ax, ay)], [touch(1, ax, ay)]);
 fire("touchend", [], [touch(1, ax, ay)]);

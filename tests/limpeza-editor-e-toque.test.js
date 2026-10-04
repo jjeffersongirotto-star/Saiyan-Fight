@@ -39,6 +39,7 @@ check("na última transformação: apertar de novo não mostra aviso de ki", !av
 
 // ---------- botão de toque ATAQUE e PARRY seguem funcionando pelo caminho único ----------
 run("startGame(); world.obstacles = []; runStats.attacks = 0");
+run("touchAutoFire = false");   // com o tiro automático ligado o botão ATAQUE fica escondido
 const a = run("getHudButtonRect('attack')");
 fire("touchstart", [touch(2, a.x + a.w / 2, a.y + a.h / 2)], [touch(2, a.x + a.w / 2, a.y + a.h / 2)]);
 fire("touchend", [], [touch(2, a.x + a.w / 2, a.y + a.h / 2)]);

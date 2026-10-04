@@ -477,21 +477,33 @@ function adjustHudValue(value, delta, min, max) {
 // Layout "de jogo de mercado": analógico à esquerda; à direita os botões em arco em volta do polegar.
 // CARREGAR no canto inferior direito, ATAQUE (maior, segura para atirar sem parar) ao lado dele,
 // ESPECIAL/PARRY acima e TRANSF. mais para dentro. Bumpar TOUCH_HUD_LAYOUT_VERSION invalida layouts salvos antigos.
-const TOUCH_HUD_LAYOUT_VERSION = 2;
+const TOUCH_HUD_LAYOUT_VERSION = 3;
 
 function getDefaultTouchHudLayout(viewportWidth) {
     const k = viewportWidth <= 540 ? 1.15 : 1;
     const opacity = viewportWidth <= 540 ? 0.9 : 0.8;
-    const stdW = Math.round(62 * k), stdH = Math.round(52 * k);
-    const bigW = Math.round(78 * k), bigH = Math.round(66 * k);
+    const stdW = Math.round(50 * k), bigW = Math.round(66 * k);
     const make = (cx, cy, w, h) => ({ x: (cx - w / 2) / 800, y: (cy - h / 2) / 350, w, h, scale: 1, opacity });
     return {
-        attack:    make(648, 298, bigW, bigH),
-        charge:    make(752, 308, stdW, stdH),
-        special:   make(676, 205, stdW, stdH),
-        parry:     make(760, 222, stdW, stdH)
+        // padrão escolhido pelo jogador: CARREGAR/TRANSFORMAR maior no canto, PARRY ao lado embaixo,
+        // ATAQUE ao lado no meio (some com o tiro automático do toque) e ESPECIAL acima do CARREGAR
+        charge:    make(757, 307, bigW, bigW),
+        parry:     make(687, 317, stdW, stdW),
+        attack:    make(687, 255, stdW, stdW),
+        special:   make(766, 236, stdW, stdW)
         // sem botão de transformar: com o ki cheio o CARREGAR vira TRANSFORMAR (ver drawTouchHUD em menu.js)
     };
+}
+
+// Teste de controles: quem comanda o Goku da prévia. Quem apertou primeiro manda até soltar tudo; se os dois
+// começam juntos (ou seguram juntos sem dono), ninguém manda.
+function chooseControlsTestOwner(dono, ativoP1, ativoP2) {
+    if (dono === "p1" && ativoP1) return "p1";
+    if (dono === "p2" && ativoP2) return "p2";
+    if (ativoP1 && ativoP2) return null;
+    if (ativoP1) return "p1";
+    if (ativoP2) return "p2";
+    return null;
 }
 
 // Exporta para Node (testes) sem quebrar o uso como <script> global no navegador.
@@ -628,6 +640,7 @@ function getStageMusicEra(stageId) {
 
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
+        chooseControlsTestOwner,
         getScrollToRevealRow,
         removeBackgroundColor,
         colorHexToRgb,
