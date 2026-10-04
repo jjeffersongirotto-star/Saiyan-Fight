@@ -38,7 +38,7 @@ const MENU_LAYOUT = {
         doubleTap: rect(200, 148, 400, 34), vibration: rect(200, 190, 400, 34),
         autoFire: rect(200, 232, 400, 34), hud: rect(200, 274, 400, 34)
     },
-    optionsHud: { save: rect(20, 20, 100, 30), reset: rect(130, 20, 100, 30) },
+    optionsHud: { save: rect(20, 20, 100, 30), reset: rect(130, 20, 124, 30) },
     optionsAudio: {
         sfxMinus: rect(560, 105, 34, 34), sfxPlus: rect(604, 105, 34, 34),
         bgmMinus: rect(560, 160, 34, 34), bgmPlus: rect(604, 160, 34, 34),
@@ -59,7 +59,9 @@ const CHARACTERS_GRID_TOP = 80;
 let charactersScrollY = 0;
 const charactersTouchScroll = { active: false, touchId: null, startY: 0, startScrollY: 0, dragged: false };
 function getCharacterCardRect(i) {
-    return rect(40 + (i % 5) * (UI.GRID_CARD_WIDTH + 12), CHARACTERS_GRID_TOP + Math.floor(i / 5) * (UI.GRID_CARD_HEIGHT + 10) - charactersScrollY, UI.GRID_CARD_WIDTH, UI.GRID_CARD_HEIGHT);
+    // grade de 5 colunas centralizada na tela
+    const esquerda = Math.round((canvas.width - (UI.GRID_CARD_WIDTH * 5 + 12 * 4)) / 2);
+    return rect(esquerda + (i % 5) * (UI.GRID_CARD_WIDTH + 12), CHARACTERS_GRID_TOP + Math.floor(i / 5) * (UI.GRID_CARD_HEIGHT + 10) - charactersScrollY, UI.GRID_CARD_WIDTH, UI.GRID_CARD_HEIGHT);
 }
 function getCharactersMaxScroll() {
     const rows = Math.ceil(getFilteredCharacters().length / 5);
@@ -472,7 +474,7 @@ function getCharacterCardImage(cItem) {
     }
     return databaseImageCache[cItem.defaultUrl];
 }
-const DATABASE_COLUMNS = 4;
+const DATABASE_COLUMNS = 5;
 const FULLSCREEN_BUTTON = { w: 44, h: 28, margin: 8 };
 
 function getFullscreenButtonRect() {
@@ -638,7 +640,7 @@ function getDatabaseScrollMetrics(layout) {
 
 function getDatabaseLayoutMetrics() {
     const columns = DATABASE_COLUMNS;
-    const padX = 26;
+    const padX = 30;
     const gapX = 16;
     const gapY = 18;
     const targetVisibleRows = 2;
@@ -646,9 +648,10 @@ function getDatabaseLayoutMetrics() {
     const gridTop = 100;
     const bottomSpacing = 48;
     const usableHeight = Math.max(170, canvas.height - gridTop - bottomSpacing);
-    const cardWidth = Math.max(120, Math.min(164, (canvas.width - (padX * 2 + gapX * (columns - 1) + 210)) / columns));
+    // 5 por fileira, ocupando a largura toda (o botão CRIAR NOVO fica em cima, não ao lado da grade)
+    const cardWidth = Math.max(110, Math.min(164, (canvas.width - (padX * 2 + gapX * (columns - 1))) / columns));
     const cardHeight = Math.max(100, Math.min(132, (usableHeight - gapY * (targetVisibleRows - 1)) / targetVisibleRows));
-    const gridLeft = padX;
+    const gridLeft = Math.round((canvas.width - (cardWidth * columns + gapX * (columns - 1))) / 2);   // centralizada
     const viewportHeight = targetVisibleRows * (cardHeight + gapY) - gapY;
     const createButtonWidth = Math.min(200, canvas.width * 0.22);
     const createButtonX = canvas.width - createButtonWidth - 22;
@@ -1348,7 +1351,104 @@ function isTestActionActive(profile, action, padIntent) {
     return Boolean(code && (keysPressed[code] || mouseButtonsPressed[code])) || Boolean(padIntent && padIntent[action]);
 }
 
+// Prévia do TESTE DE CONTROLES: o Goku no fundo da 1ª fase respondendo aos comandos dos jogadores 1 e 2
+// (teclado, mouse e controle). Manda quem apertou primeiro (chooseControlsTestOwner); juntos, ninguém.
+// É só um boneco de teste: não mexe no jogador nem no mundo da luta.
+const TESTE_QUADRO = { x: 408, y: 54, w: 372, h: 182 };
+const TESTE_ACOES = ["up", "down", "left", "right", "attack", "charge", "transform", "parry", "special"];
+let testeGoku = null;
+function getTesteGoku() {
+    if (testeGoku) return testeGoku;
+    const [w, h] = getFighterBoxSize("goku_adult");
+    testeGoku = {
+        x: TESTE_QUADRO.x + 60, y: TESTE_QUADRO.y + 70, w, h, hoverTime: 0, animTimer: 0, actionState: "idle", actionTimer: 0,
+        ki: 0, maxKi: 100, isCharging: false, isSSJ: false, transformLevel: 0, transformPowerTimer: 0, invulnerableTimer: 0,
+        parryHighlightTimer: 0, dono: null, antes: {}, tiros: [], feixe: 0
+    };
+    return testeGoku;
+}
+function updateTesteGoku(dt, pads) {
+    const g = getTesteGoku(), f = dt * 60;
+    const lerAcoes = (perfil, pad) => {
+        const intent = pad ? getPadIntent(pad) : null, a = {};
+        TESTE_ACOES.forEach(acao => { a[acao] = isTestActionActive(perfil, acao, intent); });
+        return a;
+    };
+    const a1 = lerAcoes("p1", pads[0]), a2 = lerAcoes("p2", pads[1]);
+    const algum = (a) => TESTE_ACOES.some(k => a[k]);
+    g.dono = chooseControlsTestOwner(g.dono, algum(a1), algum(a2));
+    const a = g.dono === "p1" ? a1 : g.dono === "p2" ? a2 : {};
+    const apertou = (k) => a[k] && !g.antes[k];
+    g.hoverTime += 0.05 * f;
+    g.animTimer += dt;
+    // voar nas 8 direções, dentro do quadro
+    const dx = (a.right ? 1 : 0) - (a.left ? 1 : 0), dy = (a.down ? 1 : 0) - (a.up ? 1 : 0);
+    const q = TESTE_QUADRO;
+    g.x = Math.max(q.x + 4, Math.min(q.x + q.w - g.w - 4, g.x + dx * 3 * f));
+    g.y = Math.max(q.y + 20, Math.min(q.y + q.h - g.h - 8, g.y + dy * 3 * f));
+    g.isCharging = !!a.charge;
+    if (g.isCharging) g.ki = Math.min(g.maxKi, g.ki + 0.8 * f);
+    if (apertou("attack")) {
+        g.tiros.push({ x: g.x + g.w, y: g.y + g.h * 0.45 });
+        g.actionState = "attackKi"; g.actionTimer = 12;
+    }
+    if (apertou("parry")) { g.actionState = "parry"; g.actionTimer = 14; g.parryHighlightTimer = 10; }
+    if (apertou("special")) { g.feixe = 40; g.actionState = "attackKi"; g.actionTimer = 40; }
+    if (apertou("transform")) {
+        // sobe um nível; depois da última volta ao normal (é só para ver as animações)
+        const lista = getCharacterTransformations("goku_adult");
+        const nivel = getTransformLevel(g);
+        if (nivel < lista.length) { g.isSSJ = true; g.transformLevel = nivel + 1; g.transformPowerTimer = 180; }
+        else { g.isSSJ = false; g.transformLevel = 0; g.transformPowerTimer = 0; }
+        g.actionState = "transform"; g.actionTimer = 40;
+    }
+    g.antes = Object.assign({}, a);
+    g.actionTimer = Math.max(0, g.actionTimer - f);
+    g.parryHighlightTimer = Math.max(0, g.parryHighlightTimer - f);
+    g.transformPowerTimer = Math.max(0, g.transformPowerTimer - f);
+    g.feixe = Math.max(0, g.feixe - f);
+    if (g.actionTimer <= 0) g.actionState = g.isCharging ? "chargeKi" : (getDominantMoveAction(dx, dy, 0) || "idle");
+    g.tiros.forEach(t => { t.x += 7 * f; });
+    g.tiros = g.tiros.filter(t => t.x < q.x + q.w);
+}
+function drawTesteGoku(pads) {
+    updateTesteGoku(deltaTime, pads);
+    const q = TESTE_QUADRO, g = getTesteGoku();
+    ctx.save();
+    ctx.beginPath(); ctx.rect(q.x, q.y, q.w, q.h); ctx.clip();
+    const foto = stageCardThumbs.terra && stageCardThumbs.terra.cor;
+    if (foto) {
+        const s = Math.max(q.w / foto.width, q.h / foto.height);
+        ctx.drawImage(foto, q.x + (q.w - foto.width * s) / 2, q.y + (q.h - foto.height * s) / 2, foto.width * s, foto.height * s);
+    } else { ctx.fillStyle = "#7ec8f2"; ctx.fillRect(q.x, q.y, q.w, q.h); }
+    // feixe do especial
+    if (g.feixe > 0) {
+        const y = g.y + g.h * 0.45, x0 = g.x + g.w * 0.8;
+        ctx.fillStyle = "rgba(120, 200, 255, 0.55)"; ctx.fillRect(x0, y - 9, q.x + q.w - x0, 18);
+        ctx.fillStyle = "#eaf6ff"; ctx.fillRect(x0, y - 4, q.x + q.w - x0, 8);
+    }
+    const antes = selectedCharacter;
+    selectedCharacter = "goku_adult";   // o desenho do lutador usa o personagem selecionado
+    try { drawPlayerEntity(g, characterDB.goku_adult, false); } finally { selectedCharacter = antes; }
+    g.tiros.forEach(t => {
+        ctx.fillStyle = "rgba(120, 220, 255, 0.5)"; ctx.beginPath(); ctx.arc(t.x, t.y, 9, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#f0fbff"; ctx.beginPath(); ctx.arc(t.x, t.y, 5, 0, Math.PI * 2); ctx.fill();
+    });
+    ctx.restore();
+    // moldura, legenda e quem está no comando
+    ctx.save();
+    ctx.strokeStyle = "#7dd3fc"; ctx.lineWidth = 2; ctx.strokeRect(q.x, q.y, q.w, q.h);
+    ctx.fillStyle = "rgba(2, 10, 29, 0.7)"; ctx.fillRect(q.x, q.y, q.w, 16);
+    ctx.fillStyle = "#e2e8f0"; ctx.font = "bold 9px monospace"; ctx.textAlign = "left";
+    ctx.fillText("PRÉVIA: O GOKU RESPONDE AOS COMANDOS", q.x + 6, q.y + 11);
+    ctx.textAlign = "right";
+    ctx.fillStyle = g.dono ? "#86efac" : "#94a3b8";
+    ctx.fillText(g.dono ? `NO COMANDO: JOGADOR ${g.dono === "p1" ? 1 : 2}` : "AGUARDANDO", q.x + q.w - 6, q.y + 11);
+    ctx.restore();
+}
+
 function drawControlsTest() {
+    prepareNextStageCardThumb();   // foto da 1ª fase para o fundo da prévia
     drawDragonBallMenuBackdrop(false);
     ctx.fillStyle = "rgba(2, 10, 29, 0.72)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1394,51 +1494,53 @@ function drawControlsTest() {
         });
     });
 
-    // controles conectados: analógicos e botões
-    const padX = 400;
+    drawTesteGoku(pads);
+
+    // controles conectados (embaixo da prévia, compacto): analógicos e botões
+    const padX = 408;
     ctx.save();
     ctx.fillStyle = "#7dd3fc";
-    ctx.font = "bold 10px monospace";
+    ctx.font = "bold 9px monospace";
     ctx.textAlign = "left";
-    ctx.fillText(pads.length ? `CONTROLES CONECTADOS: ${pads.length}` : "NENHUM CONTROLE DETECTADO — APERTE UM BOTÃO", padX, 62);
+    ctx.fillText(pads.length ? `CONTROLES CONECTADOS: ${pads.length}` : "NENHUM CONTROLE DETECTADO — APERTE UM BOTÃO", padX, 250);
     ctx.restore();
     pads.slice(0, 2).forEach((pad, n) => {
-        const top = 72 + n * 100;
+        const left = padX + n * 188, top = 256;
         ctx.save();
         ctx.fillStyle = "#94a3b8";
-        ctx.font = "9px monospace";
+        ctx.font = "8px monospace";
         ctx.textAlign = "left";
-        ctx.fillText(`C${n + 1}: ${String(pad.id || "controle").slice(0, 46)}`, padX, top + 6);
+        ctx.fillText(`C${n + 1}: ${String(pad.id || "controle").slice(0, 28)}`, left, top + 6);
         const stick = (cx, cy, ax, ay) => {
             ctx.strokeStyle = "#64748b";
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 1.5;
             ctx.beginPath();
-            ctx.arc(cx, cy, 22, 0, Math.PI * 2);
+            ctx.arc(cx, cy, 11, 0, Math.PI * 2);
             ctx.stroke();
             ctx.fillStyle = (Math.abs(ax) > 0.4 || Math.abs(ay) > 0.4) ? "#22c55e" : "#38bdf8";
             ctx.beginPath();
-            ctx.arc(cx + Math.max(-1, Math.min(1, ax)) * 16, cy + Math.max(-1, Math.min(1, ay)) * 16, 6, 0, Math.PI * 2);
+            ctx.arc(cx + Math.max(-1, Math.min(1, ax)) * 8, cy + Math.max(-1, Math.min(1, ay)) * 8, 3.5, 0, Math.PI * 2);
             ctx.fill();
         };
         const axes = pad.axes || [];
-        stick(padX + 28, top + 38, axes[0] || 0, axes[1] || 0);
-        stick(padX + 84, top + 38, axes[2] || 0, axes[3] || 0);
+        stick(left + 12, top + 24, axes[0] || 0, axes[1] || 0);
+        stick(left + 38, top + 24, axes[2] || 0, axes[3] || 0);
         for (let i = 0; i < 18; i++) {
             const b = pad.buttons && pad.buttons[i];
             const on = Boolean(b && (b.pressed || b.value > 0.5));
-            const bx = padX + 124 + (i % 9) * 30, by = top + 18 + Math.floor(i / 9) * 32;
+            const bx = left + 54 + (i % 9) * 14, by = top + 11 + Math.floor(i / 9) * 15;
             ctx.fillStyle = on ? "#22c55e" : "rgba(15, 23, 42, 0.9)";
             ctx.strokeStyle = on ? "#bbf7d0" : (i === 17 ? "#fbbf24" : "#475569");
-            ctx.lineWidth = 1.5;
-            ctx.fillRect(bx, by, 27, 26);
-            ctx.strokeRect(bx, by, 27, 26);
+            ctx.lineWidth = 1;
+            ctx.fillRect(bx, by, 12, 13);
+            ctx.strokeRect(bx, by, 12, 13);
             if (i <= 3) {
-                drawPadGlyph(i, bx + 13.5, by + 13, 6, on ? "#052e16" : PAD_FACE_COLORS[i]);
+                drawPadGlyph(i, bx + 6, by + 6.5, 3, on ? "#052e16" : PAD_FACE_COLORS[i]);
             } else {
                 ctx.fillStyle = on ? "#052e16" : "#cbd5e1";
-                ctx.font = "bold 8px monospace";
+                ctx.font = "bold 5px monospace";
                 ctx.textAlign = "center";
-                ctx.fillText(TEST_PAD_LABELS[i], bx + 13.5, by + 16);
+                ctx.fillText(TEST_PAD_LABELS[i], bx + 6, by + 9);
             }
         }
         ctx.restore();
@@ -1820,9 +1922,15 @@ function requestResume() {
     else setGameState(pausedFromTutorial ? "tutorial" : "playing");
 }
 
+// Com o tiro automático do toque (segurar o analógico atira) o botão ATAQUE some da luta.
+function isHudButtonHidden(key) {
+    if (gameState === "options_hud") return false;
+    return (key === "parry" && mobileDoubleTapParry) || (key === "attack" && touchAutoFire);
+}
+
 function getHudButtonAt(x, y) {
     for (const key of Object.keys(touchHudLayout)) {
-        if (key === "parry" && mobileDoubleTapParry) continue;
+        if (isHudButtonHidden(key)) continue;
         const r = getHudButtonRect(key);
         if (inRect(x, y, r.x, r.y, r.w, r.h)) return key;
     }
@@ -2360,6 +2468,7 @@ function getTutorialInstructionLines(stepKey) {
         } else {
             const names = { attack: "ATAQUE", charge: "CARREGAR", parry: "PARRY", special: "ESPECIAL" };
             if (stepKey === "transform") lines.push(`COM O KI CHEIO O BOTÃO "CARREGAR" VIRA "TRANSFORMAR": TOQUE NELE`);
+            else if (stepKey === "attack" && touchAutoFire) lines.push("SEGURE O DEDO NO ANALÓGICO PARA ATIRAR SEM PARAR");
             else lines.push(`TOQUE (OU SEGURE) NO BOTÃO "${names[stepKey]}" NA TELA`);
             if (stepKey === "charge") lines.push("(SEGURE POR UM INSTANTE)");
         }
@@ -2596,6 +2705,7 @@ function handleMenuClick(x, y) {
         }
         else if (hitRect(x, y, MENU_LAYOUT.optionsControls.test)) {
             controlsTestTouches = [];
+            testeGoku = null;   // a prévia recomeça do zero
             setGameState("controls_test");
             return;
         }
@@ -2616,6 +2726,7 @@ function handleMenuClick(x, y) {
         }
         else if (hitRect(x, y, MENU_LAYOUT.optionsGamepad.test)) {
             controlsTestTouches = [];
+            testeGoku = null;   // a prévia recomeça do zero
             setGameState("controls_test");
         }
     }
@@ -4869,20 +4980,99 @@ function drawPauseButton() {
     endButtonPress(pressed);
 }
 
-// Ícones dos botões de toque (desenhos do jogador, em icons/botoes/). Carregados uma vez; até ficarem prontos
-// o botão aparece no desenho simples (círculo com o nome).
+// Ícones dos botões de toque: as ilustrações do jogador (icons/botoes/). Ao carregar, o desenho de dentro do
+// círculo vira uma máscara limpa (sem o fundo e as falhas do recorte); o botão é montado com anel, disco com
+// degradê e o desenho em cor firme, e guardado pronto por tamanho/estado (nada é recalculado a cada quadro).
 const HUD_ICON_FILES = { attack: "ataque", parry: "parry", charge: "carregar", special: "especial", transform: "transformar" };
-const hudIcons = {};
+const hudIconMasks = {};
+const hudButtonCache = new Map();
+function buildHudIconMask(img) {
+    const S = img.naturalWidth, R = Math.round(S * 0.35), D = R * 2;   // círculo claro do desenho original
+    const c = document.createElement("canvas");
+    c.width = c.height = D;
+    const g = c.getContext("2d");
+    if (!g) return null;
+    g.drawImage(img, S / 2 - R, S / 2 - R, D, D, 0, 0, D, D);
+    try {
+        const px = g.getImageData(0, 0, D, D), d = px.data, lums = [];
+        for (let i = 0; i < d.length; i += 4) lums.push((d[i] + d[i + 1] + d[i + 2]) / 3);
+        const fundo = lums.slice().sort((x, y) => x - y)[Math.floor(lums.length * 0.75)];   // cor do disco claro
+        for (let y = 0; y < D; y++) for (let x = 0; x < D; x++) {
+            const i = (y * D + x) * 4, dist = Math.hypot(x - R + 0.5, y - R + 0.5);
+            let a = Math.max(0, Math.min(1, (fundo - lums[i / 4] - 14) / 26));
+            if (dist > R - 3) a = 0;   // tira a borda do círculo original
+            d[i] = d[i + 1] = d[i + 2] = 255;
+            d[i + 3] = Math.round(a * 255);
+        }
+        g.putImageData(px, 0, 0);
+    } catch (e) { return null; }
+    return c;
+}
 if (typeof Image !== "undefined") {
     for (const [key, nome] of Object.entries(HUD_ICON_FILES)) {
         const img = new Image();
+        img.onload = () => { hudIconMasks[key] = buildHudIconMask(img); hudButtonCache.clear(); };
         img.src = "icons/botoes/" + nome + ".png";
-        hudIcons[key] = img;
     }
 }
-function getHudIcon(key) {
-    const img = hudIcons[key];
-    return img && img.complete && img.naturalWidth > 0 ? img : null;
+// Botão pronto (canvas) para um ícone, num raio e estado: anel segmentado, disco claro com degradê e brilho,
+// o desenho em azul-escuro firme; dourado quando pronto (ex.: TRANSFORMAR) e mais claro quando apertado.
+function getHudButtonSprite(key, r, pronto, apertado) {
+    const mask = hudIconMasks[key];
+    if (!mask) return null;
+    const R = Math.round(r), id = key + "|" + R + "|" + (pronto ? 1 : 0) + (apertado ? 1 : 0);
+    let c = hudButtonCache.get(id);
+    if (c) return c;
+    const pad = 6, S = (R + pad) * 2, esc = 2;   // desenhado em 2x para ficar nítido na tela
+    c = document.createElement("canvas");
+    c.width = c.height = S * esc;
+    const g = c.getContext("2d");
+    if (!g) return null;
+    g.scale(esc, esc);
+    const cx = S / 2, cy = S / 2;
+    const anel = pronto ? "#ffd54a" : "#b9cbe2", anelEscuro = pronto ? "#b8860b" : "#5d7697";
+    // base escura translúcida com sombra suave
+    g.shadowColor = pronto ? "rgba(255, 200, 40, 0.75)" : "rgba(0, 0, 0, 0.45)";
+    g.shadowBlur = pronto ? 8 : 4;
+    g.fillStyle = "rgba(8, 18, 40, 0.62)";
+    g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.fill();
+    g.shadowBlur = 0;
+    // anel segmentado (4 arcos com frestas), com contorno escuro por baixo
+    const segs = 4, fresta = 0.16;
+    for (const [cor, larg] of [[anelEscuro, R * 0.13], [anel, R * 0.085]]) {
+        g.strokeStyle = cor; g.lineWidth = larg; g.lineCap = "round";
+        for (let i = 0; i < segs; i++) {
+            const a0 = -Math.PI / 4 + i * Math.PI / 2 + fresta, a1 = a0 + Math.PI / 2 - fresta * 2;
+            g.beginPath(); g.arc(cx, cy, R * 0.9, a0, a1); g.stroke();
+        }
+    }
+    // disco claro com degradê e borda fina
+    const rd = R * 0.72;
+    const disco = g.createRadialGradient(cx - rd * 0.35, cy - rd * 0.45, rd * 0.1, cx, cy, rd);
+    disco.addColorStop(0, apertado ? "#ffffff" : "#eef4fb"); disco.addColorStop(0.7, "#c3d3e6"); disco.addColorStop(1, "#93a9c4");
+    g.fillStyle = disco;
+    g.beginPath(); g.arc(cx, cy, rd, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = "rgba(255, 255, 255, 0.9)"; g.lineWidth = 1.2; g.stroke();
+    g.strokeStyle = "rgba(40, 60, 90, 0.55)"; g.lineWidth = 0.8;
+    g.beginPath(); g.arc(cx, cy, rd + 1, 0, Math.PI * 2); g.stroke();
+    // o desenho do jogador, tingido de azul-escuro firme
+    const t = document.createElement("canvas");
+    t.width = t.height = Math.ceil(rd * 2 * esc);
+    const tg = t.getContext("2d");
+    if (tg) {
+        tg.drawImage(mask, 0, 0, t.width, t.height);
+        tg.globalCompositeOperation = "source-in";
+        tg.fillStyle = pronto ? "#6b4a00" : "#1f3557";
+        tg.fillRect(0, 0, t.width, t.height);
+        g.drawImage(t, cx - rd, cy - rd, rd * 2, rd * 2);
+    }
+    // reflexo de luz em cima
+    g.fillStyle = "rgba(255, 255, 255, 0.22)";
+    g.beginPath(); g.ellipse(cx - rd * 0.15, cy - rd * 0.55, rd * 0.55, rd * 0.22, -0.2, 0, Math.PI * 2); g.fill();
+    c.lado = S;
+    if (hudButtonCache.size > 60) hudButtonCache.clear();
+    hudButtonCache.set(id, c);
+    return c;
 }
 
 // Toque: com o ki cheio (e ainda tendo transformação), o botão CARREGAR vira TRANSFORMAR.
@@ -4906,7 +5096,7 @@ function drawTouchHUD() {
 
     ctx.save();
     for (let key in touchHudLayout) {
-        if (key === "parry" && mobileDoubleTapParry && gameState !== "options_hud") continue;
+        if (isHudButtonHidden(key)) continue;
 
         const btnRect = getHudButtonRect(key);
         const btn = touchHudLayout[key];
@@ -4935,22 +5125,11 @@ function drawTouchHUD() {
             ctx.fillStyle = highlight ? "rgba(255, 190, 40, 0.45)" : "rgba(94, 225, 255, 0.38)";
             ctx.shadowBlur = 0;
         }
-        const icon = getHudIcon(transformReady ? "transform" : key);
-        if (icon) {
-            // ícone do jogador (anel + círculo claro com o desenho); brilho dourado em volta quando pronto
-            if (highlight) {
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, radius * 1.02, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
-            }
+        const sprite = getHudButtonSprite(transformReady ? "transform" : key, radius, highlight, hudPressAmount > 0.5);
+        if (sprite) {
             ctx.shadowBlur = 0;
-            const lado = radius * 2.1;
-            ctx.drawImage(icon, centerX - lado / 2, centerY - lado / 2, lado, lado);
-            if (hudPressAmount > 0.5) {
-                ctx.fillStyle = "rgba(94, 225, 255, 0.25)";
-                ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, Math.PI * 2); ctx.fill();
-            }
+            ctx.globalAlpha = Math.max(ctx.globalAlpha, transformDim ? 0.5 : 0.92);   // nítido, nunca apagado
+            ctx.drawImage(sprite, centerX - sprite.lado / 2, centerY - sprite.lado / 2, sprite.lado, sprite.lado);
         } else {
             ctx.beginPath();
             ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
@@ -5465,7 +5644,7 @@ function render() {
         drawTouchHUD();
 
         drawBtnAt(MENU_LAYOUT.optionsHud.save, "SALVAR", "#00ff55");
-        drawBtnAt(MENU_LAYOUT.optionsHud.reset, "RESETAR", "#ff0055");
+        drawBtnAt(MENU_LAYOUT.optionsHud.reset, "VOLTAR AO PADRÃO", "#ff0055", "bold 9px 'Courier New', monospace");
 
         ctx.fillStyle = "#ffff00";
         ctx.font = "12px monospace";

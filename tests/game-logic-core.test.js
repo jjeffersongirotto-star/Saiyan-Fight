@@ -206,18 +206,16 @@ test("adjustHudValue: trava nos limites e não acumula erro de ponto flutuante",
     assert.equal(v, 0.6);
 });
 
-test("layout touch: CARREGAR fica no canto inferior direito e ATAQUE é o maior botão", () => {
+test("layout touch: CARREGAR/TRANSFORMAR é o maior, no canto de baixo à direita; PARRY embaixo ao lado, ATAQUE no meio ao lado, ESPECIAL acima", () => {
     for (const width of [375, 800]) {
         const l = getDefaultTouchHudLayout(width);
         const cx = (b) => b.x * 800 + (b.w * b.scale) / 2;
         const cy = (b) => b.y * 350 + (b.h * b.scale) / 2;
-        const others = Object.keys(l).filter(k => k !== "charge");
-        others.forEach(k => {
-            assert.ok(cy(l.charge) >= cy(l[k]), `charge deve ser o botão mais baixo (vs ${k})`);
-        });
-        assert.ok(cx(l.charge) > 700 && cy(l.charge) > 280, "charge no canto inferior direito");
-        assert.ok(l.attack.w > l.charge.w && l.attack.h > l.charge.h);
-        assert.ok(cx(l.attack) > 400, "botões de ação no lado direito (analógico fica à esquerda)");
+        assert.ok(cx(l.charge) > 700 && cy(l.charge) > 280, "carregar no canto inferior direito");
+        ["attack", "parry", "special"].forEach(k => assert.ok(l.charge.w > l[k].w, `carregar maior que ${k}`));
+        assert.ok(cx(l.parry) < cx(l.charge) && cy(l.parry) > cy(l.attack), "parry ao lado, embaixo");
+        assert.ok(cx(l.attack) < cx(l.charge) && cy(l.attack) < cy(l.charge), "ataque ao lado, no meio");
+        assert.ok(cy(l.special) < cy(l.charge) && Math.abs(cx(l.special) - cx(l.charge)) < 20, "especial acima do carregar");
     }
 });
 
@@ -638,4 +636,15 @@ test("Saibaman arremessado: vai para trás e depois volta a voar", () => {
     for (let i = 0; i < SAIBAMAN_THROWN_FRAMES + 1; i++) stepSaibamanMotion(s, 1 / 60);
     assert.ok(s.x > x0 + 30, "foi para trás");
     assert.equal(s.phase, "voar");
+});
+
+test("Teste de controles: o Goku obedece a quem apertou primeiro; juntos, ninguém", () => {
+    const { chooseControlsTestOwner: dono } = require("../game-logic-core.js");
+    assert.equal(dono(null, true, false), "p1");
+    assert.equal(dono(null, false, true), "p2");
+    assert.equal(dono(null, true, true), null, "os dois ao mesmo tempo: não responde");
+    assert.equal(dono("p1", true, true), "p1", "p1 apertou antes: continua mandando");
+    assert.equal(dono("p2", true, true), "p2");
+    assert.equal(dono("p1", false, true), "p2", "p1 soltou: passa para o p2");
+    assert.equal(dono("p1", false, false), null);
 });
