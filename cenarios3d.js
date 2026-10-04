@@ -424,3 +424,104 @@ function drawTerraArenaStage(ang) {
         .sort((a, b) => a[2] - b[2])
         .forEach(p => taDrawParasol(p[0], p[1], p[3]));
 }
+
+// ==================== PLANETA SUPREMO KAIOH ====================
+// Gramado verde com morros, pedras e penhascos de rocha, céu roxo com várias luas transparentes. Mesma câmera
+// da arena (girando em volta dos lutadores, que ficam no meio do gramado), sem tablado.
+let ksPanorama = null;
+function ksLua(g, x, y, r) {
+    const lua = g.createRadialGradient(x - r * 0.35, y - r * 0.35, r * 0.1, x, y, r);
+    lua.addColorStop(0, "rgba(255, 255, 255, 0.95)"); lua.addColorStop(0.5, "rgba(214, 205, 245, 0.75)"); lua.addColorStop(1, "rgba(150, 130, 210, 0.55)");
+    g.fillStyle = lua;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = "rgba(255, 255, 255, 0.5)"; g.lineWidth = Math.max(1, r * 0.06);
+    g.beginPath(); g.arc(x + r * 0.1, y + r * 0.15, r * 0.55, Math.PI * 0.9, Math.PI * 1.7); g.stroke();   // redemoinho
+    g.beginPath(); g.arc(x - r * 0.15, y - r * 0.05, r * 0.3, Math.PI * 0.1, Math.PI * 0.9); g.stroke();
+    g.strokeStyle = "rgba(255, 255, 255, 0.7)"; g.lineWidth = 1;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.stroke();
+}
+function getKaioshinPanorama() {
+    if (ksPanorama) return ksPanorama;
+    const W = Math.round(Math.PI * 2 * CA_F), base = CA_HY + 4;
+    const f = c3NovaFaixa(W, CA_HY + 8);
+    if (!f) return null;
+    const { c, g } = f;
+    const ceu = g.createLinearGradient(0, 0, 0, base);
+    ceu.addColorStop(0, "#6f55c9"); ceu.addColorStop(0.55, "#a690e0"); ceu.addColorStop(0.9, "#e4c6ec"); ceu.addColorStop(1, "#f6d6e2");
+    g.fillStyle = ceu;
+    g.fillRect(0, 0, W, c.height);
+    // várias luas de tamanhos diferentes espalhadas pelo céu
+    for (let i = 0; i < 26; i++) {
+        const x = c3Hash(i + 200) * W, r = i % 3 === 0 ? 28 + c3Hash(i + 201) * 22 : 6 + c3Hash(i + 202) * 16, y = 10 + r + c3Hash(i + 203) * (base - 46 - r * 2);
+        c3NaVolta(W, x, r, x0 => ksLua(g, x0, Math.max(r + 4, y), r));
+    }
+    // morros verdes ao longe, com penhascos de rocha clara
+    const morro = (u, fases) => fases.reduce((h, f) => h + Math.sin(u / W * Math.PI * 2 * f[0] + f[1]) * f[2], 0);
+    g.fillStyle = "#7bc65a";
+    g.beginPath(); g.moveTo(0, base);
+    for (let u = 0; u <= W; u += 6) g.lineTo(u, base - 10 - Math.max(0, morro(u, [[6, 0.4, 12], [13, 1.3, 7], [27, 2.1, 3]])));
+    g.lineTo(W, base); g.closePath(); g.fill();
+    [[0.07, 70, 34], [0.24, 50, 26], [0.43, 90, 40], [0.61, 60, 30], [0.83, 80, 36]].forEach(([pos, larg, alt]) => {
+        c3NaVolta(W, pos * W, larg, x0 => {
+            g.fillStyle = "#62b048";   // topo de grama inclinado
+            g.beginPath(); g.moveTo(x0 - larg, base - 6); g.lineTo(x0 - larg * 0.4, base - alt - 8); g.lineTo(x0 + larg * 0.5, base - alt); g.lineTo(x0 + larg, base - 6); g.closePath(); g.fill();
+            g.fillStyle = "#d8b48c";   // face de rocha
+            g.beginPath(); g.moveTo(x0 + larg * 0.1, base - alt - 3); g.lineTo(x0 + larg * 0.5, base - alt); g.lineTo(x0 + larg * 0.62, base - 4); g.lineTo(x0 + larg * 0.05, base - 4); g.closePath(); g.fill();
+            g.strokeStyle = "rgba(140, 100, 70, 0.6)"; g.lineWidth = 1;
+            for (let k = 0; k < 4; k++) { g.beginPath(); g.moveTo(x0 + larg * (0.15 + k * 0.1), base - alt + 2); g.lineTo(x0 + larg * (0.12 + k * 0.1), base - 6); g.stroke(); }
+            g.fillStyle = "#2f7a3a";
+            g.beginPath(); g.arc(x0 - larg * 0.2, base - alt - 4, 3, 0, Math.PI * 2); g.arc(x0 + larg * 0.3, base - alt - 2, 2.5, 0, Math.PI * 2); g.fill();
+        });
+    });
+    ksPanorama = c;
+    return c;
+}
+
+// Pedras e tufos de grama fixos no chão (passam perto da câmera conforme ela gira).
+const KS_CHAO = (() => {
+    const itens = [];
+    for (let i = 0; i < 60; i++) {
+        const a = c3Hash(i + 300) * Math.PI * 2, r = 120 + c3Hash(i + 301) * 1400;
+        itens.push({ x: Math.sin(a) * r, z: Math.cos(a) * r, tipo: i % 4 === 0 ? "pedra" : i % 4 === 1 ? "tufo" : i % 4 === 2 ? "morrinho" : "mancha", tam: 14 + c3Hash(i + 302) * 30 });
+    }
+    return itens;
+})();
+
+function drawKaioshinStage(ang) {
+    if (!c3BlitPanorama(getKaioshinPanorama(), ang, CA_F, CA_CX)) { ctx.fillStyle = "#a690e0"; ctx.fillRect(0, 0, canvas.width, CA_HY + 6); }
+    const grama = ctx.createLinearGradient(0, CA_HY, 0, canvas.height);
+    grama.addColorStop(0, "#9fd77a"); grama.addColorStop(0.3, "#6fc04e"); grama.addColorStop(1, "#4fa23a");
+    ctx.fillStyle = grama;
+    ctx.fillRect(0, CA_HY + 4, canvas.width, canvas.height - CA_HY);
+    const lim = CA_D - CA_PERTO * 2;
+    KS_CHAO
+        .map(it => ({ it, r: caRot(it.x, it.z, ang) }))
+        .filter(o => o.r[1] < lim)
+        .sort((a, b) => a.r[1] - b.r[1])
+        .forEach(({ it }) => {
+            const p = caProj(it.x, CA_CHAO, it.z, ang), k = p[3], t = it.tam;
+            if (p[1] < CA_HY) return;
+            if (it.tipo === "pedra") {
+                const g = ctx.createRadialGradient(p[0] - t * 0.3 * k, p[1] - t * 0.6 * k, 1, p[0], p[1] - t * 0.3 * k, t * k);
+                g.addColorStop(0, "#e9c7a6"); g.addColorStop(0.6, "#b98b68"); g.addColorStop(1, "#8a5f44");
+                ctx.fillStyle = g;
+                ctx.beginPath(); ctx.ellipse(p[0], p[1] - t * 0.32 * k, t * k, t * 0.55 * k, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = "rgba(40, 90, 30, 0.35)";
+                ctx.beginPath(); ctx.ellipse(p[0] + t * 0.15 * k, p[1], t * 1.05 * k, t * 0.18 * k, 0, 0, Math.PI * 2); ctx.fill();
+            } else if (it.tipo === "tufo") {
+                ctx.strokeStyle = "#3f9a3a"; ctx.lineWidth = Math.max(1, 1.6 * k);
+                ctx.beginPath();
+                for (let j = -2; j <= 2; j++) { ctx.moveTo(p[0] + j * 3 * k, p[1]); ctx.lineTo(p[0] + j * 5.5 * k, p[1] - 11 * k); }
+                ctx.stroke();
+            } else if (it.tipo === "morrinho") {
+                // ondulação do gramado: morrinho baixo, claro em cima e com sombra embaixo
+                ctx.fillStyle = "rgba(40, 110, 40, 0.25)";
+                ctx.beginPath(); ctx.ellipse(p[0] + t * 0.4 * k, p[1], t * 3 * k, t * 0.5 * k, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = "rgba(170, 230, 120, 0.6)";
+                ctx.beginPath(); ctx.ellipse(p[0], p[1] - t * 0.25 * k, t * 2.6 * k, t * 0.55 * k, 0, Math.PI, 0); ctx.fill();
+            } else {
+                ctx.fillStyle = "rgba(150, 215, 110, 0.45)";
+                ctx.beginPath(); ctx.ellipse(p[0], p[1], t * 2 * k, t * 0.35 * k, 0, 0, Math.PI * 2); ctx.fill();
+            }
+        });
+}
