@@ -3700,57 +3700,8 @@ function drawStageBackground() {
     let scroll = world.stageScrollX;
 
     if (selectedStage === "terra") {
-        let skyGrad = ctx.createLinearGradient(0, 0, 0, 220);
-        skyGrad.addColorStop(0, "#3388ff");
-        skyGrad.addColorStop(0.7, "#88ccff");
-        skyGrad.addColorStop(1, "#e0f0ff");
-        ctx.fillStyle = skyGrad;
-        ctx.fillRect(0, 0, canvas.width, 220);
-
-        ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
-        for (let i = 0; i < 5; i++) {
-            let cx = ((i * 220 - scroll * 0.3) % (canvas.width + 100)) - 50;
-            ctx.beginPath();
-            ctx.arc(cx, 35, 22, 0, Math.PI * 2);
-            ctx.arc(cx + 25, 30, 28, 0, Math.PI * 2);
-            ctx.arc(cx + 55, 35, 20, 0, Math.PI * 2);
-            ctx.fill();
-        }
-
-        ctx.fillStyle = "#cc3300";
-        ctx.fillRect(0, 160, canvas.width, 30);
-        ctx.fillStyle = "#ffcc00";
-        ctx.fillRect(0, 160, canvas.width, 4);
-
-        ctx.fillStyle = "#ffaa00";
-        for (let x = - (scroll * 0.8 % 40); x < canvas.width + 40; x += 40) {
-            ctx.beginPath();
-            ctx.moveTo(x, 160);
-            ctx.lineTo(x + 20, 145);
-            ctx.lineTo(x + 40, 160);
-            ctx.fill();
-        }
-
-        let floorGrad = ctx.createLinearGradient(0, 190, 0, canvas.height);
-        floorGrad.addColorStop(0, "#d2b48c");
-        floorGrad.addColorStop(1, "#8b5a2b");
-        ctx.fillStyle = floorGrad;
-        ctx.fillRect(0, 190, canvas.width, canvas.height - 190);
-
-        ctx.strokeStyle = "#5c3a21";
-        ctx.lineWidth = 2;
-        let pOffset = (scroll * 1.5) % 60;
-        for (let x = -pOffset; x < canvas.width + 60; x += 60) {
-            ctx.beginPath();
-            ctx.moveTo(x, 190);
-            ctx.lineTo(x - 30, canvas.height);
-            ctx.stroke();
-        }
-        ctx.beginPath();
-        ctx.moveTo(0, 230); ctx.lineTo(canvas.width, 230);
-        ctx.moveTo(0, 280); ctx.lineTo(canvas.width, 280);
-        ctx.stroke();
-    } 
+        drawTerraArenaStage(getStageLapAngle(scroll, TERRA_ARENA_LAP_SCROLL));
+    }
     else if (selectedStage === "namek") {
         let skyGrad = ctx.createLinearGradient(0, 0, 0, 220);
         skyGrad.addColorStop(0, "#44aa77");
@@ -3791,36 +3742,8 @@ function drawStageBackground() {
         ctx.fillRect(0, 310, canvas.width, 40);
     } 
     else if (selectedStage === "kaio") {
-        let skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-        skyGrad.addColorStop(0, "#050015");
-        skyGrad.addColorStop(0.5, "#1a0033");
-        skyGrad.addColorStop(1, "#330055");
-        ctx.fillStyle = skyGrad;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        ctx.fillStyle = "#ffffff";
-        for (let i = 0; i < 60; i++) {
-            let sx = (i * 137 + scroll * 0.1) % canvas.width;
-            let sy = (i * 93) % 200;
-            let sz = (i % 3) + 1;
-            ctx.fillRect(sx, sy, sz, sz);
-        }
-
-        ctx.fillStyle = "#4c9a2a";
-        ctx.beginPath();
-        ctx.arc(400, 520, 360, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.lineWidth = 6;
-        ctx.strokeStyle = "#2d5a1e";
-        ctx.stroke();
-
-        let cx = 350 - (scroll * 0.5 % 100);
-        ctx.fillStyle = "#ffffff"; ctx.fillRect(cx, 130, 50, 35);
-        ctx.fillStyle = "#ff3300"; ctx.beginPath(); ctx.arc(cx + 25, 130, 28, Math.PI, 0); ctx.fill();
-        ctx.fillStyle = "#ffcc00"; ctx.fillRect(cx + 38, 145, 12, 20);
-        ctx.fillStyle = "#5c4033"; ctx.fillRect(cx + 80, 125, 10, 40);
-        ctx.fillStyle = "#228b22"; ctx.beginPath(); ctx.arc(cx + 85, 115, 25, 0, Math.PI * 2); ctx.fill();
-    } 
+        drawKaioPlanetStage(getStageLapAngle(scroll, KAIO_PLANET_LAP_SCROLL));
+    }
     else if (selectedStage === "time_room") {
         drawTimeRoomStage(getTimeRoomOrbitAngle(scroll));
     } 
