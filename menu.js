@@ -4066,8 +4066,78 @@ function traceSaibamanFigure(g, pose, frame) {
     for (let k = -1; k <= 1; k++) { g.beginPath(); g.moveTo(hx, hy); g.lineTo(hx - 2.2, hy + k * 1.8); g.stroke(); }
 }
 
+// Cell Jr. (Torneio de Cell): mesmo tamanho, poses e mecânica do Saibaman, mas pequeno, azul com manchas
+// escuras, rosto claro, coroa de duas pontas na cabeça e asinhas nas costas. Voltado para a esquerda.
+function traceCellJrFigure(g, pose, frame) {
+    const pele = "#3f8ee0", escuro = "#1f5aa8", claro = "#8cc4ff", linha = "#0d2350", rosto = "#e9e1f4";
+    const sway = pose === "voar" ? Math.sin(frame / 4 * Math.PI * 2) : 0;
+    g.lineJoin = "round"; g.lineCap = "round";
+    // asinhas nas costas (batendo ao voar)
+    const bate = pose === "voar" ? sway * 2 : 0;
+    g.fillStyle = "#1c3f6e"; g.strokeStyle = linha; g.lineWidth = 1;
+    g.beginPath(); g.moveTo(19, 17); g.quadraticCurveTo(30, 8 - bate, 31, 17); g.quadraticCurveTo(27, 22, 20, 21); g.closePath(); g.fill(); g.stroke();
+    g.strokeStyle = "#6fa7e6"; g.lineWidth = 0.7;
+    g.beginPath(); g.moveTo(20, 18); g.quadraticCurveTo(27, 13 - bate, 29, 17); g.stroke();
+    // pernas
+    const legs = pose === "saltar" ? [[13, 28, 12, 34, 12, 40], [18, 28, 20, 34, 20, 40]]
+        : [[13, 28, 10 + sway, 33, 12 + sway * 1.5, 39], [18, 28, 21 - sway, 33, 23 - sway * 1.5, 38]];
+    g.strokeStyle = linha; g.lineWidth = 4.4;
+    legs.forEach(l => { g.beginPath(); g.moveTo(l[0], l[1]); g.lineTo(l[2], l[3]); g.lineTo(l[4], l[5]); g.stroke(); });
+    g.strokeStyle = pele; g.lineWidth = 2.6;
+    legs.forEach(l => { g.beginPath(); g.moveTo(l[0], l[1]); g.lineTo(l[2], l[3]); g.lineTo(l[4], l[5]); g.stroke(); });
+    g.fillStyle = linha;
+    legs.forEach(l => g.fillRect(l[4] - 2, l[5] - 1, 4, 2));
+    // braço de trás
+    const armBack = pose === "saltar" ? [19, 19, 26, 15, 29, 10] : pose === "agarrar" ? [18, 20, 25, 21, 30, 19] : [18, 20, 22, 25 + sway, 21, 29 + sway];
+    g.strokeStyle = linha; g.lineWidth = 3.4;
+    g.beginPath(); g.moveTo(armBack[0], armBack[1]); g.lineTo(armBack[2], armBack[3]); g.lineTo(armBack[4], armBack[5]); g.stroke();
+    g.strokeStyle = escuro; g.lineWidth = 1.8; g.stroke();
+    // tronco: azul com o peito claro em placas e manchas escuras
+    g.fillStyle = pele; g.strokeStyle = linha; g.lineWidth = 1.3;
+    g.beginPath(); g.moveTo(11, 17); g.quadraticCurveTo(9, 23, 12, 29); g.lineTo(19, 29); g.quadraticCurveTo(22, 23, 20, 17); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = "#d9e6f7";
+    g.fillRect(12.5, 19, 5.5, 2); g.fillRect(12.5, 22, 5.5, 2); g.fillRect(13, 25, 4.5, 2);
+    g.fillStyle = linha;
+    [[19, 20], [10.8, 24], [19.5, 26]].forEach(([x, y]) => { g.beginPath(); g.arc(x, y, 0.9, 0, Math.PI * 2); g.fill(); });
+    // cabeça: coroa de duas pontas para trás (azul com manchas) e rosto claro
+    g.fillStyle = pele; g.strokeStyle = linha; g.lineWidth = 1.4;
+    g.beginPath();
+    g.moveTo(6, 10); g.quadraticCurveTo(8, 3, 15, -1); g.quadraticCurveTo(13, 3, 15, 5);
+    g.quadraticCurveTo(19, 1, 26, 0); g.quadraticCurveTo(23, 4, 24, 10);
+    g.quadraticCurveTo(23, 17, 17, 17.5); g.lineTo(10, 17); g.closePath();
+    g.fill(); g.stroke();
+    g.fillStyle = claro;
+    g.beginPath(); g.moveTo(9, 6); g.quadraticCurveTo(11, 2, 14, 0.5); g.quadraticCurveTo(12, 4, 11, 7); g.closePath(); g.fill();
+    g.fillStyle = linha;
+    [[17, 5], [21, 9], [19, 12.5], [14, 8]].forEach(([x, y]) => { g.beginPath(); g.arc(x, y, 0.9, 0, Math.PI * 2); g.fill(); });
+    g.fillStyle = rosto; g.strokeStyle = linha; g.lineWidth = 1;
+    g.beginPath(); g.moveTo(4, 9.5); g.quadraticCurveTo(4, 17, 10, 17.5); g.quadraticCurveTo(14, 17, 14, 12); g.quadraticCurveTo(12, 8, 6, 8.5); g.closePath(); g.fill(); g.stroke();
+    // olhos escuros com brilho e as marcas roxas embaixo
+    g.fillStyle = "#1a1030";
+    g.beginPath(); g.ellipse(6.8, 11.8, 1.5, 1.2, -0.2, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.ellipse(11.2, 12, 1.5, 1.2, 0.2, 0, Math.PI * 2); g.fill();
+    g.fillStyle = "#ffffff"; g.fillRect(6.3, 11.2, 0.8, 0.7); g.fillRect(10.7, 11.4, 0.8, 0.7);
+    g.strokeStyle = "#8e4fb8"; g.lineWidth = 0.8;
+    g.beginPath(); g.moveTo(6, 13.6); g.lineTo(6.6, 15.4); g.moveTo(11.6, 13.8); g.lineTo(11.2, 15.6); g.stroke();
+    g.strokeStyle = linha; g.lineWidth = 0.8;
+    g.beginPath(); g.moveTo(7.6, 16); g.quadraticCurveTo(9, 16.6, 10.6, 16); g.stroke();
+    // braço da frente
+    const armFront = pose === "saltar" ? [12, 20, 4, 17, 0, 11] : pose === "agarrar" ? [12, 20, 5, 21, 0, 19] : [12, 20, 8, 25 - sway, 7, 29 - sway];
+    g.strokeStyle = linha; g.lineWidth = 3.6;
+    g.beginPath(); g.moveTo(armFront[0], armFront[1]); g.lineTo(armFront[2], armFront[3]); g.lineTo(armFront[4], armFront[5]); g.stroke();
+    g.strokeStyle = pele; g.lineWidth = 2; g.stroke();
+    g.fillStyle = "#d9e6f7";
+    g.beginPath(); g.arc(armFront[4], armFront[5], 1.6, 0, Math.PI * 2); g.fill();
+}
+
+// Na fase do Torneio de Cell os inimigos pequenos são os Cell Jr.; nas outras, Saibamans.
+function getMinionKind() {
+    return typeof selectedStage !== "undefined" && selectedStage === "cell_games" ? "celljr" : "saibaman";
+}
+
 function getSaibamanSprite(pose, frame) {
-    const key = pose + frame;
+    const tipo = getMinionKind();
+    const key = tipo + pose + frame;
     let c = saibamanSpriteCache.get(key);
     if (c) return c;
     c = document.createElement("canvas");
@@ -4077,7 +4147,7 @@ function getSaibamanSprite(pose, frame) {
     if (g) {
         g.scale(SAIBAMAN_SPRITE_SCALE, SAIBAMAN_SPRITE_SCALE);
         g.translate(SAIBAMAN_SPRITE_PAD, SAIBAMAN_SPRITE_PAD + 1);
-        traceSaibamanFigure(g, pose, frame);
+        if (tipo === "celljr") traceCellJrFigure(g, pose, frame); else traceSaibamanFigure(g, pose, frame);
     }
     saibamanSpriteCache.set(key, c);
     return c;
@@ -4116,6 +4186,12 @@ function drawSaibamans() {
             ctx.moveTo(cx - 6, s.y + s.h + 4); ctx.lineTo(cx - 6, s.y + s.h + 18);
             ctx.moveTo(cx + 6, s.y + s.h + 2); ctx.lineTo(cx + 6, s.y + s.h + 14);
             ctx.stroke();
+            drawSaibamanSprite(s, "saltar", 0);
+        } else if (s.phase === "arremessado") {
+            // girando para trás depois de ser solto
+            ctx.translate(cx, s.y + s.h / 2);
+            ctx.rotate(s.phaseTime * 0.35);
+            ctx.translate(-cx, -(s.y + s.h / 2));
             drawSaibamanSprite(s, "saltar", 0);
         } else if (s.phase === "agarrar") {
             // desenhado depois do herói (drawGrabbingSaibamans), para ficar na frente das pernas
@@ -4296,36 +4372,47 @@ function drawPickups() {
             ctx.fillStyle = "#e8ffb0";
             ctx.beginPath(); ctx.ellipse(-2, -5, 3.2, 1.4, -0.3, 0, Math.PI * 2); ctx.fill();
         } else if (item.type === "capsule") {
-            // Cápsula Hoipoi da Corporação Cápsula: branca, faixa cinza no meio, botão no topo e o logo "CC".
+            // Cápsula da Corporação Cápsula: pílula curta deitada (pontas arredondadas iguais), corpo branco com
+            // volume de cilindro, anel metálico perto de uma ponta, botãozinho cinza em cima e o número.
             ctx.shadowColor = "#7fd0ff";
-            ctx.rotate(0.5);
-            ctx.fillStyle = "#f4f6f8";
+            ctx.rotate(-0.25);
+            const L = 12, R = 5.5;   // meia largura do corpo e raio das pontas
+            const corpo = ctx.createLinearGradient(0, -R, 0, R);
+            corpo.addColorStop(0, "#ffffff"); corpo.addColorStop(0.35, "#f1f4f8"); corpo.addColorStop(1, "#b9c2cf");
+            ctx.fillStyle = corpo;
             ctx.strokeStyle = "#3a4250";
-            ctx.lineWidth = 1.5;
+            ctx.lineWidth = 1.4;
             ctx.beginPath();
-            ctx.moveTo(-5.5, -7);
-            ctx.arc(0, -7, 5.5, Math.PI, 0);
-            ctx.lineTo(5.5, 7);
-            ctx.arc(0, 7, 5.5, 0, Math.PI);
+            ctx.moveTo(-L + R, -R);
+            ctx.lineTo(L - R, -R);
+            ctx.arc(L - R, 0, R, -Math.PI / 2, Math.PI / 2);
+            ctx.lineTo(-L + R, R);
+            ctx.arc(-L + R, 0, R, Math.PI / 2, Math.PI * 1.5);
             ctx.closePath();
             ctx.fill();
             ctx.stroke();
             ctx.shadowBlur = 0;
-            ctx.fillStyle = "#c9ced6";
-            ctx.fillRect(-5.5, 4, 11, 8);
+            // anel metálico perto da ponta direita
+            const anel = ctx.createLinearGradient(0, -R, 0, R);
+            anel.addColorStop(0, "#d7dde6"); anel.addColorStop(0.5, "#8d96a4"); anel.addColorStop(1, "#5d6674");
+            ctx.fillStyle = anel;
+            ctx.fillRect(4, -R + 0.7, 2.6, R * 2 - 1.4);
+            // botãozinho em cima, no meio do corpo
             ctx.fillStyle = "#8d96a4";
-            ctx.fillRect(-5.5, -1, 11, 2.6);
-            ctx.fillStyle = "#e23a2e";   // botão
-            ctx.fillRect(-1.6, -14.5, 3.2, 2.4);
-            ctx.fillStyle = "#ffffff";
-            ctx.fillRect(-3.6, -10, 1.6, 6);   // brilho
+            ctx.strokeStyle = "#3a4250";
+            ctx.lineWidth = 0.9;
+            ctx.beginPath(); ctx.ellipse(-1, -R, 2.4, 1.4, 0, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+            // brilho comprido em cima
+            ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
+            ctx.fillRect(-L + R - 1, -R + 1.4, 12, 1.3);
+            // número e o logo
             ctx.fillStyle = "#1c5fb8";
             ctx.font = "bold 5px monospace";
             ctx.textAlign = "center";
-            ctx.fillText("CC", 0.4, -3);
+            ctx.fillText("CC", -4.5, 2.6);
             ctx.fillStyle = "#3a4250";
-            ctx.font = "bold 4px monospace";
-            ctx.fillText("1", 0, 10);
+            ctx.font = "bold 4.5px monospace";
+            ctx.fillText("1", 9, 2);
         } else if (item.type === "cloud") {
             // Nuvem Voadora (Kinto'un): nuvem amarelo-dourada fofinha com um rastro atrás.
             ctx.shadowColor = "#ffd84a";

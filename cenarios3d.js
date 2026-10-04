@@ -3,7 +3,7 @@
 //  - Planeta do Sr. Kaioh: o planetinha verde gira e os lutadores voam por cima da estrada dando a volta nele.
 //  - Torneio de Artes Marciais e Planeta Supremo Kaioh: câmera gira em volta dos lutadores no meio da arena
 //    (mesma câmera do Torneio de Cell, ver caProj/caPoly em menu.js).
-//  - Planeta Namek e Namek Prestes a Explodir: câmera avançando para a frente; o caminho é gerado aos poucos
+//  - Planeta Namek e Namek Prestes a Explodir: câmera andando de lado (na direção dos lutadores); o caminho é gerado aos poucos
 //    (árvores, morros, pedras sempre um pouco diferentes, mas no mesmo estilo).
 // Só desenha — chamado por drawStageBackground (menu.js) durante o render. Carrega depois de menu.js.
 
@@ -563,26 +563,43 @@ function nfProj(x, y, z) {
     return [NF.CX + x * esc, NF.HY + (NF.H - y) * esc, esc];
 }
 
-// Percorre as fileiras visíveis, da mais longe para a mais perto, e chama desenhar(item, z) para cada coisa.
+// A câmera anda de lado, na direção em que os lutadores estão virados (como nas outras arenas). Cada fileira
+// fica numa posição ao longo do caminho (n * FILEIRA); o "x" de cada item vira a distância até a câmera (os
+// dois lados do caminho viram faixas de profundidade diferentes). As coisas perto passam rápido e as longe
+// devagar. Desenha da mais longe para a mais perto e chama desenhar(item com x = posição na tela, z).
+function nfProfundidade(it) {
+    return 240 + Math.abs(it.x) * 1.3 + (it.x < 0 ? 45 : 0);
+}
 function nfPercorrer(andado, gerarFileira, desenhar) {
-    const primeira = Math.floor(andado / NF.FILEIRA), ultima = Math.floor((andado + NF.LONGE) / NF.FILEIRA);
-    for (let n = ultima; n >= primeira; n--) {
-        const z = n * NF.FILEIRA - andado;
-        if (z < NF.PERTO) continue;
-        gerarFileira(n).forEach(item => desenhar(item, z + (item.dz || 0)));
+    const alcance = NF.LONGE + 400;
+    const primeira = Math.floor((andado - alcance) / NF.FILEIRA), ultima = Math.ceil((andado + alcance) / NF.FILEIRA);
+    const lista = [];
+    for (let n = primeira; n <= ultima; n++) {
+        gerarFileira(n).forEach(it => {
+            const z = nfProfundidade(it), lado = n * NF.FILEIRA + (it.dz || 0) - andado;
+            if (Math.abs(lado) * NF.F / z > canvas.width) return;   // fora da tela
+            lista.push([z, it, lado]);
+        });
     }
+    lista.sort((a, b) => b[0] - a[0]);
+    lista.forEach(([z, it, lado]) => desenhar(Object.assign({}, it, { x: lado }), z));
 }
 
-// Faixas suaves no chão que vêm em direção à câmera: é o que dá a sensação de estar andando.
+// Risquinhos no chão em várias distâncias, passando de lado (os de perto mais rápido): mostram o movimento.
 function nfFaixasDoChao(andado, cor) {
-    const passo = NF.FILEIRA * 2, primeira = Math.ceil((andado + NF.PERTO) / passo);
     ctx.fillStyle = cor;
-    for (let n = primeira; n * passo - andado < NF.LONGE; n++) {
-        if (n % 2) continue;
-        const z0 = n * passo - andado, z1 = z0 + passo * 0.5;
-        const y0 = nfProj(0, 0, z0)[1], y1 = nfProj(0, 0, z1)[1];
-        ctx.fillRect(0, y1, canvas.width, Math.max(1, y0 - y1));
-    }
+    ctx.beginPath();
+    [190, 240, 310, 420, 600, 900, 1400].forEach((z, fila) => {
+        const k = NF.F / z, passo = 70, meia = canvas.width / 2 / k + passo;
+        for (let n = Math.floor((andado - meia) / passo); n * passo - andado < meia; n++) {
+            const h = c3Hash(n * 7 + fila * 131);
+            if (h < 0.45) continue;
+            const [x, y] = nfProj(n * passo + h * 40 - andado, 0, z + h * 30);
+            const r = (12 + h * 22) * k;
+            ctx.moveTo(x + r, y); ctx.ellipse(x, y, r, Math.max(0.6, r * 0.09), 0, 0, Math.PI * 2);
+        }
+    });
+    ctx.fill();
 }
 
 // ---------- Planeta Namek ----------
@@ -611,11 +628,11 @@ function nmFileira(n) {
     const itens = [], h = (k) => c3Hash(n * 13 + k);
     if (h(1) < 0.3) {
         const lado = h(2) < 0.5 ? -1 : 1;
-        itens.push({ tipo: "arvore", x: lado * (150 + h(3) * 520), alto: 230 + h(4) * 230, copa: 34 + h(5) * 26, dz: h(6) * 60 });
+        itens.push({ tipo: "arvore", x: lado * (150 + h(3) * 520), alto: 150 + h(4) * 150, copa: 34 + h(5) * 26, dz: h(6) * 60 });
     }
     if (h(7) < 0.12) {
         const lado = h(8) < 0.5 ? -1 : 1;
-        itens.push({ tipo: "arvore", x: lado * (700 + h(9) * 700), alto: 260 + h(10) * 260, copa: 40 + h(11) * 30, dz: h(12) * 60 });
+        itens.push({ tipo: "arvore", x: lado * (700 + h(9) * 700), alto: 200 + h(10) * 200, copa: 40 + h(11) * 30, dz: h(12) * 60 });
     }
     if (h(13) < 0.26) {
         const lado = h(14) < 0.5 ? -1 : 1;
@@ -692,7 +709,7 @@ function drawNamekStage(andado) {
 }
 
 // ---------- Namek Prestes a Explodir ----------
-// Mesma câmera andando para a frente. Céu verde-escuro com raios, colunas de lava com fumaça escura, brasas e
+// Mesma câmera andando de lado. Céu verde-escuro com raios, colunas de lava com fumaça escura, brasas e
 // pedras caindo, ilhas de pedra rachadas na água e arcos de lava entre elas.
 let nxCeu = null;
 function getNamekExplodingSky() {
