@@ -161,10 +161,10 @@ test("getAnalogVector: diagonal nunca passa de força 1", () => {
     assert.ok(v.x > 0 && v.y < 0);
 });
 
-test("getDefaultTouchHudLayout: tem os 5 botões e não repete referência entre chamadas", () => {
+test("getDefaultTouchHudLayout: tem os 4 botões (sem TRANSF.: o CARREGAR vira TRANSFORMAR) e não repete referência entre chamadas", () => {
     for (const width of [375, 800]) {
         const layout = getDefaultTouchHudLayout(width);
-        assert.deepEqual(Object.keys(layout).sort(), ["attack", "charge", "parry", "special", "transform"]);
+        assert.deepEqual(Object.keys(layout).sort(), ["attack", "charge", "parry", "special"]);
     }
     const a = getDefaultTouchHudLayout(800);
     a.attack.x = 0.1;

@@ -42,26 +42,28 @@ function c3NaVolta(W, x, larg, desenha) {
 // ==================== PLANETA DO SR. KAIOH ====================
 // O planetinha visto um pouco de cima, bem perto: a estrada branca do equador fica na horizontal, no meio da
 // tela, e o planeta gira em volta do eixo de pé — os lutadores voam por cima da estrada dando a volta nele.
-const KP = { CX: 400, CY: 268, R: 196, INCL: 0.24 };
+const KP = { CX: 400, CY: 268, R: 196, INCL: 0.24, ROLL: -0.32 };   // ROLL: planeta inclinado (rua sobe para a direita)
 
 // ponto na superfície (latitude, longitude) -> tela; d > 0 = lado virado para a câmera
 function kpProj(lat, lon, ang, alt = 0) {
     const r = KP.R + alt;
     const cl = Math.cos(lat), x3 = cl * Math.sin(lon + ang), y3 = Math.sin(lat), z3 = cl * Math.cos(lon + ang);
     const ci = Math.cos(KP.INCL), si = Math.sin(KP.INCL);
-    return { x: KP.CX + r * x3, y: KP.CY - r * (y3 * ci - z3 * si), d: z3 * ci + y3 * si, nx: x3, ny: -(y3 * ci - z3 * si) };
+    const dx = r * x3, dy = -r * (y3 * ci - z3 * si), cr = Math.cos(KP.ROLL), sr = Math.sin(KP.ROLL);
+    return { x: KP.CX + dx * cr - dy * sr, y: KP.CY + dx * sr + dy * cr, d: z3 * ci + y3 * si, nx: x3, ny: -(y3 * ci - z3 * si) };
 }
 
 // Coisas em cima do planeta: casinhas, árvores, o carro e o poço; e manchas de grama (giram junto e mostram
 // o movimento). Latitude/longitude em graus.
 const KP_COISAS = (() => {
     const lista = [
-        { tipo: "casa", lat: 34, lon: 8, tam: 1 }, { tipo: "casa", lat: 40, lon: 30, tam: 0.85 },
+        // a casa do Sr. Kaioh (duas cúpulas juntas) logo na beira da pista
+        { tipo: "casa", lat: 15, lon: 14, tam: 0.75 }, { tipo: "casa", lat: 14, lon: 6, tam: 1 },
         { tipo: "arvore", lat: 30, lon: -22, tam: 1.15 }, { tipo: "arvore", lat: 46, lon: 52, tam: 0.9 },
         { tipo: "arvore", lat: -28, lon: 75, tam: 1.05 }, { tipo: "arvore", lat: 18, lon: 140, tam: 1 },
         { tipo: "arvore", lat: -24, lon: -120, tam: 1.1 }, { tipo: "arvore", lat: 36, lon: -160, tam: 0.95 },
         { tipo: "arvore", lat: -32, lon: 200, tam: 0.9 }, { tipo: "arvore", lat: 24, lon: 230, tam: 1 },
-        { tipo: "carro", lat: 24, lon: 60, tam: 1 }, { tipo: "poco", lat: 50, lon: -5, tam: 1 }
+        { tipo: "carro", lat: 0, lon: 60, tam: 1 }, { tipo: "poco", lat: 24, lon: -4, tam: 1 }
     ];
     return lista.map(o => Object.assign({}, o, { lat: o.lat * Math.PI / 180, lon: o.lon * Math.PI / 180 }));
 })();
@@ -81,7 +83,7 @@ function kpDrawCoisa(o, p) {
     const k = o.tam;
     ctx.save();
     ctx.translate(p.x, p.y);
-    ctx.rotate(ang);
+    ctx.rotate(ang + KP.ROLL);
     if (o.tipo === "arvore") {
         ctx.fillStyle = "#7a5530";
         ctx.fillRect(-3 * k, -18 * k, 6 * k, 18 * k);
@@ -180,10 +182,10 @@ function drawKaioPlanetStage(ang) {
         ctx.fillStyle = m.claro ? "rgba(225, 250, 160, 0.45)" : "rgba(60, 140, 40, 0.35)";
         // achatadas perto da borda (vistas de lado)
         const rx = m.tam * Math.max(0.2, Math.sqrt(Math.max(0, 1 - p.nx * p.nx))), ry = m.tam * 0.5 * Math.max(0.2, p.d);
-        ctx.beginPath(); ctx.ellipse(p.x, p.y, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(p.x, p.y, rx, ry, KP.ROLL, 0, Math.PI * 2); ctx.fill();
     });
 
-    // a estrada branca do equador (horizontal, no meio da tela)
+    // a estrada branca do equador (cruzando o planeta inclinado)
     const meia = 0.12, passos = 36, borda = [];
     for (let i = 0; i <= passos; i++) { const mu = -Math.PI / 2 + i / passos * Math.PI; borda.push(kpProj(meia, mu - ang, ang)); }
     const bordaB = [];
@@ -786,8 +788,20 @@ function nxDesenhar(it, z) {
         lava.addColorStop(0, "#b3160d"); lava.addColorStop(0.5, `rgba(255, ${Math.round(150 * brilho)}, 40, 1)`); lava.addColorStop(1, "#b3160d");
         ctx.fillStyle = lava;
         ctx.fillRect(x - L / 2, topo[1], L, y - topo[1]);
+        // faixas claras subindo pela coluna (a lava jorrando para cima)
+        const altura = y - topo[1];
         ctx.fillStyle = "#ffd36b";
-        for (let i = 0; i < 4; i++) ctx.fillRect(x - L * 0.1 + Math.sin(i * 2 + t) * L * 0.2, topo[1] + (y - topo[1]) * (i / 4 + 0.05), L * 0.18, (y - topo[1]) * 0.12);
+        for (let i = 0; i < 5; i++) {
+            const f = ((i / 5 - t * 0.9 + it.fase) % 1 + 1) % 1;   // 1 = embaixo, 0 = no topo
+            ctx.fillRect(x - L * 0.12 + Math.sin(i * 2 + t * 3) * L * 0.18, topo[1] + altura * f, L * 0.2, altura * 0.1);
+        }
+        // respingos saindo do topo e caindo pelos lados
+        ctx.fillStyle = "#ff9a2e";
+        for (let i = 0; i < 6; i++) {
+            const u = ((t * 0.8 + i / 6 + it.fase) % 1 + 1) % 1, lado = i % 2 ? 1 : -1;
+            const gx = x + lado * L * (0.3 + u * 2.2), gy = topo[1] - L * 2.2 * u * (1 - u) * 4 + altura * u * u * 0.25;
+            ctx.beginPath(); ctx.arc(gx, gy, Math.max(1, L * 0.16 * (1 - u * 0.5)), 0, Math.PI * 2); ctx.fill();
+        }
         // base espalhando no chão
         ctx.fillStyle = "#d4260f";
         ctx.beginPath(); ctx.ellipse(x, y, L * 2.2, L * 0.4, 0, 0, Math.PI * 2); ctx.fill();
@@ -798,6 +812,13 @@ function nxDesenhar(it, z) {
         ctx.strokeStyle = "rgba(255, 90, 20, 0.55)"; ctx.lineWidth = Math.max(2, 9 * k);
         ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.quadraticCurveTo(cima[0], cima[1], b[0], b[1]); ctx.stroke();
         ctx.strokeStyle = "#ffd36b"; ctx.lineWidth = Math.max(1, 3 * k); ctx.stroke();
+        // gotas de lava correndo ao longo do arco (de uma ponta à outra)
+        ctx.fillStyle = "#fff1b0";
+        for (let i = 0; i < 4; i++) {
+            const u = ((t * 0.45 + i / 4 + (it.dz || 0) * 0.01) % 1 + 1) % 1, v = 1 - u;
+            const px = v * v * a[0] + 2 * u * v * cima[0] + u * u * b[0], py = v * v * a[1] + 2 * u * v * cima[1] + u * u * b[1];
+            ctx.beginPath(); ctx.arc(px, py, Math.max(1.2, 5 * k), 0, Math.PI * 2); ctx.fill();
+        }
     }
 }
 

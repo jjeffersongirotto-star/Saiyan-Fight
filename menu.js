@@ -161,8 +161,8 @@ const TIER_COLORS = { diamond: "#7fe8ff", gold: "#ffd23f", silver: "#cbd2da", br
 // Posições em serpentina (linha de baixo pra cima, esquerda-direita depois direita-esquerda), na MESMA ordem
 // de STAGE_PROGRESSION — a fase N sempre se conecta só com a N-1 e a N+1, mantendo a sequência visível.
 const STAGE_MAP_POSITIONS = [
-    { x: 90, y: 280 }, { x: 260, y: 280 }, { x: 430, y: 280 }, { x: 600, y: 280 },
-    { x: 600, y: 110 }, { x: 430, y: 110 }, { x: 260, y: 110 }, { x: 90, y: 110 }
+    { x: 145, y: 248 }, { x: 315, y: 248 }, { x: 485, y: 248 }, { x: 655, y: 248 },
+    { x: 655, y: 98 }, { x: 485, y: 98 }, { x: 315, y: 98 }, { x: 145, y: 98 }
 ];
 const STAGE_MAP_NODE_R = 26;
 
@@ -225,6 +225,14 @@ function roundRectPath(x, y, w, h, r) {
 }
 
 function drawLockedStageNodeIcon(cx, cy, r, stageId) {
+    const thumb = stageCardThumbs[stageId];
+    if (thumb && thumb.cinza) {
+        ctx.save();
+        ctx.globalAlpha = 0.6;
+        drawStageThumbCircle(cx, cy, r, thumb.cinza);
+        ctx.restore();
+        return;
+    }
     const key = stageId + "|" + r;
     let icon = lockedStageIconCache[key];
     if (!icon) {
@@ -250,7 +258,20 @@ function drawLockedStageNodeIcon(cx, cy, r, stageId) {
     ctx.restore();
 }
 
+// Recorte redondo da foto da fase (a mesma das cartas de ARENAS): mostra a fase como ela é hoje.
+function drawStageThumbCircle(cx, cy, r, img, g = ctx) {
+    const s = (r * 2) / img.height, w = img.width * s;
+    g.save();
+    g.beginPath();
+    g.arc(cx, cy, r, 0, Math.PI * 2);
+    g.clip();
+    g.drawImage(img, cx - w / 2, cy - r, w, r * 2);
+    g.restore();
+}
+
 function drawStageNodeIcon(cx, cy, r, stageId, g = ctx) {
+    const thumb = stageCardThumbs[stageId];
+    if (thumb && thumb.cor) { drawStageThumbCircle(cx, cy, r, thumb.cor, g); return; }
     g.save();
     g.beginPath();
     g.arc(cx, cy, r, 0, Math.PI * 2);
@@ -419,9 +440,11 @@ function drawMedalIcon(cx, cy, r, color) {
 function getAchievementsLayoutMetrics() {
     const columns = 2;
     const gridTop = 92;
-    const gridLeft = 24;
+    const margem = 24;
     const gapX = 12, gapY = 8;
-    const cardWidth = Math.min(280, (canvas.width - gridLeft * 2 - gapX * (columns - 1)) / columns);
+    const cardWidth = Math.min(280, (canvas.width - margem * 2 - gapX * (columns - 1)) / columns);
+    // grade centralizada na tela (alinhada com o painel das medalhas)
+    const gridLeft = Math.round((canvas.width - (cardWidth * columns + gapX * (columns - 1))) / 2);
     const cardHeight = 52;
     const viewportHeight = canvas.height - gridTop - 34;
     return { columns, gridTop, gridLeft, gapX, gapY, cardWidth, cardHeight, viewportHeight };
@@ -1700,7 +1723,7 @@ function pollGamepads(dt) {
             const step = getCurrentTutorialStep();
             if (step && step.key === "pause") markTutorialActionDone("pause");
         }
-        else if (playing) pauseGame();
+        if (playing) pauseGame();
         else if (gameState === "paused") requestResume();
     }
     padPrevPause = anyPause;
@@ -1738,13 +1761,50 @@ function pollGamepads(dt) {
     }
 }
 
+// Tela de pausa (CONTINUAR / OPÇÕES / SAIR), por cima da luta ou do tutorial congelados.
+function drawPauseOverlay() {
+    ctx.fillStyle = "rgba(0,0,0,0.7)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (resumeCountdown > 0) {
+        resumeCountdown -= deltaTime;
+        if (resumeCountdown <= 0) {
+            resumeCountdown = 0;
+            autoPaused = false;
+            setGameState(pausedFromTutorial ? "tutorial" : "playing");
+        } else {
+            ctx.fillStyle = "#fff0a6";
+            ctx.font = "bold 72px 'Courier New', monospace";
+            ctx.textAlign = "center";
+            ctx.fillText(String(Math.ceil(resumeCountdown)), canvas.width / 2, 190);
+            ctx.font = "bold 14px 'Courier New', monospace";
+            ctx.fillStyle = "#e2e8f0";
+            ctx.fillText("PREPARE-SE...", canvas.width / 2, 225);
+        }
+    } else {
+        if (autoPaused) {
+            ctx.fillStyle = "#fbbf24";
+            ctx.font = "bold 18px 'Courier New', monospace";
+            ctx.textAlign = "center";
+            ctx.fillText("PAUSADO AUTOMATICAMENTE", canvas.width / 2, 62);
+            ctx.fillStyle = "#e2e8f0";
+            ctx.font = "12px 'Courier New', monospace";
+            ctx.fillText("TOQUE OU CLIQUE EM QUALQUER LUGAR PARA CONTINUAR", canvas.width / 2, 86);
+        }
+        drawBtnAt(MENU_LAYOUT.paused.resume, "CONTINUAR");
+        drawBtnAt(MENU_LAYOUT.paused.options, "OPÇÕES");
+        drawBtnAt(MENU_LAYOUT.paused.exit, "SAIR PARA MENU");
+    }
+}
+
 // Botão de pausa (só aparece em modo touch, durante a partida). Fica no centro do topo, área livre da HUD.
 function getPauseButtonRect() {
     return { x: Math.round((canvas.width - PAUSE_BUTTON.w) / 2), y: 8, w: PAUSE_BUTTON.w, h: PAUSE_BUTTON.h };
 }
 
+let pausedFromTutorial = false;   // a pausa veio do tutorial: CONTINUAR volta para o mesmo passo dele
 function pauseGame(auto = false) {
-    if (gameState !== "playing") return;
+    if (gameState !== "playing" && gameState !== "tutorial") return;
+    pausedFromTutorial = gameState === "tutorial";
     keysPressed = {};
     mouseButtonsPressed = {};
     resetTouchInputState();
@@ -1757,7 +1817,7 @@ function pauseGame(auto = false) {
 function requestResume() {
     if (gameState !== "paused" || resumeCountdown > 0) return;
     if (autoPaused || isTouchDevice) resumeCountdown = 3;
-    else setGameState("playing");
+    else setGameState(pausedFromTutorial ? "tutorial" : "playing");
 }
 
 function getHudButtonAt(x, y) {
@@ -1986,9 +2046,8 @@ canvas.addEventListener("touchstart", (e) => {
                 if (gameState === "tutorial") {
                     const step = getCurrentTutorialStep();
                     if (step && step.key === "pause") markTutorialActionDone("pause");
-                } else {
-                    pauseGame();
                 }
+                pauseGame();
             });
             return;
         }
@@ -1998,7 +2057,10 @@ canvas.addEventListener("touchstart", (e) => {
         if (hudKey) {
             // botões da partida agem NA HORA (velocidade importa); o afundado aparece enquanto o dedo segura
             hudPressHeld[touch.identifier] = hudKey;
-            if (hudKey === "charge") touchChargeId = touch.identifier;
+            // CARREGAR com o ki cheio vira TRANSFORMAR: só transforma num toque novo (quem já estava segurando
+            // para carregar precisa soltar e apertar de novo)
+            if (hudKey === "charge" && canTouchTransform()) triggerAction("transform", player, false);
+            else if (hudKey === "charge") touchChargeId = touch.identifier;
             else triggerAction(hudKey, player, false);
             continue;
         }
@@ -2248,11 +2310,11 @@ window.onkeydown = (e) => {
             }
         }
     } else if (gameState === "tutorial") {
-        if ((e.code === "Escape" || e.code === "KeyP") && getCurrentTutorialStep() && getCurrentTutorialStep().key === "pause") {
-            markTutorialActionDone("pause");
+        if (e.code === "Escape" || e.code === "KeyP") {
+            if (getCurrentTutorialStep() && getCurrentTutorialStep().key === "pause") markTutorialActionDone("pause");
+            pauseGame();
             return;
         }
-        if (e.code === "Escape") { setGameState("menu"); return; }
         for (let act in keyBindings.p1) {
             if (keyBindings.p1[act] === e.code) triggerAction(act, player, false);
         }
@@ -2296,8 +2358,9 @@ function getTutorialInstructionLines(stepKey) {
             // mostrar "toque no botão" aqui seria pedir algo que nem aparece na tela.
             lines.push("TOQUE 2 VEZES SEGUIDAS EM QUALQUER LUGAR LIVRE DA TELA");
         } else {
-            const names = { attack: "ATAQUE", charge: "CARREGAR", parry: "PARRY", transform: "TRANSF.", special: "ESPECIAL" };
-            lines.push(`TOQUE (OU SEGURE) NO BOTÃO "${names[stepKey]}" NA TELA`);
+            const names = { attack: "ATAQUE", charge: "CARREGAR", parry: "PARRY", special: "ESPECIAL" };
+            if (stepKey === "transform") lines.push(`COM O KI CHEIO O BOTÃO "CARREGAR" VIRA "TRANSFORMAR": TOQUE NELE`);
+            else lines.push(`TOQUE (OU SEGURE) NO BOTÃO "${names[stepKey]}" NA TELA`);
             if (stepKey === "charge") lines.push("(SEGURE POR UM INSTANTE)");
         }
     } else {
@@ -4066,68 +4129,81 @@ function traceSaibamanFigure(g, pose, frame) {
     for (let k = -1; k <= 1; k++) { g.beginPath(); g.moveTo(hx, hy); g.lineTo(hx - 2.2, hy + k * 1.8); g.stroke(); }
 }
 
-// Cell Jr. (Torneio de Cell): mesmo tamanho, poses e mecânica do Saibaman, mas pequeno, azul com manchas
-// escuras, rosto claro, coroa de duas pontas na cabeça e asinhas nas costas. Voltado para a esquerda.
+// Cell Jr. (Torneio de Cell): mesmo tamanho, poses e mecânica do Saibaman. Atarracado e forte, armadura
+// azul-marinho (ombros, peito, cinto, canelas) com painéis azul-claro de manchas escuras (crista, barriga,
+// braços, coxas, joelhos), crista de duas abas, rosto claro com marcas roxas e queixeira amarela, mãos brancas,
+// asas escuras atrás e botas amarelas. Voltado para a esquerda.
 function traceCellJrFigure(g, pose, frame) {
-    const pele = "#3f8ee0", escuro = "#1f5aa8", claro = "#8cc4ff", linha = "#0d2350", rosto = "#e9e1f4";
+    const azul = "#4aa3e8", azulClaro = "#8fd0ff", marinho = "#16245a", marinhoClaro = "#2c3f86", linha = "#070d26";
+    const mancha = "#1a2f78", rosto = "#ecebf4", amarelo = "#f2b630";
     const sway = pose === "voar" ? Math.sin(frame / 4 * Math.PI * 2) : 0;
     g.lineJoin = "round"; g.lineCap = "round";
-    // asinhas nas costas (batendo ao voar)
-    const bate = pose === "voar" ? sway * 2 : 0;
-    g.fillStyle = "#1c3f6e"; g.strokeStyle = linha; g.lineWidth = 1;
-    g.beginPath(); g.moveTo(19, 17); g.quadraticCurveTo(30, 8 - bate, 31, 17); g.quadraticCurveTo(27, 22, 20, 21); g.closePath(); g.fill(); g.stroke();
-    g.strokeStyle = "#6fa7e6"; g.lineWidth = 0.7;
-    g.beginPath(); g.moveTo(20, 18); g.quadraticCurveTo(27, 13 - bate, 29, 17); g.stroke();
-    // pernas
-    const legs = pose === "saltar" ? [[13, 28, 12, 34, 12, 40], [18, 28, 20, 34, 20, 40]]
-        : [[13, 28, 10 + sway, 33, 12 + sway * 1.5, 39], [18, 28, 21 - sway, 33, 23 - sway * 1.5, 38]];
-    g.strokeStyle = linha; g.lineWidth = 4.4;
-    legs.forEach(l => { g.beginPath(); g.moveTo(l[0], l[1]); g.lineTo(l[2], l[3]); g.lineTo(l[4], l[5]); g.stroke(); });
-    g.strokeStyle = pele; g.lineWidth = 2.6;
-    legs.forEach(l => { g.beginPath(); g.moveTo(l[0], l[1]); g.lineTo(l[2], l[3]); g.lineTo(l[4], l[5]); g.stroke(); });
-    g.fillStyle = linha;
-    legs.forEach(l => g.fillRect(l[4] - 2, l[5] - 1, 4, 2));
-    // braço de trás
-    const armBack = pose === "saltar" ? [19, 19, 26, 15, 29, 10] : pose === "agarrar" ? [18, 20, 25, 21, 30, 19] : [18, 20, 22, 25 + sway, 21, 29 + sway];
-    g.strokeStyle = linha; g.lineWidth = 3.4;
-    g.beginPath(); g.moveTo(armBack[0], armBack[1]); g.lineTo(armBack[2], armBack[3]); g.lineTo(armBack[4], armBack[5]); g.stroke();
-    g.strokeStyle = escuro; g.lineWidth = 1.8; g.stroke();
-    // tronco: azul com o peito claro em placas e manchas escuras
-    g.fillStyle = pele; g.strokeStyle = linha; g.lineWidth = 1.3;
-    g.beginPath(); g.moveTo(11, 17); g.quadraticCurveTo(9, 23, 12, 29); g.lineTo(19, 29); g.quadraticCurveTo(22, 23, 20, 17); g.closePath(); g.fill(); g.stroke();
-    g.fillStyle = "#d9e6f7";
-    g.fillRect(12.5, 19, 5.5, 2); g.fillRect(12.5, 22, 5.5, 2); g.fillRect(13, 25, 4.5, 2);
-    g.fillStyle = linha;
-    [[19, 20], [10.8, 24], [19.5, 26]].forEach(([x, y]) => { g.beginPath(); g.arc(x, y, 0.9, 0, Math.PI * 2); g.fill(); });
-    // cabeça: coroa de duas pontas para trás (azul com manchas) e rosto claro
-    g.fillStyle = pele; g.strokeStyle = linha; g.lineWidth = 1.4;
-    g.beginPath();
-    g.moveTo(6, 10); g.quadraticCurveTo(8, 3, 15, -1); g.quadraticCurveTo(13, 3, 15, 5);
-    g.quadraticCurveTo(19, 1, 26, 0); g.quadraticCurveTo(23, 4, 24, 10);
-    g.quadraticCurveTo(23, 17, 17, 17.5); g.lineTo(10, 17); g.closePath();
-    g.fill(); g.stroke();
-    g.fillStyle = claro;
-    g.beginPath(); g.moveTo(9, 6); g.quadraticCurveTo(11, 2, 14, 0.5); g.quadraticCurveTo(12, 4, 11, 7); g.closePath(); g.fill();
-    g.fillStyle = linha;
-    [[17, 5], [21, 9], [19, 12.5], [14, 8]].forEach(([x, y]) => { g.beginPath(); g.arc(x, y, 0.9, 0, Math.PI * 2); g.fill(); });
-    g.fillStyle = rosto; g.strokeStyle = linha; g.lineWidth = 1;
-    g.beginPath(); g.moveTo(4, 9.5); g.quadraticCurveTo(4, 17, 10, 17.5); g.quadraticCurveTo(14, 17, 14, 12); g.quadraticCurveTo(12, 8, 6, 8.5); g.closePath(); g.fill(); g.stroke();
-    // olhos escuros com brilho e as marcas roxas embaixo
-    g.fillStyle = "#1a1030";
-    g.beginPath(); g.ellipse(6.8, 11.8, 1.5, 1.2, -0.2, 0, Math.PI * 2); g.fill();
-    g.beginPath(); g.ellipse(11.2, 12, 1.5, 1.2, 0.2, 0, Math.PI * 2); g.fill();
-    g.fillStyle = "#ffffff"; g.fillRect(6.3, 11.2, 0.8, 0.7); g.fillRect(10.7, 11.4, 0.8, 0.7);
-    g.strokeStyle = "#8e4fb8"; g.lineWidth = 0.8;
-    g.beginPath(); g.moveTo(6, 13.6); g.lineTo(6.6, 15.4); g.moveTo(11.6, 13.8); g.lineTo(11.2, 15.6); g.stroke();
-    g.strokeStyle = linha; g.lineWidth = 0.8;
-    g.beginPath(); g.moveTo(7.6, 16); g.quadraticCurveTo(9, 16.6, 10.6, 16); g.stroke();
-    // braço da frente
-    const armFront = pose === "saltar" ? [12, 20, 4, 17, 0, 11] : pose === "agarrar" ? [12, 20, 5, 21, 0, 19] : [12, 20, 8, 25 - sway, 7, 29 - sway];
-    g.strokeStyle = linha; g.lineWidth = 3.6;
-    g.beginPath(); g.moveTo(armFront[0], armFront[1]); g.lineTo(armFront[2], armFront[3]); g.lineTo(armFront[4], armFront[5]); g.stroke();
-    g.strokeStyle = pele; g.lineWidth = 2; g.stroke();
-    g.fillStyle = "#d9e6f7";
-    g.beginPath(); g.arc(armFront[4], armFront[5], 1.6, 0, Math.PI * 2); g.fill();
+    const manchas = (pts, r) => { g.fillStyle = mancha; pts.forEach(([x, y]) => { g.beginPath(); g.ellipse(x, y, r, r * 0.75, 0.4, 0, Math.PI * 2); g.fill(); }); };
+    const forma = (pts, cor) => { g.fillStyle = cor; g.strokeStyle = linha; g.lineWidth = 1; g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); pts.slice(1).forEach(p => g.lineTo(p[0], p[1])); g.closePath(); g.fill(); g.stroke(); };
+
+    // asas escuras atrás dos ombros (batem ao voar)
+    const bate = pose === "voar" ? sway * 1.5 : 0;
+    forma([[20, 15], [30, 11 - bate], [31, 22], [26, 26], [21, 23]], "#1b1440");
+    g.strokeStyle = "#3c2f7a"; g.lineWidth = 0.7; g.beginPath(); g.moveTo(21, 17); g.lineTo(29, 14 - bate); g.stroke();
+
+    // pernas: coxas azuis com manchas, joelheira, canela marinho e bota amarela pontuda
+    const pernas = pose === "saltar" ? [[10, 0], [17, 0]] : [[10, sway * 1.2], [17, -sway * 1.2]];
+    pernas.forEach(([px, d], i) => {
+        const x = px + d;
+        forma([[x - 0.5, 28], [x + 5, 28], [x + 4.6, 33], [x - 0.2, 33]], azul);
+        manchas([[x + 1.5, 30], [x + 3.6, 31.5]], 0.75);
+        forma([[x - 0.4, 33], [x + 4.6, 33], [x + 4.2, 37], [x, 37]], marinho);
+        g.fillStyle = azulClaro; g.beginPath(); g.arc(x + 2.2, 33.4, 1.3, 0, Math.PI * 2); g.fill();
+        forma([[x - 1.6 + (i ? 0 : -0.6), 40], [x - 0.4, 37], [x + 4.4, 37], [x + 4.8, 40]], amarelo);
+    });
+
+    // braço de trás (só aparece no ombro e na mão)
+    const atras = pose === "saltar" ? [26, 9] : pose === "agarrar" ? [29, 20] : [24, 26 + sway];
+    g.strokeStyle = linha; g.lineWidth = 4; g.beginPath(); g.moveTo(21, 18); g.lineTo(atras[0], atras[1]); g.stroke();
+    g.strokeStyle = azul; g.lineWidth = 2.6; g.stroke();
+    g.fillStyle = "#f4f4f4"; g.strokeStyle = linha; g.lineWidth = 0.8; g.beginPath(); g.arc(atras[0], atras[1], 1.8, 0, Math.PI * 2); g.fill(); g.stroke();
+
+    // tronco: barriga azul com manchas, cinto marinho, peitoral marinho largo
+    forma([[9, 21], [22, 21], [21, 28], [10, 28]], azul);
+    manchas([[12, 23.5], [16, 25], [19, 23], [13.5, 26.5]], 0.8);
+    forma([[9.5, 27], [21.5, 27], [21, 29.5], [10, 29.5]], marinho);
+    forma([[8, 14], [23, 14], [22.5, 21.5], [16, 22.5], [8.5, 21.5]], marinho);
+    g.strokeStyle = marinhoClaro; g.lineWidth = 0.8;
+    g.beginPath(); g.moveTo(15.5, 15); g.lineTo(15.5, 21.5); g.moveTo(10, 18.5); g.quadraticCurveTo(13, 20, 15, 18.5); g.moveTo(16, 18.5); g.quadraticCurveTo(19, 20, 21.5, 18.5); g.stroke();
+    // ombreiras grandes (marinho com topo azul manchado)
+    [[7.5, 15.5], [22.5, 15.5]].forEach(([ox, oy]) => {
+        g.fillStyle = marinho; g.strokeStyle = linha; g.lineWidth = 1;
+        g.beginPath(); g.ellipse(ox, oy, 4.2, 3.6, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+        g.fillStyle = azul; g.beginPath(); g.ellipse(ox, oy - 1.2, 3.4, 2, 0, Math.PI, 0); g.fill();
+        manchas([[ox - 1, oy - 2], [ox + 1.4, oy - 1.6]], 0.55);
+    });
+
+    // cabeça: crista de duas abas pontudas (azul manchado) com o meio marinho
+    forma([[7, 9], [4, -1], [11, 3.5], [15.5, 1.5], [20, 3.5], [27, -1], [24, 9], [21, 13], [10, 13]], azul);
+    manchas([[6.5, 3], [9, 6], [23.5, 3], [21.5, 6.5], [25, 6]], 0.8);
+    forma([[11.5, 4], [15.5, 1.8], [19.5, 4], [19, 8], [12, 8]], marinho);
+    g.fillStyle = marinhoClaro; g.beginPath(); g.ellipse(14.5, 4, 1.6, 0.8, -0.3, 0, Math.PI * 2); g.fill();
+    // rosto claro, olhos, marcas roxas e queixeira amarela
+    forma([[10, 7.5], [18, 7.5], [18.5, 11.5], [15.5, 14.5], [11.5, 14.5], [9.2, 11.5]], rosto);
+    g.fillStyle = "#b5142a";
+    g.beginPath(); g.ellipse(11.8, 9.6, 1.2, 0.8, -0.2, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.ellipse(15.8, 9.6, 1.2, 0.8, 0.2, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = linha; g.lineWidth = 0.7;
+    g.beginPath(); g.moveTo(10.4, 8.6); g.lineTo(13, 9); g.moveTo(17.2, 8.6); g.lineTo(14.6, 9); g.stroke();
+    g.fillStyle = "#8a3fb0";
+    g.fillRect(10.2, 10.6, 0.9, 2.4); g.fillRect(16.8, 10.6, 0.9, 2.4);
+    forma([[9.2, 11.5], [11, 12.5], [11.6, 14.6], [15.4, 14.6], [16.6, 12.5], [18.5, 11.5], [17.4, 15], [10.4, 15]], amarelo);
+    g.strokeStyle = linha; g.lineWidth = 0.6; g.beginPath(); g.moveTo(12.4, 13.2); g.lineTo(15, 13.2); g.stroke();
+
+    // braço da frente: braço azul manchado, antebraço marinho e mão branca fechada
+    const frente = pose === "saltar" ? [[5, 13], [2, 7]] : pose === "agarrar" ? [[3, 20], [-1, 19]] : [[5, 21 - sway], [4.5, 26 - sway]];
+    g.strokeStyle = linha; g.lineWidth = 4.4; g.beginPath(); g.moveTo(8, 17); g.lineTo(frente[0][0], frente[0][1]); g.stroke();
+    g.strokeStyle = azul; g.lineWidth = 3; g.stroke();
+    g.strokeStyle = linha; g.lineWidth = 4.4; g.beginPath(); g.moveTo(frente[0][0], frente[0][1]); g.lineTo(frente[1][0], frente[1][1]); g.stroke();
+    g.strokeStyle = marinho; g.lineWidth = 3; g.stroke();
+    g.fillStyle = mancha; g.beginPath(); g.arc((8 + frente[0][0]) / 2, (17 + frente[0][1]) / 2, 0.7, 0, Math.PI * 2); g.fill();
+    g.fillStyle = "#f4f4f4"; g.strokeStyle = linha; g.lineWidth = 0.8;
+    g.beginPath(); g.arc(frente[1][0], frente[1][1], 2, 0, Math.PI * 2); g.fill(); g.stroke();
 }
 
 // Na fase do Torneio de Cell os inimigos pequenos são os Cell Jr.; nas outras, Saibamans.
@@ -4793,6 +4869,27 @@ function drawPauseButton() {
     endButtonPress(pressed);
 }
 
+// Ícones dos botões de toque (desenhos do jogador, em icons/botoes/). Carregados uma vez; até ficarem prontos
+// o botão aparece no desenho simples (círculo com o nome).
+const HUD_ICON_FILES = { attack: "ataque", parry: "parry", charge: "carregar", special: "especial", transform: "transformar" };
+const hudIcons = {};
+if (typeof Image !== "undefined") {
+    for (const [key, nome] of Object.entries(HUD_ICON_FILES)) {
+        const img = new Image();
+        img.src = "icons/botoes/" + nome + ".png";
+        hudIcons[key] = img;
+    }
+}
+function getHudIcon(key) {
+    const img = hudIcons[key];
+    return img && img.complete && img.naturalWidth > 0 ? img : null;
+}
+
+// Toque: com o ki cheio (e ainda tendo transformação), o botão CARREGAR vira TRANSFORMAR.
+function canTouchTransform() {
+    return player.ki >= player.maxKi && getTransformLevel(player) < getCharacterTransformations(selectedCharacter).length;
+}
+
 function drawTouchHUD() {
     if (!isTouchDevice && gameState !== "options_hud") return;
 
@@ -4815,10 +4912,10 @@ function drawTouchHUD() {
         const btn = touchHudLayout[key];
         const isEditing = gameState === "options_hud";
         const isSelected = hudEditorSelectedBtn === key && isEditing;
-        // Botão TRANSF. acende (dourado) quando há ki suficiente e fica apagado quando não dá para usar.
-        const transformReady = key === "transform" && player.ki >= player.maxKi && getTransformLevel(player) < getCharacterTransformations(selectedCharacter).length;
+        // Com o ki cheio o CARREGAR vira TRANSFORMAR e acende (dourado); o ESPECIAL fica apagado quando não dá.
+        const transformReady = key === "charge" && !isEditing && canTouchTransform();
         const specialReady = key === "special" && canUseSpecial(player.ki, player.maxKi) && world.beamActive <= 0;
-        const transformDim = (key === "transform" && !transformReady && !isEditing) || (key === "special" && !specialReady && !isEditing);
+        const transformDim = key === "special" && !specialReady && !isEditing;
         const highlight = isSelected || transformReady || specialReady;
         const centerX = btnRect.x + btnRect.w / 2;
         const centerY = btnRect.y + btnRect.h / 2;
@@ -4838,17 +4935,34 @@ function drawTouchHUD() {
             ctx.fillStyle = highlight ? "rgba(255, 190, 40, 0.45)" : "rgba(94, 225, 255, 0.38)";
             ctx.shadowBlur = 0;
         }
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-
-        ctx.fillStyle = highlight ? "#fff1a8" : "#e8fbff";
-        ctx.font = "bold 8px 'Trebuchet MS', sans-serif";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(hudLabels[key] || key.toUpperCase(), centerX, centerY + 1);
+        const icon = getHudIcon(transformReady ? "transform" : key);
+        if (icon) {
+            // ícone do jogador (anel + círculo claro com o desenho); brilho dourado em volta quando pronto
+            if (highlight) {
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius * 1.02, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            }
+            ctx.shadowBlur = 0;
+            const lado = radius * 2.1;
+            ctx.drawImage(icon, centerX - lado / 2, centerY - lado / 2, lado, lado);
+            if (hudPressAmount > 0.5) {
+                ctx.fillStyle = "rgba(94, 225, 255, 0.25)";
+                ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, Math.PI * 2); ctx.fill();
+            }
+        } else {
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = highlight ? "#fff1a8" : "#e8fbff";
+            ctx.font = "bold 8px 'Trebuchet MS', sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(transformReady ? "TRANSF." : (hudLabels[key] || key.toUpperCase()), centerX, centerY + 1);
+        }
         if (hudPressed) ctx.restore();
     }
     ctx.restore();
@@ -4892,11 +5006,14 @@ function render() {
         ctx.translate(offsetX, offsetY);
     }
 
-    if (gameState === "tutorial") {
+    if (gameState === "tutorial" || (gameState === "paused" && pausedFromTutorial)) {
         pollGamepads(deltaTime);
-        updateTutorial(deltaTime);
-        gameplayClock += deltaTime;
+        if (gameState === "tutorial") {
+            updateTutorial(deltaTime);
+            gameplayClock += deltaTime;
+        }
         drawTutorialScreen();
+        if (gameState === "paused") drawPauseOverlay();
     }
     else if (gameState === "playing" || gameState === "paused" || gameState === "gameover") {
         pollGamepads(deltaTime);
@@ -4940,37 +5057,7 @@ function render() {
         drawTouchHUD();
 
         if (gameState === "paused") {
-            ctx.fillStyle = "rgba(0,0,0,0.7)";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            if (resumeCountdown > 0) {
-                resumeCountdown -= deltaTime;
-                if (resumeCountdown <= 0) {
-                    resumeCountdown = 0;
-                    autoPaused = false;
-                    setGameState("playing");
-                } else {
-                    ctx.fillStyle = "#fff0a6";
-                    ctx.font = "bold 72px 'Courier New', monospace";
-                    ctx.textAlign = "center";
-                    ctx.fillText(String(Math.ceil(resumeCountdown)), canvas.width / 2, 190);
-                    ctx.font = "bold 14px 'Courier New', monospace";
-                    ctx.fillStyle = "#e2e8f0";
-                    ctx.fillText("PREPARE-SE...", canvas.width / 2, 225);
-                }
-            } else {
-                if (autoPaused) {
-                    ctx.fillStyle = "#fbbf24";
-                    ctx.font = "bold 18px 'Courier New', monospace";
-                    ctx.textAlign = "center";
-                    ctx.fillText("PAUSADO AUTOMATICAMENTE", canvas.width / 2, 62);
-                    ctx.fillStyle = "#e2e8f0";
-                    ctx.font = "12px 'Courier New', monospace";
-                    ctx.fillText("TOQUE OU CLIQUE EM QUALQUER LUGAR PARA CONTINUAR", canvas.width / 2, 86);
-                }
-                drawBtnAt(MENU_LAYOUT.paused.resume, "CONTINUAR");
-                drawBtnAt(MENU_LAYOUT.paused.options, "OPÇÕES");
-                drawBtnAt(MENU_LAYOUT.paused.exit, "SAIR PARA MENU");
-            }
+            drawPauseOverlay();
         } else if (gameState === "gameover") {
             const gs = gameOverStats || { stageName: "", score, attacks: 0, parries: 0, hitsReceived: 0, items: { senzu: 0, capsule: 0, cloud: 0, staff: 0 }, isNewStageRecord: false, isNewGeneralRecord: false };
 
@@ -5436,6 +5523,7 @@ function render() {
         drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
     }
     else if (gameState === "ranking") {
+        prepareNextStageCardThumb();   // fotos das fases para os ícones das abas
         drawStageBackground();
         ctx.fillStyle = "rgba(9, 9, 21, 0.85)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -5704,6 +5792,7 @@ function render() {
         drawBtnAt(continueRect, "CONTINUAR", "#86efac", "bold 12px 'Courier New', monospace");
     }
     else if (gameState === "stage_map") {
+        prepareNextStageCardThumb();   // fotos das fases para os círculos (uma por quadro, antes de pintar a tela)
         ctx.fillStyle = "#0a1024";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         // um "céu estrelado" simples de fundo, só pra não ficar um bloco de cor sólida

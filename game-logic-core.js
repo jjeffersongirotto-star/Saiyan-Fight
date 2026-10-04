@@ -489,8 +489,8 @@ function getDefaultTouchHudLayout(viewportWidth) {
         attack:    make(648, 298, bigW, bigH),
         charge:    make(752, 308, stdW, stdH),
         special:   make(676, 205, stdW, stdH),
-        parry:     make(760, 222, stdW, stdH),
-        transform: make(556, 232, stdW, stdH)
+        parry:     make(760, 222, stdW, stdH)
+        // sem botão de transformar: com o ki cheio o CARREGAR vira TRANSFORMAR (ver drawTouchHUD em menu.js)
     };
 }
 
