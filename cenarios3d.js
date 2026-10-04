@@ -339,8 +339,38 @@ function taDrawGate(ang) {
 
 // Muro com a plateia em volta da arena (em 3D, só a parte na frente da câmera).
 const TA_PLATEIA_CORES = ["#e74c3c", "#f1c40f", "#3498db", "#2ecc71", "#ecf0f1", "#9b59b6", "#e67e22", "#34495e", "#f5cba7"];
+// Cada pedaço do muro (com as cabeças da plateia em cima) é uma textura pronta, desenhada com uma transformação
+// afim: poucas chamadas por quadro em vez de centenas de retângulos.
+const TA_PLATEIA_ALT = 26;   // altura das cabeças acima do muro
+let taPlateiaTex = null;
+function getTerraCrowdTiles() {
+    if (taPlateiaTex) return taPlateiaTex;
+    const lista = [];
+    for (let v = 0; v < 4; v++) {
+        const f = c3NovaFaixa(48, TA_MURO_ALT + TA_PLATEIA_ALT);
+        if (!f) return null;
+        const { c, g } = f;
+        for (let fil = 0; fil < 3; fil++) {
+            for (let j = 0; j < 4; j++) {
+                const x = (j + 0.5 + (fil % 2) * 0.5) / 4.5 * 48, y = TA_PLATEIA_ALT - 6 - fil * 7;
+                g.fillStyle = TA_PLATEIA_CORES[(v * 7 + j * 3 + fil * 5) % TA_PLATEIA_CORES.length];
+                g.fillRect(x - 3, y, 6, 6);
+                g.fillStyle = "#2b1d14";
+                g.fillRect(x - 2, y - 4, 4, 4);
+            }
+        }
+        g.fillStyle = v % 2 ? "#c9a07a" : "#bf966f";
+        g.fillRect(0, TA_PLATEIA_ALT, 48, TA_MURO_ALT);
+        g.fillStyle = "#8d2d22";
+        g.fillRect(0, TA_PLATEIA_ALT, 48, 3);
+        lista.push(c);
+    }
+    return (taPlateiaTex = lista);
+}
 function taDrawCrowdWall(ang) {
     const N = 72, R = TA_MURO_R, lim = CA_D - CA_PERTO * 3;
+    const tiles = getTerraCrowdTiles();
+    if (!tiles) return;
     const segs = [];
     for (let i = 0; i < N; i++) {
         const a0 = i / N * Math.PI * 2, a1 = (i + 1) / N * Math.PI * 2;
@@ -349,26 +379,21 @@ function taDrawCrowdWall(ang) {
         if (r0[1] > lim || r1[1] > lim) continue;
         segs.push({ i, a0, a1, d: (r0[1] + r1[1]) / 2 });
     }
+    const topo = CA_CHAO + TA_MURO_ALT + TA_PLATEIA_ALT;
+    ctx.save();   // mantém o tremor de tela (translate) que já está aplicado
+    const base = ctx.getTransform ? ctx.getTransform() : null;
     segs.sort((a, b) => a.d - b.d).forEach(sg => {
-        const p00 = caProj(Math.sin(sg.a0) * R, CA_CHAO, Math.cos(sg.a0) * R, ang), p01 = caProj(Math.sin(sg.a1) * R, CA_CHAO, Math.cos(sg.a1) * R, ang);
-        const p10 = caProj(Math.sin(sg.a0) * R, CA_CHAO + TA_MURO_ALT, Math.cos(sg.a0) * R, ang), p11 = caProj(Math.sin(sg.a1) * R, CA_CHAO + TA_MURO_ALT, Math.cos(sg.a1) * R, ang);
-        // plateia: cabeças coloridas por cima do muro (algumas fileiras)
-        const k = p10[3];
-        for (let f = 0; f < 3; f++) {
-            for (let j = 0; j < 4; j++) {
-                const t = (j + 0.5 + (f % 2) * 0.5) / 4.5;
-                const x = p10[0] + (p11[0] - p10[0]) * t, y = p10[1] + (p11[1] - p10[1]) * t - (6 + f * 7) * k;
-                ctx.fillStyle = TA_PLATEIA_CORES[(sg.i * 7 + j * 3 + f * 5) % TA_PLATEIA_CORES.length];
-                ctx.fillRect(x - 3 * k, y, 6 * k, 6 * k);
-                ctx.fillStyle = "#2b1d14";
-                ctx.fillRect(x - 2 * k, y - 4 * k, 4 * k, 4 * k);
-            }
-        }
-        ctx.fillStyle = sg.i % 2 ? "#c9a07a" : "#bf966f";
-        ctx.beginPath(); ctx.moveTo(p10[0], p10[1]); ctx.lineTo(p11[0], p11[1]); ctx.lineTo(p01[0], p01[1]); ctx.lineTo(p00[0], p00[1]); ctx.closePath(); ctx.fill();
-        ctx.strokeStyle = "#8d2d22"; ctx.lineWidth = Math.max(1, 2.5 * k);
-        ctx.beginPath(); ctx.moveTo(p10[0], p10[1]); ctx.lineTo(p11[0], p11[1]); ctx.stroke();
+        const TL = caProj(Math.sin(sg.a0) * R, topo, Math.cos(sg.a0) * R, ang), TR = caProj(Math.sin(sg.a1) * R, topo, Math.cos(sg.a1) * R, ang);
+        const BL = caProj(Math.sin(sg.a0) * R, CA_CHAO, Math.cos(sg.a0) * R, ang);
+        const tex = tiles[sg.i % tiles.length];
+        // 2% a mais de largura para não aparecer fresta entre pedaços vizinhos
+        const ux = (TR[0] - TL[0]) * 1.02, uy = (TR[1] - TL[1]) * 1.02;
+        if (base) ctx.setTransform(base);
+        ctx.transform(ux / tex.width, uy / tex.width, (BL[0] - TL[0]) / tex.height, (BL[1] - TL[1]) / tex.height, TL[0], TL[1]);
+        ctx.drawImage(tex, 0, 0);
+        if (!base) ctx.restore(), ctx.save();
     });
+    ctx.restore();
 }
 
 // Guarda-sol azul (de pé, igual de todos os lados).

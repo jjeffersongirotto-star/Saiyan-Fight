@@ -610,3 +610,20 @@ test("Nave de Freeza: a câmera dá a volta na nave e recomeça pela frente", ()
     assert.ok(Math.abs(getFreezaShipOrbitAngle(FREEZA_SHIP_LAP_SCROLL / 2) - Math.PI) < 1e-9);
     assert.equal(getFreezaShipOrbitAngle(FREEZA_SHIP_LAP_SCROLL), 0);
 });
+
+test("Fases que giram (Kaioh, Torneio, Supremo Kaioh): o ângulo dá a volta e recomeça", () => {
+    const { getStageLapAngle, KAIO_PLANET_LAP_SCROLL, TERRA_ARENA_LAP_SCROLL, KAIOSHIN_LAP_SCROLL } = require("../game-logic-core.js");
+    for (const volta of [KAIO_PLANET_LAP_SCROLL, TERRA_ARENA_LAP_SCROLL, KAIOSHIN_LAP_SCROLL]) {
+        assert.equal(getStageLapAngle(0, volta), 0);
+        assert.ok(Math.abs(getStageLapAngle(volta / 2, volta) - Math.PI) < 1e-9);
+        assert.equal(getStageLapAngle(volta, volta), 0);
+        assert.ok(getStageLapAngle(-10, volta) >= 0, "nunca negativo");
+    }
+});
+
+test("Fases que andam para frente (Namek): o caminho só cresce", () => {
+    const { getForwardTravel } = require("../game-logic-core.js");
+    assert.equal(getForwardTravel(0), 0);
+    assert.equal(getForwardTravel(-50), 0);
+    assert.ok(getForwardTravel(1000) > getForwardTravel(500));
+});
