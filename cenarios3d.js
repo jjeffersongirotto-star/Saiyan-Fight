@@ -665,3 +665,129 @@ function drawNamekStage(andado) {
     nfFaixasDoChao(andado, "rgba(30, 70, 160, 0.16)");
     nfPercorrer(andado, nmFileira, nmDesenhar);
 }
+
+// ---------- Namek Prestes a Explodir ----------
+// Mesma câmera andando para a frente. Céu verde-escuro com raios, colunas de lava com fumaça escura, brasas e
+// pedras caindo, ilhas de pedra rachadas na água e arcos de lava entre elas.
+let nxCeu = null;
+function getNamekExplodingSky() {
+    if (nxCeu) return nxCeu;
+    const f = c3NovaFaixa(canvas.width, NF.HY + 6);
+    if (!f) return null;
+    const { c, g } = f;
+    const ceu = g.createLinearGradient(0, 0, 0, NF.HY);
+    ceu.addColorStop(0, "#14361f"); ceu.addColorStop(0.45, "#2f6b35"); ceu.addColorStop(0.85, "#8fa74c"); ceu.addColorStop(1, "#d6c070");
+    g.fillStyle = ceu;
+    g.fillRect(0, 0, c.width, c.height);
+    // nuvens de tempestade escuras
+    g.fillStyle = "rgba(20, 35, 25, 0.55)";
+    for (let i = 0; i < 9; i++) {
+        const x = c3Hash(i + 500) * c.width, y = 10 + c3Hash(i + 501) * 60, r = 30 + c3Hash(i + 502) * 40;
+        g.beginPath(); g.ellipse(x, y, r * 2.2, r * 0.5, 0, 0, Math.PI * 2); g.fill();
+    }
+    // terra rachada ao longe com brilho de lava
+    g.fillStyle = "#5e5a4a";
+    g.beginPath(); g.moveTo(0, NF.HY + 2);
+    for (let x = 0; x <= c.width; x += 12) g.lineTo(x, NF.HY - 4 - Math.abs(Math.sin(x * 0.02)) * 10);
+    g.lineTo(c.width, NF.HY + 2); g.closePath(); g.fill();
+    nxCeu = c;
+    return c;
+}
+
+function nxFileira(n) {
+    const itens = [], h = (k) => c3Hash(n * 17 + k + 1000);
+    if (h(1) < 0.5) itens.push({ tipo: "ilha", x: (h(2) * 2 - 1) * 900, larg: 60 + h(3) * 130, racha: h(4) < 0.5, dz: h(5) * 70 });
+    if (h(6) < 0.13) {
+        const lado = h(7) < 0.5 ? -1 : 1;
+        itens.push({ tipo: "coluna", x: lado * (260 + h(8) * 700), alto: 300 + h(9) * 260, larg: 26 + h(10) * 22, fase: h(11) * 6, dz: h(12) * 60 });
+    }
+    if (h(13) < 0.08) itens.push({ tipo: "arco", x: (h(14) * 2 - 1) * 700, abre: 120 + h(15) * 200, alto: 90 + h(16) * 120, dz: h(17) * 60 });
+    if (h(18) < 0.5) itens.push({ tipo: "onda", x: (h(19) * 2 - 1) * 900, larg: 80 + h(20) * 200, dz: h(21) * 80 });
+    return itens;
+}
+
+function nxDesenhar(it, z) {
+    if (z < NF.PERTO) return;
+    const [x, y, k] = nfProj(it.x, 0, z);
+    const t = typeof gameplayClock === "number" ? gameplayClock : 0;
+    if (it.tipo === "onda") {
+        ctx.fillStyle = "rgba(150, 220, 220, 0.25)";
+        ctx.beginPath(); ctx.ellipse(x, y, it.larg * k, it.larg * 0.06 * k + 0.5, 0, 0, Math.PI * 2); ctx.fill();
+    } else if (it.tipo === "ilha") {
+        const L = it.larg * k, A = 18 * k, topo = L * 0.18;
+        if (x + L < -40 || x - L > canvas.width + 40) return;
+        // lado escuro e tampo azulado da pedra
+        ctx.fillStyle = "#3a2c44";
+        ctx.beginPath(); ctx.ellipse(x, y, L, topo, 0, 0, Math.PI); ctx.lineTo(x - L, y - A); ctx.ellipse(x, y - A, L, topo, 0, Math.PI, 0, true); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = "#5b86a8";
+        ctx.beginPath(); ctx.ellipse(x, y - A, L, topo, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "rgba(255, 255, 255, 0.18)";
+        ctx.beginPath(); ctx.ellipse(x - L * 0.25, y - A - topo * 0.2, L * 0.45, topo * 0.4, 0, 0, Math.PI * 2); ctx.fill();
+        if (it.racha) {
+            ctx.strokeStyle = "#ff8a1e"; ctx.lineWidth = Math.max(1, 2 * k);
+            ctx.beginPath(); ctx.moveTo(x - L * 0.6, y - A); ctx.lineTo(x - L * 0.1, y - A + topo * 0.3); ctx.lineTo(x + L * 0.2, y - A - topo * 0.2); ctx.lineTo(x + L * 0.6, y - A + topo * 0.1); ctx.stroke();
+        }
+    } else if (it.tipo === "coluna") {
+        const topo = nfProj(it.x, it.alto, z), L = it.larg * k;
+        if (x + L * 6 < -40 || x - L * 6 > canvas.width + 40) return;
+        const brilho = 0.75 + Math.sin(t * 3 + it.fase) * 0.25;
+        // fumaça escura subindo em volta e por cima
+        ctx.fillStyle = "rgba(40, 26, 24, 0.85)";
+        for (let i = 0; i < 7; i++) {
+            const fy = topo[1] + (y - topo[1]) * (i / 9), fx = x + Math.sin(i * 1.7 + it.fase + t * 0.5) * L * 1.2;
+            ctx.beginPath(); ctx.arc(fx, fy, L * (1.6 + (6 - i) * 0.35), 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.fillStyle = "rgba(70, 50, 55, 0.7)";
+        for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.arc(x + (i - 2) * L * 1.4, topo[1] - L * (1 + (i % 2)), L * 1.8, 0, Math.PI * 2); ctx.fill(); }
+        // a lava subindo
+        const lava = ctx.createLinearGradient(x - L, 0, x + L, 0);
+        lava.addColorStop(0, "#b3160d"); lava.addColorStop(0.5, `rgba(255, ${Math.round(150 * brilho)}, 40, 1)`); lava.addColorStop(1, "#b3160d");
+        ctx.fillStyle = lava;
+        ctx.fillRect(x - L / 2, topo[1], L, y - topo[1]);
+        ctx.fillStyle = "#ffd36b";
+        for (let i = 0; i < 4; i++) ctx.fillRect(x - L * 0.1 + Math.sin(i * 2 + t) * L * 0.2, topo[1] + (y - topo[1]) * (i / 4 + 0.05), L * 0.18, (y - topo[1]) * 0.12);
+        // base espalhando no chão
+        ctx.fillStyle = "#d4260f";
+        ctx.beginPath(); ctx.ellipse(x, y, L * 2.2, L * 0.4, 0, 0, Math.PI * 2); ctx.fill();
+    } else if (it.tipo === "arco") {
+        const a = nfProj(it.x - it.abre / 2, 0, z), b = nfProj(it.x + it.abre / 2, 0, z), cima = nfProj(it.x, it.alto * 1.8, z);
+        if (Math.max(a[0], b[0]) < -40 || Math.min(a[0], b[0]) > canvas.width + 40) return;
+        ctx.lineCap = "round";
+        ctx.strokeStyle = "rgba(255, 90, 20, 0.55)"; ctx.lineWidth = Math.max(2, 9 * k);
+        ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.quadraticCurveTo(cima[0], cima[1], b[0], b[1]); ctx.stroke();
+        ctx.strokeStyle = "#ffd36b"; ctx.lineWidth = Math.max(1, 3 * k); ctx.stroke();
+    }
+}
+
+function drawNamekExplodingStage(andado) {
+    const ceu = getNamekExplodingSky();
+    if (ceu) ctx.drawImage(ceu, 0, 0); else { ctx.fillStyle = "#2f6b35"; ctx.fillRect(0, 0, canvas.width, NF.HY); }
+    const t = typeof gameplayClock === "number" ? gameplayClock : 0;
+    // raio de vez em quando (com clarão rápido)
+    const ciclo = t % 3.2;
+    if (ciclo < 0.18) {
+        const semente = Math.floor(t / 3.2);
+        ctx.strokeStyle = "rgba(255, 255, 230, 0.95)"; ctx.lineWidth = 2;
+        ctx.beginPath();
+        let rx = 120 + c3Hash(semente) * 560, ry = 0;
+        ctx.moveTo(rx, ry);
+        for (let i = 0; i < 7; i++) { rx += (c3Hash(semente * 7 + i) - 0.5) * 50; ry += NF.HY / 7; ctx.lineTo(rx, ry); }
+        ctx.stroke();
+        ctx.fillStyle = `rgba(230, 255, 210, ${0.18 * (1 - ciclo / 0.18)})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    // água escura, mais clara lá longe
+    const agua = ctx.createLinearGradient(0, NF.HY, 0, canvas.height);
+    agua.addColorStop(0, "#7fb3a8"); agua.addColorStop(0.2, "#3f8590"); agua.addColorStop(1, "#14424f");
+    ctx.fillStyle = agua;
+    ctx.fillRect(0, NF.HY + 2, canvas.width, canvas.height - NF.HY);
+    nfFaixasDoChao(andado, "rgba(10, 40, 50, 0.2)");
+    nfPercorrer(andado, nxFileira, nxDesenhar);
+    // brasas e pedrinhas caindo do céu (na frente de tudo do cenário)
+    for (let i = 0; i < 26; i++) {
+        const vel = 40 + c3Hash(i + 700) * 70, x = (c3Hash(i + 701) * canvas.width + Math.sin(t + i) * 10) % canvas.width;
+        const y = ((c3Hash(i + 702) * canvas.height + t * vel) % (canvas.height + 30)) - 15;
+        if (i % 5 === 0) { ctx.fillStyle = "#2b2324"; ctx.beginPath(); ctx.ellipse(x, y, 3, 4, 0, 0, Math.PI * 2); ctx.fill(); }
+        else { ctx.fillStyle = i % 2 ? "#ffb43b" : "#ff7a1e"; ctx.fillRect(x, y, 2, 5); }
+    }
+}

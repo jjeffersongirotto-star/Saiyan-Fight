@@ -3718,69 +3718,7 @@ function drawStageBackground() {
         drawKaioshinStage(getStageLapAngle(scroll, KAIOSHIN_LAP_SCROLL));
     }
     else if (selectedStage === "namek_explosao") {
-        // Namek prestes a explodir: o mesmo verde de Namek, mas o céu virou vermelho, o chão racha e pedaços
-        // de rocha voam ao fundo — a corrida contra o tempo do fim da saga Freeza.
-        let skyGrad = ctx.createLinearGradient(0, 0, 0, 220);
-        skyGrad.addColorStop(0, "#3a0000");
-        skyGrad.addColorStop(0.5, "#9a1a10");
-        skyGrad.addColorStop(1, "#ff7a2a");
-        ctx.fillStyle = skyGrad;
-        ctx.fillRect(0, 0, canvas.width, 220);
-
-        // dois sóis de Namek, agora num céu incendiado
-        ctx.fillStyle = "rgba(255, 220, 120, 0.95)";
-        ctx.beginPath(); ctx.arc(150, 45, 25, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(680, 35, 18, 0, Math.PI * 2); ctx.fill();
-
-        // fragmentos do planeta se despedaçando, caindo ao fundo
-        for (let i = 0; i < 10; i++) {
-            const fx = ((i * 97 + scroll * (0.3 + (i % 3) * 0.15)) % (canvas.width + 60)) - 30;
-            const fy = 20 + (i * 53) % 160;
-            const fs = 4 + (i % 4) * 3;
-            ctx.save();
-            ctx.translate(fx, fy);
-            ctx.rotate(i * 0.7);
-            ctx.fillStyle = "#3a1a10";
-            ctx.fillRect(-fs / 2, -fs / 2, fs, fs);
-            ctx.restore();
-        }
-
-        ctx.fillStyle = "#4a1510";
-        world.mountainsFar.forEach(m => {
-            let x = ((m.x - scroll * 0.4) % (canvas.width + 200)) - 100;
-            ctx.beginPath();
-            ctx.ellipse(x + m.w / 2, 190, m.w / 2, m.h, 0, Math.PI, 0);
-            ctx.fill();
-        });
-
-        // fumaça/lava subindo em colunas
-        for (let i = 0; i < 5; i++) {
-            const sx2 = ((i * 170 - scroll * 0.9) % (canvas.width + 100)) - 40;
-            const grad = ctx.createLinearGradient(0, 130, 0, 195);
-            grad.addColorStop(0, "rgba(255,140,40,0)");
-            grad.addColorStop(1, "rgba(255,90,20,0.65)");
-            ctx.fillStyle = grad;
-            ctx.fillRect(sx2, 130, 14, 65);
-        }
-
-        let floorGrad = ctx.createLinearGradient(0, 190, 0, canvas.height);
-        floorGrad.addColorStop(0, "#5a1a0a");
-        floorGrad.addColorStop(1, "#1a0500");
-        ctx.fillStyle = floorGrad;
-        ctx.fillRect(0, 190, canvas.width, canvas.height - 190);
-
-        // rachaduras incandescentes no chão
-        ctx.strokeStyle = "#ff5a1a";
-        ctx.lineWidth = 2;
-        for (let i = 0; i < 6; i++) {
-            const cx2 = ((i * 140 - scroll * 1.1) % (canvas.width + 100)) - 40;
-            ctx.beginPath();
-            ctx.moveTo(cx2, 195);
-            ctx.lineTo(cx2 + 18, 230);
-            ctx.lineTo(cx2 - 6, 260);
-            ctx.lineTo(cx2 + 12, canvas.height - 10);
-            ctx.stroke();
-        }
+        drawNamekExplodingStage(getForwardTravel(scroll));
     }
     else if (selectedStage === "cell_games") {
         drawCellArenaStage(getCellArenaOrbitAngle(scroll));
