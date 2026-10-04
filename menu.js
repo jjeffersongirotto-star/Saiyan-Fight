@@ -3700,127 +3700,14 @@ function drawStageBackground() {
     let scroll = world.stageScrollX;
 
     if (selectedStage === "terra") {
-        let skyGrad = ctx.createLinearGradient(0, 0, 0, 220);
-        skyGrad.addColorStop(0, "#3388ff");
-        skyGrad.addColorStop(0.7, "#88ccff");
-        skyGrad.addColorStop(1, "#e0f0ff");
-        ctx.fillStyle = skyGrad;
-        ctx.fillRect(0, 0, canvas.width, 220);
-
-        ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
-        for (let i = 0; i < 5; i++) {
-            let cx = ((i * 220 - scroll * 0.3) % (canvas.width + 100)) - 50;
-            ctx.beginPath();
-            ctx.arc(cx, 35, 22, 0, Math.PI * 2);
-            ctx.arc(cx + 25, 30, 28, 0, Math.PI * 2);
-            ctx.arc(cx + 55, 35, 20, 0, Math.PI * 2);
-            ctx.fill();
-        }
-
-        ctx.fillStyle = "#cc3300";
-        ctx.fillRect(0, 160, canvas.width, 30);
-        ctx.fillStyle = "#ffcc00";
-        ctx.fillRect(0, 160, canvas.width, 4);
-
-        ctx.fillStyle = "#ffaa00";
-        for (let x = - (scroll * 0.8 % 40); x < canvas.width + 40; x += 40) {
-            ctx.beginPath();
-            ctx.moveTo(x, 160);
-            ctx.lineTo(x + 20, 145);
-            ctx.lineTo(x + 40, 160);
-            ctx.fill();
-        }
-
-        let floorGrad = ctx.createLinearGradient(0, 190, 0, canvas.height);
-        floorGrad.addColorStop(0, "#d2b48c");
-        floorGrad.addColorStop(1, "#8b5a2b");
-        ctx.fillStyle = floorGrad;
-        ctx.fillRect(0, 190, canvas.width, canvas.height - 190);
-
-        ctx.strokeStyle = "#5c3a21";
-        ctx.lineWidth = 2;
-        let pOffset = (scroll * 1.5) % 60;
-        for (let x = -pOffset; x < canvas.width + 60; x += 60) {
-            ctx.beginPath();
-            ctx.moveTo(x, 190);
-            ctx.lineTo(x - 30, canvas.height);
-            ctx.stroke();
-        }
-        ctx.beginPath();
-        ctx.moveTo(0, 230); ctx.lineTo(canvas.width, 230);
-        ctx.moveTo(0, 280); ctx.lineTo(canvas.width, 280);
-        ctx.stroke();
-    } 
+        drawTerraArenaStage(getStageLapAngle(scroll, TERRA_ARENA_LAP_SCROLL));
+    }
     else if (selectedStage === "namek") {
-        let skyGrad = ctx.createLinearGradient(0, 0, 0, 220);
-        skyGrad.addColorStop(0, "#44aa77");
-        skyGrad.addColorStop(0.6, "#77ddaa");
-        skyGrad.addColorStop(1, "#aaffcc");
-        ctx.fillStyle = skyGrad;
-        ctx.fillRect(0, 0, canvas.width, 220);
-
-        ctx.fillStyle = "rgba(255, 255, 200, 0.9)";
-        ctx.beginPath(); ctx.arc(150, 45, 25, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(220, 70, 15, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(680, 35, 18, 0, Math.PI * 2); ctx.fill();
-
-        ctx.fillStyle = "#226666";
-        world.mountainsFar.forEach(m => {
-            let x = ((m.x - scroll * 0.4) % (canvas.width + 200)) - 100;
-            ctx.beginPath();
-            ctx.ellipse(x + m.w / 2, 190, m.w / 2, m.h, 0, Math.PI, 0);
-            ctx.fill();
-        });
-
-        ctx.fillStyle = "#114444";
-        for (let i = 0; i < 6; i++) {
-            let ax = ((i * 180 - scroll * 0.8) % (canvas.width + 120)) - 40;
-            ctx.fillRect(ax + 12, 140, 6, 50);
-            ctx.beginPath();
-            ctx.arc(ax + 15, 135, 22, 0, Math.PI * 2);
-            ctx.fill();
-        }
-
-        let floorGrad = ctx.createLinearGradient(0, 190, 0, canvas.height);
-        floorGrad.addColorStop(0, "#20b2aa");
-        floorGrad.addColorStop(1, "#005555");
-        ctx.fillStyle = floorGrad;
-        ctx.fillRect(0, 190, canvas.width, canvas.height - 190);
-
-        ctx.fillStyle = "#00ffff";
-        ctx.fillRect(0, 310, canvas.width, 40);
-    } 
+        drawNamekStage(getForwardTravel(scroll));
+    }
     else if (selectedStage === "kaio") {
-        let skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-        skyGrad.addColorStop(0, "#050015");
-        skyGrad.addColorStop(0.5, "#1a0033");
-        skyGrad.addColorStop(1, "#330055");
-        ctx.fillStyle = skyGrad;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        ctx.fillStyle = "#ffffff";
-        for (let i = 0; i < 60; i++) {
-            let sx = (i * 137 + scroll * 0.1) % canvas.width;
-            let sy = (i * 93) % 200;
-            let sz = (i % 3) + 1;
-            ctx.fillRect(sx, sy, sz, sz);
-        }
-
-        ctx.fillStyle = "#4c9a2a";
-        ctx.beginPath();
-        ctx.arc(400, 520, 360, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.lineWidth = 6;
-        ctx.strokeStyle = "#2d5a1e";
-        ctx.stroke();
-
-        let cx = 350 - (scroll * 0.5 % 100);
-        ctx.fillStyle = "#ffffff"; ctx.fillRect(cx, 130, 50, 35);
-        ctx.fillStyle = "#ff3300"; ctx.beginPath(); ctx.arc(cx + 25, 130, 28, Math.PI, 0); ctx.fill();
-        ctx.fillStyle = "#ffcc00"; ctx.fillRect(cx + 38, 145, 12, 20);
-        ctx.fillStyle = "#5c4033"; ctx.fillRect(cx + 80, 125, 10, 40);
-        ctx.fillStyle = "#228b22"; ctx.beginPath(); ctx.arc(cx + 85, 115, 25, 0, Math.PI * 2); ctx.fill();
-    } 
+        drawKaioPlanetStage(getStageLapAngle(scroll, KAIO_PLANET_LAP_SCROLL));
+    }
     else if (selectedStage === "time_room") {
         drawTimeRoomStage(getTimeRoomOrbitAngle(scroll));
     } 
@@ -3828,105 +3715,10 @@ function drawStageBackground() {
         drawFreezaShipStage(getFreezaShipOrbitAngle(scroll));
     }
     else if (selectedStage === "kaioshin") {
-        let skyGrad = ctx.createLinearGradient(0, 0, 0, 220);
-        skyGrad.addColorStop(0, "#ffb6c1");
-        skyGrad.addColorStop(0.5, "#e6e6fa");
-        skyGrad.addColorStop(1, "#b0e0e6");
-        ctx.fillStyle = skyGrad;
-        ctx.fillRect(0, 0, canvas.width, 220);
-
-        ctx.fillStyle = "rgba(255, 240, 245, 0.85)";
-        ctx.beginPath(); ctx.arc(600, 60, 40, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = "rgba(221, 160, 221, 0.5)";
-        ctx.beginPath(); ctx.arc(180, 80, 25, 0, Math.PI * 2); ctx.fill();
-
-        ctx.fillStyle = "#9370db";
-        world.mountainsFar.forEach(m => {
-            let x = ((m.x - scroll * 0.3) % (canvas.width + 200)) - 100;
-            ctx.beginPath();
-            ctx.moveTo(x, 190);
-            ctx.lineTo(x + m.w / 2, 190 - m.h * 1.2);
-            ctx.lineTo(x + m.w, 190);
-            ctx.fill();
-        });
-
-        ctx.fillStyle = "#ffd700";
-        for (let i = 0; i < 5; i++) {
-            let kx = ((i * 200 - scroll * 0.7) % (canvas.width + 100)) - 30;
-            ctx.fillRect(kx + 10, 140, 5, 50);
-            ctx.beginPath(); ctx.arc(kx + 12, 130, 20, 0, Math.PI * 2); ctx.fill();
-        }
-
-        let floorGrad = ctx.createLinearGradient(0, 190, 0, canvas.height);
-        floorGrad.addColorStop(0, "#ba55d3");
-        floorGrad.addColorStop(1, "#4b0082");
-        ctx.fillStyle = floorGrad;
-        ctx.fillRect(0, 190, canvas.width, canvas.height - 190);
+        drawKaioshinStage(getStageLapAngle(scroll, KAIOSHIN_LAP_SCROLL));
     }
     else if (selectedStage === "namek_explosao") {
-        // Namek prestes a explodir: o mesmo verde de Namek, mas o céu virou vermelho, o chão racha e pedaços
-        // de rocha voam ao fundo — a corrida contra o tempo do fim da saga Freeza.
-        let skyGrad = ctx.createLinearGradient(0, 0, 0, 220);
-        skyGrad.addColorStop(0, "#3a0000");
-        skyGrad.addColorStop(0.5, "#9a1a10");
-        skyGrad.addColorStop(1, "#ff7a2a");
-        ctx.fillStyle = skyGrad;
-        ctx.fillRect(0, 0, canvas.width, 220);
-
-        // dois sóis de Namek, agora num céu incendiado
-        ctx.fillStyle = "rgba(255, 220, 120, 0.95)";
-        ctx.beginPath(); ctx.arc(150, 45, 25, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(680, 35, 18, 0, Math.PI * 2); ctx.fill();
-
-        // fragmentos do planeta se despedaçando, caindo ao fundo
-        for (let i = 0; i < 10; i++) {
-            const fx = ((i * 97 + scroll * (0.3 + (i % 3) * 0.15)) % (canvas.width + 60)) - 30;
-            const fy = 20 + (i * 53) % 160;
-            const fs = 4 + (i % 4) * 3;
-            ctx.save();
-            ctx.translate(fx, fy);
-            ctx.rotate(i * 0.7);
-            ctx.fillStyle = "#3a1a10";
-            ctx.fillRect(-fs / 2, -fs / 2, fs, fs);
-            ctx.restore();
-        }
-
-        ctx.fillStyle = "#4a1510";
-        world.mountainsFar.forEach(m => {
-            let x = ((m.x - scroll * 0.4) % (canvas.width + 200)) - 100;
-            ctx.beginPath();
-            ctx.ellipse(x + m.w / 2, 190, m.w / 2, m.h, 0, Math.PI, 0);
-            ctx.fill();
-        });
-
-        // fumaça/lava subindo em colunas
-        for (let i = 0; i < 5; i++) {
-            const sx2 = ((i * 170 - scroll * 0.9) % (canvas.width + 100)) - 40;
-            const grad = ctx.createLinearGradient(0, 130, 0, 195);
-            grad.addColorStop(0, "rgba(255,140,40,0)");
-            grad.addColorStop(1, "rgba(255,90,20,0.65)");
-            ctx.fillStyle = grad;
-            ctx.fillRect(sx2, 130, 14, 65);
-        }
-
-        let floorGrad = ctx.createLinearGradient(0, 190, 0, canvas.height);
-        floorGrad.addColorStop(0, "#5a1a0a");
-        floorGrad.addColorStop(1, "#1a0500");
-        ctx.fillStyle = floorGrad;
-        ctx.fillRect(0, 190, canvas.width, canvas.height - 190);
-
-        // rachaduras incandescentes no chão
-        ctx.strokeStyle = "#ff5a1a";
-        ctx.lineWidth = 2;
-        for (let i = 0; i < 6; i++) {
-            const cx2 = ((i * 140 - scroll * 1.1) % (canvas.width + 100)) - 40;
-            ctx.beginPath();
-            ctx.moveTo(cx2, 195);
-            ctx.lineTo(cx2 + 18, 230);
-            ctx.lineTo(cx2 - 6, 260);
-            ctx.lineTo(cx2 + 12, canvas.height - 10);
-            ctx.stroke();
-        }
+        drawNamekExplodingStage(getForwardTravel(scroll));
     }
     else if (selectedStage === "cell_games") {
         drawCellArenaStage(getCellArenaOrbitAngle(scroll));
@@ -4691,9 +4483,9 @@ function drawScreenFlash() {
     ctx.restore();
 }
 
-// Fases de fundo claro (Sala do Tempo, toda branca): placas escuras translúcidas atrás do placar do topo,
+// Fases de fundo claro (céu claro, nuvens, luas ou a Sala do Tempo toda branca): placas escuras translúcidas atrás do placar do topo,
 // senão os textos brancos/claros somem no fundo.
-const STAGES_FUNDO_CLARO = ["time_room", "cell_games", "freeza_ship"];
+const STAGES_FUNDO_CLARO = ["terra", "kaio", "namek", "time_room", "cell_games", "freeza_ship", "kaioshin"];
 
 function drawHUD() {
     ctx.save();

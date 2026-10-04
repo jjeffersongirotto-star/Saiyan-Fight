@@ -585,6 +585,20 @@ function getFreezaShipOrbitAngle(scroll) {
     return v / FREEZA_SHIP_LAP_SCROLL * Math.PI * 2;
 }
 
+// Ângulo de uma volta completa para as fases em 3D que giram (0 → 2π a cada `volta` de avanço, e recomeça).
+function getStageLapAngle(scroll, volta) {
+    const v = ((scroll % volta) + volta) % volta;
+    return v / volta * Math.PI * 2;
+}
+const KAIO_PLANET_LAP_SCROLL = 6000;   // Planeta do Sr. Kaioh: ~67 s por volta
+const TERRA_ARENA_LAP_SCROLL = 9000;   // Torneio de Artes Marciais: ~100 s
+const KAIOSHIN_LAP_SCROLL = 10800;     // Planeta Supremo Kaioh: ~2 min
+// Fases que andam para a frente (Namek): distância percorrida pela câmera.
+const NAMEK_FORWARD_SPEED = 1.4;
+function getForwardTravel(scroll) {
+    return Math.max(0, scroll) * NAMEK_FORWARD_SPEED;
+}
+
 // Música de cada fase: um tema original do jogo para cada uma das 8 fases — ver BGM_THEMES em audio.js.
 const STAGE_MUSIC_ERA = {
     terra: "classico", kaio: "kaio", namek: "namek", freeza_ship: "freeza",
@@ -666,6 +680,12 @@ if (typeof module !== "undefined" && module.exports) {
         CELL_ARENA_LAP_SCROLL,
         getCellArenaOrbitAngle,
         FREEZA_SHIP_LAP_SCROLL,
-        getFreezaShipOrbitAngle
+        getFreezaShipOrbitAngle,
+        getStageLapAngle,
+        KAIO_PLANET_LAP_SCROLL,
+        TERRA_ARENA_LAP_SCROLL,
+        KAIOSHIN_LAP_SCROLL,
+        NAMEK_FORWARD_SPEED,
+        getForwardTravel
     };
 }
