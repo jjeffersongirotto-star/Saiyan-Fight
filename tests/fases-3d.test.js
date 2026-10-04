@@ -32,9 +32,13 @@ for (const [id, [chamada, volta]] of Object.entries(fases)) {
     check(`${id}: desenha vários pontos da volta/caminho sem erro`, ok);
 }
 
-check("Kaioh: a rua fica no equador (horizontal) e o planeta gira", run(`(() => {
-    const a = kpProj(0, 0, 0), b = kpProj(0, 0.3, 0), c = kpProj(0, 0, 0.3);
-    return Math.abs(a.y - b.y) < 20 && Math.abs(a.x - c.x) > 10;
+check("Kaioh: a rua cruza o planeta inclinada (sobe para a direita) e o planeta gira", run(`(() => {
+    const a = kpProj(0, 0, 0), b = kpProj(0, 0.4, 0), c = kpProj(0, 0, 0.3);
+    return b.x > a.x && b.y < a.y - 10 && Math.abs(a.x - c.x) > 10;
+})()`));
+check("Kaioh: o carro está na pista e a casa logo ao lado", run(`(() => {
+    const carro = KP_COISAS.find(o => o.tipo === "carro"), casas = KP_COISAS.filter(o => o.tipo === "casa");
+    return Math.abs(carro.lat) < 0.1 && casas.every(c => c.lat > 0.12 && c.lat < 0.35);
 })()`));
 check("Namek: o caminho é sempre o mesmo (mesma fileira, mesmas árvores)", run("JSON.stringify(nmFileira(37)) === JSON.stringify(nmFileira(37))"));
 check("Namek explodindo: o caminho é sempre o mesmo", run("JSON.stringify(nxFileira(37)) === JSON.stringify(nxFileira(37))"));
