@@ -277,6 +277,14 @@ function describePadBinding(list) {
 
 // Converte um Gamepad em "intenções". Movimento: analógico esquerdo ou direcional (fixos).
 // Ações do jogo seguem `bindings`. Menus usam sempre cruz (confirma) e bola (volta), para não travar se remapear.
+// Sensibilidade do analógico (1 = pouca … 5 = muita; 3 = padrão): quanto o analógico precisa inclinar para mover.
+const PAD_SENSITIVITY_MIN = 1, PAD_SENSITIVITY_MAX = 5, PAD_SENSITIVITY_DEFAULT = 3;
+function getPadStickThreshold(level) {
+    const n = Math.round(Number(level));
+    const nivel = Number.isFinite(n) ? Math.max(PAD_SENSITIVITY_MIN, Math.min(PAD_SENSITIVITY_MAX, n)) : PAD_SENSITIVITY_DEFAULT;
+    return [0.6, 0.5, 0.4, 0.3, 0.2][nivel - 1];
+}
+
 function getGamepadIntent(pad, threshold = 0.4, bindings = DEFAULT_PAD_BINDINGS) {
     const none = {
         up: false, down: false, left: false, right: false, attack: false, charge: false, transform: false,
@@ -643,6 +651,8 @@ function getStageMusicEra(stageId) {
 
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
+        getPadStickThreshold,
+        PAD_SENSITIVITY_DEFAULT,
         chooseControlsTestOwner,
         getScrollToRevealRow,
         removeBackgroundColor,

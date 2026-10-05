@@ -50,6 +50,7 @@ const ultimo = h2.run("getFilteredCharacters()[getFilteredCharacters().length - 
 const r = h2.run("getCharacterCardRect(getFilteredCharacters().length - 1)");
 h2.check("depois de rolar, o último cartão fica inteiro dentro da tela", r.y + r.h <= 350);
 h2.run(`handleMenuClick(${r.x + r.w / 2}, ${r.y + r.h / 2})`);
+h2.run("executeSystemConfirm(true)");   // a seleção pergunta antes de trocar
 h2.check("clicar no último cartão (antes escondido) seleciona o personagem certo", h2.run("selectedCharacter") === ultimo);
 h2.run("charactersScrollY = 0");
 const { fire, touch } = h2;
