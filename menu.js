@@ -1218,7 +1218,7 @@ function pollEditorGamepad(dt, intents, padConnected) {
     editorPad.prev = now;
 }
 
-// ---- Tela CONTROLE PS5 / DUALSENSE: remapear botões (inclui o TOUCHPAD) ----
+// ---- Tela CONTROLE JOYSTICK (padrão PS5/DualSense): remapear botões (inclui o TOUCHPAD) ----
 const PAD_ACTION_LABELS = { attack: "ATAQUE", parry: "PARRY", charge: "CARREGAR", transform: "TRANSFORMAR", special: "ESPECIAL", pause: "PAUSAR" };
 const PAD_FACE_COLORS = ["#7aa7ff", "#ff7a7a", "#ff9fd6", "#67e8a5"]; // cruz, bola, quadrado, triângulo (cores do PS5)
 let padCapture = null;          // { action, timeLeft, ignore:Set } enquanto espera o botão
@@ -1285,7 +1285,7 @@ function drawPadGlyph(index, cx, cy, s, color) {
 
 function drawGamepadOptions() {
     drawDragonBallMenuBackdrop(false);
-    drawDragonBallPanel(90, 15, 620, 333, "CONTROLE PS5 / DUALSENSE", "Escolha uma ação e aperte o botão desejado (o TOUCHPAD também vale)");
+    drawDragonBallPanel(90, 15, 620, 333, "CONTROLE JOYSTICK", "Escolha uma ação e aperte o botão desejado (o TOUCHPAD também vale)");
     drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
 
     PAD_ACTIONS.forEach((action, i) => {
@@ -1314,10 +1314,18 @@ function drawGamepadOptions() {
     ctx.fillText("XBOX: CRUZ=A, BOLA=B, QUADRADO=X, TRIÂNGULO=Y  |  TOUCHPAD SÓ NO DUALSENSE", 125, 336);
     if (padCaptureNoteTimer > 0) {
         padCaptureNoteTimer -= deltaTime;
+        // aviso no espaço vazio abaixo do TESTAR, centralizado na coluna e quebrado em até 2 linhas
         ctx.fillStyle = "#fbbf24";
-        ctx.font = "bold 11px monospace";
-        ctx.textAlign = "left";
-        ctx.fillText(padCaptureNote, 125, 290);
+        ctx.font = "bold 10px monospace";
+        ctx.textAlign = "center";
+        const r = MENU_LAYOUT.optionsGamepad.test, cx = r.x + r.w / 2, palavras = String(padCaptureNote).split(" ");
+        const linhas = [""];
+        palavras.forEach(p => {
+            const tenta = (linhas[linhas.length - 1] + " " + p).trim();
+            if (ctx.measureText(tenta).width > r.w + 10 && linhas[linhas.length - 1] && linhas.length < 2) linhas.push(p);
+            else linhas[linhas.length - 1] = tenta;
+        });
+        linhas.forEach((l, i) => ctx.fillText(l, cx, r.y + r.h + 20 + i * 13, r.w + 20));
     }
 
     if (padCapture) {
@@ -1375,6 +1383,21 @@ function updateTesteGoku(dt, pads) {
         return a;
     };
     const a1 = lerAcoes("p1", pads[0]), a2 = lerAcoes("p2", pads[1]);
+    // toque (jogador 1): dedo dentro do quadro leva o Goku até ele; os botões de toque fazem as ações
+    const q0 = TESTE_QUADRO;
+    controlsTestTouches.forEach(t => {
+        const botao = getHudButtonAt(t.x, t.y);
+        if (botao) {
+            if (botao === "charge" && g.ki >= g.maxKi && !(g.antes.charge || g.antes.transform)) a1.transform = true;
+            else if (botao === "charge" && g.antes.transform) a1.transform = true;   // segue segurando o mesmo toque
+            else a1[botao] = true;
+        } else if (inRect(t.x, t.y, q0.x, q0.y, q0.w, q0.h)) {
+            const cx = g.x + g.w / 2, cy = g.y + g.h / 2;
+            if (t.x > cx + 8) a1.right = true; else if (t.x < cx - 8) a1.left = true;
+            if (t.y > cy + 8) a1.down = true; else if (t.y < cy - 8) a1.up = true;
+            if (touchAutoFire && (g.tiroAuto = (g.tiroAuto || 0) + dt * 60) >= 12) { g.tiroAuto = 0; a1.attack = !g.antes.attack; }
+        }
+    });
     const algum = (a) => TESTE_ACOES.some(k => a[k]);
     g.dono = chooseControlsTestOwner(g.dono, algum(a1), algum(a2));
     const a = g.dono === "p1" ? a1 : g.dono === "p2" ? a2 : {};
@@ -1398,7 +1421,7 @@ function updateTesteGoku(dt, pads) {
         // sobe um nível; depois da última volta ao normal (é só para ver as animações)
         const lista = getCharacterTransformations("goku_adult");
         const nivel = getTransformLevel(g);
-        if (nivel < lista.length) { g.isSSJ = true; g.transformLevel = nivel + 1; g.transformPowerTimer = 180; }
+        if (nivel < lista.length) { g.isSSJ = true; g.transformLevel = nivel + 1; g.transformPowerTimer = 180; g.ki = 0; }
         else { g.isSSJ = false; g.transformLevel = 0; g.transformPowerTimer = 0; }
         g.actionState = "transform"; g.actionTimer = 40;
     }
@@ -1440,7 +1463,7 @@ function drawTesteGoku(pads) {
     ctx.strokeStyle = "#7dd3fc"; ctx.lineWidth = 2; ctx.strokeRect(q.x, q.y, q.w, q.h);
     ctx.fillStyle = "rgba(2, 10, 29, 0.7)"; ctx.fillRect(q.x, q.y, q.w, 16);
     ctx.fillStyle = "#e2e8f0"; ctx.font = "bold 9px monospace"; ctx.textAlign = "left";
-    ctx.fillText("PRÉVIA: O GOKU RESPONDE AOS COMANDOS", q.x + 6, q.y + 11);
+    ctx.fillText(isTouchDevice ? "PRÉVIA: TOQUE NO QUADRO PARA MOVER" : "PRÉVIA: O GOKU RESPONDE AOS COMANDOS", q.x + 6, q.y + 11);
     ctx.textAlign = "right";
     ctx.fillStyle = g.dono ? "#86efac" : "#94a3b8";
     ctx.fillText(g.dono ? `NO COMANDO: JOGADOR ${g.dono === "p1" ? 1 : 2}` : "AGUARDANDO", q.x + q.w - 6, q.y + 11);
@@ -1479,7 +1502,7 @@ function drawControlsTest() {
     };
 
     // ações dos jogadores 1 e 2 (3 colunas x 3 linhas cada)
-    [["p1", "JOGADOR 1 (TECLADO/MOUSE/CONTROLE 1)", 62, pads[0]], ["p2", "JOGADOR 2 (TECLADO/CONTROLE 2)", 170, pads[1]]].forEach(([profile, title, top, pad]) => {
+    [["p1", "JOGADOR 1 (TECLADO/MOUSE/CONTROLE 1/TOQUE)", 78, pads[0]], ["p2", "JOGADOR 2 (TECLADO/CONTROLE 2)", 184, pads[1]]].forEach(([profile, title, top, pad]) => {
         ctx.save();
         ctx.fillStyle = "#7dd3fc";
         ctx.font = "bold 10px monospace";
@@ -1495,6 +1518,16 @@ function drawControlsTest() {
     });
 
     drawTesteGoku(pads);
+    // botões de toque (no celular), para testar o toque também
+    if (isTouchDevice) {
+        for (const key of Object.keys(touchHudLayout)) {
+            if (isHudButtonHidden(key)) continue;
+            const r = getHudButtonRect(key), raio = Math.min(r.w, r.h) * 0.48;
+            const pronto = key === "charge" && getTesteGoku().ki >= getTesteGoku().maxKi;
+            const sprite = getHudButtonSprite(pronto ? "transform" : key, raio, pronto, false);
+            if (sprite) ctx.drawImage(sprite, r.x + r.w / 2 - sprite.lado / 2, r.y + r.h / 2 - sprite.lado / 2, sprite.lado, sprite.lado);
+        }
+    }
 
     // controles conectados (embaixo da prévia, compacto): analógicos e botões
     const padX = 408;
@@ -2522,6 +2555,8 @@ function getTutorialUiLayout() {
 function drawTutorialScreen() {
     drawStageBackground();
     drawPlayerEntity(player, characterDB[selectedCharacter], false);
+    drawObstacles();      // tiros de ki (e o projétil de treino do passo PARRY), igual à luta
+    drawSpecialBeams();   // o feixe do ESPECIAL
 
     const step = getCurrentTutorialStep();
     const ui = getTutorialUiLayout();
@@ -2848,8 +2883,8 @@ function handleMenuClick(x, y) {
                 stageChoicePendingId = null;
                 saveSettings();
                 startGame();
-            } else if (hitRect(x, y, MENU_LAYOUT.stageMap.cancel)) {
-                stageChoicePendingId = null;
+            } else if (hitRect(x, y, MENU_LAYOUT.back)) {
+                stageChoicePendingId = null;   // a seta ← fecha a escolha do modo (como nas outras telas)
             }
             return;
         }
@@ -4170,151 +4205,183 @@ function drawKiLightning(entity, cx, bottomY, w, h, forte) {
 // ==================== SAIBAMAN (VISUAL DO ANIME) ====================
 // Cabeça grande e bulbosa com sulcos, olhos vermelhos enormes, corpo magro e curvado e garras. Cada pose é
 // desenhada uma vez numa imagem guardada (2x, para ficar nítida) e só copiada a cada quadro.
-const SAIBAMAN_SPRITE_SCALE = 2, SAIBAMAN_SPRITE_PAD = 8;
+const SAIBAMAN_SPRITE_SCALE = 3, SAIBAMAN_SPRITE_PAD = 8;
+const MINION_DRAW_SCALE = 1.3;   // desenhados um pouco maiores que a caixa de colisão (os pés no mesmo lugar)
 const saibamanSpriteCache = new Map();
 
-function traceSaibamanFigure(g, pose, frame) {
-    const skin = "#6cc43a", dark = "#2f7a1c", shade = "#4b9b2a", light = "#a9ea6e", line = "#173d0d";
+// Minions desenhados de frente (como nas referências), num espaço de 64x80 reduzido para a caixa de 32x40.
+// Contorno escuro, sombra de um tom e brilho em cima (cel-shading). Poses: voar (padrão), saltar e agarrar.
+function minionLimb(g, pts, larg, cor, contorno, aneis) {
+    g.lineCap = "round"; g.lineJoin = "round";
+    const traco = () => { g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); pts.slice(1).forEach(p => g.lineTo(p[0], p[1])); };
+    g.strokeStyle = contorno; g.lineWidth = larg + 2.4; traco(); g.stroke();
+    g.strokeStyle = cor; g.lineWidth = larg; traco(); g.stroke();
+    if (!aneis) return;
+    // anéis/escamas atravessando o membro
+    g.strokeStyle = aneis; g.lineWidth = 0.9;
+    for (let i = 0; i < pts.length - 1; i++) {
+        const [x0, y0] = pts[i], [x1, y1] = pts[i + 1], len = Math.hypot(x1 - x0, y1 - y0) || 1;
+        const nx = -(y1 - y0) / len, ny = (x1 - x0) / len;
+        for (let t = 0.2; t < 1; t += 0.22) {
+            const cx = x0 + (x1 - x0) * t, cy = y0 + (y1 - y0) * t;
+            g.beginPath(); g.moveTo(cx - nx * larg * 0.45, cy - ny * larg * 0.45); g.quadraticCurveTo(cx + (x1 - x0) / len, cy + (y1 - y0) / len, cx + nx * larg * 0.45, cy + ny * larg * 0.45); g.stroke();
+        }
+    }
+}
+function minionClaws(g, x, y, dir, tam) {
+    // três garras brancas curvas
+    g.fillStyle = "#eef3f8"; g.strokeStyle = "#3a4656"; g.lineWidth = 0.7;
+    for (let k = -1; k <= 1; k++) {
+        const a = dir + k * 0.45;
+        g.beginPath();
+        g.moveTo(x + Math.cos(a + 1.3) * tam * 0.35, y + Math.sin(a + 1.3) * tam * 0.35);
+        g.quadraticCurveTo(x + Math.cos(a) * tam * 1.1, y + Math.sin(a) * tam * 1.1 - 1, x + Math.cos(a) * tam * 1.25, y + Math.sin(a) * tam * 1.25);
+        g.lineTo(x + Math.cos(a - 1.3) * tam * 0.35, y + Math.sin(a - 1.3) * tam * 0.35);
+        g.closePath(); g.fill(); g.stroke();
+    }
+}
+function minionPose(pose, frame) {
     const sway = pose === "voar" ? Math.sin(frame / 4 * Math.PI * 2) : 0;
-    g.lineJoin = "round"; g.lineCap = "round";
-
-    // pernas finas e dobradas (no salto ficam esticadas para baixo)
-    g.strokeStyle = line; g.lineWidth = 4.2;
-    const legs = pose === "saltar" ? [[13, 27, 11, 34, 12, 40], [19, 27, 21, 34, 20, 40]]
-        : [[13, 27, 9 + sway, 33, 12 + sway * 1.5, 39], [19, 27, 22 - sway, 32, 24 - sway * 1.5, 38]];
-    legs.forEach(l => { g.beginPath(); g.moveTo(l[0], l[1]); g.lineTo(l[2], l[3]); g.lineTo(l[4], l[5]); g.stroke(); });
-    g.strokeStyle = shade; g.lineWidth = 2.4;
-    legs.forEach(l => { g.beginPath(); g.moveTo(l[0], l[1]); g.lineTo(l[2], l[3]); g.lineTo(l[4], l[5]); g.stroke(); });
-
-    // braço de trás
-    const armBack = pose === "saltar" ? [20, 18, 28, 15, 31, 9] : pose === "agarrar" ? [19, 19, 26, 20, 31, 18] : [19, 19, 23, 24 + sway, 22, 29 + sway];
-    g.strokeStyle = line; g.lineWidth = 3.6;
-    g.beginPath(); g.moveTo(armBack[0], armBack[1]); g.lineTo(armBack[2], armBack[3]); g.lineTo(armBack[4], armBack[5]); g.stroke();
-    g.strokeStyle = dark; g.lineWidth = 1.8; g.stroke();
-
-    // tronco magro, curvado para a frente
-    g.fillStyle = skin; g.strokeStyle = line; g.lineWidth = 1.3;
-    g.beginPath();
-    g.moveTo(11, 17); g.quadraticCurveTo(8, 23, 12, 29); g.lineTo(20, 29); g.quadraticCurveTo(23, 22, 20, 16); g.closePath();
-    g.fill(); g.stroke();
-    g.fillStyle = dark;   // placas do peito
-    g.fillRect(13, 20, 6, 1.4); g.fillRect(13, 23, 6, 1.4); g.fillRect(14, 26, 4, 1.2);
-
-    // cabeça bulbosa (maior que o corpo), voltada para a esquerda
-    g.fillStyle = skin; g.strokeStyle = line; g.lineWidth = 1.5;
-    g.beginPath();
-    g.moveTo(4, 12);
-    g.bezierCurveTo(2, 2, 10, -2, 17, -1);
-    g.bezierCurveTo(27, 0, 29, 7, 26, 13);
-    g.bezierCurveTo(24, 18, 17, 19, 11, 18);
-    g.bezierCurveTo(7, 17, 5, 15, 4, 12);
-    g.closePath(); g.fill(); g.stroke();
-    // sombra de baixo e brilho em cima (volume)
-    g.fillStyle = shade;
-    g.beginPath(); g.moveTo(6, 14); g.bezierCurveTo(12, 18, 21, 18, 26, 12); g.bezierCurveTo(24, 18, 16, 19, 11, 18); g.closePath(); g.fill();
-    g.fillStyle = light;
-    g.beginPath(); g.ellipse(12, 3, 4.5, 1.8, -0.3, 0, Math.PI * 2); g.fill();
-    // sulcos do crânio
-    g.strokeStyle = dark; g.lineWidth = 1.1;
-    [[7, 8, 12, 2, 18, 3], [12, 10, 16, 4, 23, 5], [18, 11, 21, 6, 26, 9]].forEach(c => {
-        g.beginPath(); g.moveTo(c[0], c[1]); g.quadraticCurveTo(c[2], c[3], c[4], c[5]); g.stroke();
-    });
-    // olhos vermelhos enormes, sem pupila
-    g.fillStyle = "#e3262c"; g.strokeStyle = "#4a0508"; g.lineWidth = 0.9;
-    g.beginPath(); g.ellipse(7.6, 11.2, 2.9, 2.2, -0.35, 0, Math.PI * 2); g.fill(); g.stroke();
-    g.beginPath(); g.ellipse(14.4, 11.6, 3.1, 2.3, 0.25, 0, Math.PI * 2); g.fill(); g.stroke();
-    g.fillStyle = "#ffd0d0";
-    g.fillRect(6.4, 10, 1.3, 1); g.fillRect(13.2, 10.4, 1.3, 1);
-    // boca com dentinhos
-    g.strokeStyle = line; g.lineWidth = 0.9;
-    g.beginPath(); g.moveTo(8, 15.6); g.lineTo(13, 15.8); g.stroke();
-    g.fillStyle = "#f4f4e0"; g.fillRect(9, 15.7, 1, 0.9); g.fillRect(11.2, 15.8, 1, 0.9);
-
-    // braço da frente com garras
-    const armFront = pose === "saltar" ? [12, 19, 3, 17, -1, 10] : pose === "agarrar" ? [12, 19, 4, 20, -1, 18] : [12, 19, 8, 24 - sway, 7, 29 - sway];
-    g.strokeStyle = line; g.lineWidth = 3.8;
-    g.beginPath(); g.moveTo(armFront[0], armFront[1]); g.lineTo(armFront[2], armFront[3]); g.lineTo(armFront[4], armFront[5]); g.stroke();
-    g.strokeStyle = skin; g.lineWidth = 2; g.stroke();
-    g.strokeStyle = line; g.lineWidth = 1;
-    const hx = armFront[4], hy = armFront[5];
-    for (let k = -1; k <= 1; k++) { g.beginPath(); g.moveTo(hx, hy); g.lineTo(hx - 2.2, hy + k * 1.8); g.stroke(); }
+    if (pose === "saltar") return { sway, bracos: [[[20, 33], [14, 24], [12, 14]], [[44, 33], [50, 24], [52, 14]]], maos: [[12, 13, -Math.PI / 2], [52, 13, -Math.PI / 2]], pernas: [[[28, 50], [26, 62], [25, 74]], [[36, 50], [38, 62], [39, 74]]] };
+    if (pose === "agarrar") return { sway, bracos: [[[20, 33], [9, 38], [4, 44]], [[44, 33], [55, 38], [60, 44]]], maos: [[4, 45, Math.PI * 0.75], [60, 45, Math.PI * 0.25]], pernas: [[[28, 50], [19, 60], [17, 73]], [[36, 50], [45, 60], [47, 73]]] };
+    return { sway, bracos: [[[20, 33], [12, 42 + sway], [14, 53 + sway]], [[44, 33], [52, 42 - sway], [50, 53 - sway]]], maos: [[14, 54 + sway, Math.PI / 2], [50, 54 - sway, Math.PI / 2]],
+        pernas: [[[28, 50], [19, 59 + sway], [17, 72]], [[36, 50], [45, 59 - sway], [47, 72]]] };
 }
 
-// Cell Jr. (Torneio de Cell): mesmo tamanho, poses e mecânica do Saibaman. Atarracado e forte, armadura
-// azul-marinho (ombros, peito, cinto, canelas) com painéis azul-claro de manchas escuras (crista, barriga,
-// braços, coxas, joelhos), crista de duas abas, rosto claro com marcas roxas e queixeira amarela, mãos brancas,
-// asas escuras atrás e botas amarelas. Voltado para a esquerda.
+function traceSaibamanFigure(g, pose, frame) {
+    g.save(); g.scale(0.5, 0.5);
+    const pele = "#6fc046", sombra = "#3f8a28", claro = "#a9e46f", linha = "#14320b", aneis = "rgba(20, 60, 12, 0.55)";
+    const P = minionPose(pose, frame);
+    // pernas agachadas com anéis e pés de garras
+    P.pernas.forEach((pts, i) => {
+        minionLimb(g, pts, 7.5, pele, linha, aneis);
+        const [fx, fy] = pts[pts.length - 1];
+        g.fillStyle = sombra; g.strokeStyle = linha; g.lineWidth = 1.1;
+        g.beginPath(); g.ellipse(fx, fy + 1, 5.5, 3, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+        minionClaws(g, fx + (i ? 2 : -2), fy + 3, i ? 0.3 : Math.PI - 0.3, 5);
+    });
+    // tronco: peitoral liso em placas e barriga segmentada
+    g.fillStyle = pele; g.strokeStyle = linha; g.lineWidth = 1.3;
+    g.beginPath(); g.moveTo(19, 31); g.quadraticCurveTo(32, 27, 45, 31); g.lineTo(42, 44); g.quadraticCurveTo(32, 53, 22, 44); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = sombra;
+    g.beginPath(); g.moveTo(22, 44); g.quadraticCurveTo(32, 53, 42, 44); g.lineTo(40, 41); g.quadraticCurveTo(32, 48, 24, 41); g.closePath(); g.fill();
+    g.strokeStyle = linha; g.lineWidth = 1;
+    g.beginPath(); g.moveTo(32, 31); g.lineTo(32, 49); g.stroke();
+    g.beginPath(); g.moveTo(21, 38); g.quadraticCurveTo(26.5, 41, 31.5, 38); g.moveTo(32.5, 38); g.quadraticCurveTo(37.5, 41, 43, 38); g.stroke();
+    g.beginPath(); g.moveTo(25, 45); g.lineTo(39, 45); g.stroke();
+    g.fillStyle = "rgba(255, 255, 255, 0.35)";
+    g.beginPath(); g.ellipse(26, 34, 3.5, 1.6, -0.3, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.ellipse(38, 34, 3.5, 1.6, 0.3, 0, Math.PI * 2); g.fill();
+    // braços com anéis e mãos de garras
+    P.bracos.forEach((pts, i) => {
+        minionLimb(g, pts, 6.5, pele, linha, aneis);
+        const [hx, hy, dir] = P.maos[i];
+        g.fillStyle = sombra; g.beginPath(); g.arc(pts[2][0], pts[2][1], 3.4, 0, Math.PI * 2); g.fill();
+        minionClaws(g, hx, hy, dir, 5);
+    });
+    // orelhas pontudas
+    g.fillStyle = pele; g.strokeStyle = linha; g.lineWidth = 1.1;
+    [[1, 19], [-1, 45]].forEach(([d, x]) => { g.beginPath(); g.moveTo(x, 21); g.lineTo(x - d * 9, 15); g.lineTo(x + d * 1, 27); g.closePath(); g.fill(); g.stroke(); });
+    // cabeça grande em forma de cérebro, com o sulco no meio e veios
+    const cab = g.createRadialGradient(28, 8, 2, 32, 15, 18);
+    cab.addColorStop(0, "#d4f59a"); cab.addColorStop(0.55, claro); cab.addColorStop(1, "#78c24c");
+    g.fillStyle = cab; g.strokeStyle = linha; g.lineWidth = 1.4;
+    g.beginPath(); g.moveTo(19, 24); g.bezierCurveTo(13, 12, 20, 0, 32, 0); g.bezierCurveTo(44, 0, 51, 12, 45, 24); g.quadraticCurveTo(39, 31, 32, 31); g.quadraticCurveTo(25, 31, 19, 24); g.closePath(); g.fill(); g.stroke();
+    g.strokeStyle = "rgba(40, 90, 20, 0.85)"; g.lineWidth = 1.1;
+    g.beginPath(); g.moveTo(32, 1); g.bezierCurveTo(31, 6, 33, 10, 32, 16); g.stroke();
+    g.lineWidth = 0.7;
+    [[22, 8, 27, 6, 28, 11], [21, 14, 25, 12, 27, 16], [42, 8, 37, 6, 36, 11], [43, 14, 39, 12, 37, 16], [25, 3, 28, 4, 29, 7], [39, 3, 36, 4, 35, 7]].forEach(v => {
+        g.beginPath(); g.moveTo(v[0], v[1]); g.quadraticCurveTo(v[2], v[3] + 2, v[2] + (v[4] - v[2]) / 2, v[3]); g.quadraticCurveTo(v[4], v[5] - 2, v[4], v[5]); g.stroke();
+    });
+    // testa franzida, olhos vermelhos puxados e boca aberta
+    g.fillStyle = "rgba(60, 120, 30, 0.45)";
+    g.beginPath(); g.moveTo(22, 20); g.quadraticCurveTo(32, 16, 42, 20); g.lineTo(42, 22); g.quadraticCurveTo(32, 19, 22, 22); g.closePath(); g.fill();
+    [[26.5, 23.5, 0.38], [37.5, 23.5, -0.38]].forEach(([x, y, r]) => {
+        g.fillStyle = "#e0263a"; g.strokeStyle = "#3a0408"; g.lineWidth = 1;
+        g.beginPath(); g.ellipse(x, y, 4.6, 2.1, r, 0, Math.PI * 2); g.fill(); g.stroke();
+        g.fillStyle = "#ff9aa4"; g.beginPath(); g.ellipse(x - 1, y - 0.6, 1.4, 0.6, r, 0, Math.PI * 2); g.fill();
+    });
+    g.fillStyle = "#b5202f"; g.strokeStyle = linha; g.lineWidth = 1;
+    g.beginPath(); g.moveTo(28.5, 27.3); g.quadraticCurveTo(32, 26.4, 35.5, 27.3); g.quadraticCurveTo(32, 31.5, 28.5, 27.3); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = "#ff7b88"; g.beginPath(); g.ellipse(32, 29, 1.8, 0.8, 0, 0, Math.PI * 2); g.fill();
+    g.restore();
+}
+
+// Cell Jr. (Torneio de Cell): mesmo tamanho, poses e mecânica do Saibaman. Atarracado, armadura azul-marinho
+// brilhante (ombros, peito, cinto, canelas), painéis azul-claros com manchas escuras (crista, barriga, braços,
+// coxas), crista de duas abas, rosto claro com marcas roxas e queixeira amarela, mãos brancas, asas escuras e
+// botas amarelas. Desenhado de frente.
 function traceCellJrFigure(g, pose, frame) {
-    const azul = "#4aa3e8", azulClaro = "#8fd0ff", marinho = "#16245a", marinhoClaro = "#2c3f86", linha = "#070d26";
-    const mancha = "#1a2f78", rosto = "#ecebf4", amarelo = "#f2b630";
-    const sway = pose === "voar" ? Math.sin(frame / 4 * Math.PI * 2) : 0;
-    g.lineJoin = "round"; g.lineCap = "round";
-    const manchas = (pts, r) => { g.fillStyle = mancha; pts.forEach(([x, y]) => { g.beginPath(); g.ellipse(x, y, r, r * 0.75, 0.4, 0, Math.PI * 2); g.fill(); }); };
-    const forma = (pts, cor) => { g.fillStyle = cor; g.strokeStyle = linha; g.lineWidth = 1; g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); pts.slice(1).forEach(p => g.lineTo(p[0], p[1])); g.closePath(); g.fill(); g.stroke(); };
-
+    g.save(); g.scale(0.5, 0.5);
+    const azul = "#3f9ae6", azulClaro = "#8fd0ff", marinho = "#14215a", marinhoBrilho = "#3a52a8", linha = "#060b22", mancha = "#122a6e";
+    const P = minionPose(pose, frame);
+    const manchas = (pts, r) => { g.fillStyle = mancha; pts.forEach(([x, y], i) => { g.beginPath(); g.ellipse(x, y, r * (0.8 + (i % 3) * 0.2), r * 0.7, i * 0.7, 0, Math.PI * 2); g.fill(); }); };
+    const forma = (pts, cor) => { g.fillStyle = cor; g.strokeStyle = linha; g.lineWidth = 1.2; g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); pts.slice(1).forEach(p => g.lineTo(p[0], p[1])); g.closePath(); g.fill(); g.stroke(); };
+    const brilho = (x, y, rx, ry) => { g.fillStyle = "rgba(255, 255, 255, 0.35)"; g.beginPath(); g.ellipse(x, y, rx, ry, -0.4, 0, Math.PI * 2); g.fill(); };
     // asas escuras atrás dos ombros (batem ao voar)
-    const bate = pose === "voar" ? sway * 1.5 : 0;
-    forma([[20, 15], [30, 11 - bate], [31, 22], [26, 26], [21, 23]], "#1b1440");
-    g.strokeStyle = "#3c2f7a"; g.lineWidth = 0.7; g.beginPath(); g.moveTo(21, 17); g.lineTo(29, 14 - bate); g.stroke();
-
-    // pernas: coxas azuis com manchas, joelheira, canela marinho e bota amarela pontuda
-    const pernas = pose === "saltar" ? [[10, 0], [17, 0]] : [[10, sway * 1.2], [17, -sway * 1.2]];
-    pernas.forEach(([px, d], i) => {
-        const x = px + d;
-        forma([[x - 0.5, 28], [x + 5, 28], [x + 4.6, 33], [x - 0.2, 33]], azul);
-        manchas([[x + 1.5, 30], [x + 3.6, 31.5]], 0.75);
-        forma([[x - 0.4, 33], [x + 4.6, 33], [x + 4.2, 37], [x, 37]], marinho);
-        g.fillStyle = azulClaro; g.beginPath(); g.arc(x + 2.2, 33.4, 1.3, 0, Math.PI * 2); g.fill();
-        forma([[x - 1.6 + (i ? 0 : -0.6), 40], [x - 0.4, 37], [x + 4.4, 37], [x + 4.8, 40]], amarelo);
+    const bate = P.sway * 2;
+    forma([[22, 32], [6, 24 - bate], [3, 44], [14, 52], [22, 44]], "#1d1446");
+    forma([[42, 32], [58, 24 - bate], [61, 44], [50, 52], [42, 44]], "#1d1446");
+    g.strokeStyle = "#4a3b8c"; g.lineWidth = 0.8;
+    g.beginPath(); g.moveTo(20, 34); g.lineTo(7, 30 - bate); g.moveTo(44, 34); g.lineTo(57, 30 - bate); g.stroke();
+    // pernas: coxa azul manchada, joelheira e canela marinho, bota amarela pontuda
+    P.pernas.forEach((pts, i) => {
+        const [h, k, f] = pts;
+        minionLimb(g, [h, k], 9, azul, linha);
+        manchas([[(h[0] + k[0]) / 2 - 1.5, (h[1] + k[1]) / 2], [(h[0] + k[0]) / 2 + 2, (h[1] + k[1]) / 2 + 3]], 1.2);
+        minionLimb(g, [k, f], 8.5, marinho, linha);
+        g.fillStyle = marinhoBrilho; g.strokeStyle = linha; g.lineWidth = 1;
+        g.beginPath(); g.arc(k[0], k[1], 4, 0, Math.PI * 2); g.fill(); g.stroke();
+        g.fillStyle = azulClaro; g.beginPath(); g.arc(k[0] - 1, k[1] - 1, 1.6, 0, Math.PI * 2); g.fill();
+        const d = i ? 1 : -1;
+        forma([[f[0] - 5, f[1] - 1], [f[0] + 5, f[1] - 1], [f[0] + 6 * d + (d > 0 ? 2 : -2), f[1] + 5], [f[0] - 4 * d, f[1] + 5]], "#f0a624");
+        g.fillStyle = "rgba(255, 240, 180, 0.6)"; g.fillRect(f[0] - 3, f[1], 5, 1.2);
     });
-
-    // braço de trás (só aparece no ombro e na mão)
-    const atras = pose === "saltar" ? [26, 9] : pose === "agarrar" ? [29, 20] : [24, 26 + sway];
-    g.strokeStyle = linha; g.lineWidth = 4; g.beginPath(); g.moveTo(21, 18); g.lineTo(atras[0], atras[1]); g.stroke();
-    g.strokeStyle = azul; g.lineWidth = 2.6; g.stroke();
-    g.fillStyle = "#f4f4f4"; g.strokeStyle = linha; g.lineWidth = 0.8; g.beginPath(); g.arc(atras[0], atras[1], 1.8, 0, Math.PI * 2); g.fill(); g.stroke();
-
-    // tronco: barriga azul com manchas, cinto marinho, peitoral marinho largo
-    forma([[9, 21], [22, 21], [21, 28], [10, 28]], azul);
-    manchas([[12, 23.5], [16, 25], [19, 23], [13.5, 26.5]], 0.8);
-    forma([[9.5, 27], [21.5, 27], [21, 29.5], [10, 29.5]], marinho);
-    forma([[8, 14], [23, 14], [22.5, 21.5], [16, 22.5], [8.5, 21.5]], marinho);
-    g.strokeStyle = marinhoClaro; g.lineWidth = 0.8;
-    g.beginPath(); g.moveTo(15.5, 15); g.lineTo(15.5, 21.5); g.moveTo(10, 18.5); g.quadraticCurveTo(13, 20, 15, 18.5); g.moveTo(16, 18.5); g.quadraticCurveTo(19, 20, 21.5, 18.5); g.stroke();
-    // ombreiras grandes (marinho com topo azul manchado)
-    [[7.5, 15.5], [22.5, 15.5]].forEach(([ox, oy]) => {
-        g.fillStyle = marinho; g.strokeStyle = linha; g.lineWidth = 1;
-        g.beginPath(); g.ellipse(ox, oy, 4.2, 3.6, 0, 0, Math.PI * 2); g.fill(); g.stroke();
-        g.fillStyle = azul; g.beginPath(); g.ellipse(ox, oy - 1.2, 3.4, 2, 0, Math.PI, 0); g.fill();
-        manchas([[ox - 1, oy - 2], [ox + 1.4, oy - 1.6]], 0.55);
+    // barriga azul manchada, cinto e protetor marinho
+    forma([[23, 42], [41, 42], [40, 51], [24, 51]], azul);
+    manchas([[27, 45], [33, 47], [38, 44.5], [30, 49], [36, 49.5]], 1.2);
+    forma([[22.5, 50], [41.5, 50], [41, 54], [23, 54]], marinho);
+    forma([[29, 53.5], [35, 53.5], [33.5, 58], [30.5, 58]], marinho);
+    // peitoral marinho grande e brilhante
+    forma([[18, 30], [46, 30], [44, 41], [32, 44], [20, 41]], marinho);
+    g.strokeStyle = marinhoBrilho; g.lineWidth = 1;
+    g.beginPath(); g.moveTo(32, 31); g.lineTo(32, 43); g.moveTo(21, 37); g.quadraticCurveTo(26, 41, 31, 37); g.moveTo(33, 37); g.quadraticCurveTo(38, 41, 43, 37); g.stroke();
+    brilho(25, 33, 4, 1.6); brilho(39, 33, 4, 1.6);
+    // braços: azul manchado em cima, antebraço marinho e punho branco
+    P.bracos.forEach((pts, i) => {
+        const [o, c, m] = pts;
+        minionLimb(g, [o, c], 7, azul, linha);
+        manchas([[(o[0] + c[0]) / 2, (o[1] + c[1]) / 2]], 1.2);
+        minionLimb(g, [c, m], 7, marinho, linha);
+        g.fillStyle = "#f2f4f8"; g.strokeStyle = linha; g.lineWidth = 1;
+        g.beginPath(); g.arc(m[0], m[1], 3.6, 0, Math.PI * 2); g.fill(); g.stroke();
+        g.strokeStyle = "#9aa6b8"; g.lineWidth = 0.6;
+        g.beginPath(); g.moveTo(m[0] - 2, m[1]); g.lineTo(m[0] + 2, m[1]); g.stroke();
     });
-
-    // cabeça: crista de duas abas pontudas (azul manchado) com o meio marinho
-    forma([[7, 9], [4, -1], [11, 3.5], [15.5, 1.5], [20, 3.5], [27, -1], [24, 9], [21, 13], [10, 13]], azul);
-    manchas([[6.5, 3], [9, 6], [23.5, 3], [21.5, 6.5], [25, 6]], 0.8);
-    forma([[11.5, 4], [15.5, 1.8], [19.5, 4], [19, 8], [12, 8]], marinho);
-    g.fillStyle = marinhoClaro; g.beginPath(); g.ellipse(14.5, 4, 1.6, 0.8, -0.3, 0, Math.PI * 2); g.fill();
-    // rosto claro, olhos, marcas roxas e queixeira amarela
-    forma([[10, 7.5], [18, 7.5], [18.5, 11.5], [15.5, 14.5], [11.5, 14.5], [9.2, 11.5]], rosto);
-    g.fillStyle = "#b5142a";
-    g.beginPath(); g.ellipse(11.8, 9.6, 1.2, 0.8, -0.2, 0, Math.PI * 2); g.fill();
-    g.beginPath(); g.ellipse(15.8, 9.6, 1.2, 0.8, 0.2, 0, Math.PI * 2); g.fill();
-    g.strokeStyle = linha; g.lineWidth = 0.7;
-    g.beginPath(); g.moveTo(10.4, 8.6); g.lineTo(13, 9); g.moveTo(17.2, 8.6); g.lineTo(14.6, 9); g.stroke();
-    g.fillStyle = "#8a3fb0";
-    g.fillRect(10.2, 10.6, 0.9, 2.4); g.fillRect(16.8, 10.6, 0.9, 2.4);
-    forma([[9.2, 11.5], [11, 12.5], [11.6, 14.6], [15.4, 14.6], [16.6, 12.5], [18.5, 11.5], [17.4, 15], [10.4, 15]], amarelo);
-    g.strokeStyle = linha; g.lineWidth = 0.6; g.beginPath(); g.moveTo(12.4, 13.2); g.lineTo(15, 13.2); g.stroke();
-
-    // braço da frente: braço azul manchado, antebraço marinho e mão branca fechada
-    const frente = pose === "saltar" ? [[5, 13], [2, 7]] : pose === "agarrar" ? [[3, 20], [-1, 19]] : [[5, 21 - sway], [4.5, 26 - sway]];
-    g.strokeStyle = linha; g.lineWidth = 4.4; g.beginPath(); g.moveTo(8, 17); g.lineTo(frente[0][0], frente[0][1]); g.stroke();
-    g.strokeStyle = azul; g.lineWidth = 3; g.stroke();
-    g.strokeStyle = linha; g.lineWidth = 4.4; g.beginPath(); g.moveTo(frente[0][0], frente[0][1]); g.lineTo(frente[1][0], frente[1][1]); g.stroke();
-    g.strokeStyle = marinho; g.lineWidth = 3; g.stroke();
-    g.fillStyle = mancha; g.beginPath(); g.arc((8 + frente[0][0]) / 2, (17 + frente[0][1]) / 2, 0.7, 0, Math.PI * 2); g.fill();
-    g.fillStyle = "#f4f4f4"; g.strokeStyle = linha; g.lineWidth = 0.8;
-    g.beginPath(); g.arc(frente[1][0], frente[1][1], 2, 0, Math.PI * 2); g.fill(); g.stroke();
+    // ombreiras redondas marinho com brilho
+    [[17, 32], [47, 32]].forEach(([x, y]) => {
+        g.fillStyle = marinho; g.strokeStyle = linha; g.lineWidth = 1.2;
+        g.beginPath(); g.arc(x, y, 7, 0, Math.PI * 2); g.fill(); g.stroke();
+        brilho(x - 2, y - 3, 3, 1.4);
+    });
+    // crista de duas abas (azul manchado) e o meio marinho brilhante
+    forma([[29, 14], [22, 1], [14, 5], [15, 18], [22, 24], [27, 22]], azul);
+    forma([[35, 14], [42, 1], [50, 5], [49, 18], [42, 24], [37, 22]], azul);
+    manchas([[19, 8], [22, 14], [17, 13], [24, 19], [45, 8], [42, 14], [47, 13], [40, 19]], 1.3);
+    forma([[26, 8], [32, 3], [38, 8], [38, 17], [26, 17]], marinho);
+    brilho(30, 7, 2.5, 1.2);
+    // rosto claro, olhos, marcas roxas e a queixeira amarela
+    forma([[25.5, 15], [38.5, 15], [38, 23], [32, 28.5], [26, 23]], "#eeebf5");
+    [[29, 18.5, 0.25], [35, 18.5, -0.25]].forEach(([x, y, r]) => {
+        g.fillStyle = "#c2183a"; g.beginPath(); g.ellipse(x, y, 2.1, 1.1, r, 0, Math.PI * 2); g.fill();
+        g.strokeStyle = linha; g.lineWidth = 0.8; g.beginPath(); g.moveTo(x - 2.4, y - 1.6 + r * 2); g.lineTo(x + 2.4, y - 1.6 - r * 2); g.stroke();
+    });
+    g.fillStyle = "#9c4bc4"; g.fillRect(26.6, 19.5, 1.2, 4); g.fillRect(36.2, 19.5, 1.2, 4);
+    g.strokeStyle = "#f2b630"; g.lineWidth = 2.4; g.lineJoin = "round";
+    g.beginPath(); g.moveTo(25.5, 21); g.lineTo(28, 26); g.lineTo(32, 29); g.lineTo(36, 26); g.lineTo(38.5, 21); g.stroke();
+    g.strokeStyle = "#a76d0e"; g.lineWidth = 0.6; g.stroke();
+    g.strokeStyle = linha; g.lineWidth = 0.7; g.beginPath(); g.moveTo(30.5, 24.5); g.quadraticCurveTo(32, 25.3, 33.5, 24.5); g.stroke();
+    g.restore();
 }
 
 // Na fase do Torneio de Cell os inimigos pequenos são os Cell Jr.; nas outras, Saibamans.
@@ -4341,9 +4408,9 @@ function getSaibamanSprite(pose, frame) {
 }
 
 function drawSaibamanSprite(s, pose, frame, offsetY = 0) {
-    const img = getSaibamanSprite(pose, frame);
-    ctx.drawImage(img, s.x - SAIBAMAN_SPRITE_PAD, s.y - SAIBAMAN_SPRITE_PAD + offsetY,
-        32 + SAIBAMAN_SPRITE_PAD * 2, 40 + SAIBAMAN_SPRITE_PAD * 2);
+    const img = getSaibamanSprite(pose, frame), k = MINION_DRAW_SCALE;
+    ctx.drawImage(img, s.x + 16 - (16 + SAIBAMAN_SPRITE_PAD) * k, s.y + 40 - (40 + SAIBAMAN_SPRITE_PAD + 1) * k + offsetY,
+        (32 + SAIBAMAN_SPRITE_PAD * 2) * k, (40 + SAIBAMAN_SPRITE_PAD * 2) * k);
 }
 
 function drawSaibamans() {
@@ -5509,7 +5576,7 @@ function render() {
         // 2 linhas abaixo do subtítulo (que fica em y+54) — antes o 1º botão (y=100) cobria a escrita.
         drawBtnAt(MENU_LAYOUT.optionsControls.pc, "CONTROLES PC", "#7dd3fc");
         drawBtnAt(MENU_LAYOUT.optionsControls.touch, "CONTROLES TOUCH", "#93c5fd");
-        drawBtnAt(MENU_LAYOUT.optionsControls.gamepad, "CONTROLE PS5", "#c4b5fd");
+        drawBtnAt(MENU_LAYOUT.optionsControls.gamepad, "CONTROLE JOYSTICK", "#c4b5fd");
         drawBtnAt(MENU_LAYOUT.optionsControls.test, "TESTAR CONTROLES", "#a7f3d0");
 
         drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
@@ -6101,7 +6168,6 @@ function render() {
             drawModeButton(MENU_LAYOUT.stageMap.hard.x, MENU_LAYOUT.stageMap.hard.y, MENU_LAYOUT.stageMap.hard.w, MENU_LAYOUT.stageMap.hard.h, "DIFÍCIL", canHard, "#f87171");
             drawModeButton(MENU_LAYOUT.stageMap.unlimited.x, MENU_LAYOUT.stageMap.unlimited.y, MENU_LAYOUT.stageMap.unlimited.w, MENU_LAYOUT.stageMap.unlimited.h, "SEM LIMITE", canUnlimited, "#86efac");
 
-            drawBtnAt(MENU_LAYOUT.stageMap.cancel, "VOLTAR", "#fca5a5", "bold 10px 'Courier New', monospace");
         }
 
         if (stageLockedHintTimer > 0) {

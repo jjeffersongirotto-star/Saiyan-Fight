@@ -32,5 +32,17 @@ check("carregar mostra a animação e enche o ki", run("testeGoku.actionState") 
 run("keysPressed = {};"); quadro();
 run("keysPressed[keyBindings.p1.transform] = true;"); quadro();
 check("transformar mostra a animação e sobe de nível", run("testeGoku.actionState") === "transform" && run("getTransformLevel(testeGoku)") === 1);
+// toque (celular): dedo no quadro move o Goku; botões de toque fazem as ações
+run("keysPressed = {}; isTouchDevice = true; testeGoku = null;"); quadro();
+const gx = run("testeGoku.x");
+run("controlsTestTouches = [{ x: TESTE_QUADRO.x + TESTE_QUADRO.w - 10, y: testeGoku.y + testeGoku.h / 2 }];");
+for (let i = 0; i < 10; i++) quadro();
+check("toque: arrastar no quadro move o Goku", run("testeGoku.x") > gx && run("testeGoku.dono") === "p1");
+run("controlsTestTouches = []; touchAutoFire = false;"); quadro();
+run("(() => { const r = getHudButtonRect('attack'); controlsTestTouches = [{ x: r.x + r.w / 2, y: r.y + r.h / 2 }]; })()"); quadro();
+check("toque: botão ATAQUE solta ki", run("testeGoku.tiros.length") >= 1);
+run("controlsTestTouches = []; testeGoku.ki = testeGoku.maxKi;"); quadro();
+run("(() => { const r = getHudButtonRect('charge'); controlsTestTouches = [{ x: r.x + r.w / 2, y: r.y + r.h / 2 }]; })()"); quadro();
+check("toque: com o ki cheio o CARREGAR transforma", run("getTransformLevel(testeGoku)") >= 1);
 check("a luta de verdade não é mexida", run("player.ki") === 0 || run("typeof player") === "object");
 summary();

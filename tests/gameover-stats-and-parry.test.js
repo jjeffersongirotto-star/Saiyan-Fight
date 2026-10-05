@@ -77,9 +77,10 @@ run("render()");
 const textCalls = h.calls.filter(c => c[0] === "fillText");
 check("não mostra mais o texto pequeno explicando os modos embaixo dos botões", !textCalls.some(c => String(c[1][0]).startsWith("NORMAL: ondas") || String(c[1][0]).startsWith("SEM LIMITE: todas")));
 
-const voltarRectX = 400 - 70, voltarRectY = 224;
-run(`handleMenuClick(${voltarRectX + 70}, ${voltarRectY + 15})`);
-check("o botão VOLTAR (na posição nova, mais acima) ainda funciona e fecha o overlay", run("stageChoicePendingId") === null);
+// o botão VOLTAR do quadro saiu: a seta ← do canto fecha a escolha de modo (como nas outras telas)
+check("o quadro de modo não tem mais o botão VOLTAR", !textCalls.some(c => String(c[1][0]) === "VOLTAR"));
+run("(() => { const r = MENU_LAYOUT.back; handleMenuClick(r.x + r.w / 2, r.y + r.h / 2); })()");
+check("a seta ← fecha o quadro de modo", run("stageChoicePendingId") === null && run("gameState") === "stage_map");
 
 run("setGameState('menu')");
 process.exit(summary());

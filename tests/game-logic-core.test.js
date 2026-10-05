@@ -178,7 +178,11 @@ test("getDefaultTouchHudLayout: botões não se sobrepõem e cabem no canvas 800
         }));
         rects.forEach((a, i) => {
             assert.ok(a.x >= 0 && a.y >= 0 && a.x + a.w <= 800 && a.y + a.h <= 350, `${a.key} fora da tela (${width})`);
-            rects.slice(i + 1).forEach(b => assert.equal(rectsOverlap(a, b), false, `${a.key} x ${b.key} (${width})`));
+            // os botões são redondos: compara círculos (os cantos dos quadrados podem se encostar)
+            rects.slice(i + 1).forEach(b => {
+                const d = Math.hypot((a.x + a.w / 2) - (b.x + b.w / 2), (a.y + a.h / 2) - (b.y + b.h / 2));
+                assert.ok(d >= Math.min(a.w, a.h) * 0.48 + Math.min(b.w, b.h) * 0.48, `${a.key} x ${b.key} (${width})`);
+            });
         });
     }
 });

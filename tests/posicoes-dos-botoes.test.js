@@ -41,8 +41,8 @@ clickOn("ranking", "getRankingStageTabRect(2)");
 check("ranking por fase: clicar na 3ª aba escolhe a 3ª fase", run("rankingSelectedStage") === run("STAGE_PROGRESSION[2].id"));
 
 run("stageProgress = {}; stageChoicePendingId = 'terra'");
-clickOn("stage_map", "MENU_LAYOUT.stageMap.cancel");
-check("mapa de fases: VOLTAR fecha a escolha de modo", run("stageChoicePendingId") === null && run("gameState") === "stage_map");
+clickOn("stage_map", "MENU_LAYOUT.back");
+check("mapa de fases: a seta ← fecha a escolha de modo", run("stageChoicePendingId") === null && run("gameState") === "stage_map");
 
 // ---------- a área invisível embaixo da tela de controles do PC não existe mais ----------
 run("setGameState('options_pc')");
