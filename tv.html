@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Saiyan Fight — TV</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  video { width: 100vw; height: 100vh; object-fit: contain; background: #000; }
+  #aviso { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; color: #9fb3d8;
+           font: bold 3vw sans-serif; text-align: center; }
+</style>
+</head>
+<body>
+<!-- Tela da TV (receptor do "TRANSMITIR PARA A TV"): recebe ao vivo a imagem do jogo que está rodando no
+     celular/PC (vídeo do canvas por WebRTC; a combinação da conexão vai pelo canal da Presentation API). -->
+<video id="video" autoplay muted playsinline></video>
+<div id="aviso">CONECTANDO AO SAIYAN FIGHT...</div>
+<script>
+(function () {
+    const video = document.getElementById("video"), aviso = document.getElementById("aviso");
+    function atender(conexao) {
+        const pc = new RTCPeerConnection({ iceServers: [] });
+        pc.ontrack = (e) => { video.srcObject = e.streams[0]; aviso.style.display = "none"; };
+        pc.onicecandidate = (e) => { if (e.candidate) conexao.send(JSON.stringify({ tipo: "ice", candidato: e.candidate })); };
+        conexao.onmessage = async (e) => {
+            let msg; try { msg = JSON.parse(e.data); } catch (err) { return; }
+            if (msg.tipo === "oferta") {
+                await pc.setRemoteDescription(msg.sdp);
+                const resposta = await pc.createAnswer();
+                await pc.setLocalDescription(resposta);
+                conexao.send(JSON.stringify({ tipo: "resposta", sdp: pc.localDescription }));
+            } else if (msg.tipo === "ice" && msg.candidato) {
+                try { await pc.addIceCandidate(msg.candidato); } catch (err) { /* ignora candidato ruim */ }
+            }
+        };
+        conexao.onclose = conexao.onterminate = () => { pc.close(); aviso.textContent = "TRANSMISSÃO ENCERRADA"; aviso.style.display = "flex"; };
+    }
+    if (navigator.presentation && navigator.presentation.receiver) {
+        navigator.presentation.receiver.connectionList.then(lista => {
+            lista.connections.forEach(atender);
+            lista.onconnectionavailable = (e) => atender(e.connection);
+        });
+    } else {
+        aviso.textContent = "ABRA PELO BOTÃO TRANSMITIR PARA A TV DO JOGO";
+    }
+})();
+</script>
+</body>
+</html>

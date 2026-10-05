@@ -305,19 +305,16 @@ test("getScrollToRevealRow: rola só quando a linha não está visível e respei
 
 const padButtons = (on) => Array.from({ length: 18 }, (_, i) => ({ pressed: on.includes(i), value: on.includes(i) ? 1 : 0 }));
 
-test("PS5 padrão: cruz ataca, bola parry, quadrado carrega, triângulo transforma, options pausa", () => {
+test("PS5 padrão: quadrado ataca, R1 parry, cruz carrega, triângulo transforma, bola especial, options pausa", () => {
     const at = (i) => getGamepadIntent({ axes: [0, 0], buttons: padButtons([i]) });
-    assert.equal(at(0).attack, true);
-    assert.equal(at(1).parry, true);
-    assert.equal(at(2).charge, true);
+    assert.equal(at(2).attack, true);
+    assert.equal(at(5).parry, true);
+    assert.equal(at(0).charge, true);
     assert.equal(at(3).transform, true);
+    assert.equal(at(1).special, true);
     assert.equal(at(9).pause, true);
-    assert.equal(at(0).parry, false);
-});
-
-test("PS5 padrão: TOUCHPAD (17), R1 e R2 lançam o especial", () => {
-    for (const i of [5, 7, 17]) assert.equal(getGamepadIntent({ axes: [0, 0], buttons: padButtons([i]) }).special, true, `botão ${i}`);
-    assert.equal(getGamepadIntent({ axes: [0, 0], buttons: padButtons([4]) }).special, false);
+    assert.equal(at(0).attack, false);
+    assert.equal(at(4).special, false);
 });
 
 test("movimento: analógico esquerdo e direcional; zona morta; sem controle = tudo parado", () => {
@@ -331,7 +328,7 @@ test("movimento: analógico esquerdo e direcional; zona morta; sem controle = tu
 });
 
 test("menus usam sempre cruz/bola mesmo depois de remapear o ataque", () => {
-    const remapped = assignPadButton(DEFAULT_PAD_BINDINGS, "attack", 2).bindings;
+    const remapped = assignPadButton(DEFAULT_PAD_BINDINGS, "attack", 6).bindings;
     const i = getGamepadIntent({ axes: [0, 0], buttons: padButtons([0]) }, 0.4, remapped);
     assert.equal(i.confirm, true);
     assert.equal(i.attack, false);
@@ -341,19 +338,17 @@ test("assignPadButton: atribui o touchpad a uma ação e não mexe no padrão or
     const before = JSON.stringify(DEFAULT_PAD_BINDINGS);
     const { bindings, displaced } = assignPadButton(DEFAULT_PAD_BINDINGS, "attack", 17);
     assert.deepEqual(bindings.attack, [17]);
-    assert.equal(displaced, "special", "o touchpad era do especial");
-    assert.ok(!bindings.special.includes(17));
-    assert.ok(bindings.special.length > 0, "especial não fica sem botão");
+    assert.equal(displaced, null, "o touchpad estava livre");
     assert.equal(JSON.stringify(DEFAULT_PAD_BINDINGS), before);
     assert.equal(getGamepadIntent({ axes: [0, 0], buttons: padButtons([17]) }, 0.4, bindings).attack, true);
-    assert.equal(getGamepadIntent({ axes: [0, 0], buttons: padButtons([0]) }, 0.4, bindings).attack, false);
+    assert.equal(getGamepadIntent({ axes: [0, 0], buttons: padButtons([2]) }, 0.4, bindings).attack, false);
 });
 
 test("assignPadButton: botão em uso por outra ação => as duas trocam", () => {
-    const { bindings, displaced } = assignPadButton(DEFAULT_PAD_BINDINGS, "attack", 1); // bola era o parry
+    const { bindings, displaced } = assignPadButton(DEFAULT_PAD_BINDINGS, "attack", 1); // bola era o especial
     assert.deepEqual(bindings.attack, [1]);
-    assert.deepEqual(bindings.parry, [0], "parry ficou com a cruz (antigo botão do ataque)");
-    assert.equal(displaced, "parry");
+    assert.deepEqual(bindings.special, [2], "especial ficou com o quadrado (antigo botão do ataque)");
+    assert.equal(displaced, "special");
     for (const a of PAD_ACTIONS) assert.ok(bindings[a].length >= 1, `${a} com botão`);
 });
 

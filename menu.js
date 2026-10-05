@@ -549,7 +549,7 @@ function toggleFullscreen() {
 function drawFullscreenButton() {
     const rect = getFullscreenButtonRect();
     if (padNavIsActiveState()) registerMenuTarget(rect.x, rect.y, rect.w, rect.h);   // o controle também alcança
-    const hovered = inRect(mouseX, mouseY, rect.x, rect.y, rect.w, rect.h);
+    const hovered = isMouseHovering() && inRect(mouseX, mouseY, rect.x, rect.y, rect.w, rect.h);
     const isActive = isFullscreenActive();
     const centerX = rect.x + rect.w / 2;
     const centerY = rect.y + rect.h / 2;
@@ -838,9 +838,22 @@ function traceRoundedRect(x, y, w, h, radius) {
     ctx.closePath();
 }
 
+// Plataforma em uso agora (a última que mexeu): "controle", "toque" ou "pc" (teclado/mouse).
+let lastPadInputAt = 0, lastKeyInputAt = 0;
+function getActiveInputPlatform() {
+    const toque = lastInputWasTouch ? (lastTouchStartAt || 1) : 0;
+    if (lastPadInputAt > 0 && lastPadInputAt >= toque && lastPadInputAt >= lastKeyInputAt && getConnectedGamepads().length) return "controle";
+    if (isTouchDevice && lastInputWasTouch) return "toque";
+    return "pc";
+}
+function isMouseHovering() {
+    return !lastInputWasTouch && !padNav.visible && getActiveInputPlatform() === "pc";
+}
+
 function drawBtn(x, y, w, h, text, color = "#00ffff", font = "bold 12px 'Courier New', monospace") {
     registerMenuTarget(x, y, w, h);
-    let hov = inRect(mouseX, mouseY, x, y, w, h);
+    // laranja de "passar o mouse" só quando quem está jogando usa o mouse (toque e controle deixavam um botão aceso)
+    let hov = isMouseHovering() && inRect(mouseX, mouseY, x, y, w, h);
     const pressAmount = beginButtonPress(x, y, w, h);
     const pressed = pressAmount > 0.5;
 
@@ -1262,25 +1275,55 @@ function pollPadCapture(dt) {
     }
 }
 
-// Desenha o símbolo do botão do PS5 (cruz, bola, quadrado, triângulo) sem depender de fontes.
+// Desenha o símbolo de qualquer botão do PS5 sem depender de fontes: cruz, bola, quadrado, triângulo, gatilhos
+// (L1/R1/L2/R2 em pílula), CREATE e OPTIONS (pílulas com as marcas), L3/R3, direcional, PS e touchpad.
 function drawPadGlyph(index, cx, cy, s, color) {
     ctx.save();
     ctx.strokeStyle = color;
+    ctx.fillStyle = color;
     ctx.lineWidth = 2;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
+    const texto = (t, tam) => { ctx.font = `bold ${tam}px monospace`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(t, cx, cy + 0.5); };
+    const pilula = (w, h) => { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(cx - w / 2, cy - h / 2, w, h, h / 2); else ctx.rect(cx - w / 2, cy - h / 2, w, h); ctx.stroke(); };
     ctx.beginPath();
     if (index === 0) {
         ctx.moveTo(cx - s, cy - s); ctx.lineTo(cx + s, cy + s);
         ctx.moveTo(cx + s, cy - s); ctx.lineTo(cx - s, cy + s);
+        ctx.stroke();
     } else if (index === 1) {
-        ctx.arc(cx, cy, s, 0, Math.PI * 2);
+        ctx.arc(cx, cy, s, 0, Math.PI * 2); ctx.stroke();
     } else if (index === 2) {
-        ctx.rect(cx - s, cy - s, s * 2, s * 2);
+        ctx.rect(cx - s, cy - s, s * 2, s * 2); ctx.stroke();
+    } else if (index === 3) {
+        ctx.moveTo(cx, cy - s); ctx.lineTo(cx + s, cy + s * 0.8); ctx.lineTo(cx - s, cy + s * 0.8); ctx.closePath(); ctx.stroke();
+    } else if (index >= 4 && index <= 7) {
+        ctx.lineWidth = 1.5; pilula(s * 3, s * 2); texto(["L1", "R1", "L2", "R2"][index - 4], Math.round(s * 1.2));
+    } else if (index === 8 || index === 9) {
+        // CREATE: pílula com três traços inclinados; OPTIONS: pílula com três linhas
+        ctx.lineWidth = 1.5; pilula(s * 1.4, s * 2.2);
+        ctx.lineWidth = 1.2; ctx.beginPath();
+        for (let k = -1; k <= 1; k++) {
+            if (index === 9) { ctx.moveTo(cx - s * 0.35, cy + k * s * 0.45); ctx.lineTo(cx + s * 0.35, cy + k * s * 0.45); }
+            else { ctx.moveTo(cx - s * 0.3 + k * s * 0.3, cy + s * 0.5); ctx.lineTo(cx + k * s * 0.3, cy - s * 0.5); }
+        }
+        ctx.stroke();
+    } else if (index === 10 || index === 11) {
+        ctx.lineWidth = 1.5; ctx.arc(cx, cy, s, 0, Math.PI * 2); ctx.stroke(); texto(index === 10 ? "L3" : "R3", Math.round(s * 0.95));
+    } else if (index >= 12 && index <= 15) {
+        // direcional: cruz com a direção pintada
+        const t = s * 0.38;
+        ctx.lineWidth = 1.3;
+        ctx.rect(cx - t, cy - s, t * 2, s * 2); ctx.rect(cx - s, cy - t, s * 2, t * 2); ctx.stroke();
+        const d = { 12: [0, -1], 13: [0, 1], 14: [-1, 0], 15: [1, 0] }[index];
+        ctx.fillRect(cx + d[0] * s * 0.62 - t * 0.8, cy + d[1] * s * 0.62 - t * 0.8, t * 1.6, t * 1.6);
+    } else if (index === 16) {
+        ctx.lineWidth = 1.5; ctx.arc(cx, cy, s, 0, Math.PI * 2); ctx.stroke(); texto("PS", Math.round(s * 0.95));
+    } else if (index === 17) {
+        ctx.lineWidth = 1.5; ctx.rect(cx - s * 1.6, cy - s * 0.9, s * 3.2, s * 1.8); ctx.stroke();
     } else {
-        ctx.moveTo(cx, cy - s); ctx.lineTo(cx + s, cy + s * 0.8); ctx.lineTo(cx - s, cy + s * 0.8); ctx.closePath();
+        texto(String(index), Math.round(s * 1.2));
     }
-    ctx.stroke();
     ctx.restore();
 }
 
@@ -1296,7 +1339,7 @@ function drawGamepadOptions() {
         ctx.textAlign = "left";
         ctx.fillText(PAD_ACTION_LABELS[action], 125, y + 19);
         const list = padBindings[action];
-        if (list[0] >= 0 && list[0] <= 3) drawPadGlyph(list[0], 300, y + 14, 8, PAD_FACE_COLORS[list[0]]);
+        if (list[0] >= 0) drawPadGlyph(list[0], 300, y + 14, 8, PAD_FACE_COLORS[list[0]] || "#cbd5e1");
         const isCapturing = padCapture && padCapture.action === action;
         drawBtnAt(bindRect, isCapturing ? "APERTE UM BOTÃO..." : describePadBinding(list), isCapturing ? "#fbbf24" : "#00ffff", "bold 11px 'Courier New', monospace");
     });
@@ -1640,7 +1683,9 @@ function isMenuBackTarget(t) {
 function padNavIsActiveState() {
     // controls_test: os botões do controle precisam acender na tela, não navegar
     // tutorial: o analógico mexe só o personagem (CREATE pula o passo, OPTIONS pausa — ver pollGamepads)
-    return gameState !== "playing" && gameState !== "tutorial" && gameState !== "options_hud" && gameState !== "controls_test";
+    // (no fim do tutorial volta a navegar: o botão VOLTAR AO MENU precisa ser alcançado)
+    if (gameState === "tutorial") return tutorialPhase === "finished";
+    return gameState !== "playing" && gameState !== "options_hud" && gameState !== "controls_test";
 }
 
 // Acha o alvo que está sob o foco atual (ou o mais próximo, se a tela mudou); escolhe um inicial se não há foco.
@@ -1725,6 +1770,12 @@ function isDomModalOpen(id) {
     return Boolean(el && el.style && (el.style.display === "flex" || el.style.display === "block"));
 }
 
+// analógico inclinado para cima/baixo (usado para rolar texto nas janelas, não para trocar de botão)
+function scrollAxis() {
+    const pads = getConnectedGamepads();
+    return pads.some(p => p.axes && Math.abs(p.axes[1] || 0) > 0.4 && !(p.buttons && (p.buttons[12] && p.buttons[12].pressed || p.buttons[13] && p.buttons[13].pressed)));
+}
+
 function pollGamepadMenu(dt) {
     const pads = getConnectedGamepads();
     const intents = pads.map(pad => getPadIntent(pad));
@@ -1746,13 +1797,31 @@ function pollGamepadMenu(dt) {
     const alertOpen = isDomModalOpen("modal-alert"), updatesOpen = isDomModalOpen("modal-updates"), editorOpen = isDomModalOpen("modal-editor");
     if (alertOpen || updatesOpen || editorOpen) {
         const confirm = any("confirm"), back = any("back");
-        if (alertOpen) {
-            const holder = document.getElementById("modal-alert-btns");
-            const buttons = holder && holder.querySelectorAll ? Array.from(holder.querySelectorAll("button")) : [];
-            if (confirm && !padNav.prevConfirm && buttons[0]) buttons[0].click();
-            else if (back && !padNav.prevBack && buttons.length) buttons[buttons.length - 1].click();
-        } else if (updatesOpen) {
-            if ((confirm && !padNav.prevConfirm) || (back && !padNav.prevBack)) closeUpdatesModal();
+        if (alertOpen || updatesOpen) {
+            // foco num dos botões da janela (destacado); direcional troca, CRUZ aperta, BOLA fecha/cancela,
+            // analógico rola o texto
+            const modal = document.getElementById(alertOpen ? "modal-alert" : "modal-updates");
+            const buttons = modal && modal.querySelectorAll ? Array.from(modal.querySelectorAll("button")).filter(b => b.offsetParent !== null || b.style.display !== "none") : [];
+            if (padNav.modalId !== modal) { padNav.modalId = modal; padNav.modalIndex = 0; padNav.modalHeld = {}; padNav.modalHoldTime = {}; }
+            let delta = 0;
+            for (const [nome, d] of [["left", -1], ["up", -1], ["right", 1], ["down", 1]]) {
+                if (padRepeatTick(padNav.modalHeld, padNav.modalHoldTime, nome, any(nome) && !scrollAxis(), dt)) delta = d;
+            }
+            if (buttons.length) {
+                padNav.modalIndex = (padNav.modalIndex + delta + buttons.length) % buttons.length;
+                buttons.forEach((b, i) => { b.style.outline = i === padNav.modalIndex ? "3px solid #ffd23f" : ""; b.style.outlineOffset = "2px"; });
+            }
+            // rolar o texto com o analógico
+            const ay = pads.length && pads[0].axes ? (pads[0].axes[1] || 0) : 0;
+            if (Math.abs(ay) > 0.4 && modal) {
+                const rolavel = Array.from(modal.querySelectorAll ? modal.querySelectorAll("ul, p, div") : []).find(el => el.scrollHeight > el.clientHeight + 4);
+                if (rolavel) rolavel.scrollTop += ay * 10;
+            }
+            if (confirm && !padNav.prevConfirm && buttons[padNav.modalIndex]) buttons[padNav.modalIndex].click();
+            else if (back && !padNav.prevBack) {
+                if (updatesOpen) closeUpdatesModal();
+                else if (buttons.length) buttons[buttons.length - 1].click();
+            }
         } else {
             pollEditorGamepad(dt, intents, pads.length > 0);
         }
@@ -1761,6 +1830,10 @@ function pollGamepadMenu(dt) {
         return;
     }
     editorPadReset();
+    if (padNav.modalId) {   // janela fechou: tira o destaque dos botões dela
+        if (padNav.modalId.querySelectorAll) Array.from(padNav.modalId.querySelectorAll("button")).forEach(b => { b.style.outline = ""; });
+        padNav.modalId = null;
+    }
 
     // Ao entrar numa tela, botão já apertado (ex.: segurando o ataque no jogo) não conta como clique.
     if (padNav.polledState !== gameState) {
@@ -1865,6 +1938,7 @@ function pollGamepads(dt) {
     }
     padPrevCreate = createDown;
 
+    if (getConnectedGamepads().some(pad => { const i = getPadIntent(pad); return Object.keys(i).some(k => i[k]); })) lastPadInputAt = Date.now();
     const anyPause = ["p1", "p2"].some(profile => getPadIntent(assignments[profile]).pause);
     if (anyPause && !padPrevPause) {
         if (gameState === "tutorial") {
@@ -1909,7 +1983,7 @@ function pollGamepads(dt) {
     }
 }
 
-// TRANSMITIR PARA A TV: explica como espelhar a tela do jogo numa TV pelo próprio aparelho.
+// TRANSMITIR PARA A TV — ajuda: como espelhar a tela do jogo numa TV pelo próprio aparelho.
 function ajudaTransmitirTV() {
     showSystemAlert("TRANSMITIR PARA A TV",
         "Espelhe a tela pelo aparelho:\n" +
@@ -1918,10 +1992,42 @@ function ajudaTransmitirTV() {
         "• PC (Chrome/Edge): menu ⋮ > 'Transmitir...' e escolha a TV.\n" +
         "O jogo continua no seu aparelho e a TV mostra a mesma tela.");
 }
-// (a API de apresentação abriria uma SEGUNDA cópia do jogo na TV, sem controle — por isso o caminho certo é
-// o espelhamento do próprio aparelho/navegador, que mostra exatamente esta tela)
+// Onde o navegador permite (Chrome com Chromecast/Google TV), o botão abre a lista de TVs do próprio navegador
+// e a TV abre tv.html, que recebe AO VIVO a imagem deste canvas (vídeo por WebRTC; a combinação da conexão vai
+// pelo canal da Presentation API). O jogo continua aqui. Experimental: sem suporte (iPhone, Firefox, TV sem
+// Chromecast) ou se falhar, mostra como espelhar pelo aparelho. Tocar de novo encerra a transmissão.
+let transmissaoTV = null;   // { conexao, pc }
+function encerrarTransmissaoTV() {
+    if (!transmissaoTV) return;
+    try { transmissaoTV.pc.close(); } catch (e) {}
+    try { transmissaoTV.conexao.terminate(); } catch (e) {}
+    transmissaoTV = null;
+}
+function iniciarVideoParaTV(conexao) {
+    const stream = canvas.captureStream(30);
+    const pc = new RTCPeerConnection({ iceServers: [] });
+    stream.getTracks().forEach(t => pc.addTrack(t, stream));
+    transmissaoTV = { conexao, pc };
+    pc.onicecandidate = (e) => { if (e.candidate) conexao.send(JSON.stringify({ tipo: "ice", candidato: e.candidate })); };
+    conexao.onmessage = async (e) => {
+        let msg; try { msg = JSON.parse(e.data); } catch (err) { return; }
+        if (msg.tipo === "resposta") await pc.setRemoteDescription(msg.sdp);
+        else if (msg.tipo === "ice" && msg.candidato) { try { await pc.addIceCandidate(msg.candidato); } catch (err) {} }
+    };
+    conexao.onclose = conexao.onterminate = () => { if (transmissaoTV && transmissaoTV.conexao === conexao) { try { pc.close(); } catch (e) {} transmissaoTV = null; } };
+    pc.createOffer().then(oferta => pc.setLocalDescription(oferta)).then(() => conexao.send(JSON.stringify({ tipo: "oferta", sdp: pc.localDescription })));
+}
 function transmitirParaTV() {
-    ajudaTransmitirTV();
+    if (transmissaoTV) { encerrarTransmissaoTV(); return; }
+    const suporta = typeof PresentationRequest === "function" && typeof RTCPeerConnection === "function" && canvas && typeof canvas.captureStream === "function";
+    if (!suporta) { ajudaTransmitirTV(); return; }
+    try {
+        const pedido = new PresentationRequest(["tv.html"]);
+        pedido.start().then(conexao => {
+            if (conexao.state === "connected") iniciarVideoParaTV(conexao);
+            else conexao.onconnect = () => iniciarVideoParaTV(conexao);
+        }).catch(err => { if (!err || err.name !== "AbortError") ajudaTransmitirTV(); });   // cancelar a lista não mostra ajuda
+    } catch (e) { ajudaTransmitirTV(); }
 }
 
 // Tela de pausa (CONTINUAR / OPÇÕES / SAIR), por cima da luta ou do tutorial congelados.
@@ -2148,7 +2254,7 @@ canvas.addEventListener("touchstart", (e) => {
         const ui = getTutorialUiLayout();
         const onTutorialBtn = ui.finished
             ? inRect(firstPoint.x, firstPoint.y, ui.voltar.x, ui.voltar.y, ui.voltar.w, ui.voltar.h)
-            : inRect(firstPoint.x, firstPoint.y, ui.pular.x, ui.pular.y, ui.pular.w, ui.pular.h) || inRect(firstPoint.x, firstPoint.y, ui.sair.x, ui.sair.y, ui.sair.w, ui.sair.h);
+            : inRect(firstPoint.x, firstPoint.y, ui.pular.x, ui.pular.y, ui.pular.w, ui.pular.h);
         if (onTutorialBtn) {
             startPointerPress(firstPoint.x, firstPoint.y, firstTouch.identifier, () => handleMenuClick(firstPoint.x, firstPoint.y));
             return;
@@ -2439,6 +2545,7 @@ canvas.addEventListener("touchcancel", (e) => {
 }, { passive: false });
 
 window.onkeydown = (e) => {
+    lastKeyInputAt = Date.now();
     if (remappingKey) {
         let [p, act] = remappingKey.split(".");
         keyBindings[p][act] = e.code;
@@ -2515,16 +2622,20 @@ document.addEventListener("visibilitychange", () => { if (document.hidden) autoP
 // Texto de instrução do passo atual, adaptado ao controle em uso — toque (analógico ou arrastar), teclado/mouse
 // e controle (quando conectado) aparecem juntos no PC, já que o jogo aceita os três ao mesmo tempo.
 function getTutorialInstructionLines(stepKey) {
+    // só os comandos da plataforma em uso (toque, teclado/mouse ou controle); troca na hora se o jogador mudar
     const lines = [];
-    const padConnected = getConnectedGamepads().length > 0;
-    if (isTouchDevice) {
+    const plataforma = getActiveInputPlatform();
+    if (plataforma === "controle") {
+        const padNames = { move: "ANALÓGICO ESQUERDO OU DIRECIONAL", attack: describePadBinding(padBindings.attack), charge: describePadBinding(padBindings.charge), parry: describePadBinding(padBindings.parry), transform: describePadBinding(padBindings.transform), special: describePadBinding(padBindings.special), pause: describePadBinding(padBindings.pause) };
+        lines.push(`CONTROLE: ${padNames[stepKey]}   (CREATE = PULAR, OPTIONS = PAUSA/SAIR)`);
+        if (stepKey === "charge") lines.push("(SEGURE POR UM INSTANTE)");
+    } else if (plataforma === "toque") {
         if (stepKey === "move") {
             lines.push(touchControlMode === "swipe" ? "ARRASTE O DEDO NA TELA PARA VOAR" : "TOQUE E ARRASTE NO ANALÓGICO (ESQUERDA DA TELA), OU SEGURE PRA ATIRAR SEM PARAR");
         } else if (stepKey === "pause") {
             lines.push("TOQUE NO ÍCONE DE PAUSA NO TOPO DA TELA");
         } else if (stepKey === "parry" && mobileDoubleTapParry) {
-            // O botão PARRY fica escondido de propósito quando o duplo toque está ativado (padrão do jogo) —
-            // mostrar "toque no botão" aqui seria pedir algo que nem aparece na tela.
+            // O botão PARRY fica escondido de propósito quando o duplo toque está ativado (padrão do jogo).
             lines.push("TOQUE 2 VEZES SEGUIDAS EM QUALQUER LUGAR LIVRE DA TELA");
         } else {
             const names = { attack: "ATAQUE", charge: "CARREGAR", parry: "PARRY", special: "ESPECIAL" };
@@ -2541,10 +2652,6 @@ function getTutorialInstructionLines(stepKey) {
             lines.push(`TECLADO: ${getBindingDisplayName("Escape")} OU ${getBindingDisplayName("KeyP")}`);
         } else {
             lines.push(`TECLADO/MOUSE: ${getBindingDisplayName(keyBindings.p1[stepKey])}`);
-        }
-        if (padConnected) {
-            const padNames = { move: "ANALÓGICO ESQUERDO OU DIRECIONAL", attack: describePadBinding(padBindings.attack), charge: describePadBinding(padBindings.charge), parry: describePadBinding(padBindings.parry), transform: describePadBinding(padBindings.transform), special: describePadBinding(padBindings.special), pause: describePadBinding(padBindings.pause) };
-            lines.push(`CONTROLE: ${padNames[stepKey]}   (CREATE = PULAR, OPTIONS = PAUSA/SAIR)`);
         }
         if (stepKey === "charge") lines.push("(SEGURE POR UM INSTANTE)");
     }
@@ -2575,7 +2682,6 @@ function getTutorialUiLayout() {
     return {
         finished, title, subtitle, bubbleX, bubbleY, bubbleW, bubbleH, padTop, lineGap,
         pular: { x: 6, y: bubbleY + bubbleH / 2 - 8, w: 50, h: 16 },
-        sair: { x: canvas.width - 56, y: bubbleY + bubbleH / 2 - 8, w: 50, h: 16 },
         voltar: { x: canvas.width / 2 - 70, y: bubbleY + bubbleH + 6, w: 140, h: 18 }
     };
 }
@@ -2614,9 +2720,7 @@ function drawTutorialScreen() {
         drawBtn(ui.voltar.x, ui.voltar.y, ui.voltar.w, ui.voltar.h, "VOLTAR AO MENU", "#86efac", "bold 9px 'Courier New', monospace");
     } else if (step) {
         registerMenuTarget(ui.pular.x, ui.pular.y, ui.pular.w, ui.pular.h);
-        registerMenuTarget(ui.sair.x, ui.sair.y, ui.sair.w, ui.sair.h);
         drawBtn(ui.pular.x, ui.pular.y, ui.pular.w, ui.pular.h, "PULAR", "#93c5fd", "bold 8px 'Courier New', monospace");
-        drawBtn(ui.sair.x, ui.sair.y, ui.sair.w, ui.sair.h, "SAIR", "#fca5a5", "bold 8px 'Courier New', monospace");
     }
     ctx.restore();
 
@@ -2888,7 +2992,6 @@ function handleMenuClick(x, y) {
             if (inRect(x, y, ui.voltar.x, ui.voltar.y, ui.voltar.w, ui.voltar.h)) setGameState("menu");
         } else {
             if (inRect(x, y, ui.pular.x, ui.pular.y, ui.pular.w, ui.pular.h)) advanceTutorialStep();
-            else if (inRect(x, y, ui.sair.x, ui.sair.y, ui.sair.w, ui.sair.h)) setGameState("menu");
         }
     }
     else if (gameState === "stage_map") {
@@ -5266,6 +5369,7 @@ function render() {
     // Janela (editor, novidades, alerta) cobrindo a tela fora da luta: não redesenha o jogo escondido atrás
     // dela — no celular isso deixava a rolagem e os toques do editor travados.
     if (gameState !== "playing" && isModalCoveringScreen()) {
+        pollGamepadMenu(deltaTime);   // o controle continua funcionando nas janelas (avisos, UPDATES, editor)
         requestAnimationFrame(render);
         return;
     }
@@ -5600,7 +5704,7 @@ function render() {
 
         drawBtnAt(MENU_LAYOUT.optionsMain.controls, "CONTROLES", "#7dd3fc");
         drawBtnAt(MENU_LAYOUT.optionsMain.audio, "CONFIGURAÇÃO DE ÁUDIO", "#c4b5fd");
-        drawBtnAt(MENU_LAYOUT.optionsMain.cast, "TRANSMITIR PARA A TV", "#86efac");
+        drawBtnAt(MENU_LAYOUT.optionsMain.cast, transmissaoTV ? "PARAR TRANSMISSÃO PARA A TV" : "TRANSMITIR PARA A TV", transmissaoTV ? "#fca5a5" : "#86efac");
 
         drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
     }
