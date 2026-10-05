@@ -1166,22 +1166,29 @@ const PARRY_REFLECT_COLOR = "#fff23f";
 // automática do teclado) ou apertar sem parar rebatia tudo o tempo todo. Parry que acerta não tem espera,
 // então rebater golpes seguidos no tempo certo continua valendo.
 const PARRY_WHIFF_COOLDOWN = 30;   // quadros (a 60fps) = 0,5s
-// Raio do parry: a área em volta do corpo coberta pelo escudo do parry (desenhado no próprio sprite, sprites.js).
-const PARRY_RADIUS = 52;   // ≈ borda do escudo + o tamanho do tiro: rebate quando o tiro encosta no escudo
+// Alcance do parry: um círculo bem rente à aura de ki (inclui a cabeça; cresce junto com a aura).
+// PARRY_RADIUS é o mínimo (e o valor usado antes da aura ser desenhada pela 1ª vez).
+const PARRY_RADIUS = 56;
+const PARRY_AURA_MARGIN = 6;
+function getParryCircle(p) {
+    const forma = p.auraForma;
+    if (forma) return { x: p.x + forma.offX, y: p.y + forma.offY, r: Math.max(PARRY_RADIUS, Math.max(forma.rx, forma.ry) + PARRY_AURA_MARGIN) };
+    return { x: p.x + p.w / 2, y: p.y + p.h * 0.2, r: PARRY_RADIUS };   // centro na altura do peito do desenho (a arte é maior que a caixa)
+}
 
 function tryReflect(target = player, isP2 = false) {
     if (target.parryCooldown > 0) return;
     target.parryHighlightTimer = 10;
     setActionState(target, "parry", 14);
     let reflectedCount = 0;
-    const targetCx = target.x + target.w / 2, targetCy = target.y + target.h / 2;
+    const area = getParryCircle(target);
 
     for (let i = world.obstacles.length - 1; i >= 0; i--) {
         let obs = world.obstacles[i];
         // Alcance do parry é intencionalmente circular (é uma "habilidade", não a hitbox do corpo).
-        let dist = Math.hypot(obs.x - targetCx, obs.y - targetCy);
+        let dist = Math.hypot(obs.x - area.x, obs.y - area.y);
 
-        if (dist < PARRY_RADIUS && obs.fromPlayer === isP2) {
+        if (dist < area.r && obs.fromPlayer === isP2) {
             // Mecânica simples, de volta ao que era: devolve o golpe em linha reta, rumo ao adversário —
             // sem ângulo nenhum, só inverte a direção horizontal.
             const incomingSpeed = Math.hypot(obs.vx, obs.vy) || 4;
