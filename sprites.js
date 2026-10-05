@@ -183,6 +183,7 @@ function spriteMuscleLine(x1, y1, x2, y2, w, t0, t1, off, curv, color, width, op
 // Raça do Freeza (formas 1 a 3): braços, pernas, barriga e cauda rosados com listras; rosto, mãos e pés na cor da pele.
 const SPRITE_MARCAS_ROSA = ["listras_freeza", "carapaca_freeza"];
 const SPRITE_ROSA_FREEZA = "#ee7d98";
+const SPRITE_METAL = "#c3ccd9";   // partes de metal do Freeza ciborgue
 const SPRITE_MARCAS_FREEZA = ["freeza", "listras_freeza", "carapaca_freeza", "metal_freeza"];   // lábios roxos
 function spriteLimbSkin(a, skin) { return SPRITE_MARCAS_ROSA.includes(a.bodyMarks) ? SPRITE_ROSA_FREEZA : skin; }
 
@@ -603,6 +604,11 @@ function spriteAnimeFace(a, pose, skin, browColor) {
     const mouth = pose.mouth && pose.mouth !== "auto" ? pose.mouth : a.mouthType;
     if (mouth === "shout" || mouth === "grito") s += `<path d="M1.6 8.4 L7.2 8 L6.2 11.6 L2.6 11.8 Z" fill="#4a0d0d" stroke="${SPRITE_OUTLINE}" stroke-width="1"/>`;
     else if (mouth === "smile") s += `<path d="M0.6 9 Q3 10.2 5.4 8.6" fill="none" stroke="${lipColor}" stroke-width="1.1" stroke-linecap="round"/>`;
+    else if (mouth === "risada") {
+        // risada maligna: boca larga aberta, fileira de dentes de cima e canto puxado para cima
+        s += `<path d="M0.2 8.4 Q3.4 8.8 7.6 7 Q6.8 11.6 3.4 12 Q0.8 11.6 0.2 8.4 Z" fill="#3a0d14" stroke="${lipColor}" stroke-width="1.1" stroke-linejoin="round"/>`;
+        s += `<path d="M0.8 8.7 Q3.6 9.1 7 7.4 L6.6 9.2 Q3.6 10.4 1 9.9 Z" fill="#ffffff"/><path d="M2.6 8.9 L2.6 10 M4.4 8.7 L4.4 9.9 M5.9 8.1 L5.9 9.4" stroke="#b9b4c8" stroke-width="0.5"/>`;
+    }
     else if (mouth === "maligno" || mouth === "grin") s += `<path d="M0.8 9.8 L3.6 9.6 Q5.4 9.2 6.4 7.6" fill="none" stroke="${lipColor}" stroke-width="1.2" stroke-linecap="round"/><path d="M4.4 9.6 L4.9 10.9 L5.4 9.4 Z" fill="#ffffff"/>`;   // sorriso de canto, com o caninho
     else s += `<path d="M1 9.4 L5 9.1" stroke="${lipColor}" stroke-width="${freezaLips ? 1.6 : 1.1}" stroke-linecap="round"/>`;
     return s;
@@ -621,7 +627,9 @@ function spriteHead(R, a, B, pose, ctx) {
     let s = "";
     // Rosto de anime pensado para pixel art: virado 3/4 para o adversário (direita), queixo marcado,
     // olhos grandes com branco + pupila, sobrancelha grossa — legível mesmo com poucos pixels.
-    s += `<path d="M-6.4 ${_n2(ry - 6)} L-6.4 ${_n2(ry + 2.6)} L6 ${_n2(ry + 2.6)} L5.6 ${_n2(ry - 6)} Z" fill="${spriteShade(skin, -0.3)}" stroke="${SPRITE_OUTLINE}" stroke-width="1"/>`;
+    // pescoço: contorno só dos lados, sem a linha de baixo — encaixa no peito sem risco (como coxa + canela)
+    s += `<path d="M-6.4 ${_n2(ry - 6)} L-6.4 ${_n2(ry + 3.4)} L6 ${_n2(ry + 3.4)} L5.6 ${_n2(ry - 6)} Z" fill="${spriteShade(skin, -0.3)}"/>`;
+    s += `<path d="M-6.4 ${_n2(ry - 6)} L-6.4 ${_n2(ry + 2.4)} M5.6 ${_n2(ry - 6)} L6 ${_n2(ry + 2.4)}" stroke="${SPRITE_OUTLINE}" stroke-width="1" stroke-linecap="round"/>`;
     if (ear === "pontuda") s += spritePath(`M${_n2(-rx + 1.4)} -2.4 L${_n2(-rx - 9)} -9.6 L${_n2(-rx + 2.2)} 5.4 Z`, spriteShade(skin, -0.1));   // orelha pontuda (Piccolo/Kaioshin)
     else if (ear === "normal") s += spriteEllipse(-rx + 0.6, 1.4, 2.6, 3.6, spriteShade(skin, -0.12));
     const face = R.lin(-10, -8, 10, 12, [[0, spriteShade(skin, 0.22)], [0.55, skin], [1, spriteShade(skin, -0.3)]]);
@@ -633,6 +641,7 @@ function spriteHead(R, a, B, pose, ctx) {
         s += spritePath("M-6 -12.4 Q-1 -15.4 3 -14.6 Q-1 -12.4 -4.6 -9.4 Z", "#f3e3ff", `opacity="0.7"`, "");
         s += `<path d="M2.4 4.4 L5.4 5.6 M-6.4 4.4 L-4.2 5.2" stroke="#7f4fc0" stroke-width="1.2" stroke-linecap="round"/>`;
     }
+    if (marks === "metal_freeza") s += `<path d="M-6.4 4.4 L-4.2 5.2" stroke="${a.primaryColor}" stroke-width="1.2" stroke-linecap="round"/>`;
     if (marks === "namek") {
         s += `<path d="M-4 -9.6 Q0 -11.2 4 -9.6 M-3 -7.4 Q0 -8.8 3 -7.4" fill="none" stroke="${spriteShade(skin, -0.45)}" stroke-width="0.9" stroke-linecap="round"/>`;
         // estrias do pescoço (músculos do pescoço do Namek)
@@ -656,56 +665,85 @@ function spriteHead(R, a, B, pose, ctx) {
     return { back: hairWrap(hair.back), front: s };
 }
 
-// Cabeças da raça do Freeza: capacete branco com domo roxo e chifres finos (1ª forma) ou grandes para cima
-// (2ª), crânio alongado para trás com espinhos (3ª) e meia cabeça de metal com lente (ciborgue).
+// Cabeças da raça do Freeza (vistas em 3/4, rosto para a direita). Capacete (1ª e 2ª formas): chapa roxa no alto
+// da cabeça dando volume para cima, o capacete branco em volta dela e descendo dos lados até um "fone" chato e
+// redondo sobre a orelha; os chifres saem dos lados, acima do fone. 3ª forma: crânio alto subindo reto, domo roxo
+// comprido e espinhos brancos dos dois lados. Ciborgue: topo da cabeça e a parte da frente do rosto de metal, com a
+// lente verde no lugar do olho da frente (o olho de trás e o resto do rosto continuam do Freeza).
 function spriteFreezaHead(R, a, rx, ry) {
     const hf = a.headFeature, o = SPRITE_OUTLINE;
-    const branco = R.lin(-14, -24, 12, 8, [[0, "#ffffff"], [0.55, "#ecebf2"], [1, "#a8a6b8"]]);
-    const roxo = R.lin(-10, -30, 8, -4, [[0, spriteShade(a.primaryColor, 0.6)], [0.4, a.primaryColor], [1, spriteShade(a.primaryColor, -0.55)]]);
-    const metal = R.lin(-14, -24, 12, 8, [[0, "#f2f6ff"], [0.45, "#b8c4d8"], [1, "#5a6a88"]]);
-    // borda de baixo do capacete (testa e lateral de trás, até o maxilar): igual nas formas com capacete
-    const borda = `L${_n2(-rx - 1.8)} 7 Q${_n2(-rx + 1.6)} 10.6 ${_n2(-rx + 5.4)} 9 L${_n2(-rx + 4.2)} 2 Q${_n2(-rx + 4)} -4.6 -1 -6.4 Q${_n2(rx - 3)} -7.4`;
+    const branco = R.lin(-14, -26, 12, 8, [[0, "#ffffff"], [0.55, "#ecebf2"], [1, "#a8a6b8"]]);
+    const roxo = R.lin(-10, -34, 8, -6, [[0, spriteShade(a.primaryColor, 0.6)], [0.4, a.primaryColor], [1, spriteShade(a.primaryColor, -0.55)]]);
+    const metal = R.lin(-12, -22, 12, 8, [[0, "#f2f6ff"], [0.45, "#b8c4d8"], [1, "#5a6a88"]]);
+    const P = (q) => `${_n2(q[0])} ${_n2(q[1])}`;
     let s = "";
+    // chifre reto em "L": sai para o lado e sobe (2ª forma) ou só para o lado subindo pouco (1ª forma)
     const chifre = (pts, w) => {
-        // chifre cônico: base larga (w) afinando até a ponta, seguindo a curva b → c → t
-        const [b, c, t] = pts, L = Math.hypot(c[0] - b[0], c[1] - b[1]) || 1;
-        const nx = -(c[1] - b[1]) / L * w, ny = (c[0] - b[0]) / L * w;
-        const P = (q) => `${_n2(q[0])} ${_n2(q[1])}`;
-        const b1 = [b[0] + nx, b[1] + ny], b2 = [b[0] - nx, b[1] - ny], c1 = [c[0] + nx * 0.55, c[1] + ny * 0.55], c2 = [c[0] - nx * 0.55, c[1] - ny * 0.55];
-        return `<path d="M${P(b1)} Q${P(c1)} ${P(t)} Q${P(c2)} ${P(b2)} Z" fill="#1d1a22" stroke="${o}" stroke-width="0.8" stroke-linejoin="round"/>` +
-            `<path d="M${P([b[0] + nx * 0.4, b[1] + ny * 0.4])} Q${P([c[0] + nx * 0.25, c[1] + ny * 0.25])} ${P([t[0] + (c[0] - t[0]) * 0.25, t[1] + (c[1] - t[1]) * 0.25])}" fill="none" stroke="#77738a" stroke-width="0.8" stroke-linecap="round"/>`;
-    };
-    if (hf === "capacete_freeza" || hf === "capacete_chifres") {
-        if (hf === "capacete_freeza") {
-            s += chifre([[-rx, -8], [-rx - 8, -10.6], [-rx - 16.6, -15.4]], 2.2);   // chifres finos para os lados
-            s += chifre([[rx - 1.4, -9], [rx + 6.4, -11.6], [rx + 14, -16.6]], 2);
-        } else {
-            s += chifre([[-rx + 1.4, -11], [-rx - 6.4, -16], [-rx - 4.6, -29]], 3.6);   // chifres grossos, curvados para cima
-            s += chifre([[rx - 3.4, -12], [rx + 4.6, -17], [rx + 3, -29.6]], 3.4);
+        const n = pts.length, L = [], Rr = [];
+        for (let i = 0; i < n - 1; i++) {
+            const p = pts[i], q = pts[i + 1], prev = pts[Math.max(0, i - 1)];
+            const dx = (q[0] - prev[0]) || (q[0] - p[0]), dy = (q[1] - prev[1]) || (q[1] - p[1]), len = Math.hypot(dx, dy) || 1;
+            const ww = w * (1 - i / (n - 1) * 0.55);
+            L.push([p[0] - dy / len * ww, p[1] + dx / len * ww]); Rr.push([p[0] + dy / len * ww, p[1] - dx / len * ww]);
         }
-        s += spritePath(`M${_n2(rx + 0.8)} -3.6 C${_n2(rx + 2)} -19.6 ${_n2(-rx - 3.4)} -21.4 ${_n2(-rx - 2.4)} -4 ${borda} ${_n2(rx + 0.8)} -3.6 Z`, branco);
-        s += spritePath(`M${_n2(rx - 2.2)} -7.2 C${_n2(rx - 1.4)} -18.8 ${_n2(-rx + 0.6)} -20.4 ${_n2(-rx + 1.6)} -7.6 Q-2 -10.6 ${_n2(rx - 2.2)} -7.2 Z`, roxo);
-        s += `<ellipse cx="-3" cy="-15.4" rx="4" ry="1.8" fill="#ffffff" opacity="0.6" transform="rotate(-14 -3 -15.4)"/>`;
-        s += `<path d="M${_n2(-rx - 1.4)} -2 Q${_n2(-rx - 0.6)} 4 ${_n2(-rx + 3)} 8" fill="none" stroke="#a8a6b8" stroke-width="0.7"/>`;
+        const d = `M${L.map(P).join(" L")} L${P(pts[n - 1])} L${Rr.reverse().map(P).join(" L")} Z`;
+        const brilho = `M${pts.slice(0, n - 1).map(q => P([q[0], q[1] - w * 0.35])).join(" L")}`;
+        return `<path d="${d}" fill="#1d1a22" stroke="${o}" stroke-width="0.8" stroke-linejoin="round"/><path d="${brilho}" fill="none" stroke="#77738a" stroke-width="0.7" stroke-linecap="round"/>`;
+    };
+    // capacete branco + chapa roxa (domoTopo = altura do topo da chapa; inset = quanto a borda branca aparece)
+    const capacete = (domoTopo, inset) => {
+        let c = "";
+        // tiras laterais descendo até o fone (lado de trás e o da frente, mais estreito pela perspectiva)
+        c += spritePath(`M${_n2(-rx - 1.2)} -7 L${_n2(-rx + 2.8)} -6.4 L${_n2(-rx + 3)} 0 L${_n2(-rx - 0.4)} 0.6 Z`, branco);
+        c += spritePath(`M${_n2(rx + 1.2)} -7 L${_n2(rx - 1.6)} -5.6 L${_n2(rx - 1)} -0.2 L${_n2(rx + 1)} 0 Z`, branco);
+        // "fones" chatos e redondos sobre as orelhas
+        c += `<ellipse cx="${_n2(-rx + 0.8)}" cy="2.6" rx="4.2" ry="5.4" fill="${branco}" stroke="${o}" stroke-width="1"/><ellipse cx="${_n2(-rx + 0.8)}" cy="2.6" rx="2.6" ry="3.6" fill="#d8d6e2" stroke="#9a97ac" stroke-width="0.7"/>`;
+        c += `<ellipse cx="${_n2(rx + 0.2)}" cy="2.4" rx="1.9" ry="4.8" fill="${branco}" stroke="${o}" stroke-width="1"/>`;
+        // casco branco em volta da chapa, com a borda da testa em "V" entre os olhos
+        c += spritePath(`M${_n2(-rx - 1.4)} -5.6 C${_n2(-rx - 2.8)} ${_n2(domoTopo - 5)} ${_n2(rx + 2.6)} ${_n2(domoTopo - 5)} ${_n2(rx + 1.4)} -5.6 L${_n2(rx - 0.6)} -4.4 Q${_n2(rx - 3.4)} -6.4 1.6 -3.2 Q-4 -6.4 ${_n2(-rx + 1.8)} -4.4 Z`, branco);
+        // chapa roxa dando volume para cima
+        c += spritePath(`M${_n2(-rx - 1.4 + inset)} ${_n2(-6.6 - inset * 0.3)} C${_n2(-rx - 2.2 + inset)} ${_n2(domoTopo - 1)} ${_n2(rx + 2 - inset)} ${_n2(domoTopo - 1)} ${_n2(rx + 1.4 - inset)} ${_n2(-6.6 - inset * 0.3)} Q${_n2(rx - 3.6)} ${_n2(-8.6 - inset * 0.4)} 1.6 ${_n2(-5.6 - inset * 0.6)} Q-4 ${_n2(-8.6 - inset * 0.4)} ${_n2(-rx - 1.4 + inset)} ${_n2(-6.6 - inset * 0.3)} Z`, roxo);
+        c += `<ellipse cx="-3" cy="${_n2(domoTopo * 0.62)}" rx="${_n2(4.6 - inset * 0.4)}" ry="1.9" fill="#ffffff" opacity="0.6" transform="rotate(-12 -3 ${_n2(domoTopo * 0.62)})"/>`;
+        return c;
+    };
+    if (hf === "capacete_freeza") {
+        s += chifre([[-rx - 1, -4.6], [-rx - 9, -6.4], [-rx - 17, -10.6]], 2.4);   // chifres longos para os lados, subindo pouco
+        s += chifre([[rx + 0.6, -5], [rx + 8, -6.8], [rx + 15, -11]], 2.2);
+        s += capacete(-24, 2.2);                                                    // chapa grande e alta
+    }
+    if (hf === "capacete_chifres") {
+        s += chifre([[-rx - 0.6, -5], [-rx - 6.6, -6.4], [-rx - 7.4, -15], [-rx - 6.4, -27]], 3.4);   // para o lado e depois para cima
+        s += chifre([[rx + 0.2, -5.4], [rx + 6, -6.8], [rx + 6.6, -15.4], [rx + 5.4, -27]], 3.2);
+        s += capacete(-20, 4.4);                                                    // chapa menor
     }
     if (hf === "cabeca_longa") {
-        // crânio comprido para trás e para cima (≈45°), domo roxo alongado e espinhos brancos na borda
+        // crânio alto subindo reto, continuando a cabeça; espinhos brancos dos dois lados, simétricos
         const espinho = (bx, by, tx, ty, bw) => {
             const L = Math.hypot(tx - bx, ty - by) || 1, nx = -(ty - by) / L * bw / 2, ny = (tx - bx) / L * bw / 2;
             return spritePath(`M${_n2(bx + nx)} ${_n2(by + ny)} Q${_n2((bx + tx) / 2 + nx * 0.5)} ${_n2((by + ty) / 2 + ny * 0.5)} ${_n2(tx)} ${_n2(ty)} Q${_n2((bx + tx) / 2 - nx * 0.5)} ${_n2((by + ty) / 2 - ny * 0.5)} ${_n2(bx - nx)} ${_n2(by - ny)} Z`, "#f2f1f6");
         };
-        s += espinho(3, -16, 9.6, -26, 10) + espinho(-7, -22, -6, -34, 10.6) + espinho(-18, -27, -22, -39, 10) + espinho(-27, -27, -38, -31, 9) + espinho(-rx - 1, -8, -rx - 11, -13.6, 8.4);
-        s += spritePath(`M${_n2(rx + 0.6)} -4 C${_n2(rx + 1.4)} -15 -2 -22 -14 -29 Q-28 -36 -33 -29 Q-34 -20 ${_n2(-rx - 2.4)} -4 ${borda} ${_n2(rx + 0.6)} -4 Z`, branco);
-        s += spritePath(`M${_n2(rx - 2.4)} -7.6 C${_n2(rx - 1.6)} -15.4 -3 -20.4 -14 -26.2 Q-26 -32.6 -29.4 -27.6 Q-29 -19 ${_n2(-rx + 1.4)} -7.8 Q-2 -10.6 ${_n2(rx - 2.4)} -7.6 Z`, roxo);
-        s += `<path d="M1 -14 Q-8 -20.4 -18 -25" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.55"/>`;
+        [[-1, -10], [-1, -21], [1, -10], [1, -21]].forEach(([sd, y]) => {
+            const bx = sd < 0 ? -rx - 0.4 : rx - 0.6;
+            s += espinho(bx, y, bx + sd * 9, y - 9, 8);
+        });
+        s += espinho(-rx + 2, -30, -rx - 3, -40, 7) + espinho(rx - 3, -30, rx + 1.6, -40, 7);
+        s += spritePath(`M${_n2(-rx - 1.4)} -5.4 C${_n2(-rx - 3)} -24 ${_n2(-rx - 1.6)} -44 0 -44 C${_n2(rx + 1.6)} -44 ${_n2(rx + 3)} -24 ${_n2(rx + 1.4)} -5.4 L${_n2(rx - 0.6)} -4.4 Q${_n2(rx - 3.4)} -6.4 1.6 -3.2 Q-4 -6.4 ${_n2(-rx + 1.8)} -4.4 Z`, branco);
+        s += spritePath(`M${_n2(-rx + 1.6)} -7 C${_n2(-rx + 0.2)} -24 ${_n2(-rx + 1.2)} -40.6 0 -40.6 C${_n2(rx - 1.2)} -40.6 ${_n2(rx - 0.2)} -24 ${_n2(rx - 1.6)} -7 Q${_n2(rx - 3.6)} -8.8 1.6 -6 Q-4 -8.8 ${_n2(-rx + 1.6)} -7 Z`, roxo);
+        s += `<path d="M-4 -12 Q-5.4 -26 -2 -36" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.55"/>`;
+        // placas brancas dos lados do rosto, como a borda do capacete
+        s += spritePath(`M${_n2(-rx - 1.2)} -6 L${_n2(-rx + 2.8)} -5.4 L${_n2(-rx + 3)} 4 L${_n2(-rx - 0.2)} 5 Z`, branco);
     }
     if (hf === "meia_cabeca_metal") {
-        // ciborgue: topo e lado de trás da cabeça em metal com rebites; lente verde no olho de trás; maxilar de metal
-        s += spritePath(`M${_n2(rx - 1)} -6.4 C${_n2(rx)} -19.4 ${_n2(-rx - 3)} -21 ${_n2(-rx - 2.2)} -4 L${_n2(-rx - 1.6)} 8 Q${_n2(-rx + 2)} 12 -2.6 11.6 L-2.6 -2.6 Q2 -7.6 ${_n2(rx - 1)} -6.4 Z`, metal);
-        s += `<path d="M-2.6 -2.6 Q-4 -12 4 -18 M${_n2(-rx - 1.4)} 0 L-2.8 0 M-6 -18 L-6 -6" fill="none" stroke="#2a3a6a" stroke-width="0.9"/>`;
-        [[2, -12], [-8, -14], [-9, 5], [-4.4, 9]].forEach(([x, y]) => { s += `<circle cx="${x}" cy="${y}" r="0.7" fill="#2a3a6a"/>`; });
-        s += `<ellipse cx="-5.2" cy="1.4" rx="3.4" ry="3" fill="${R.rad(-6, 0.4, 3.6, [[0, "#d9fff4"], [0.45, "#3fe0b8"], [1, "#0a6a5a"]])}" stroke="${o}" stroke-width="0.9"/>`;
-        s += `<ellipse cx="-6.2" cy="0.4" rx="1" ry="0.7" fill="#ffffff" opacity="0.85"/>`;
+        // topo da cabeça de metal (no lugar do domo) com gomos azuis e rebites
+        s += spritePath(`M${_n2(-rx + 0.4)} -3 C${_n2(-rx - 0.4)} -18 ${_n2(rx + 0.4)} -18 ${_n2(rx)} -3 Q0 -9.4 ${_n2(-rx + 0.4)} -3 Z`, metal);
+        s += `<path d="M-5 -15.4 Q-6 -10 -7 -5.4 M1 -16.4 L1 -8.4 M6.6 -14.6 Q7.4 -10 7.6 -6" fill="none" stroke="#2a3a6a" stroke-width="0.9"/>`;
+        [[-8, -6.6], [-2, -8.6], [4, -9], [9.4, -6.4]].forEach(([x, y]) => { s += `<circle cx="${x}" cy="${y}" r="0.6" fill="#2a3a6a"/>`; });
+        // placa de metal na frente do rosto, em volta do olho da frente, descendo pela bochecha
+        s += spritePath(`M1.6 -4.4 L${_n2(rx + 0.4)} -4.4 L${_n2(rx - 0.2)} 4.6 L8.2 9.4 L5.6 8.8 L4.6 5.6 Q1.6 4.6 1.6 2 Z`, metal);
+        s += `<path d="M1.8 1.4 L-0.2 1.6" stroke="#2a3a6a" stroke-width="0.8"/>`;
+        // lente verde no lugar do olho da frente
+        s += `<ellipse cx="5.2" cy="1" rx="3" ry="2.7" fill="${R.rad(4.4, 0.2, 3.2, [[0, "#d9fff4"], [0.45, "#3fe0b8"], [1, "#0a6a5a"]])}" stroke="${o}" stroke-width="0.9"/>`;
+        s += `<ellipse cx="4.4" cy="0.1" rx="0.9" ry="0.6" fill="#ffffff" opacity="0.85"/>`;
     }
     return s;
 }
@@ -799,21 +837,35 @@ function spriteGloveSpec(a) {
     return null;
 }
 
+// Silhueta do tronco (ombros → cintura → quadril), no espaço padrão do tronco (ombros y=45, quadril y=77).
+function spriteTorsoBodyPath(B, pose) {
+    const sw = B.sw, ww = B.ww, hw = B.hw;
+    const x0 = 48 - sw / 2, x1 = 48 + sw / 2, yw = 69, yh = 77;
+    const y0b = 45 - (pose.breath || 0);
+    if (B.belly) {
+        // barrigão redondo: alarga bem abaixo do peito e fecha arredondado no quadril
+        const bx = ww / 2;
+        return `M${_n2(x0)} ${_n2(y0b + 1)} C${_n2(x0 - 3)} 50 ${_n2(48 - bx)} 54 ${_n2(48 - bx)} 63 C${_n2(48 - bx)} 72 ${_n2(48 - hw / 2 - 3)} ${yh} ${_n2(48 - hw / 2)} ${yh} L${_n2(48 + hw / 2)} ${yh} C${_n2(48 + hw / 2 + 3)} ${yh} ${_n2(48 + bx)} 72 ${_n2(48 + bx)} 63 C${_n2(48 + bx)} 54 ${_n2(x1 + 3)} 50 ${_n2(x1)} ${_n2(y0b + 1)} Q48 ${_n2(y0b - 4)} ${_n2(x0)} ${_n2(y0b + 1)} Z`;
+    }
+    return `M${_n2(x0)} ${_n2(y0b + 1)} Q${_n2(x0 - 1.6)} 56 ${_n2(48 - ww / 2)} ${yw} L${_n2(48 - hw / 2)} ${yh} L${_n2(48 + hw / 2)} ${yh} L${_n2(48 + ww / 2)} ${yw} Q${_n2(x1 + 1.6)} 56 ${_n2(x1)} ${_n2(y0b + 1)} Q48 ${_n2(y0b - 4)} ${_n2(x0)} ${_n2(y0b + 1)} Z`;
+}
+
+// Contorno do tronco, desenhado ANTES das pernas: assim as pernas cobrem a borda de baixo dele e o tronco (sem
+// contorno próprio) cobre o topo das coxas — quadril sem risco entre tronco e pernas (como coxa + canela).
+function spriteTorsoOutline(B, pose) {
+    return `<path d="${spriteTorsoBodyPath(B, pose)}" fill="${SPRITE_OUTLINE}" stroke="${SPRITE_OUTLINE}" stroke-width="3.8" stroke-linejoin="round"/>`;
+}
+
 // Desenha o volume do tronco + roupa. Coordenadas do viewBox; centro em x=48.
 function spriteTorso(R, a, B, spec, skin, pose) {
     const sw = B.sw, ww = B.ww, hw = B.hw;
     const x0 = 48 - sw / 2, x1 = 48 + sw / 2, y0 = 45, yw = 69, yh = 77;
     const breath = pose.breath || 0;
     const y0b = y0 - breath;
-    let body = `M${_n2(x0)} ${_n2(y0b + 1)} Q${_n2(x0 - 1.6)} 56 ${_n2(48 - ww / 2)} ${yw} L${_n2(48 - hw / 2)} ${yh} L${_n2(48 + hw / 2)} ${yh} L${_n2(48 + ww / 2)} ${yw} Q${_n2(x1 + 1.6)} 56 ${_n2(x1)} ${_n2(y0b + 1)} Q48 ${_n2(y0b - 4)} ${_n2(x0)} ${_n2(y0b + 1)} Z`;
-    if (B.belly) {
-        // barrigão redondo: alarga bem abaixo do peito e fecha arredondado no quadril
-        const bx = ww / 2;
-        body = `M${_n2(x0)} ${_n2(y0b + 1)} C${_n2(x0 - 3)} 50 ${_n2(48 - bx)} 54 ${_n2(48 - bx)} 63 C${_n2(48 - bx)} 72 ${_n2(48 - hw / 2 - 3)} ${yh} ${_n2(48 - hw / 2)} ${yh} L${_n2(48 + hw / 2)} ${yh} C${_n2(48 + hw / 2 + 3)} ${yh} ${_n2(48 + bx)} 72 ${_n2(48 + bx)} 63 C${_n2(48 + bx)} 54 ${_n2(x1 + 3)} 50 ${_n2(x1)} ${_n2(y0b + 1)} Q48 ${_n2(y0b - 4)} ${_n2(x0)} ${_n2(y0b + 1)} Z`;
-    }
+    const body = spriteTorsoBodyPath(B, pose);
     const base = spec.torso;
     const fill = R.lin(x0, 46, x1, 70, [[0, spriteShade(base, 0.32)], [0.45, base], [1, spriteShade(base, -0.42)]]);
-    let s = spritePath(body, fill);
+    let s = spritePath(body, fill, "", "");   // o contorno vem de spriteTorsoOutline (por baixo das pernas)
     if (base === SPRITE_ROSA_FREEZA) {
         // pele rosada listrada (raça do Freeza): faixas horizontais do peito ao quadril, levemente curvas
         let st = "";
@@ -883,6 +935,13 @@ function spriteTorso(R, a, B, spec, skin, pose) {
             // forma final: o corpo liso é a própria armadura — músculos marcados e a gota roxa brilhante no meio do
             // peito (as placas dos ombros ficam em spriteShoulderPads); sem cueca, a virilha só tem a sombra do quadril
             d += spriteBareTorsoMuscles(Object.assign({}, B, { mus: Math.max(B.mus, 0.7), female: false }), spec.torso, ww, y0b);
+            if (a.bodyMarks === "metal_freeza") {
+                // ciborgue: metade direita do peito e da barriga em placas de metal (a esquerda continua do Freeza)
+                const met = R.lin(48, y0b, x1, yh, [[0, "#eef3fb"], [0.5, SPRITE_METAL], [1, "#5a6a88"]]);
+                d += spritePath(`M48 ${_n2(y0b - 1.6)} Q${_n2(48 + sw * 0.3)} ${_n2(y0b - 2)} ${_n2(x1)} ${_n2(y0b + 1)} Q${_n2(x1 + 1.6)} 56 ${_n2(48 + ww / 2)} ${yw} L${_n2(48 + hw / 2)} ${yh} L48 ${yh} Z`, met);
+                d += `<path d="M48 54 L${_n2(x1 - 0.6)} 52.6 M48 60 L${_n2(48 + ww / 2 + 0.6)} 60 M48 65.6 L${_n2(48 + ww / 2)} 65.6 M${_n2(48 + sw * 0.24)} ${_n2(y0b + 1)} L${_n2(48 + sw * 0.22)} 53.4" stroke="#2a3a6a" stroke-width="0.8"/>`;
+                [[48 + sw * 0.34, 50], [48 + ww * 0.3, 63], [48 + ww * 0.3, 68.4]].forEach(([x, y]) => { d += `<circle cx="${_n2(x)}" cy="${y}" r="0.6" fill="#2a3a6a"/>`; });
+            }
             const gema = R.lin(44, y0b + 5, 52, y0b + 16, [[0, spriteShade(a.primaryColor, 0.55)], [0.45, a.primaryColor], [1, spriteShade(a.primaryColor, -0.5)]]);
             d += spritePath(`M${_n2(48 - 5.2)} ${_n2(y0b + 6.4)} Q48 ${_n2(y0b + 4.2)} ${_n2(48 + 5.2)} ${_n2(y0b + 6.4)} Q${_n2(48 + 4.6)} ${_n2(y0b + 11.6)} 48 ${_n2(y0b + 16)} Q${_n2(48 - 4.6)} ${_n2(y0b + 11.6)} ${_n2(48 - 5.2)} ${_n2(y0b + 6.4)} Z`, gema);
             d += `<ellipse cx="${_n2(48 - 1.8)}" cy="${_n2(y0b + 7.4)}" rx="2" ry="1" fill="#ffffff" opacity="0.7"/>`;
@@ -900,7 +959,7 @@ function spriteTorso(R, a, B, spec, skin, pose) {
             d += `<ellipse cx="${_n2(48 - sw * 0.18)}" cy="${_n2(y0b + 6.4)}" rx="3" ry="1.5" fill="#ffffff" opacity="0.4"/>`;
             d += spritePath(`M${_n2(x0 + 2.4)} ${_n2(y0b + 1.6)} Q48 ${_n2(y0b - 3.4)} ${_n2(x1 - 2.4)} ${_n2(y0b + 1.6)} L${_n2(x1 - 3.2)} ${_n2(y0b + 4.4)} Q48 ${_n2(y0b + 0.2)} ${_n2(x0 + 3.2)} ${_n2(y0b + 4.4)} Z`, "#f4f4f2");   // colar branco
             const bx = ww * 0.42;
-            d += spritePath(`M${_n2(48 - bx)} 67 L${_n2(48 - bx)} 61.4 Q48 56.8 ${_n2(48 + bx)} 61.4 L${_n2(48 + bx)} 67 Z`, ouro, `stroke="#f4f4f2" stroke-width="1.6"`, "");
+            d += spritePath(`M${_n2(48 - bx)} 67 L${_n2(48 - bx)} 61.4 Q48 56.8 ${_n2(48 + bx)} 61.4 L${_n2(48 + bx)} 67 Z`, ouro, `stroke="${spriteShade(a.accentColor, -0.7)}" stroke-width="0.8" stroke-linejoin="round"`, "");
             d += `<path d="M${_n2(48 - bx * 0.5)} 60.4 L${_n2(48 - bx * 0.5)} 66.6 M48 59.4 L48 66.6 M${_n2(48 + bx * 0.5)} 60.4 L${_n2(48 + bx * 0.5)} 66.6" stroke="${spriteShade(a.accentColor, -0.5)}" stroke-width="0.8" opacity="0.85"/>`;
             break;
         }
@@ -975,21 +1034,14 @@ function spriteTorsoMarks(R, a, B, skin, x0, x1, ww, y0b) {
     let d = "";
     if (m === "carapaca_freeza") {
         const branco = R.lin(x0, y0b, x1, 62, [[0, "#ffffff"], [0.55, "#eceaf2"], [1, "#a9a6b8"]]);
-        d += spritePath(`M${_n2(x0 - 1)} ${_n2(y0b + 1)} Q48 ${_n2(y0b - 4.4)} ${_n2(x1 + 1)} ${_n2(y0b + 1)} L${_n2(x1 - 0.6)} 56 Q${_n2(x1 - 3)} 61.4 ${_n2(48 + ww * 0.3)} 61 L48 63.4 L${_n2(48 - ww * 0.3)} 61 Q${_n2(x0 + 3)} 61.4 ${_n2(x0 + 0.6)} 56 Z`, branco);
+        // desce pelas laterais até a cintura; no meio fica um recorte com a barriga rosada listrada acima do short
+        const cx = ww * 0.3;
+        d += spritePath(`M${_n2(x0 - 1)} ${_n2(y0b + 1)} Q48 ${_n2(y0b - 4.4)} ${_n2(x1 + 1)} ${_n2(y0b + 1)} Q${_n2(x1 + 1.4)} 58 ${_n2(48 + ww / 2 + 0.8)} 69.8 L${_n2(48 + cx)} 69.8 L${_n2(48 + cx)} 64.4 Q48 61.6 ${_n2(48 - cx)} 64.4 L${_n2(48 - cx)} 69.8 L${_n2(48 - ww / 2 - 0.8)} 69.8 Q${_n2(x0 - 1.4)} 58 ${_n2(x0 - 1)} ${_n2(y0b + 1)} Z`, branco);
+        d += `<path d="M${_n2(x0 + 2)} 60 Q${_n2(x0 + 3.4)} 64 ${_n2(48 - cx - 1.6)} 68 M${_n2(x1 - 2)} 60 Q${_n2(x1 - 3.4)} 64 ${_n2(48 + cx + 1.6)} 68" fill="none" stroke="#9d9ab0" stroke-width="0.8" opacity="0.8"/>`;
         d += `<path d="M${_n2(48 - B.sw * 0.3)} ${_n2(y0b + 8.4)} Q${_n2(48 - B.sw * 0.14)} ${_n2(y0b + 11.4)} 48 ${_n2(y0b + 9.4)} Q${_n2(48 + B.sw * 0.14)} ${_n2(y0b + 11.4)} ${_n2(48 + B.sw * 0.3)} ${_n2(y0b + 8.4)}" fill="none" stroke="#8d8aa0" stroke-width="1" opacity="0.8"/>`;
         const gema = R.lin(44, 52, 52, 62, [[0, spriteShade(a.primaryColor, 0.6)], [0.45, a.primaryColor], [1, spriteShade(a.primaryColor, -0.5)]]);
         d += spritePath(`M${_n2(48 - 6)} ${_n2(y0b + 11)} Q48 ${_n2(y0b + 9)} ${_n2(48 + 6)} ${_n2(y0b + 11)} Q${_n2(48 + 5)} ${_n2(y0b + 15.4)} 48 ${_n2(y0b + 17.6)} Q${_n2(48 - 5)} ${_n2(y0b + 15.4)} ${_n2(48 - 6)} ${_n2(y0b + 11)} Z`, gema);
         d += `<ellipse cx="${_n2(48 - 2)}" cy="${_n2(y0b + 11.8)}" rx="2.4" ry="1" fill="#ffffff" opacity="0.7"/>`;
-    }
-    if (m === "metal_freeza") {
-        // peito de metal: placas com rebites, duas lentes roxas e a barriga em gomos azul-escuros
-        const junta = "#2a3a6a";
-        d += `<path d="M48 ${_n2(y0b + 2)} L48 60 M${_n2(48 - ww * 0.5)} 60 L${_n2(48 + ww * 0.5)} 60 M${_n2(48 - ww * 0.44)} 64 L${_n2(48 + ww * 0.44)} 64" stroke="${junta}" stroke-width="1" opacity="0.9"/>`;
-        [-1, 1].forEach(sd => {
-            const cx = 48 + sd * B.sw * 0.17, cy = y0b + 8;
-            d += `<ellipse cx="${_n2(cx)}" cy="${_n2(cy)}" rx="2.6" ry="2" fill="${R.rad(cx - 0.8, cy - 0.8, 3, [[0, "#e7c6ff"], [0.5, a.primaryColor], [1, "#2a1150"]])}" stroke="${SPRITE_OUTLINE}" stroke-width="0.7"/>`;
-            d += `<circle cx="${_n2(48 + sd * ww * 0.36)}" cy="61.6" r="0.6" fill="${junta}"/><circle cx="${_n2(48 + sd * ww * 0.36)}" cy="66" r="0.6" fill="${junta}"/>`;
-        });
     }
     if (m === "namek") {
         // centro do abdômen rosado com estrias e linhas finas na pele verde do peitoral
@@ -1061,8 +1113,15 @@ function spriteSymbol(a, B) {
 // ---------------------------------------------------------------------------
 // MEMBROS
 // ---------------------------------------------------------------------------
-function spriteHand(R, cx, cy, r, color, open, ang) {
+function spriteHand(R, cx, cy, r, color, open, ang, parts) {
     const fill = R.rad(cx - r * 0.4, cy - r * 0.5, r * 1.9, [[0, spriteShade(color, 0.4)], [0.55, color], [1, spriteShade(color, -0.4)]]);
+    if (parts) {
+        // em duas partes, para juntar ao antebraço sem risco no pulso: o contorno vai por baixo do braço e o
+        // preenchimento (sem contorno) por cima
+        const full = spriteHand(R, cx, cy, r, color, open, ang);
+        const base = full.replace(/fill="url\([^)]*\)"/, `fill="${SPRITE_OUTLINE}"`).replace(/<path[^>]*\/>/g, "").replace(/stroke-width="1"/, `stroke-width="3.8"`);
+        return { base, fill: full.replace(/ stroke="#15110f" stroke-width="1"/, "") };
+    }
     if (open) {
         return `<g transform="rotate(${_n2(ang || 0)} ${_n2(cx)} ${_n2(cy)})"><ellipse cx="${_n2(cx)}" cy="${_n2(cy)}" rx="${_n2(r * 1.25)}" ry="${_n2(r * 1.5)}" fill="${fill}" stroke="${SPRITE_OUTLINE}" stroke-width="1"/><path d="M${_n2(cx - r * 0.5)} ${_n2(cy - r * 0.6)} L${_n2(cx - r * 0.5)} ${_n2(cy - r * 1.4)} M${_n2(cx)} ${_n2(cy - r * 0.7)} L${_n2(cx)} ${_n2(cy - r * 1.5)} M${_n2(cx + r * 0.5)} ${_n2(cy - r * 0.6)} L${_n2(cx + r * 0.5)} ${_n2(cy - r * 1.4)}" stroke="${SPRITE_OUTLINE}" stroke-width="0.6" opacity="0.7"/></g>`;
     }
@@ -1079,8 +1138,13 @@ function spriteArm(R, a, B, spec, glove, skin, side, angles, handKind) {
     let s = "";
     // anime: deltoide largo afinando no cotovelo; antebraço forte afinando no punho; manga do kimono larga.
     const mus = B.mus || 0;
-    s += spriteJoined(spriteMuscle(sx, sy, e[0], e[1], w * 1.35, w * 0.9, spec.armUpper, { bulge: 0.16 + 0.08 * mus, parts: true }),
-        spriteMuscle(e[0], e[1], h[0], h[1], w * (1.0 + 0.06 * mus), w * 0.72, spec.armLower, { bulge: 0.14 + 0.06 * mus, parts: true }));
+    if (a.bodyMarks === "metal_freeza" && side < 0) spec = Object.assign({}, spec, { armUpper: SPRITE_METAL, armLower: SPRITE_METAL });
+    const up = spriteMuscle(sx, sy, e[0], e[1], w * 1.35, w * 0.9, spec.armUpper, { bulge: 0.16 + 0.08 * mus, parts: true });
+    const lo = spriteMuscle(e[0], e[1], h[0], h[1], w * (1.0 + 0.06 * mus), w * 0.72, spec.armLower, { bulge: 0.14 + 0.06 * mus, parts: true });
+    const handColor = glove && glove.full ? glove.color : (spec.armLower === SPRITE_METAL ? SPRITE_METAL : skin);
+    const dirA = Math.atan2(h[0] - e[0], -(h[1] - e[1])) * 180 / Math.PI;
+    const mao = spriteHand(R, h[0], h[1], w * 0.52, handColor, handKind === "open", dirA + 180, true);
+    s += up.base + lo.base + mao.base + up.fill + lo.fill + up.shade + lo.shade;   // braço + mão sem risco no pulso
     if (mus > 0) {
         const lin = (c) => spriteShade(c, -0.48), luz = (c) => spriteShade(c, 0.48);
         const peleUp = spec.armUpper === skin || spec.armUpper === SPRITE_ROSA_FREEZA;
@@ -1096,7 +1160,7 @@ function spriteArm(R, a, B, spec, glove, skin, side, angles, handKind) {
             s += spriteMuscleLine(e[0], e[1], h[0], h[1], w, 0.1, 0.55, 0.14, 0.18, lin(spec.armLower), 0.5 + 0.4 * mus, 0.25 + 0.3 * mus);
         }
     }
-    s += spriteArmMarks(R, a, B, spec, skin, sx, sy, e, h, w);
+    s += spriteArmMarks(R, a, B, spec, skin, sx, sy, e, h, w, side);
     if (spec.spots) s += spriteSpots(sx, sy, e[0], e[1], [0.35, 0.68], w * 0.26);
     if (spec.sleeve) {
         const p = [sx + (e[0] - sx) * spec.sleeve.frac, sy + (e[1] - sy) * spec.sleeve.frac];
@@ -1115,24 +1179,23 @@ function spriteArm(R, a, B, spec, glove, skin, side, angles, handKind) {
             if (glove.trim) s += spriteBand(q1[0], q1[1], q2[0], q2[1], w * 1.0, glove.trim, 1.5);
         }
     }
-    const handColor = glove && glove.full ? glove.color : skin;
-    const dirA = Math.atan2(h[0] - e[0], -(h[1] - e[1])) * 180 / Math.PI;
-    s += spriteHand(R, h[0], h[1], w * 0.52, handColor, handKind === "open", dirA + 180);
+    s += mao.fill;
     return { svg: s, hand: h, elbow: e };
 }
 
 // Marcas no braço à mostra: listras rosadas (Freeza 1–3), placas roxas (forma final), segmentos de metal
 // (ciborgue) e placas rosadas com estrias + faixa vermelha no punho (Namek).
-function spriteArmMarks(R, a, B, spec, skin, sx, sy, e, h, w) {
+function spriteArmMarks(R, a, B, spec, skin, sx, sy, e, h, w, side) {
     const m = a.bodyMarks;
     let s = "";
     if (spec.armUpper === SPRITE_ROSA_FREEZA) s += spriteStripes(sx, sy, e[0], e[1], w * 1.35, w * 0.9, 0.12, 0.94, 9, "#a8344f", 0.7, 0.8);
     if (spec.armLower === SPRITE_ROSA_FREEZA) s += spriteStripes(e[0], e[1], h[0], h[1], w * 1.05, w * 0.72, 0.08, 0.6, 5, "#a8344f", 0.7, 0.8);
-    if (m === "freeza" && spec.armLower === skin) s += spritePlate(R, e[0], e[1], h[0], h[1], 0.72, B.l2 * 0.46, w * 0.86, a.primaryColor);   // faixa roxa perto do punho
-    if (m === "metal_freeza") {
+    // forma final: faixa roxa perto do punho (no ciborgue, só no braço direito, que continua do Freeza)
+    if ((m === "freeza" || m === "metal_freeza") && spec.armLower === skin) s += spritePlate(R, e[0], e[1], h[0], h[1], 0.72, B.l2 * 0.46, w * 0.86, a.primaryColor);
+    if (m === "metal_freeza" && spec.armUpper === SPRITE_METAL) {
         const junta = "#2a3a6a";
-        if (spec.armUpper === skin) s += spriteStripes(sx, sy, e[0], e[1], w * 1.35, w * 0.9, 0.35, 0.8, 3, junta, 0.9, 0.9);
-        if (spec.armLower === skin) s += spriteStripes(e[0], e[1], h[0], h[1], w, w * 0.72, 0.25, 0.85, 4, junta, 0.9, 0.9);
+        s += spriteStripes(sx, sy, e[0], e[1], w * 1.35, w * 0.9, 0.35, 0.8, 3, junta, 0.9, 0.9);
+        s += spriteStripes(e[0], e[1], h[0], h[1], w, w * 0.72, 0.25, 0.85, 4, junta, 0.9, 0.9);
         s += `<circle cx="${_n2(e[0])}" cy="${_n2(e[1])}" r="${_n2(w * 0.42)}" fill="${junta}" stroke="${SPRITE_OUTLINE}" stroke-width="0.7"/>`;
     }
     if (m === "namek") {
@@ -1160,7 +1223,7 @@ function spriteLegMarks(R, a, B, color, hx, hy, k, f, w) {
         s += spriteStripes(k[0], k[1], f[0], f[1], w * 0.95, w * 0.66, 0.06, 0.5, 4, "#a8344f", 0.7, 0.8);
     }
     if (m === "freeza") s += spritePlate(R, k[0], k[1], f[0], f[1], 0.42, B.t2 * 0.55, w * 0.78, a.primaryColor);   // placa roxa na canela
-    if (m === "metal_freeza") {
+    if (m === "metal_freeza" && color === SPRITE_METAL) {
         s += spriteStripes(hx, hy, k[0], k[1], w * 1.3, w * 0.92, 0.3, 0.85, 3, "#2a3a6a", 0.9, 0.9);
         s += spriteStripes(k[0], k[1], f[0], f[1], w * 0.95, w * 0.66, 0.3, 0.85, 3, "#2a3a6a", 0.9, 0.9);
         const joelho = R.rad(k[0] - 1, k[1] - 1, w * 0.7, [[0, "#ffb27a"], [0.6, "#d06a2a"], [1, "#7a3412"]]);
@@ -1174,12 +1237,19 @@ function spriteLeg(R, a, B, spec, boot, skin, side, angles) {
     const k = spriteSeg(hx, hy, angles[0], B.t1);
     const f = spriteSeg(k[0], k[1], angles[1], B.t2);
     const w = B.leg * (spec.legWide ? 1.13 : 1);
-    const color = spec.legCover ? spec.leg : (spec.legSkin || skin);
+    const color = spec.legCover ? spec.leg : (a.bodyMarks === "metal_freeza" ? SPRITE_METAL : (spec.legSkin || skin));
     let s = "";
     // anime: coxa larga afinando no joelho; calça folgada (gi) cai larga até a bota.
     const wide = spec.legCover && spec.legWide;
-    s += spriteJoined(spriteMuscle(hx, hy, k[0], k[1], w * (wide ? 1.55 : 1.3), w * (wide ? 1.22 : 0.92), color, { bulge: wide ? 0.08 : 0.14, parts: true }),
-        spriteMuscle(k[0], k[1], f[0], f[1], w * (wide ? 1.22 : 0.95 + 0.05 * (B.mus || 0)), w * (wide ? 1.12 : 0.66), color, { bulge: wide ? 0.04 : 0.12 + 0.06 * (B.mus || 0), parts: true }));
+    const coxa = spriteMuscle(hx, hy, k[0], k[1], w * (wide ? 1.55 : 1.3), w * (wide ? 1.22 : 0.92), color, { bulge: wide ? 0.08 : 0.14, parts: true });
+    const canela = spriteMuscle(k[0], k[1], f[0], f[1], w * (wide ? 1.22 : 0.95 + 0.05 * (B.mus || 0)), w * (wide ? 1.12 : 0.66), color, { bulge: wide ? 0.04 : 0.12 + 0.06 * (B.mus || 0), parts: true });
+    // pé comum: contorno por baixo da canela (sem risco no tornozelo), preenchimento no fim
+    const fc = boot && boot.color && !boot.guard ? boot.color : skin;
+    const pePath = `M${_n2(f[0] - 3.4)} ${_n2(f[1] - 1)} L${_n2(f[0] + 3.4)} ${_n2(f[1] - 1)} Q${_n2(f[0] + side * 7.6 + (side < 0 ? 2 : 0))} ${_n2(f[1] + 0.4)} ${_n2(f[0] + side * 6.4 + (side < 0 ? 1.4 : 0))} ${_n2(f[1] + 3.6)} L${_n2(f[0] - 3.8)} ${_n2(f[1] + 3.6)} Z`;
+    const peGiro = `rotate(${_n2(angles[1] * 0.45 + side * 4)} ${_n2(f[0])} ${_n2(f[1])})`;
+    const garras = boot && boot.claws;
+    const peBase = garras ? "" : `<g transform="${peGiro}"><path d="${pePath}" fill="${SPRITE_OUTLINE}" stroke="${SPRITE_OUTLINE}" stroke-width="3.8" stroke-linejoin="round"/></g>`;
+    s += coxa.base + canela.base + peBase + coxa.fill + canela.fill + coxa.shade + canela.shade;
     const mus = B.mus || 0;
     if (mus > 0) {
         const lin = spriteShade(color, -0.48), luz = spriteShade(color, 0.48);
@@ -1204,10 +1274,8 @@ function spriteLeg(R, a, B, spec, boot, skin, side, angles) {
         s += spriteMuscle(from[0], from[1], f[0], f[1], w * 0.98, w * 0.86, boot.color, { bulge: 0 });
         s += spriteBand(from[0], from[1], f[0], f[1], w * 1.04, boot.trim, 1.8);
     }
-    if (boot && boot.claws) return { svg: s + spriteClawFoot(f, side, angles[1] * 0.45 + side * 4, skin), foot: f, knee: k };
-    const fc = boot ? boot.color : skin;
-    s += `<g transform="rotate(${_n2(angles[1] * 0.45 + side * 4)} ${_n2(f[0])} ${_n2(f[1])})">` +
-        `<path d="M${_n2(f[0] - 3.4)} ${_n2(f[1] - 1)} L${_n2(f[0] + 3.4)} ${_n2(f[1] - 1)} Q${_n2(f[0] + side * 7.6 + (side < 0 ? 2 : 0))} ${_n2(f[1] + 0.4)} ${_n2(f[0] + side * 6.4 + (side < 0 ? 1.4 : 0))} ${_n2(f[1] + 3.6)} L${_n2(f[0] - 3.8)} ${_n2(f[1] + 3.6)} Z" fill="${fc}" stroke="${SPRITE_OUTLINE}" stroke-width="1.2" stroke-linejoin="round"/>` +
+    if (garras) return { svg: s + spriteClawFoot(f, side, angles[1] * 0.45 + side * 4, a.bodyMarks === "metal_freeza" ? SPRITE_METAL : skin), foot: f, knee: k };
+    s += `<g transform="${peGiro}"><path d="${pePath}" fill="${fc}"/>` +
         `<path d="M${_n2(f[0] - 3.6)} ${_n2(f[1] + 2.4)} L${_n2(f[0] + side * 6.2)} ${_n2(f[1] + 2.4)}" stroke="${spriteShade(fc, -0.45)}" stroke-width="1.3"/></g>`;
     return { svg: s, foot: f, knee: k };
 }
@@ -1315,16 +1383,16 @@ function spriteShoulderPads(R, a, B) {
         // placa arredondada com cúpula brilhante (ombros da raça do Freeza / ciborgue)
         const cx = 48 + side * (B.sw / 2 - 0.4), cy = 46.6;
         const f = R.rad(cx - side * 1.6 - 1.4, cy - 2, rx * 1.3, [[0, spriteShade(base, 0.6)], [0.45, base], [1, spriteShade(base, -0.5)]]);
-        return (rim ? `<ellipse cx="${_n2(cx)}" cy="${_n2(cy + 0.6)}" rx="${_n2(rx + 2.4)}" ry="${_n2(ry + 2)}" fill="${rim}" stroke="${SPRITE_OUTLINE}" stroke-width="1"/>` : "") +
+        return (rim ? `<ellipse cx="${_n2(cx + side * 1.2)}" cy="${_n2(cy + 0.4)}" rx="${_n2(rx + 3.6)}" ry="${_n2(ry + 2.2)}" fill="${rim}" stroke="${SPRITE_OUTLINE}" stroke-width="1"/>` : "") +
             `<ellipse cx="${_n2(cx)}" cy="${_n2(cy)}" rx="${_n2(rx)}" ry="${_n2(ry)}" fill="${f}" stroke="${SPRITE_OUTLINE}" stroke-width="0.9"/>` +
             `<ellipse cx="${_n2(cx - side * 1.4 - 1)}" cy="${_n2(cy - ry * 0.4)}" rx="${_n2(rx * 0.35)}" ry="${_n2(ry * 0.25)}" fill="#ffffff" opacity="0.7"/>`;
     };
     const bracoNu = !(a.innerShirt && a.innerShirt !== "nenhuma") && !["jaqueta_trunks", "traje_android", "armadura_cell"].includes(a.outerShirt);
     if (a.outerShirt === "armadura_freeza") {
-        const cor = a.bodyMarks === "metal_freeza" ? "#d06a2a" : a.primaryColor;   // ciborgue: ombros de cobre
-        s += dome(-1, 4.6, 3.6, cor) + dome(1, 4.6, 3.6, cor);
+        const metal = a.bodyMarks === "metal_freeza";   // ciborgue: ombro esquerdo (de trás) de cobre, o direito continua roxo
+        s += dome(-1, 4.6, 3.6, metal ? "#d06a2a" : a.primaryColor) + dome(1, 4.6, 3.6, a.primaryColor);
     } else if (a.bodyMarks === "carapaca_freeza" && bracoNu) {
-        s += dome(-1, 4.4, 3.4, a.primaryColor, "#f2f1f6") + dome(1, 4.4, 3.4, a.primaryColor, "#f2f1f6");
+        s += dome(-1, 6.2, 4.4, a.primaryColor, "#f2f1f6") + dome(1, 6.2, 4.4, a.primaryColor, "#f2f1f6");   // placas largas e proeminentes
     }
     if (a.outerShirt === "armadura_exercito") {
         // ombreiras do exército do Freeza: largas, douradas com frisos e borda branca, apontando para os lados
@@ -1491,6 +1559,7 @@ function spriteRenderFigure(a, pose, opts) {
     let fig = "";
     fig += torsoWrap(spriteBack(R, a, B, pose, skin));   // capa/asas/cauda acompanham ombros e quadril
     fig += headWrap(headParts.back);          // cabelo comprido fica ATRÁS do corpo
+    fig += torsoWrap(spriteTorsoOutline(B, pose));
     fig += legL.svg + legR.svg;
     fig += armL.svg;                          // braço de trás (esquerdo, lado oposto ao adversário) some atrás do tronco
     let torso = spriteTorso(R, a, B, spec, skin, pose);
