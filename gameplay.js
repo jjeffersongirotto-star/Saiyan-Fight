@@ -194,7 +194,17 @@ function updateTutorial(dt) {
 
     const step = getCurrentTutorialStep();
 
+    // Igual à luta: os tiros de ki voam, o especial dura o tempo dele, a aura da transformação vai passando
+    // e carregar enche o ki em qualquer passo (no passo CARREGAR isso é contado lá embaixo).
+    const f = dt * 60;
+    world.obstacles.forEach(o => { if (o !== tutorialParryTarget && o.fromPlayer) { o.x += o.vx * f; o.y += (o.vy || 0) * f; } });
+    world.obstacles = world.obstacles.filter(o => o === tutorialParryTarget || (o.x > -30 && o.x < canvas.width + 30));
+    if (world.beamActive > 0) world.beamActive = Math.max(0, world.beamActive - f);
+    updateTransformPower(player, false, dt);
+    if (player.isCharging && (!step || step.key !== "charge")) player.ki = Math.min(player.maxKi, player.ki + 1.4 * f);
+
     if (tutorialPhase === "effect") {
+        setTutorialActionState(0, 0);
         tutorialEffectTimer -= dt * 60;
         if (tutorialEffectTimer <= 0) { advanceTutorialStep(); return; }
         if (step && step.key !== "move") return;   // durante o efeito só o movimento continua livre
@@ -262,9 +272,17 @@ function updateTutorial(dt) {
         }
     }
 
-    if (tutorialPhase === "waiting" && !["move", "charge"].includes(step.key)) {
-        player.actionState = "idle";
-    }
+    if (tutorialPhase === "waiting" && !["move", "charge"].includes(step.key)) setTutorialActionState(dx, dy);
+}
+
+// Animação do personagem no tutorial, com a mesma prioridade da luta: parry, especial, ataque/transformação
+// ainda em andamento, carregando, voando ou parado.
+function setTutorialActionState(dx, dy) {
+    if (player.parryHighlightTimer > 0) player.actionState = "parry";
+    else if (world.beamActive > 0) player.actionState = "attackKi";
+    else if (player.actionTimer > 0 && ["attackKi", "transform", "parry"].includes(player.actionState)) { /* mantém */ }
+    else if (player.isCharging) player.actionState = "chargeKi";
+    else player.actionState = getDominantMoveAction(dx, dy) || "idle";
 }
 
 // getHitboxRect, rectsOverlap e circleHitsEntity agora vivem em game-logic-core.js.
@@ -1640,7 +1658,8 @@ function update(dt) {
         }
     }
 
-    world.pickupSpawnTimer += dt * 60;
+    // itens só servem ao jogador 1: no VERSUS não aparecem (os dois lutam nas mesmas condições)
+    if (gameMode !== "coop") world.pickupSpawnTimer += dt * 60;
     if (world.pickupSpawnTimer >= SPAWN_TIMERS.PICKUP_FRAMES) {
         world.pickupSpawnTimer = 0;
         spawnPickup();
@@ -1774,7 +1793,8 @@ function update(dt) {
         }
     }
 
-    world.saibamanSpawnTimer += dt * 60;
+    // VERSUS é só um contra o outro, nas mesmas condições: sem Saibamans/Cell Jr.
+    if (gameMode !== "coop") world.saibamanSpawnTimer += dt * 60;
     if (world.saibamanSpawnTimer > SPAWN_TIMERS.SAIBAMAN_FRAMES) {
         world.saibamanSpawnTimer = 0;
         spawnSaibaman();

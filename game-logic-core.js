@@ -477,20 +477,21 @@ function adjustHudValue(value, delta, min, max) {
 // Layout "de jogo de mercado": analógico à esquerda; à direita os botões em arco em volta do polegar.
 // CARREGAR no canto inferior direito, ATAQUE (maior, segura para atirar sem parar) ao lado dele,
 // ESPECIAL/PARRY acima e TRANSF. mais para dentro. Bumpar TOUCH_HUD_LAYOUT_VERSION invalida layouts salvos antigos.
-const TOUCH_HUD_LAYOUT_VERSION = 3;
+const TOUCH_HUD_LAYOUT_VERSION = 4;
 
 function getDefaultTouchHudLayout(viewportWidth) {
-    const k = viewportWidth <= 540 ? 1.15 : 1;
     const opacity = viewportWidth <= 540 ? 0.9 : 0.8;
-    const stdW = Math.round(50 * k), bigW = Math.round(66 * k);
-    const make = (cx, cy, w, h) => ({ x: (cx - w / 2) / 800, y: (cy - h / 2) / 350, w, h, scale: 1, opacity });
+    // tamanhos fixos (a escala maior do celular empurrava os botões para fora da tela)
+    const big = 62, std = 46;
+    const make = (cx, cy, w) => ({ x: (cx - w / 2) / 800, y: (cy - w / 2) / 350, w, h: w, scale: 1, opacity });
     return {
-        // padrão escolhido pelo jogador: CARREGAR/TRANSFORMAR maior no canto, PARRY ao lado embaixo,
-        // ATAQUE ao lado no meio (some com o tiro automático do toque) e ESPECIAL acima do CARREGAR
-        charge:    make(757, 307, bigW, bigW),
-        parry:     make(687, 317, stdW, stdW),
-        attack:    make(687, 255, stdW, stdW),
-        special:   make(766, 236, stdW, stdW)
+        // padrão escolhido pelo jogador (print dele): todos juntos no canto inferior direito — CARREGAR/TRANSFORMAR
+        // maior embaixo, ESPECIAL em cima dele, ATAQUE à esquerda no meio (some com o tiro automático do toque)
+        // e PARRY embaixo à esquerda
+        charge:  make(767, 317, big),
+        special: make(774, 262, std),
+        attack:  make(726, 277, std),
+        parry:   make(712, 324, std)
         // sem botão de transformar: com o ki cheio o CARREGAR vira TRANSFORMAR (ver drawTouchHUD em menu.js)
     };
 }
