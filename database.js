@@ -2148,9 +2148,9 @@ function loadCharacterData() {
 // transformar). O construtor continua funcionando igual para criar personagens novos a partir desses modelos.
 const FREEZA_TRANSFORMACOES = [
     { name: "Segunda forma", diff: { build: "gigante", headFeature: "capacete_chifres", bodyMarks: "carapaca_freeza", outerShirt: "none" }, ssj: false, aura: "roxo" },
-    { name: "Terceira forma", diff: { build: "musculoso", headFeature: "cabeca_longa", bodyMarks: "carapaca_freeza", outerShirt: "none" }, ssj: false, aura: "roxo" },
+    { name: "Terceira forma", diff: { build: "musculoso", headFeature: "cabeca_longa", bodyMarks: "carapaca_freeza", outerShirt: "none", mouthType: "risada" }, ssj: false, aura: "roxo" },
     { name: "Forma final", diff: { build: "normal", headFeature: "none", bodyMarks: "freeza", outerShirt: "armadura_freeza", gloves: "nenhuma", shoes: "pes_garras", skinColor: "" }, ssj: false, aura: "roxo" },
-    { name: "Freeza ciborgue", diff: { build: "normal", headFeature: "meia_cabeca_metal", bodyMarks: "metal_freeza", outerShirt: "armadura_freeza", gloves: "nenhuma", shoes: "pes_garras", skinColor: "#c8d0de" }, ssj: false, aura: "roxo" }
+    { name: "Freeza ciborgue", diff: { build: "normal", headFeature: "meia_cabeca_metal", bodyMarks: "metal_freeza", outerShirt: "armadura_freeza", gloves: "nenhuma", shoes: "pes_garras", skinColor: "" }, ssj: false, aura: "roxo" }
 ];
 
 const DEFAULT_CHARACTERS = {
