@@ -1,6 +1,6 @@
 // tests/selecao-parry-controle.test.js
 // - SELEÇÃO DE PERSONAGEM pergunta antes de trocar (herói e vilão); no VERSUS a lista tem todos os personagens;
-// - parry: a área é o escudo em volta do corpo (PARRY_RADIUS), sem círculo grande separado;
+// - parry: círculo rente à aura (getParryCircle), sem círculo grande desenhado; ícones dos itens menores;
 // - controle: sensibilidade do analógico salva, analógico direito rola UPDATES, touchpad alterna tela cheia.
 //
 // Uso: node tests/selecao-parry-controle.test.js
@@ -49,6 +49,14 @@ run("tryReflect(player, false)");
 check("parry rebate o tiro que encosta no escudo em volta do corpo", run("world.obstacles[0].fromPlayer") === true);
 check("parry não alcança longe do corpo (sem bola gigante)", run("world.obstacles[1].fromPlayer") === false);
 check("não existe mais o círculo grande separado", run("typeof drawParryRing") === "undefined");
+// tiro passando logo acima da cabeça (topo do desenho fica bem acima da caixa de colisão) também é rebatido
+run("render(); player.parryCooldown = 0");
+const topoCabeca = run("player.y + player.h * (103 / 112) - player.h * 1.54 * (103 / 112)");
+run(`world.obstacles = [{ x: player.x + player.w / 2 + 10, y: ${topoCabeca} - 6, vx: -4, vy: 0, radius: 6, fromPlayer: false, damage: 1 }]`);
+run("tryReflect(player, false)");
+check("parry rebate a magia que passa logo acima da cabeça", run("world.obstacles[0].fromPlayer") === true);
+const area = run("getParryCircle(player)"), forma = run("player.auraForma");
+check("o alcance do parry fica rente à aura (círculo só um pouco maior que ela)", forma && area.r >= Math.max(forma.rx, forma.ry) && area.r <= Math.max(forma.rx, forma.ry) + 12);
 run("setGameState('menu')");
 
 // ---------- controle ----------

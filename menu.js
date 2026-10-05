@@ -4173,9 +4173,11 @@ function drawPlayerEntity(p, charData, isBoss = false) {
         const auraType = charData && charData.aura ? charData.aura : "gelo";
         const auraPalette = AURA_COLORS[auraType] || AURA_COLORS.gelo;
         const auraColor = auraPalette[0] || "#62eaff";
-        const bubbleRadius = Math.max(p.w, p.h) * 0.78;
-        const bubbleX = renderX + p.w / 2;
-        const bubbleY = renderY + p.h / 2;
+        // sempre um pouco maior que a aura de ki (que cresce ao carregar/transformar: o escudo cresce junto)
+        const forma = p.auraForma;
+        const bubbleRadius = forma ? Math.max(forma.rx, forma.ry) + 8 : Math.max(p.w, p.h) * 0.78;
+        const bubbleX = forma ? p.x + forma.offX : renderX + p.w / 2;
+        const bubbleY = forma ? p.y + forma.offY : renderY + p.h / 2;
 
         ctx.save();
         ctx.globalAlpha = 0.22;
@@ -4387,6 +4389,8 @@ function drawKiAura(entity, charData, cx, bottomY, bodyW, bodyH) {
     const sx = w / KI_AURA_BASE_W, sy = h / KI_AURA_BASE_H, dw = img.width * sx, dh = img.height * sy;
     ctx.drawImage(img, Math.round(cx - dw / 2), Math.round(bottomY + img.bottomOffset * sy - dh), Math.round(dw), Math.round(dh));
     ctx.restore();
+    // forma visível da aura (relativa à caixa do lutador): o escudo da cápsula e o alcance do parry ficam em volta dela
+    entity.auraForma = { offX: cx - entity.x, offY: bottomY - h * 0.52 - entity.y, rx: w * 0.95, ry: h * 0.58 };
     if (nivel > 0) drawKiLightning(entity, cx, bottomY, w, h, transformed);
 }
 
@@ -5166,7 +5170,7 @@ function drawHUD() {
 // Ícone rápido ao pegar um item (sem texto no meio da luta): sobe e some como os antigos avisos.
 // senzu = + verde, cápsula = escudo, nuvem voadora = sandália com asas, bastão mágico = punho de força.
 function drawPickupFeedbackIcon(ft) {
-    const pop = (0.7 + Math.min(1, (1 - ft.alpha) * 6) * 0.3) * 1.4;   // cresce rápido ao aparecer
+    const pop = (0.7 + Math.min(1, (1 - ft.alpha) * 6) * 0.3) * 0.98;   // cresce rápido ao aparecer (30% menor que antes)
     ctx.save();
     ctx.globalAlpha = Math.max(0, Math.min(1, ft.alpha * 1.4));
     ctx.translate(ft.x, ft.y);

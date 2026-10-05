@@ -17,7 +17,7 @@ run("gameMode = 'singleplayer'; selectedStage = 'terra'; startGame()");
 // não importa de onde o golpe vem (cima, baixo, meio) nem onde o vilão está — sempre sai reto (vy = 0)
 run("player2.y = 20"); // vilão bem no alto — não deveria influenciar mais nada
 for (const offsetY of [-50, -10, 0, 10, 50]) {
-    run(`world.obstacles = [{ x: player.x + player.w/2, y: player.y + player.h/2 + ${offsetY}, radius: 8, vx: -3, vy: 7, fromPlayer: false, color: '#fff' }]`);
+    run(`player.parryCooldown = 0; world.obstacles = [{ x: player.x + player.w/2, y: getParryCircle(player).y + ${offsetY}, radius: 8, vx: -3, vy: 7, fromPlayer: false, color: '#fff' }]`);
     run("tryReflect(player, false)");
     check(`parry (golpe a ${offsetY}px do centro): sai em linha reta, sem desvio vertical`, run("world.obstacles[0].vy") === 0);
     check(`parry (golpe a ${offsetY}px do centro): sempre rumo ao adversário (vx positivo)`, run("world.obstacles[0].vx") > 0);
@@ -25,12 +25,12 @@ for (const offsetY of [-50, -10, 0, 10, 50]) {
 
 // mudar a posição do vilão não muda mais nada no rebote (mira automática foi removida)
 run("player2.y = 280");
-run(`world.obstacles = [{ x: player.x + player.w/2, y: player.y + player.h/2, radius: 8, vx: -3, vy: 0, fromPlayer: false, color: '#fff' }]`);
+run(`player.parryCooldown = 0; world.obstacles = [{ x: player.x + player.w/2, y: getParryCircle(player).y, radius: 8, vx: -3, vy: 0, fromPlayer: false, color: '#fff' }]`);
 run("tryReflect(player, false)");
 check("a posição do vilão não influencia mais o ângulo do rebote (é sempre reto)", run("world.obstacles[0].vy") === 0);
 
 // o rebatido sai mais rápido que veio
-run(`world.obstacles = [{ x: player.x + player.w/2, y: player.y + player.h/2, radius: 8, vx: -5, vy: 0, fromPlayer: false, color: '#fff' }]`);
+run(`player.parryCooldown = 0; world.obstacles = [{ x: player.x + player.w/2, y: getParryCircle(player).y, radius: 8, vx: -5, vy: 0, fromPlayer: false, color: '#fff' }]`);
 run("tryReflect(player, false)");
 check("o golpe rebatido sai mais rápido do que veio", Math.abs(run("world.obstacles[0].vx")) > 5);
 

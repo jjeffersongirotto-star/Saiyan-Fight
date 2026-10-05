@@ -13,7 +13,7 @@ const { run, check, summary } = h;
 run("writeStorage('saiyan_ranking', ''); writeStorage('saiyan_stage_ranking', '')");
 run("gameMode = 'singleplayer'; selectedStage = 'terra'; startGame()");
 run("fireKiBarrage(player, false); fireKiBarrage(player, false)");
-run(`world.obstacles = [{ x: player.x + player.w/2, y: player.y + player.h/2 - 5, radius: 8, vx: 0, vy: 2, fromPlayer: false, color: '#fff' }]`);
+run(`player.parryCooldown = 0; world.obstacles = [{ x: player.x + player.w/2, y: player.y + player.h/2 - 5, radius: 8, vx: 0, vy: 2, fromPlayer: false, color: '#fff' }]`);
 run("tryReflect(player, false)");
 run("world.pickups = [{ type: 'capsule', x: player.x, y: player.y, w: 24, h: 24, vy: 0, spin: 0, pulse: 0 }]");
 run("update(1/60)");
@@ -38,25 +38,25 @@ check("uma pontuação pior (0) NÃO é registrada como novo recorde", run("game
 // ---------- parry: mecânica simples — devolve em linha reta, rumo ao adversário ----------
 run("gameMode = 'singleplayer'; selectedStage = 'terra'; startGame()");
 // golpe vindo de cima
-run(`world.obstacles = [{ x: player.x + player.w/2, y: player.y + player.h/2 - 40, radius: 8, vx: -3, vy: 5, fromPlayer: false, color: '#fff' }]`);
+run(`player.parryCooldown = 0; world.obstacles = [{ x: player.x + player.w/2, y: player.y + player.h/2 - 40, radius: 8, vx: -3, vy: 5, fromPlayer: false, color: '#fff' }]`);
 run("tryReflect(player, false)");
 check("parry (golpe vindo de cima): sai sempre rumo ao adversário (vx positivo)", run("world.obstacles[0].vx") > 0);
 check("parry: sai em linha reta, sem componente vertical", run("world.obstacles[0].vy") === 0);
 
 // golpe vindo de baixo
-run(`world.obstacles = [{ x: player.x + player.w/2, y: player.y + player.h/2 + 40, radius: 8, vx: -3, vy: -5, fromPlayer: false, color: '#fff' }]`);
+run(`player.parryCooldown = 0; world.obstacles = [{ x: player.x + player.w/2, y: getParryCircle(player).y + 40, radius: 8, vx: -3, vy: -5, fromPlayer: false, color: '#fff' }]`);
 run("tryReflect(player, false)");
 check("parry (golpe vindo de baixo): sai sempre rumo ao adversário (vx positivo)", run("world.obstacles[0].vx") > 0);
 check("parry: continua saindo em linha reta, independente de onde veio", run("world.obstacles[0].vy") === 0);
 
 // golpe vindo bem no meio (quase na mesma altura do jogador)
-run(`world.obstacles = [{ x: player.x + player.w/2, y: player.y + player.h/2, radius: 8, vx: -3, vy: 0, fromPlayer: false, color: '#fff' }]`);
+run(`player.parryCooldown = 0; world.obstacles = [{ x: player.x + player.w/2, y: getParryCircle(player).y, radius: 8, vx: -3, vy: 0, fromPlayer: false, color: '#fff' }]`);
 run("tryReflect(player, false)");
 check("parry (golpe no meio): sai reto, sem desvio vertical", run("world.obstacles[0].vy") === 0);
 
 // nenhum caso deveria mandar o golpe de volta pro lado do próprio jogador (vx negativo)
 for (const y of [-40, -20, 0, 20, 40]) {
-    run(`player.parryCooldown = 0; world.obstacles = [{ x: player.x + player.w/2, y: player.y + player.h/2 + ${y}, radius: 8, vx: -2, vy: 0, fromPlayer: false, color: '#fff' }]`);
+    run(`player.parryCooldown = 0; world.obstacles = [{ x: player.x + player.w/2, y: getParryCircle(player).y + ${y}, radius: 8, vx: -2, vy: 0, fromPlayer: false, color: '#fff' }]`);
     run("tryReflect(player, false)");
     check(`parry a ${y}px do centro nunca manda de volta pro próprio jogador`, run("world.obstacles[0].vx") > 0);
 }
