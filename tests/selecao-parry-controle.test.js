@@ -1,6 +1,6 @@
 // tests/selecao-parry-controle.test.js
 // - SELEÇÃO DE PERSONAGEM pergunta antes de trocar (herói e vilão); no VERSUS a lista tem todos os personagens;
-// - parry com área maior (PARRY_RADIUS) e o círculo desenhado do mesmo tamanho;
+// - parry: a área é o escudo em volta do corpo (PARRY_RADIUS), sem círculo grande separado;
 // - controle: sensibilidade do analógico salva, analógico direito rola UPDATES, touchpad alterna tela cheia.
 //
 // Uso: node tests/selecao-parry-controle.test.js
@@ -43,14 +43,12 @@ run("gameMode = 'singleplayer'; currentTab = 'HERÓIS'; setGameState('menu')");
 // ---------- parry ----------
 run("gameMode = 'singleplayer'; stageMode = 'normal'; startGame(); world.obstacles = []; player.parryCooldown = 0");
 const cx = run("player.x + player.w / 2"), cy = run("player.y + player.h / 2");
+run(`world.obstacles.push({ x: ${cx} + 45, y: ${cy}, vx: -4, vy: 0, radius: 6, fromPlayer: false, damage: 1 })`);
 run(`world.obstacles.push({ x: ${cx} + 90, y: ${cy}, vx: -4, vy: 0, radius: 6, fromPlayer: false, damage: 1 })`);
 run("tryReflect(player, false)");
-check("parry pega um tiro a 90px (antes só 70)", run("world.obstacles[0].fromPlayer") === true);
-check("o raio do parry é maior que o antigo", run("PARRY_RADIUS") > 70);
-let raioDesenhado = null;
-run("(() => { const arc = ctx.arc; window.__arcos = []; ctx.arc = function (x, y, r) { window.__arcos.push(r); return arc.apply(this, arguments); }; drawParryRing(player); ctx.arc = arc; })()");
-raioDesenhado = Math.max(...run("window.__arcos"));
-check("o círculo desenhado tem o tamanho da área do parry", Math.abs(raioDesenhado - run("PARRY_RADIUS")) <= run("PARRY_RADIUS") * 0.08 + 0.01);
+check("parry rebate o tiro que encosta no escudo em volta do corpo", run("world.obstacles[0].fromPlayer") === true);
+check("parry não alcança longe do corpo (sem bola gigante)", run("world.obstacles[1].fromPlayer") === false);
+check("não existe mais o círculo grande separado", run("typeof drawParryRing") === "undefined");
 run("setGameState('menu')");
 
 // ---------- controle ----------

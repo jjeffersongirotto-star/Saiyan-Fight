@@ -55,8 +55,8 @@ run("tryReflect(player, false)");
 check("parry (golpe no meio): sai reto, sem desvio vertical", run("world.obstacles[0].vy") === 0);
 
 // nenhum caso deveria mandar o golpe de volta pro lado do próprio jogador (vx negativo)
-for (const y of [-60, -20, 0, 20, 60]) {
-    run(`world.obstacles = [{ x: player.x + player.w/2, y: player.y + player.h/2 + ${y}, radius: 8, vx: -2, vy: 0, fromPlayer: false, color: '#fff' }]`);
+for (const y of [-40, -20, 0, 20, 40]) {
+    run(`player.parryCooldown = 0; world.obstacles = [{ x: player.x + player.w/2, y: player.y + player.h/2 + ${y}, radius: 8, vx: -2, vy: 0, fromPlayer: false, color: '#fff' }]`);
     run("tryReflect(player, false)");
     check(`parry a ${y}px do centro nunca manda de volta pro próprio jogador`, run("world.obstacles[0].vx") > 0);
 }

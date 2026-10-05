@@ -4282,25 +4282,6 @@ function drawPlayerEntity(p, charData, isBoss = false) {
     }
 
     ctx.restore();
-    if (p.parryHighlightTimer > 0) drawParryRing(p);
-}
-
-// Círculo do parry: mostra exatamente a área que rebate (PARRY_RADIUS), em volta do centro do lutador.
-function drawParryRing(p) {
-    const t = Math.max(0, Math.min(1, p.parryHighlightTimer / 10));   // 1 ao apertar → some
-    const cx = p.x + p.w / 2, cy = p.y + p.h / 2, r = PARRY_RADIUS * (0.92 + 0.08 * (1 - t));
-    ctx.save();
-    ctx.globalAlpha = 0.25 + 0.6 * t;
-    const g = ctx.createRadialGradient(cx, cy, r * 0.55, cx, cy, r);
-    g.addColorStop(0, "rgba(255, 242, 63, 0)");
-    g.addColorStop(1, "rgba(255, 242, 63, 0.28)");
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = "#fff23f"; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.8)"; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.arc(cx, cy, r - 4, 0, Math.PI * 2); ctx.stroke();
-    ctx.restore();
 }
 
 // ==================== AURA DE KI (labareda em volta do corpo) ====================

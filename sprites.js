@@ -1156,9 +1156,10 @@ function spriteRenderFigure(a, pose, opts) {
         fig += spriteKiBall(R, h[0] + (pose.ki.ox || 0), h[1], pose.ki.r, kiColor, pose.ki.flick || 0);
     }
     if (pose.shield > 0) {
-        const sh = R.rad(48, 62, 40, [[0.55, kiColor, 0], [0.86, kiColor, 0.25 * pose.shield], [1, "#ffffff", 0.75 * pose.shield]]);
-        fig += `<ellipse cx="48" cy="62" rx="33" ry="43" fill="${sh}" stroke="${spriteShade(kiColor, 0.55)}" stroke-width="1.6" opacity="${_n2(0.9 * pose.shield)}"/>`;
-        fig += `<path d="M22 46 Q48 28 74 46" fill="none" stroke="#ffffff" stroke-width="1.3" stroke-linecap="round" opacity="${_n2(0.7 * pose.shield)}"/>`;
+        // escudo do parry: envolve o corpo inteiro (é a área que rebate, PARRY_RADIUS em gameplay.js), menor que a aura
+        const sh = R.rad(48, 60, 50, [[0.55, kiColor, 0], [0.86, kiColor, 0.25 * pose.shield], [1, "#ffffff", 0.75 * pose.shield]]);
+        fig += `<ellipse cx="48" cy="60" rx="42" ry="50" fill="${sh}" stroke="${spriteShade(kiColor, 0.55)}" stroke-width="1.8" opacity="${_n2(0.9 * pose.shield)}"/>`;
+        fig += `<path d="M14 40 Q48 14 82 40" fill="none" stroke="#ffffff" stroke-width="1.4" stroke-linecap="round" opacity="${_n2(0.7 * pose.shield)}"/>`;
     }
 
     // luz de contorno (rim light) sobre a figura toda + brilho dourado quando transformado

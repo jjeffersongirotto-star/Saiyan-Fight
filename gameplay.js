@@ -1166,8 +1166,8 @@ const PARRY_REFLECT_COLOR = "#fff23f";
 // automática do teclado) ou apertar sem parar rebatia tudo o tempo todo. Parry que acerta não tem espera,
 // então rebater golpes seguidos no tempo certo continua valendo.
 const PARRY_WHIFF_COOLDOWN = 30;   // quadros (a 60fps) = 0,5s
-// Raio do parry: o círculo desenhado em volta do lutador (drawParryRing, menu.js) tem exatamente este tamanho.
-const PARRY_RADIUS = 100;
+// Raio do parry: a área em volta do corpo coberta pelo escudo do parry (desenhado no próprio sprite, sprites.js).
+const PARRY_RADIUS = 52;   // ≈ borda do escudo + o tamanho do tiro: rebate quando o tiro encosta no escudo
 
 function tryReflect(target = player, isP2 = false) {
     if (target.parryCooldown > 0) return;
