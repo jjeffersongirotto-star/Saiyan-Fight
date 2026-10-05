@@ -32,7 +32,7 @@ const MENU_LAYOUT = {
             { key: "joystick", label: "JOYSTICK", cx: 584, ...rect(529, 236, 110, 70) }
         ]
     },
-    optionsGamepad: { reset: rect(570, 82, 120, 28), test: rect(570, 122, 120, 28), sensLess: rect(570, 222, 34, 28), sensMore: rect(656, 222, 34, 28) },
+    optionsGamepad: { reset: rect(570, 96, 120, 28), test: rect(570, 136, 120, 28), sensLess: rect(570, 246, 34, 28), sensMore: rect(656, 246, 34, 28) },
     optionsPc: {
         profileP1: rect(130, 78, 150, 32), profileP2: rect(520, 78, 150, 32),
         keyboard: rect(130, 114, 150, 28), mouse: rect(520, 114, 150, 28),
@@ -94,7 +94,7 @@ function getPcKeyRect(idx) {
     return rect(idx % 2 === 0 ? 280 : 560, PC_KEY_ROW_Y0 + Math.floor(idx / 2) * PC_KEY_ROW_STEP, 110, 24);
 }
 function getGamepadBindingRect(i) {
-    return rect(330, 82 + i * 36, 210, 28);
+    return rect(330, 96 + i * 36, 210, 28);   // uma linha de espaço abaixo do subtítulo
 }
 function getRankingStageTabRect(i) {
     return rect(40 + (i % 8) * 92, 90, 84, 30);
@@ -801,6 +801,8 @@ function getBindingDisplayName(binding) {
         NONE: "NENHUMA"
     };
     if (labels[binding]) return labels[binding];
+    if (binding === "NumpadEnter") return "NUM ENTER";
+    if (typeof binding === "string" && /^Numpad\d$/.test(binding)) return "NUM " + binding.slice(6);
     if (typeof binding === "string" && binding.startsWith("Key")) return binding.slice(3).toUpperCase();
     if (typeof binding === "string" && binding.startsWith("Digit")) return binding.slice(5);
     return binding || "NENHUMA";
@@ -1420,7 +1422,7 @@ function drawPadGlyph(index, cx, cy, s, color) {
 
 function drawGamepadOptions() {
     drawDragonBallMenuBackdrop(false);
-    drawDragonBallPanel(90, 15, 620, 333, "CONTROLE JOYSTICK", "Escolha uma ação e aperte o botão desejado (o TOUCHPAD também vale)");
+    drawDragonBallPanel(90, 15, 620, 333, "CONTROLE JOYSTICK", "Escolha uma ação e aperte o botão desejado");
     drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
 
     PAD_ACTIONS.forEach((action, i) => {
@@ -1441,7 +1443,8 @@ function drawGamepadOptions() {
     {
         const menos = MENU_LAYOUT.optionsGamepad.sensLess, mais = MENU_LAYOUT.optionsGamepad.sensMore;
         ctx.fillStyle = "#ffffff"; ctx.font = "bold 10px monospace"; ctx.textAlign = "center";
-        ctx.fillText("SENSIBILIDADE", (menos.x + mais.x + mais.w) / 2, menos.y - 7);
+        ctx.fillText("SENSIBILIDADE", (menos.x + mais.x + mais.w) / 2, menos.y - 19);
+        ctx.fillText("DO ANALÓGICO", (menos.x + mais.x + mais.w) / 2, menos.y - 7);
         drawBtnAt(menos, "−", "#e2e8f0", "bold 16px monospace");
         drawBtnAt(mais, "+", "#e2e8f0", "bold 16px monospace");
         const x0 = menos.x + menos.w + 6, larg = mais.x - 6 - x0, passo = larg / PAD_SENSITIVITY_MAX;
@@ -1452,15 +1455,6 @@ function drawGamepadOptions() {
         }
     }
 
-    const pads = getConnectedGamepads();
-    const isPs5 = pads.some(pad => /dualsense|054c/i.test(String(pad.id || "")));
-    ctx.font = "10px monospace";
-    ctx.textAlign = "left";
-    ctx.fillStyle = pads.length ? "#86efac" : "#94a3b8";
-    ctx.fillText(pads.length ? (isPs5 ? "DUALSENSE (PS5) DETECTADO" : `CONTROLE: ${String(pads[0].id || "").slice(0, 44)}`) : "NENHUM CONTROLE DETECTADO: APERTE UM BOTÃO", 125, 306);
-    ctx.fillStyle = "#94a3b8";
-    ctx.fillText("MOVER: ANALÓGICO ESQUERDO OU DIRECIONAL  |  MENUS: CRUZ CONFIRMA, BOLA VOLTA (FIXOS)", 125, 322);
-    ctx.fillText("XBOX: CRUZ=A, BOLA=B, QUADRADO=X, TRIÂNGULO=Y  |  TOUCHPAD SÓ NO DUALSENSE", 125, 336);
     if (padCaptureNoteTimer > 0) {
         padCaptureNoteTimer -= deltaTime;
         // aviso no espaço vazio abaixo do TESTAR, centralizado na coluna e quebrado em até 2 linhas
@@ -2815,7 +2809,7 @@ function getTutorialInstructionLines(stepKey) {
         }
     } else {
         if (stepKey === "move") {
-            lines.push("TECLADO: W A S D OU SETAS DIRECIONAIS");
+            lines.push(`TECLADO: ${["up", "left", "down", "right"].map(k => getBindingDisplayName(keyBindings.p1[k])).join(" / ")}`);
             lines.push("MOUSE: ATIVE O MODO 'SEGUIR MOUSE' NAS OPÇÕES");
         } else if (stepKey === "pause") {
             lines.push(`TECLADO: ${getBindingDisplayName("Escape")} OU ${getBindingDisplayName("KeyP")}`);

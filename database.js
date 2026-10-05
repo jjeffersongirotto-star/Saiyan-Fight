@@ -225,7 +225,8 @@ let editingKey = null;
 // aba TRANSFORMAÇÃO do editor (ver "ABA TRANSFORMAÇÃO" mais abaixo)
 let tempTransformations = [];
 let editingTransformIndex = null;   // índice da transformação aberta no construtor (null = editando o personagem normal)
-let transformEditStash = null;      // como estava o construtor (personagem normal) antes de abrir a transformação
+let transformEditStash = null;
+let transformEditMexido = false;   // builderMexido de antes de abrir a transformação      // como estava o construtor (personagem normal) antes de abrir a transformação
 let currentTab = "HERÓIS";
 let tempBase64 = null;
 let tempAnimations = {};
@@ -336,16 +337,20 @@ function applyEffectiveControlMode() {
     return mode;
 }
 
-let keyBindings = {
-    p1: { 
-        up: "KeyW", down: "KeyS", left: "KeyA", right: "KeyD", 
-        attack: "KeyF", charge: "KeyC", transform: "KeyT", parry: "Space", special: "KeyE" 
+// Padrão do PC (o do jogador): J1 nas setas com ataque no mouse; J2 no teclado numérico. Mudou o padrão? Suba
+// KEY_BINDINGS_VERSION: quem tinha teclas salvas de uma versão antiga recebe o padrão novo uma vez.
+const KEY_BINDINGS_VERSION = 2;
+const DEFAULT_KEY_BINDINGS = {
+    p1: {
+        up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight",
+        attack: "MouseLeft", charge: "KeyS", transform: "KeyA", parry: "Space", special: "KeyQ"
     },
-    p2: { 
-        up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight", 
-        attack: "Enter", charge: "Numpad0", transform: "Numpad1", parry: "Numpad2", special: "Numpad3" 
+    p2: {
+        up: "Numpad5", down: "Numpad2", left: "Numpad1", right: "Numpad3",
+        attack: "Enter", charge: "NumpadEnter", transform: "Numpad9", parry: "Numpad0", special: "Numpad7"
     }
 };
+let keyBindings = { p1: Object.assign({}, DEFAULT_KEY_BINDINGS.p1), p2: Object.assign({}, DEFAULT_KEY_BINDINGS.p2) };
 
 let touchControlMode = "analog";
 let mobileDoubleTapParry = true;
@@ -411,6 +416,13 @@ function initSettings() {
         autofireHintSeen = readStorage("saiyan_hint_autofire") === "1";
         applyEffectiveControlMode();
 
+        if (readStorage("saiyan_controls_v") !== String(KEY_BINDINGS_VERSION)) {
+            // padrão novo das teclas para todos, uma vez (modo teclado: as setas movem e o mouse esquerdo ataca)
+            writeStorage("saiyan_controls", "");
+            writeStorage("saiyan_pc_mode", "");
+            pcInputMode = "keyboard";
+            writeStorage("saiyan_controls_v", String(KEY_BINDINGS_VERSION));
+        }
         let savedBindings = readStorage("saiyan_controls");
         if (savedBindings) {
             const parsedBindings = readJsonStorage("saiyan_controls", null);
@@ -1911,6 +1923,7 @@ function openModal(key = null) {
     setFormFromBgRemoval(char.bgRemoval);
     populateBuilderPresetOptions();
     builderLastAppearance = char.builderAppearance || null;
+    builderMexido = false;
     // cópia das transformações: o editor só grava no personagem ao SALVAR
     tempTransformations = JSON.parse(JSON.stringify(key ? getCharacterTransformations(key) : [SPRITE_DEFAULT_TRANSFORMATION]));
     editingTransformIndex = null;
@@ -1957,8 +1970,21 @@ function closeUpdatesModal() {
     restoreFocusAfterModal();
 }
 
+// O jogador mexeu no CONSTRUTOR depois do último "USAR ESTE PERSONAGEM"? Então SALVAR já gera as animações com o que
+// está na prévia (antes salvava as animações antigas — num personagem novo, as do Goku padrão).
+let builderMexido = false;
+document.addEventListener("change", (e) => {
+    const id = e.target && e.target.id ? String(e.target.id) : "";
+    if (id.startsWith("build-") && id !== "build-pose") builderMexido = true;
+});
+document.addEventListener("input", (e) => {
+    const id = e.target && e.target.id ? String(e.target.id) : "";
+    if (id.startsWith("build-") && id !== "build-pose") builderMexido = true;
+});
+
 function saveCharacterFromModal() {
     if (editingTransformIndex !== null) finishTransformationEdit(null);
+    if (builderMexido) applyBuilderToCharacter();
     const charName = document.getElementById('char-name');
     const name = charName ? charName.value.trim().toUpperCase() : "";
     if (!name) {
@@ -2366,6 +2392,7 @@ function applyBuilderToCharacter() {
         tempFps[state] = fpsSettings[state];
     });
     builderLastAppearance = appearance;
+    builderMexido = false;
     savedSpriteMotionPreviewFrames = {};
     spriteMotionPreviewImageCache = {};
     activeSpriteMovement = "idle";
@@ -2479,7 +2506,7 @@ function editTransformation(i) {
     const base = getTransformBase();
     const t = tempTransformations[i];
     if (!base || !t) return;
-    if (editingTransformIndex === null) transformEditStash = getBuilderAppearanceFromForm();
+    if (editingTransformIndex === null) { transformEditStash = getBuilderAppearanceFromForm(); transformEditMexido = builderMexido; }
     editingTransformIndex = i;
     setBuilderFormFromAppearance(spriteTransformAppearance(base, t));
     const presetSel = document.getElementById("build-preset");
@@ -2496,7 +2523,7 @@ function finishTransformationEdit(nextTab = "transformacao") {
     if (t && base) t.diff = spriteAppearanceDiff(base, getBuilderAppearanceFromForm());
     editingTransformIndex = null;
     showTransformBanner(false);
-    if (transformEditStash) setBuilderFormFromAppearance(transformEditStash);
+    if (transformEditStash) { setBuilderFormFromAppearance(transformEditStash); builderMexido = transformEditMexido; }   // mexer na transformação não conta como mexer no personagem
     transformEditStash = null;
     if (nextTab) switchEditorTab(nextTab);
 }

@@ -159,7 +159,25 @@ function spriteBuild(a) {
         // corpo feminino: ombros e cintura mais finos, quadril um pouco mais largo, braços e pernas mais delicados
         B.sw *= 0.86; B.ww *= B.belly ? 0.94 : 0.86; B.hw *= 1.06; B.arm *= 0.86; B.leg *= 0.94; B.female = true;
     }
+    // quanto os músculos aparecem (marcas e volume): bem marcados no musculoso/gigante, leves no magro/jovem,
+    // só tônus no corpo feminino e nenhum no gordo (Majin Boo)
+    B.mus = B.belly ? 0 : (SPRITE_MUSCLE_LEVEL[a.build] !== undefined ? SPRITE_MUSCLE_LEVEL[a.build] : 0.7);
+    if (B.female) B.mus *= 0.45;
     return B;
+}
+
+const SPRITE_MUSCLE_LEVEL = { musculoso: 1, gigante: 1, normal: 0.7, magro: 0.4, jovem: 0.35, gordo: 0 };
+
+// Linha de músculo desenhada ao longo de um membro: de t0 a t1 do segmento, deslocada da linha do meio por "off"
+// (em larguras do membro; positivo = lado da luz) e curvada por "curv". É o traço que separa bíceps/tríceps,
+// quadríceps, panturrilha etc. — como nos desenhos de Dragon Ball.
+function spriteMuscleLine(x1, y1, x2, y2, w, t0, t1, off, curv, color, width, opacity) {
+    const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1;
+    let nx = -dy / len, ny = dx / len;
+    if (nx * SPRITE_LIGHT.x + ny * SPRITE_LIGHT.y < 0) { nx = -nx; ny = -ny; }
+    const at = (t, o) => [x1 + dx * t + nx * o * w, y1 + dy * t + ny * o * w];
+    const p0 = at(t0, off), p1 = at(t1, off), m = at((t0 + t1) / 2, off + curv);
+    return `<path d="M${_n2(p0[0])} ${_n2(p0[1])} Q${_n2(m[0])} ${_n2(m[1])} ${_n2(p1[0])} ${_n2(p1[1])}" fill="none" stroke="${color}" stroke-width="${_n2(width)}" stroke-linecap="round" opacity="${_n2(opacity)}"/>`;
 }
 
 // Proporções de anime (como os sprites de luta de Dragon Ball): cabeça menor, pernas longas, ombros largos e
@@ -770,19 +788,13 @@ function spriteTorso(R, a, B, spec, skin, pose) {
             break;
         }
         default: {
-            if (spec.torso === skin && !B.female) {
-                const line = spriteShade(skin, -0.42);
-                if (B.bulk > 0) {
-                    // peitoral + abdômen definidos (personagem musculoso/gigante de torso nu)
-                    d += `<path d="M${_n2(48 - 9)} 50 Q${_n2(48 - 4.6)} 56.4 48 52.6 Q${_n2(48 + 4.6)} 56.4 ${_n2(48 + 9)} 50" fill="none" stroke="${line}" stroke-width="1.3" stroke-linecap="round"/>`;
-                    d += `<path d="M48 52.6 L48 68" stroke="${line}" stroke-width="1.2" opacity="0.85"/>`;
-                    [58.4, 62.6, 66.8].forEach(y => {
-                        d += `<path d="M${_n2(48 - 4.6)} ${y} Q48 ${_n2(y + 1.4)} ${_n2(48 + 4.6)} ${y}" fill="none" stroke="${line}" stroke-width="0.9" opacity="0.65"/>`;
-                    });
-                    d += `<path d="M${_n2(48 - 9.4)} 51 Q${_n2(48 - 10.6)} 60 ${_n2(48 - 7.6)} 68" fill="none" stroke="${spriteShade(skin, 0.5)}" stroke-width="1" opacity="0.4" stroke-linecap="round"/>`;
-                } else {
-                    d += `<path d="M${_n2(48 - 8)} 50.6 Q${_n2(48 - 4)} 55 48 52.4 Q${_n2(48 + 4)} 55 ${_n2(48 + 8)} 50.6 M48 52.4 L48 66 M${_n2(48 - 4.8)} 58.6 L${_n2(48 - 1.2)} 59.4 M${_n2(48 + 4.8)} 58.6 L${_n2(48 + 1.2)} 59.4 M${_n2(48 - 4.4)} 63.6 L${_n2(48 - 1.2)} 64.2 M${_n2(48 + 4.4)} 63.6 L${_n2(48 + 1.2)} 64.2" fill="none" stroke="${line}" stroke-width="0.9" stroke-linecap="round" opacity="0.7"/>`;
-                }
+            if (spec.torso === skin) d += spriteBareTorsoMuscles(B, skin, ww, y0b);
+            else if (B.mus > 0.3) {
+                // com camisa/malha: o tecido marca o peitoral e o abdômen por baixo
+                const dobra = spriteShade(base, -0.4), k = B.mus;
+                d += `<path d="M${_n2(48 - sw * 0.33)} ${_n2(y0b + 9)} Q${_n2(48 - sw * 0.16)} ${_n2(y0b + 12.4)} 48 ${_n2(y0b + 9.6)} Q${_n2(48 + sw * 0.16)} ${_n2(y0b + 12.4)} ${_n2(48 + sw * 0.33)} ${_n2(y0b + 9)}" fill="none" stroke="${dobra}" stroke-width="${_n2(0.8 + 0.4 * k)}" stroke-linecap="round" opacity="${_n2(0.3 + 0.3 * k)}"/>`;
+                d += `<path d="M48 ${_n2(y0b + 11)} L48 66 M${_n2(48 - 4)} 61 Q48 62 ${_n2(48 + 4)} 61" fill="none" stroke="${dobra}" stroke-width="0.8" opacity="${_n2(0.18 + 0.22 * k)}"/>`;
+                d += `<path d="M${_n2(48 - sw * 0.3)} ${_n2(y0b + 4)} Q${_n2(48 - sw * 0.18)} ${_n2(y0b + 2.6)} ${_n2(48 - 2)} ${_n2(y0b + 4.6)}" fill="none" stroke="${spriteShade(base, 0.5)}" stroke-width="1" opacity="${_n2(0.25 + 0.2 * k)}" stroke-linecap="round"/>`;
             }
             if (a.pants !== "nenhuma") {
                 const belt = R.lin(0, 66, 0, 72, [[0, spriteShade(a.accentColor, 0.2)], [1, spriteShade(a.accentColor, -0.35)]]);
@@ -810,6 +822,46 @@ function spriteTorso(R, a, B, spec, skin, pose) {
     s += `<path d="M${_n2(x1 - 1)} ${_n2(y0b + 5)} Q${_n2(x1 + 0.4)} 58 ${_n2(48 + ww / 2 - 0.6)} 68" fill="none" stroke="${spriteShade(base, 0.55)}" stroke-width="1.1" opacity="0.4" stroke-linecap="round"/>`;
     s += `<path d="M${_n2(x0 + 4)} 58 Q${_n2(x0 + 6)} 62 ${_n2(48 - ww / 2 + 1)} 66" fill="none" stroke="${spriteShade(base, -0.5)}" stroke-width="0.8" opacity="0.28"/>`;
     return s;
+}
+
+// Peito à mostra: peitoral em duas placas com sombra embaixo e luz em cima, abdômen em gomos (3 pares), linha do
+// meio, oblíquos e serrátil nas laterais — tudo na força do porte físico (B.mus). Corpo feminino: só tônus leve.
+function spriteBareTorsoMuscles(B, skin, ww, y0b) {
+    const k = B.mus;
+    if (k <= 0) return "";
+    const line = spriteShade(skin, -0.45), dark = spriteShade(skin, -0.3), light = spriteShade(skin, 0.45);
+    let d = "";
+    if (B.female) {
+        d += `<path d="M48 ${_n2(y0b + 13)} L48 65.6 M${_n2(48 - ww * 0.36)} 57 Q${_n2(48 - ww * 0.3)} 62 ${_n2(48 - ww * 0.22)} 67 M${_n2(48 + ww * 0.36)} 57 Q${_n2(48 + ww * 0.3)} 62 ${_n2(48 + ww * 0.22)} 67" fill="none" stroke="${line}" stroke-width="0.8" stroke-linecap="round" opacity="0.4"/>`;
+        return d + `<path d="M47.2 65.4 Q48 66.6 48.8 65.4" stroke="${line}" stroke-width="0.8" fill="none" opacity="0.6"/>`;
+    }
+    const pw = B.sw * (0.3 + 0.06 * k), top = y0b + 3.2, bot = y0b + 10.4 + 1.2 * k;
+    for (const sd of [-1, 1]) {
+        const X = (v) => _n2(48 + sd * v);
+        // sombra embaixo do peitoral (meia-lua) + contorno de baixo + luz no alto do peito
+        d += `<path d="M${X(0.6)} ${_n2(bot - 1.8)} Q${X(pw * 0.55)} ${_n2(bot + 1.2)} ${X(pw)} ${_n2(top + 3.4)} Q${X(pw * 0.62)} ${_n2(bot + 3.4)} ${X(0.6)} ${_n2(bot + 1.2)} Z" fill="${dark}" opacity="${_n2(0.45 + 0.3 * k)}"/>`;
+        d += `<path d="M${X(0.6)} ${_n2(bot - 1.8)} Q${X(pw * 0.55)} ${_n2(bot + 1.2)} ${X(pw)} ${_n2(top + 3.4)}" fill="none" stroke="${line}" stroke-width="${_n2(0.9 + 0.6 * k)}" stroke-linecap="round"/>`;
+        d += `<path d="M${X(pw * 0.25)} ${_n2(top + 1.6)} Q${X(pw * 0.6)} ${_n2(top + 0.2)} ${X(pw * 0.86)} ${_n2(top + 2.6)}" fill="none" stroke="${light}" stroke-width="${_n2(1 + 0.8 * k)}" stroke-linecap="round" opacity="${_n2(0.35 + 0.25 * k)}"/>`;
+        // oblíquos: do lado das costelas até a cintura (o "V")
+        d += `<path d="M${X(ww * 0.5 + 2.4)} ${_n2(bot + 1)} Q${X(ww * 0.46)} 62 ${X(ww * 0.3)} 69.4" fill="none" stroke="${line}" stroke-width="${_n2(0.7 + 0.5 * k)}" stroke-linecap="round" opacity="${_n2(0.45 + 0.4 * k)}"/>`;
+        // serrátil (dentes nas costelas) só em quem é bem musculoso
+        if (k > 0.8) [0, 1, 2].forEach(i => {
+            const yy = bot + 0.6 + i * 2.2;
+            d += `<path d="M${X(ww * 0.5 + 2.6 - i * 0.3)} ${_n2(yy)} l${_n2(-sd * 1.8)} ${_n2(0.9)}" stroke="${line}" stroke-width="0.7" stroke-linecap="round" opacity="0.6"/>`;
+        });
+    }
+    // abdômen: linha do meio e 3 pares de gomos (luz em cima de cada gomo, sulco escuro embaixo)
+    const aw = ww * 0.26 + 1.4 * k, a0 = bot + 1.6, step = (68.4 - a0) / 3;
+    d += `<path d="M48 ${_n2(bot - 1.6)} L48 ${_n2(68.6)}" stroke="${line}" stroke-width="${_n2(0.8 + 0.5 * k)}" opacity="${_n2(0.55 + 0.35 * k)}"/>`;
+    for (let i = 0; i < 3; i++) {
+        const y = a0 + i * step;
+        for (const sd of [-1, 1]) {
+            const X = (v) => _n2(48 + sd * v);
+            if (i > 0) d += `<path d="M${X(0.8)} ${_n2(y)} Q${X(aw * 0.55)} ${_n2(y + 0.9)} ${X(aw)} ${_n2(y - 0.3)}" fill="none" stroke="${line}" stroke-width="${_n2(0.7 + 0.4 * k)}" stroke-linecap="round" opacity="${_n2(0.45 + 0.4 * k)}"/>`;
+            d += `<path d="M${X(1.4)} ${_n2(y + step * 0.32)} L${X(aw - 0.8)} ${_n2(y + step * 0.26)}" stroke="${light}" stroke-width="${_n2(Math.max(0.8, step * 0.32))}" stroke-linecap="round" opacity="${_n2(0.18 + 0.22 * k)}"/>`;
+        }
+    }
+    return d + `<path d="M47.2 ${_n2(68)} Q48 ${_n2(69.2)} 48.8 ${_n2(68)}" stroke="${line}" stroke-width="0.8" fill="none" opacity="0.7"/>`;
 }
 
 // Símbolo pequeno no peito.
@@ -847,8 +899,23 @@ function spriteArm(R, a, B, spec, glove, skin, side, angles, handKind) {
     const w = B.arm;
     let s = "";
     // anime: deltoide largo afinando no cotovelo; antebraço forte afinando no punho; manga do kimono larga.
-    s += spriteJoined(spriteMuscle(sx, sy, e[0], e[1], w * 1.35, w * 0.9, spec.armUpper, { bulge: 0.16, parts: true }),
-        spriteMuscle(e[0], e[1], h[0], h[1], w * 1.0, w * 0.72, spec.armLower, { bulge: 0.14, parts: true }));
+    const mus = B.mus || 0;
+    s += spriteJoined(spriteMuscle(sx, sy, e[0], e[1], w * 1.35, w * 0.9, spec.armUpper, { bulge: 0.16 + 0.08 * mus, parts: true }),
+        spriteMuscle(e[0], e[1], h[0], h[1], w * (1.0 + 0.06 * mus), w * 0.72, spec.armLower, { bulge: 0.14 + 0.06 * mus, parts: true }));
+    if (mus > 0) {
+        const lin = (c) => spriteShade(c, -0.48), luz = (c) => spriteShade(c, 0.48);
+        if (spec.armUpper === skin) {
+            // separação bíceps/tríceps (sombra do lado de trás) e brilho na barriga do bíceps
+            s += spriteMuscleLine(sx, sy, e[0], e[1], w, 0.4, 0.9, -0.2, -0.16, lin(skin), 0.6 + 0.4 * mus, 0.3 + 0.35 * mus);
+            s += spriteMuscleLine(sx, sy, e[0], e[1], w, 0.5, 0.78, 0.22, 0.1, luz(skin), 0.8 + 0.6 * mus, 0.18 + 0.2 * mus);
+        } else if (mus > 0.3) {
+            s += spriteMuscleLine(sx, sy, e[0], e[1], w, 0.45, 0.85, -0.15, -0.18, lin(spec.armUpper), 0.7, 0.2 + 0.2 * mus);   // dobra da manga no bíceps
+        }
+        if (spec.armLower === skin) {
+            // antebraço: músculo grosso perto do cotovelo afinando no punho
+            s += spriteMuscleLine(e[0], e[1], h[0], h[1], w, 0.1, 0.55, 0.14, 0.18, lin(skin), 0.5 + 0.4 * mus, 0.25 + 0.3 * mus);
+        }
+    }
     if (a.bodyMarks === "freeza") s += spritePlate(R, e[0], e[1], h[0], h[1], 0.5, B.l2 * 0.62, w * 0.82, a.primaryColor);
     if (spec.spots) s += spriteSpots(sx, sy, e[0], e[1], [0.35, 0.68], w * 0.26);
     if (spec.sleeve) {
@@ -877,7 +944,19 @@ function spriteLeg(R, a, B, spec, boot, skin, side, angles) {
     // anime: coxa larga afinando no joelho; calça folgada (gi) cai larga até a bota.
     const wide = spec.legCover && spec.legWide;
     s += spriteJoined(spriteMuscle(hx, hy, k[0], k[1], w * (wide ? 1.55 : 1.3), w * (wide ? 1.22 : 0.92), color, { bulge: wide ? 0.08 : 0.14, parts: true }),
-        spriteMuscle(k[0], k[1], f[0], f[1], w * (wide ? 1.22 : 0.95), w * (wide ? 1.12 : 0.66), color, { bulge: wide ? 0.04 : 0.12, parts: true }));
+        spriteMuscle(k[0], k[1], f[0], f[1], w * (wide ? 1.22 : 0.95 + 0.05 * (B.mus || 0)), w * (wide ? 1.12 : 0.66), color, { bulge: wide ? 0.04 : 0.12 + 0.06 * (B.mus || 0), parts: true }));
+    const mus = B.mus || 0;
+    if (mus > 0) {
+        const lin = spriteShade(color, -0.48), luz = spriteShade(color, 0.48);
+        if (color === skin) {
+            // quadríceps (gota acima do joelho) e panturrilha
+            s += spriteMuscleLine(hx, hy, k[0], k[1], w, 0.35, 0.92, 0.2, 0.26, lin, 0.6 + 0.4 * mus, 0.3 + 0.35 * mus);
+            s += spriteMuscleLine(k[0], k[1], f[0], f[1], w, 0.1, 0.55, -0.28, -0.2, lin, 0.5 + 0.4 * mus, 0.28 + 0.32 * mus);
+        } else if (mus > 0.3) {
+            // calça: dobra do tecido marcando a coxa
+            s += spriteMuscleLine(hx, hy, k[0], k[1], w, 0.35, 0.85, 0.18, 0.22, lin, 0.7, 0.18 + 0.2 * mus);
+        }
+    }
     if (a.bodyMarks === "freeza") s += spritePlate(R, k[0], k[1], f[0], f[1], 0.42, B.t2 * 0.55, w * 0.78, a.primaryColor);
     if (a.bodyMarks === "cell") s += spriteSpots(hx, hy, k[0], k[1], [0.3, 0.66], w * 0.28);   // pintas do Cell (corpo, não calça)
     if (boot) {
