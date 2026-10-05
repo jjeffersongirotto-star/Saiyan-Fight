@@ -391,7 +391,7 @@
             width: 100%;
             height: 100%;
             background: transparent;
-            image-rendering: pixelated;
+            image-rendering: auto;   /* o canvas já é desenhado em alta resolução (600x600) */
         }
 
         .sprite-sheet-editor {
@@ -811,7 +811,7 @@
             <div id="tab-content-basico" class="tab-content" style="display: block;">
                 <div class="preview-box">
                     <div class="preview-image-wrap">
-                        <canvas id="preview-canvas" class="prev-canvas" width="100" height="100"></canvas>
+                        <canvas id="preview-canvas" class="prev-canvas" width="600" height="600"></canvas>
                     </div>
 
                     <div class="preview-fields">
@@ -1038,7 +1038,7 @@
                 </div>
                 <div class="preview-box">
                     <div class="preview-image-wrap">
-                        <canvas id="build-preview-canvas" class="prev-canvas" width="100" height="100"></canvas>
+                        <canvas id="build-preview-canvas" class="prev-canvas" width="600" height="600"></canvas>
                     </div>
                     <div class="preview-fields">
                         <div class="form-row">
@@ -1275,6 +1275,7 @@
                 Novidades e correções do jogo.
             </p>
             <ul id="lista-updates" style="margin: 0 0 18px; color: #ddd; line-height: 1.6; padding-left: 18px; overflow-y: auto;">
+                <li>Imagem bem mais nítida: o jogo agora desenha na resolução real da tela (até 2x), com os personagens em alta resolução na luta. Cartões de SELEÇÃO DE PERSONAGEM e DATABASE com o personagem grande, liso e sem distorção (vale para personagens novos), e prévia do editor em alta resolução. Planeta Supremo Kaioh: planetas do céu diferentes (lua, gigante gasoso, oceano e um parecido com a Terra).</li>
                 <li>Ícones dos itens 30% menores. O escudo da cápsula fica sempre maior que a aura de ki (e cresce junto ao transformar). Parry com alcance em volta da aura: pega até a magia que passa logo acima da cabeça.</li>
                 <li>Parry: sem o círculo grande; o escudo do personagem ficou maior (envolve o corpo todo, menor que a aura) e é exatamente a área que rebate.</li>
                 <li>Tutorial com controle: a dica mostra só o botão do passo (sem o texto entre parênteses).</li>

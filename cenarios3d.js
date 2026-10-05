@@ -456,15 +456,68 @@ function drawTerraArenaStage(ang) {
 // Gramado verde com morros, pedras e penhascos de rocha, céu roxo com várias luas transparentes. Mesma câmera
 // da arena (girando em volta dos lutadores, que ficam no meio do gramado), sem tablado.
 let ksPanorama = null;
-function ksLua(g, x, y, r) {
-    const lua = g.createRadialGradient(x - r * 0.35, y - r * 0.35, r * 0.1, x, y, r);
-    lua.addColorStop(0, "rgba(255, 255, 255, 0.95)"); lua.addColorStop(0.5, "rgba(214, 205, 245, 0.75)"); lua.addColorStop(1, "rgba(150, 130, 210, 0.55)");
-    g.fillStyle = lua;
-    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
-    g.strokeStyle = "rgba(255, 255, 255, 0.5)"; g.lineWidth = Math.max(1, r * 0.06);
-    g.beginPath(); g.arc(x + r * 0.1, y + r * 0.15, r * 0.55, Math.PI * 0.9, Math.PI * 1.7); g.stroke();   // redemoinho
-    g.beginPath(); g.arc(x - r * 0.15, y - r * 0.05, r * 0.3, Math.PI * 0.1, Math.PI * 0.9); g.stroke();
-    g.strokeStyle = "rgba(255, 255, 255, 0.7)"; g.lineWidth = 1;
+// Planetas do céu do Supremo Kaioh: cada um de um tipo (lua, gigante gasoso, planeta oceano, planeta como a
+// Terra) — esfera com volume (luz do alto à esquerda, sombra no lado oposto e brilho na borda).
+const KS_TIPOS_PLANETA = ["lua", "jupiter", "oceano", "terra"];
+function ksPlaneta(g, x, y, r, tipo, semente) {
+    const h = (k) => c3Hash(semente * 7 + k);
+    g.save();
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.clip();
+    if (tipo === "jupiter") {
+        g.fillStyle = "#d9b48a"; g.fillRect(x - r, y - r, r * 2, r * 2);
+        const faixas = ["#c98e5e", "#ecd5b0", "#b9764a", "#f2e2c6", "#c4875a", "#e3c39a", "#a8673f"];
+        for (let i = 0; i < 9; i++) {
+            const yy = y - r + (i + 0.5) * (r * 2 / 9) + Math.sin(i * 1.7 + semente) * r * 0.05;
+            g.fillStyle = faixas[i % faixas.length];
+            g.beginPath(); g.ellipse(x, yy, r * 1.2, r * (0.07 + h(i) * 0.06), 0, 0, Math.PI * 2); g.fill();
+        }
+        g.fillStyle = "#b5523a";   // grande mancha vermelha
+        g.beginPath(); g.ellipse(x + r * 0.25, y + r * 0.3, r * 0.22, r * 0.12, 0, 0, Math.PI * 2); g.fill();
+    } else if (tipo === "oceano") {
+        const mar = g.createLinearGradient(x, y - r, x, y + r);
+        mar.addColorStop(0, "#3fb6e8"); mar.addColorStop(1, "#1a5fae");
+        g.fillStyle = mar; g.fillRect(x - r, y - r, r * 2, r * 2);
+        g.strokeStyle = "rgba(255, 255, 255, 0.55)"; g.lineWidth = Math.max(1, r * 0.06); g.lineCap = "round";
+        for (let i = 0; i < 5; i++) {   // nuvens em redemoinho sobre o mar
+            const cx = x + (h(i) - 0.5) * r * 1.4, cy = y + (h(i + 9) - 0.5) * r * 1.4, rr = r * (0.18 + h(i + 4) * 0.2);
+            g.beginPath(); g.arc(cx, cy, rr, Math.PI * 0.2, Math.PI * 1.5); g.stroke();
+        }
+        g.fillStyle = "#e9f7ff";   // calotas polares
+        g.beginPath(); g.ellipse(x, y - r, r * 0.6, r * 0.18, 0, 0, Math.PI * 2); g.fill();
+    } else if (tipo === "terra") {
+        g.fillStyle = "#2f7fd0"; g.fillRect(x - r, y - r, r * 2, r * 2);
+        for (let i = 0; i < 4; i++) {   // continentes verdes com bordas de areia
+            const cx = x + (h(i) - 0.5) * r * 1.3, cy = y + (h(i + 5) - 0.5) * r * 1.2, rr = r * (0.25 + h(i + 2) * 0.25);
+            g.fillStyle = "#d9c28a";
+            g.beginPath(); g.ellipse(cx, cy, rr * 1.08, rr * 0.78, h(i + 7) * 3, 0, Math.PI * 2); g.fill();
+            g.fillStyle = i % 2 ? "#4c9a3c" : "#3d8a35";
+            g.beginPath(); g.ellipse(cx, cy, rr, rr * 0.7, h(i + 7) * 3, 0, Math.PI * 2); g.fill();
+            g.beginPath(); g.ellipse(cx + rr * 0.5, cy - rr * 0.3, rr * 0.45, rr * 0.35, 0, 0, Math.PI * 2); g.fill();
+        }
+        g.fillStyle = "rgba(255, 255, 255, 0.8)";   // nuvens
+        for (let i = 0; i < 6; i++) {
+            const cx = x + (h(i + 20) - 0.5) * r * 1.6, cy = y + (h(i + 30) - 0.5) * r * 1.6;
+            g.beginPath(); g.ellipse(cx, cy, r * (0.15 + h(i + 40) * 0.2), r * 0.06, -0.3, 0, Math.PI * 2); g.fill();
+        }
+    } else {   // lua cinza com crateras
+        g.fillStyle = "#c9c6cf"; g.fillRect(x - r, y - r, r * 2, r * 2);
+        g.fillStyle = "rgba(150, 146, 160, 0.6)";
+        g.beginPath(); g.ellipse(x - r * 0.2, y + r * 0.1, r * 0.45, r * 0.32, 0.4, 0, Math.PI * 2); g.fill();   // "mar" lunar
+        for (let i = 0; i < 7; i++) {
+            const cx = x + (h(i) - 0.5) * r * 1.5, cy = y + (h(i + 11) - 0.5) * r * 1.5, rr = r * (0.06 + h(i + 3) * 0.12);
+            g.fillStyle = "rgba(120, 116, 130, 0.75)"; g.beginPath(); g.arc(cx, cy, rr, 0, Math.PI * 2); g.fill();
+            g.fillStyle = "rgba(235, 233, 240, 0.7)"; g.beginPath(); g.arc(cx - rr * 0.25, cy - rr * 0.25, rr * 0.55, 0, Math.PI * 2); g.fill();
+        }
+    }
+    // volume: luz do alto à esquerda e sombra (lado da noite) embaixo à direita
+    const luz = g.createRadialGradient(x - r * 0.4, y - r * 0.45, r * 0.05, x - r * 0.1, y - r * 0.1, r * 1.35);
+    luz.addColorStop(0, "rgba(255, 255, 255, 0.35)"); luz.addColorStop(0.45, "rgba(255, 255, 255, 0)");
+    luz.addColorStop(0.8, "rgba(40, 20, 80, 0.3)"); luz.addColorStop(1, "rgba(30, 10, 60, 0.6)");
+    g.fillStyle = luz; g.fillRect(x - r, y - r, r * 2, r * 2);
+    g.restore();
+    // atmosfera: brilho fino na borda
+    g.strokeStyle = tipo === "lua" ? "rgba(255, 255, 255, 0.45)" : tipo === "jupiter" ? "rgba(255, 230, 190, 0.5)" : "rgba(170, 225, 255, 0.7)";
+    g.lineWidth = Math.max(1, r * 0.05);
     g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.stroke();
 }
 function getKaioshinPanorama() {
@@ -477,10 +530,11 @@ function getKaioshinPanorama() {
     ceu.addColorStop(0, "#6f55c9"); ceu.addColorStop(0.55, "#a690e0"); ceu.addColorStop(0.9, "#e4c6ec"); ceu.addColorStop(1, "#f6d6e2");
     g.fillStyle = ceu;
     g.fillRect(0, 0, W, c.height);
-    // várias luas de tamanhos diferentes espalhadas pelo céu
+    // vários planetas de tamanhos e tipos diferentes espalhados pelo céu (lua, gigante gasoso, oceano, "Terra")
     for (let i = 0; i < 26; i++) {
         const x = c3Hash(i + 200) * W, r = i % 3 === 0 ? 28 + c3Hash(i + 201) * 22 : 6 + c3Hash(i + 202) * 16, y = 10 + r + c3Hash(i + 203) * (base - 46 - r * 2);
-        c3NaVolta(W, x, r, x0 => ksLua(g, x0, Math.max(r + 4, y), r));
+        const tipo = KS_TIPOS_PLANETA[i % KS_TIPOS_PLANETA.length];
+        c3NaVolta(W, x, r, x0 => ksPlaneta(g, x0, Math.max(r + 4, y), r, tipo, i));
     }
     // morros verdes ao longe, com penhascos de rocha clara
     const morro = (u, fases) => fases.reduce((h, f) => h + Math.sin(u / W * Math.PI * 2 * f[0] + f[1]) * f[2], 0);

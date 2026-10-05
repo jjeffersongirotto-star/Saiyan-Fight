@@ -405,7 +405,7 @@ function warmFrameArt(charKey, state, src, tries) {
     }
     if (!img.__svgImage || typeof ACTION_SPRITE_SCALE === "undefined") return;   // só desenhos em pixel art
     const k = ACTION_SPRITE_SCALE[state] || 1, [bw, bh] = getFighterBoxSize(charKey);
-    getPixelArtSource(img, bw * k * PIXEL_SPRITE_SCALE, bh * k * PIXEL_SPRITE_SCALE);
+    getPixelArtSource(img, bw * k * PIXEL_SPRITE_SCALE * renderScale, bh * k * PIXEL_SPRITE_SCALE * renderScale);
 }
 
 // Nos menus, já prepara os lutadores escolhidos (quadros + pixel art): o primeiro segundo da luta não precisa

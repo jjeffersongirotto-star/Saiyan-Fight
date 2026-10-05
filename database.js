@@ -18,8 +18,38 @@ const UI = {
 };
 
 // ==================== DOM E CANVAS ====================
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+// O canvas de verdade tem mais pixels que 800x350 (renderScale, até 2x — nítido em telas grandes e na TV),
+// mas o jogo inteiro continua pensando em 800x350: `canvas.width/height` sempre devolvem a resolução lógica e
+// o contexto já vem escalado (ver applyRenderTransform). `canvasEl` é o elemento real.
+const canvasEl = document.getElementById("game");
+const canvas = new Proxy(canvasEl, {
+    get(alvo, nome) {
+        if (nome === "width") return GAME_WIDTH;
+        if (nome === "height") return GAME_HEIGHT;
+        const v = Reflect.get(alvo, nome);
+        return typeof v === "function" ? v.bind(alvo) : v;
+    },
+    set(alvo, nome, valor) {
+        if (nome === "width" || nome === "height") return true;   // a resolução real é controlada por setRenderScale
+        alvo[nome] = valor;
+        return true;
+    }
+});
+const ctx = canvasEl.getContext("2d");
+let renderScale = 1;   // pixels reais por pixel do jogo
+const RENDER_SCALE_MAX = 2;
+function applyRenderTransform() {
+    if (ctx.setTransform) ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+}
+function setRenderScale(escala) {
+    escala = Math.max(1, Math.min(RENDER_SCALE_MAX, escala));
+    const w = Math.round(GAME_WIDTH * escala), h = Math.round(GAME_HEIGHT * escala);
+    if (canvasEl.width !== w) canvasEl.width = w;
+    if (canvasEl.height !== h) canvasEl.height = h;
+    renderScale = escala;
+    applyRenderTransform();
+}
 const fileInput = document.getElementById("file-input");
 const modal = document.getElementById("modal-editor");
 const updatesModal = document.getElementById("modal-updates");
@@ -88,13 +118,12 @@ function fitCanvasToViewport() {
     // pipeline de desenho reescalava os draws para esse novo tamanho — o jogo
     // continuava desenhando em coordenadas 800x350 num canvas muito maior, deixando
     // quase toda a tela preta. Removido: a escala fica só no CSS, como no resto do jogo.
-    if (canvas.width !== GAME_WIDTH) canvas.width = GAME_WIDTH;
-    if (canvas.height !== GAME_HEIGHT) canvas.height = GAME_HEIGHT;
-    ctx.imageSmoothingEnabled = false;
-
     const viewportScale = Math.min(viewportWidth / GAME_WIDTH, viewportHeight / GAME_HEIGHT);
     const maxDesktopScale = viewportWidth > 540 && !isFullscreen ? 1.6 : Infinity;
     const scale = Math.min(viewportScale, maxDesktopScale);
+    // resolução real: acompanha o tamanho na tela (em passos de 0,5 para não refazer tudo a cada ajuste), até 2x
+    const dpr = (typeof window !== "undefined" && window.devicePixelRatio) || 1;
+    setRenderScale(Math.ceil(scale * dpr * 2) / 2);
 
     const displayWidth = Math.round(GAME_WIDTH * scale);
     const displayHeight = Math.round(GAME_HEIGHT * scale);
@@ -1758,11 +1787,13 @@ function renderImageToPreview(img) {
     let drawY = (prevCanvas.height - baseH) / 2;
 
     try {
-        prevCtx.imageSmoothingEnabled = false;
+        // desenho do jogo/construtor (SVG): redesenha o vetor no tamanho grande (nítido, sem pixels esticados)
+        const vetor = img.__svgImage && img.__svgImage.complete && img.__svgImage.naturalWidth ? img.__svgImage : null;
+        prevCtx.imageSmoothingEnabled = !!vetor;
         prevCtx.drawImage(
-            img,
+            vetor || img,
             0, 0,
-            img.naturalWidth, img.naturalHeight,
+            (vetor || img).naturalWidth, (vetor || img).naturalHeight,
             drawX, drawY,
             renderW, renderH
         );
