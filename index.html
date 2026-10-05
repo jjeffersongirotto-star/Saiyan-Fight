@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Saiyan Fight</title>
     <link rel="icon" href="icons/favicon-32.png" type="image/png" sizes="32x32">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -38,6 +38,7 @@
             justify-content: center;   /* centraliza o jogo na vertical quando a janela é maior que ele */
             min-height: 100vh;
             min-height: 100dvh;
+            min-height: var(--altura-visivel, 100dvh);   /* altura realmente visível (fitCanvasToViewport) */
             overflow-x: hidden;
             overscroll-behavior: none;   /* arrastar o dedo na borda não "puxa" a página nem recarrega */
         }
@@ -807,6 +808,14 @@
                 font-size: 11px;
             }
         }
+        /* Celular deitado com recorte da câmera (notch): a mesma margem dos dois lados, para o jogo ficar no centro
+           da tela e longe do recorte. */
+        @media (pointer: coarse) {
+            body {
+                padding-left: max(8px, env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px));
+                padding-right: max(8px, env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px));
+            }
+        }
     </style>
 </head>
 <body>
@@ -1303,8 +1312,10 @@
                 Novidades e correções do jogo.
             </p>
             <ul id="lista-updates" style="margin: 0 0 18px; color: #ddd; line-height: 1.5; padding: 0 4px 0 0; list-style: none; overflow-y: auto;">
-                <li class="upd-versao"><h3>Versão 0.21 (ATUAL)</h3><p>Notas de versão</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>UPDATES em notas de versão</strong><p>Novidades organizadas por versão, da 0.1 até a atual, com etiquetas: NOVO (verde) para o que chegou nesta versão, CORRIGIDO (amarelo), MELHORADO (azul) e CRIAÇÃO (dourado) para o que não existia antes.</p></li>
+                <li class="upd-versao"><h3>Versão 0.22 (ATUAL)</h3><p>Tela centralizada</p></li>
+                <li class="upd-item upd-corrigido"><span class="upd-tag">CORRIGIDO</span><strong>Jogo centralizado no aplicativo</strong><p>Ao abrir pelo atalho na tela inicial, o jogo ficava mais abaixo e à direita (e cortado embaixo). Agora ele usa a área realmente visível da tela e fica no centro, com a mesma margem dos dois lados do recorte da câmera.</p></li>
+                <li class="upd-versao"><h3>Versão 0.21</h3><p>Notas de versão</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>UPDATES em notas de versão</strong><p>Novidades organizadas por versão, da 0.1 até a atual, com etiquetas: NOVO (verde) para o que chegou nesta versão, CORRIGIDO (amarelo), MELHORADO (azul) e CRIAÇÃO (dourado) para o que não existia antes.</p></li>
                 <li class="upd-versao"><h3>Versão 0.20</h3><p>Alta resolução</p></li>
                 <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>Imagem nítida e cartões de personagem</strong><p>Imagem bem mais nítida: o jogo agora desenha na resolução real da tela (até 2x), com os personagens em alta resolução na luta. Cartões de SELEÇÃO DE PERSONAGEM e DATABASE com o personagem grande, liso e sem distorção (vale para personagens novos), e prévia do editor em alta resolução. Planeta Supremo Kaioh: planetas do céu diferentes (lua, gigante gasoso, oceano e um parecido com a Terra).</p></li>
                 <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>Cenários em alta resolução</strong><p>Cenários também em alta resolução (céus, montanhas, pavilhão, nave, plateia). Mapa de fases: nomes com fundo escuro, sem letras amassadas nem linha por cima. Supremo Kaioh: planetas azuis sem riscos e uma lua com crateras no lugar de um dos azuis. Bola de poder do vilão 50% maior.</p></li>
