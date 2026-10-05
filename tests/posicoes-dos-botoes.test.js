@@ -59,6 +59,13 @@ run(`handleMenuClick(${js.x + 55}, ${js.y + 50})`);
 check("controles: JOYSTICK vira o modo principal (sem HUD de toque, tutorial do controle)",
     run("controlSelectionMode") === "joystick" && run("getEffectiveControlMode()") === "joystick" && run("isTouchDevice") === false && run("getActiveInputPlatform()") === "controle");
 check("controles: só um interruptor ligado por vez", run("MENU_LAYOUT.optionsControls.toggles.filter(t => controlSelectionMode === t.key).length") === 1);
+run("controlSelectionMode = 'auto'; autoControlOverride = null");
+run("window.onkeydown({ code: 'KeyZ', key: 'z', preventDefault(){} })");
+check("AUTOMÁTICO: usar o teclado acende o PC", run("getEffectiveControlMode()") === "pc");
+run("autoControlOverride = 'joystick'; applyEffectiveControlMode()");
+check("AUTOMÁTICO: usar o controle acende o JOYSTICK e esconde o toque", run("getEffectiveControlMode()") === "joystick" && run("isTouchDevice") === false);
+run("autoControlOverride = 'touch'; applyEffectiveControlMode()");
+check("AUTOMÁTICO: tocar na tela acende o TOUCH", run("getEffectiveControlMode()") === "touch" && run("controlSelectionMode") === "auto");
 check("controles: os 4 interruptores ficam abaixo dos 4 botões", run("MENU_LAYOUT.optionsControls.toggles.every(t => t.y >= MENU_LAYOUT.optionsControls.test.y + MENU_LAYOUT.optionsControls.test.h)"));
 run("setGameState('options_pc'); render()");
 check("controles PC: a tela abre sem os interruptores", run("gameState") === "options_pc");

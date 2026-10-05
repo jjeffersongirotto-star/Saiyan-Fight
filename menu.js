@@ -2589,6 +2589,8 @@ canvas.addEventListener("touchcancel", (e) => {
 
 window.onkeydown = (e) => {
     lastKeyInputAt = Date.now();
+    // AUTOMÁTICO: usou o teclado → modo PC
+    if (controlSelectionMode === "auto" && autoControlOverride !== "pc") { autoControlOverride = "pc"; applyEffectiveControlMode(); }
     if (remappingKey) {
         let [p, act] = remappingKey.split(".");
         keyBindings[p][act] = e.code;
@@ -5760,10 +5762,11 @@ function render() {
         drawBtnAt(MENU_LAYOUT.optionsControls.touch, "CONTROLES TOUCH", "#93c5fd");
         drawBtnAt(MENU_LAYOUT.optionsControls.gamepad, "CONTROLE JOYSTICK", "#c4b5fd");
         drawBtnAt(MENU_LAYOUT.optionsControls.test, "TESTAR CONTROLES", "#a7f3d0");
-        // chaves ON/OFF do modo de entrada: só a escolhida fica ligada
+        // chaves ON/OFF: no AUTOMÁTICO, a chave da entrada em uso acende sozinha (controle, toque ou PC)
+        const ativo = getEffectiveControlMode(), auto = controlSelectionMode === "auto";
         const cores = { auto: "#22c55e", pc: "#7dd3fc", touch: "#93c5fd", joystick: "#c4b5fd" };
         MENU_LAYOUT.optionsControls.toggles.forEach(t => {
-            drawModeToggle(t, controlSelectionMode === t.key, cores[t.key]);
+            drawModeToggle(t, t.key === "auto" ? auto : ativo === t.key, cores[t.key]);
         });
 
         drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
