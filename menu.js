@@ -2175,6 +2175,28 @@ function transmitirParaTV() {
     } catch (e) { ajudaTransmitirTV(motivoFalhaTransmissao(e)); }
 }
 
+// Resolução automática: durante a luta/tutorial mede o tempo dos quadros; se a média ficar abaixo de ~52 FPS,
+// baixa a resolução real meio passo (2x → 1,5x → 1x) e recomeça a medir. Nunca sobe de novo na mesma sessão
+// (evita ficar alternando). Os primeiros quadros depois de entrar na luta não contam (caches sendo montados).
+const DESEMPENHO_MS_LIMITE = 19.2;
+const desempenho = { soma: 0, n: 0, ignorar: 120 };
+function vigiarDesempenho(msQuadro) {
+    const lutando = gameState === "playing" || gameState === "tutorial";
+    if (!lutando || document.hidden) { desempenho.ignorar = 120; desempenho.soma = desempenho.n = 0; return; }
+    if (desempenho.ignorar > 0) { desempenho.ignorar--; return; }
+    if (!(msQuadro > 0) || msQuadro > 250) return;   // aba voltando do fundo etc.
+    desempenho.soma += msQuadro;
+    desempenho.n++;
+    if (desempenho.n < 90) return;
+    const media = desempenho.soma / desempenho.n;
+    desempenho.soma = desempenho.n = 0;
+    if (media > DESEMPENHO_MS_LIMITE && renderScale > 1) {
+        renderScaleTeto = Math.max(1, renderScale - 0.5);
+        setRenderScale(renderScaleTeto);   // ajustes de tela depois (fitCanvasToViewport) respeitam o teto
+        desempenho.ignorar = 120;   // as imagens guardadas são refeitas na resolução nova
+    }
+}
+
 // Tela de pausa (CONTINUAR / OPÇÕES / SAIR), por cima da luta ou do tutorial congelados.
 function drawPauseOverlay() {
     ctx.fillStyle = "rgba(0,0,0,0.7)";
@@ -5552,6 +5574,7 @@ function isModalCoveringScreen() {
 function render() {
     let now = performance.now();
     deltaTime = Math.min((now - lastFrameTime) / 1000, 0.1);
+    vigiarDesempenho(now - lastFrameTime);
     runDueButtonActions();
     runBackgroundWork();
     lastFrameTime = now;

@@ -38,12 +38,13 @@ const canvas = new Proxy(canvasEl, {
 const ctx = canvasEl.getContext("2d");
 let renderScale = 1;   // pixels reais por pixel do jogo
 const RENDER_SCALE_MAX = 2;
+let renderScaleTeto = RENDER_SCALE_MAX;   // baixa sozinho se o aparelho não aguentar 60 FPS (vigiarDesempenho, menu.js)
 function applyRenderTransform() {
     if (ctx.setTransform) ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
     ctx.imageSmoothingEnabled = false;
 }
 function setRenderScale(escala) {
-    escala = Math.max(1, Math.min(RENDER_SCALE_MAX, escala));
+    escala = Math.max(1, Math.min(RENDER_SCALE_MAX, renderScaleTeto, escala));
     const w = Math.round(GAME_WIDTH * escala), h = Math.round(GAME_HEIGHT * escala);
     if (canvasEl.width !== w) canvasEl.width = w;
     if (canvasEl.height !== h) canvasEl.height = h;
