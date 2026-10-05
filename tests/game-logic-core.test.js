@@ -5,6 +5,8 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
+    getPadStickThreshold,
+    PAD_SENSITIVITY_DEFAULT,
     removeBackgroundColor,
     colorHexToRgb,
     rgbToHex,
@@ -646,4 +648,11 @@ test("Teste de controles: o Goku obedece a quem apertou primeiro; juntos, ningu�
     assert.equal(dono("p2", true, true), "p2");
     assert.equal(dono("p1", false, true), "p2", "p1 soltou: passa para o p2");
     assert.equal(dono("p1", false, false), null);
+});
+
+test("sensibilidade do analógico: mais sensível precisa inclinar menos", () => {
+    assert.equal(getPadStickThreshold(PAD_SENSITIVITY_DEFAULT), 0.4, "padrão igual ao antigo");
+    assert.ok(getPadStickThreshold(5) < getPadStickThreshold(3) && getPadStickThreshold(3) < getPadStickThreshold(1));
+    assert.equal(getPadStickThreshold(99), getPadStickThreshold(5), "acima do máximo fica no máximo");
+    assert.equal(getPadStickThreshold("x"), 0.4, "valor inválido usa o padrão");
 });

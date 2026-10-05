@@ -1166,6 +1166,8 @@ const PARRY_REFLECT_COLOR = "#fff23f";
 // automática do teclado) ou apertar sem parar rebatia tudo o tempo todo. Parry que acerta não tem espera,
 // então rebater golpes seguidos no tempo certo continua valendo.
 const PARRY_WHIFF_COOLDOWN = 30;   // quadros (a 60fps) = 0,5s
+// Raio do parry: o círculo desenhado em volta do lutador (drawParryRing, menu.js) tem exatamente este tamanho.
+const PARRY_RADIUS = 100;
 
 function tryReflect(target = player, isP2 = false) {
     if (target.parryCooldown > 0) return;
@@ -1179,7 +1181,7 @@ function tryReflect(target = player, isP2 = false) {
         // Alcance do parry é intencionalmente circular (é uma "habilidade", não a hitbox do corpo).
         let dist = Math.hypot(obs.x - targetCx, obs.y - targetCy);
 
-        if (dist < 70 && obs.fromPlayer === isP2) {
+        if (dist < PARRY_RADIUS && obs.fromPlayer === isP2) {
             // Mecânica simples, de volta ao que era: devolve o golpe em linha reta, rumo ao adversário —
             // sem ângulo nenhum, só inverte a direção horizontal.
             const incomingSpeed = Math.hypot(obs.vx, obs.vy) || 4;
@@ -1595,6 +1597,7 @@ function update(dt) {
     if (player.hp < world.lastPlayerHp) vibrate(140); // levou dano
     world.lastPlayerHp = player.hp;
     if (player.parryHighlightTimer > 0) player.parryHighlightTimer -= dt * 60;
+    if (player2.parryHighlightTimer > 0) player2.parryHighlightTimer -= dt * 60;
     if (player.parryCooldown > 0) player.parryCooldown = Math.max(0, player.parryCooldown - dt * 60);
     if (player2.parryCooldown > 0) player2.parryCooldown = Math.max(0, player2.parryCooldown - dt * 60);
     if (player2.hitTimer > 0) player2.hitTimer = Math.max(0, player2.hitTimer - dt * 60);

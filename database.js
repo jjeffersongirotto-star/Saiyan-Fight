@@ -250,6 +250,7 @@ function buildProceduralAnimations(appearance) {
     });
     return { animations, fpsSettings };
 }
+let padSensitivity = PAD_SENSITIVITY_DEFAULT;   // analógico: 1 (pouca) a 5 (muita), em Opções > Controle Joystick
 let padBindings = normalizePadBindings(null); // botões do controle (padrão PS5) — remapeáveis em Opções > Controle PS5
 let touchAutoFire = true;          // atira sem parar enquanto o dedo estiver no analógico/tela
 let autofireHintSeen = false;      // dica "apoie o dedo para atirar" já foi mostrada?
@@ -361,6 +362,8 @@ function initSettings() {
             writeStorage("saiyan_pad_bindings", JSON.stringify(padBindings));
             writeStorage("saiyan_pad_bindings_v", String(PAD_BINDINGS_VERSION));
         }
+        const sens = Number(readStorage("saiyan_pad_sens"));
+        if (sens >= PAD_SENSITIVITY_MIN && sens <= PAD_SENSITIVITY_MAX) padSensitivity = Math.round(sens);
         autofireHintSeen = readStorage("saiyan_hint_autofire") === "1";
         applyEffectiveControlMode();
 
@@ -434,6 +437,7 @@ function saveControls() {
         writeStorage("saiyan_vibration", String(vibrationEnabled));
         writeStorage("saiyan_autofire", String(touchAutoFire));
         writeStorage("saiyan_pad_bindings", JSON.stringify(padBindings));
+        writeStorage("saiyan_pad_sens", String(padSensitivity));
         writeStorage("saiyan_doubletap", mobileDoubleTapParry.toString());
         writeStorage("saiyan_touch_hud", JSON.stringify(touchHudLayout));
     } catch (e) {
@@ -2183,6 +2187,8 @@ function saveCharacterData() {
 }
 
 function getFilteredCharacters() {
+    // VERSUS: os dois jogadores podem escolher qualquer personagem, herói ou vilão
+    if (gameMode === "coop") return Object.keys(characterDB);
     return Object.keys(characterDB).filter(k => {
         let a = characterDB[k].alignment;
         return currentTab === "HERÓIS" ? (a === "HERÓI" || a === "ANTI-HERÓI") : (a === "VILÃO" || a === "ANTI-HERÓI");

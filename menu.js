@@ -32,7 +32,7 @@ const MENU_LAYOUT = {
             { key: "joystick", label: "JOYSTICK", cx: 584, ...rect(529, 236, 110, 70) }
         ]
     },
-    optionsGamepad: { reset: rect(570, 82, 120, 28), test: rect(570, 122, 120, 28) },
+    optionsGamepad: { reset: rect(570, 82, 120, 28), test: rect(570, 122, 120, 28), sensLess: rect(570, 222, 34, 28), sensMore: rect(656, 222, 34, 28) },
     optionsPc: {
         profileP1: rect(130, 78, 150, 32), profileP2: rect(520, 78, 150, 32),
         keyboard: rect(130, 114, 150, 28), mouse: rect(520, 114, 150, 28),
@@ -1373,6 +1373,20 @@ function drawGamepadOptions() {
 
     drawBtnAt(MENU_LAYOUT.optionsGamepad.reset, "PADRÃO PS5", "#a7f3d0", "bold 11px 'Courier New', monospace");
     drawBtnAt(MENU_LAYOUT.optionsGamepad.test, "TESTAR", "#93c5fd", "bold 11px 'Courier New', monospace");
+    // sensibilidade do analógico: −  [barra 1..5]  +
+    {
+        const menos = MENU_LAYOUT.optionsGamepad.sensLess, mais = MENU_LAYOUT.optionsGamepad.sensMore;
+        ctx.fillStyle = "#ffffff"; ctx.font = "bold 10px monospace"; ctx.textAlign = "center";
+        ctx.fillText("SENSIBILIDADE", (menos.x + mais.x + mais.w) / 2, menos.y - 7);
+        drawBtnAt(menos, "−", "#e2e8f0", "bold 16px monospace");
+        drawBtnAt(mais, "+", "#e2e8f0", "bold 16px monospace");
+        const x0 = menos.x + menos.w + 6, larg = mais.x - 6 - x0, passo = larg / PAD_SENSITIVITY_MAX;
+        for (let n = 1; n <= PAD_SENSITIVITY_MAX; n++) {
+            ctx.fillStyle = n <= padSensitivity ? "#fbbf24" : "rgba(148, 163, 184, 0.35)";
+            const h = 6 + n * 3;
+            ctx.fillRect(x0 + (n - 1) * passo + 1, menos.y + menos.h - 4 - h, passo - 2, h);
+        }
+    }
 
     const pads = getConnectedGamepads();
     const isPs5 = pads.some(pad => /dualsense|054c/i.test(String(pad.id || "")));
@@ -1824,6 +1838,12 @@ function pollGamepadMenu(dt) {
     const intents = pads.map(pad => getPadIntent(pad));
     const any = (k) => intents.some(i => i[k]);
     if (intents.some(i => Object.keys(i).some(k => i[k])) || pads.some(pad => pad.buttons && pad.buttons.some(b => b && b.pressed))) marcarEntradaControle();
+    // botão do TOUCHPAD (PS5, botão 17) maximiza/minimiza a tela — a não ser que esteja ligado a uma ação,
+    // esperando um botão novo, ou no TESTE DE CONTROLES (lá ele só acende)
+    const touchpadDown = pads.some(pad => pad.buttons && pad.buttons[17] && pad.buttons[17].pressed);
+    const touchpadLivre = !Object.values(padBindings).some(lista => (lista || []).includes(17));
+    if (touchpadDown && !padPrevTouchpad && touchpadLivre && !padCapture && gameState !== "controls_test") toggleFullscreen();
+    padPrevTouchpad = touchpadDown;
 
     // Tela "Controle PS5": esperando o jogador apertar o novo botão de uma ação.
     if (padCapture) {
@@ -1855,8 +1875,9 @@ function pollGamepadMenu(dt) {
                 padNav.modalIndex = (padNav.modalIndex + delta + buttons.length) % buttons.length;
                 buttons.forEach((b, i) => { b.style.outline = i === padNav.modalIndex ? "3px solid #ffd23f" : ""; b.style.outlineOffset = "2px"; });
             }
-            // rolar o texto com o analógico
-            const ay = pads.length && pads[0].axes ? (pads[0].axes[1] || 0) : 0;
+            // rolar o texto com o analógico (esquerdo ou direito; vale o mais inclinado)
+            const eixos = pads.length && pads[0].axes ? pads[0].axes : [];
+            const ay = Math.abs(eixos[3] || 0) > Math.abs(eixos[1] || 0) ? (eixos[3] || 0) : (eixos[1] || 0);
             if (Math.abs(ay) > 0.4 && modal) {
                 const rolavel = Array.from(modal.querySelectorAll ? modal.querySelectorAll("ul, p, div") : []).find(el => el.scrollHeight > el.clientHeight + 4);
                 if (rolavel) rolavel.scrollTop += ay * 10;
@@ -1930,7 +1951,7 @@ function drawPadFocus() {
 // ---- Controles (gamepad) USB/Bluetooth ----
 // Todas as leituras do controle passam por aqui, para respeitar os botões remapeados (padBindings, padrão PS5).
 function getPadIntent(pad) {
-    return getGamepadIntent(pad, 0.4, padBindings);
+    return getGamepadIntent(pad, getPadStickThreshold(padSensitivity), padBindings);
 }
 
 // Viram "teclas virtuais" do jogador correspondente, então reaproveitam todo o resto do jogo.
@@ -1939,6 +1960,7 @@ const padPrevPressed = { p1: {}, p2: {} };
 const padAttackCooldown = { p1: 0, p2: 0 };
 let padPrevPause = false;
 let padPrevCreate = false;   // botão CREATE/SHARE (pular passo do tutorial)
+let padPrevTouchpad = false; // botão do touchpad (tela cheia)
 
 function getConnectedGamepads() {
     try {
@@ -2881,13 +2903,14 @@ function handleMenuClick(x, y) {
 
         chars.forEach((key, i) => {
             if (y >= CHARACTERS_GRID_TOP - 4 && hitRect(x, y, getCharacterCardRect(i))) {
-                if (currentTab === "HERÓIS") {
-                    selectedCharacter = key;
+                const heroi = currentTab === "HERÓIS";
+                if ((heroi ? selectedCharacter : selectedBoss) === key) return;   // já é o escolhido
+                const nome = characterDB[key] && characterDB[key].name ? characterDB[key].name : key;
+                const quem = gameMode === "coop" ? (heroi ? "o JOGADOR 1" : "o JOGADOR 2") : (heroi ? "o herói" : "o vilão");
+                showSystemConfirm("SELECIONAR PERSONAGEM", `Deseja selecionar ${nome} para ${quem}?`, () => {
+                    if (heroi) selectedCharacter = key; else selectedBoss = key;
                     saveSelectedCharacters();
-                } else {
-                    selectedBoss = key;
-                    saveSelectedCharacters();
-                }
+                }, "SELECIONAR", "CANCELAR");
             }
         });
 
@@ -2958,6 +2981,11 @@ function handleMenuClick(x, y) {
             saveControls();
             padCaptureNote = "PADRÃO PS5 RESTAURADO";
             padCaptureNoteTimer = 3;
+        }
+        else if (hitRect(x, y, MENU_LAYOUT.optionsGamepad.sensLess) || hitRect(x, y, MENU_LAYOUT.optionsGamepad.sensMore)) {
+            const d = hitRect(x, y, MENU_LAYOUT.optionsGamepad.sensMore) ? 1 : -1;
+            padSensitivity = Math.max(PAD_SENSITIVITY_MIN, Math.min(PAD_SENSITIVITY_MAX, padSensitivity + d));
+            saveControls();
         }
         else if (hitRect(x, y, MENU_LAYOUT.optionsGamepad.test)) {
             controlsTestTouches = [];
@@ -4251,6 +4279,25 @@ function drawPlayerEntity(p, charData, isBoss = false) {
         ctx.fillRect(renderX, renderY, p.w, p.h);
     }
 
+    ctx.restore();
+    if (p.parryHighlightTimer > 0) drawParryRing(p);
+}
+
+// Círculo do parry: mostra exatamente a área que rebate (PARRY_RADIUS), em volta do centro do lutador.
+function drawParryRing(p) {
+    const t = Math.max(0, Math.min(1, p.parryHighlightTimer / 10));   // 1 ao apertar → some
+    const cx = p.x + p.w / 2, cy = p.y + p.h / 2, r = PARRY_RADIUS * (0.92 + 0.08 * (1 - t));
+    ctx.save();
+    ctx.globalAlpha = 0.25 + 0.6 * t;
+    const g = ctx.createRadialGradient(cx, cy, r * 0.55, cx, cy, r);
+    g.addColorStop(0, "rgba(255, 242, 63, 0)");
+    g.addColorStop(1, "rgba(255, 242, 63, 0.28)");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "#fff23f"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.8)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(cx, cy, r - 4, 0, Math.PI * 2); ctx.stroke();
     ctx.restore();
 }
 
@@ -5654,8 +5701,10 @@ function render() {
         ctx.textAlign = "center";
         ctx.fillText("SELEÇÃO DE PERSONAGEM", canvas.width / 2, 25);
 
-        drawBtnAt(MENU_LAYOUT.characters.tabHeroes, "HERÓIS", currentTab === "HERÓIS" ? "#ffff00" : "#00ffff");
-        drawBtnAt(MENU_LAYOUT.characters.tabVillains, "VILÕES", currentTab === "VILÕES" ? "#ffff00" : "#00ffff");
+        // VERSUS: cada jogador escolhe qualquer personagem (as abas viram JOGADOR 1 / JOGADOR 2, com a lista inteira)
+        const versus = gameMode === "coop";
+        drawBtnAt(MENU_LAYOUT.characters.tabHeroes, versus ? "JOGADOR 1" : "HERÓIS", currentTab === "HERÓIS" ? "#ffff00" : "#00ffff");
+        drawBtnAt(MENU_LAYOUT.characters.tabVillains, versus ? "JOGADOR 2" : "VILÕES", currentTab === "VILÕES" ? "#ffff00" : "#00ffff");
 
         let chars = getFilteredCharacters();
         setCharactersScroll(charactersScrollY);   // mantém dentro do limite (ex.: depois de apagar personagens)

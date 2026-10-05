@@ -34,6 +34,7 @@ check("controles PC: a 5ª tecla da lista é a de ATAQUE", run("remappingKey") =
 run("currentTab = 'HERÓIS'");
 const heroi = run("getFilteredCharacters()[1]");
 clickOn("characters", "getCharacterCardRect(1)");
+run("executeSystemConfirm(true)");   // a seleção pergunta antes de trocar
 check("personagens: clicar no 2º cartão seleciona o 2º herói", run("selectedCharacter") === heroi);
 
 run("rankingViewMode = 'fase'");
