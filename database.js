@@ -160,6 +160,13 @@ function normalizeTouchHudLayout(layout) {
 }
 
 window.addEventListener("resize", fitCanvasToViewport);
+// Voltando de outra janela (seletor de TV, configurações rápidas, outro app) o tamanho da tela pode ter mudado
+// sem um "resize" confiável: recalcula ao voltar o foco/visibilidade e ao entrar/sair da tela cheia.
+const refazerEncaixeDaTela = () => { fitCanvasToViewport(); setTimeout(fitCanvasToViewport, 250); setTimeout(fitCanvasToViewport, 800); };
+window.addEventListener("focus", refazerEncaixeDaTela);
+window.addEventListener("pageshow", refazerEncaixeDaTela);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) refazerEncaixeDaTela(); });
+document.addEventListener("fullscreenchange", refazerEncaixeDaTela);
 window.addEventListener("orientationchange", fitCanvasToViewport);
 
 if (typeof ResizeObserver === "function" && canvas.parentElement) {
@@ -280,7 +287,7 @@ function getEffectiveControlMode() {
 
 function applyEffectiveControlMode() {
     const mode = getEffectiveControlMode();
-    isTouchDevice = mode === "touch";
+    isTouchDevice = mode === "touch";   // "joystick": o controle é a entrada principal (sem botões de toque)
     manualControlMode = mode;
     return mode;
 }

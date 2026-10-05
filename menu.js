@@ -22,16 +22,20 @@ const MENU_LAYOUT = {
     paused: { resume: rect(300, 110, 200, 35), options: rect(300, 160, 200, 35), exit: rect(300, 210, 200, 35) },
     characters: { tabHeroes: rect(250, 45, 140, 25), tabVillains: rect(410, 45, 140, 25) },
     optionsMain: { controls: rect(220, 125, 360, 42), audio: rect(220, 180, 360, 42), cast: rect(220, 235, 360, 42) },
-    optionsControls: { pc: rect(180, 144, 220, 46), touch: rect(420, 144, 220, 46), gamepad: rect(180, 204, 220, 46), test: rect(420, 204, 220, 46) },
+    optionsControls: {
+        pc: rect(180, 120, 220, 42), touch: rect(420, 120, 220, 42), gamepad: rect(180, 172, 220, 42), test: rect(420, 172, 220, 42),
+        // chaves de modo de entrada (só uma ligada): área de toque em volta de cada chave, centro em cx
+        toggles: [
+            { key: "auto", label: "AUTOMÁTICO", cx: 215, ...rect(160, 236, 110, 70) },
+            { key: "pc", label: "PC", cx: 338, ...rect(283, 236, 110, 70) },
+            { key: "touch", label: "TOUCH", cx: 461, ...rect(406, 236, 110, 70) },
+            { key: "joystick", label: "JOYSTICK", cx: 584, ...rect(529, 236, 110, 70) }
+        ]
+    },
     optionsGamepad: { reset: rect(570, 82, 120, 28), test: rect(570, 122, 120, 28) },
     optionsPc: {
         profileP1: rect(130, 78, 150, 32), profileP2: rect(520, 78, 150, 32),
         keyboard: rect(130, 114, 150, 28), mouse: rect(520, 114, 150, 28),
-        toggles: [
-            { key: "auto", label: "AUTOMÁTICO", ...rect(120, 314, 150, 28) },
-            { key: "pc", label: "PC", ...rect(325, 314, 150, 28) },
-            { key: "touch", label: "TOUCH", ...rect(530, 314, 150, 28) }
-        ]
     },
     optionsTouch: {
         analog: rect(170, 106, 180, 34), swipe: rect(450, 106, 180, 34),
@@ -841,6 +845,7 @@ function traceRoundedRect(x, y, w, h, radius) {
 // Plataforma em uso agora (a última que mexeu): "controle", "toque" ou "pc" (teclado/mouse).
 let lastPadInputAt = 0, lastKeyInputAt = 0;
 function getActiveInputPlatform() {
+    if (controlSelectionMode === "joystick") return "controle";
     const toque = lastInputWasTouch ? (lastTouchStartAt || 1) : 0;
     if (lastPadInputAt > 0 && lastPadInputAt >= toque && lastPadInputAt >= lastKeyInputAt && getConnectedGamepads().length) return "controle";
     if (isTouchDevice && lastInputWasTouch) return "toque";
@@ -848,6 +853,27 @@ function getActiveInputPlatform() {
 }
 function isMouseHovering() {
     return !lastInputWasTouch && !padNav.visible && getActiveInputPlatform() === "pc";
+}
+
+// Chave ON/OFF de modo de entrada (tela CONTROLES): nome em cima, OFF/ON e a chave em pílula.
+function drawModeToggle(t, ativo, cor) {
+    registerMenuTarget(t.x, t.y, t.w, t.h);
+    const pressed = beginButtonPress(t.x, t.y, t.w, t.h);
+    const cx = t.cx, y = t.y + 34;   // y = topo da pílula
+    ctx.save();
+    ctx.fillStyle = "#e2e8f0"; ctx.font = "bold 12px 'Courier New', monospace"; ctx.textAlign = "center";
+    ctx.fillText(t.label, cx, t.y + 14);
+    ctx.fillStyle = "#dbeafe"; ctx.font = "bold 8px 'Courier New', monospace";
+    ctx.fillText("OFF", cx - 30, t.y + 28); ctx.fillText("ON", cx + 32, t.y + 28);
+    ctx.fillStyle = "rgba(10, 20, 35, 0.9)";
+    ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(cx - 40, y, 80, 26, 13); else ctx.rect(cx - 40, y, 80, 26); ctx.fill();
+    ctx.strokeStyle = ativo ? cor : "#7dd3fc"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.strokeStyle = ativo ? cor : "#557089"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(cx - 16, y + 13); ctx.lineTo(cx + 16, y + 13); ctx.stroke();
+    ctx.fillStyle = ativo ? cor : "#40566d";
+    ctx.beginPath(); ctx.arc(cx + (ativo ? 16 : -16), y + 13, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    endButtonPress(pressed);
 }
 
 function drawBtn(x, y, w, h, text, color = "#00ffff", font = "bold 12px 'Courier New', monospace") {
@@ -1938,7 +1964,11 @@ function pollGamepads(dt) {
     }
     padPrevCreate = createDown;
 
-    if (getConnectedGamepads().some(pad => { const i = getPadIntent(pad); return Object.keys(i).some(k => i[k]); })) lastPadInputAt = Date.now();
+    if (getConnectedGamepads().some(pad => { const i = getPadIntent(pad); return Object.keys(i).some(k => i[k]); })) {
+        lastPadInputAt = Date.now();
+        // AUTOMÁTICO: pegou o controle → modo joystick (some o HUD de toque) até usar toque/mouse de novo
+        if (controlSelectionMode === "auto" && autoControlOverride !== "joystick") { autoControlOverride = "joystick"; applyEffectiveControlMode(); }
+    }
     const anyPause = ["p1", "p2"].some(profile => getPadIntent(assignments[profile]).pause);
     if (anyPause && !padPrevPause) {
         if (gameState === "tutorial") {
@@ -1984,10 +2014,13 @@ function pollGamepads(dt) {
 }
 
 // TRANSMITIR PARA A TV — ajuda: como espelhar a tela do jogo numa TV pelo próprio aparelho.
-function ajudaTransmitirTV() {
+function ajudaTransmitirTV(motivo) {
     showSystemAlert("TRANSMITIR PARA A TV",
-        "Espelhe a tela pelo aparelho:\n" +
-        "• Android: puxe as configurações rápidas e toque em 'Transmitir tela' / 'Smart View'.\n" +
+        (motivo ? "MOTIVO: " + motivo + "\n\n" : "") +
+        "Espelhe a tela pelo aparelho (coloque o jogo em TELA CHEIA antes):\n" +
+        "• Android: o menu do Chrome não tem 'Transmitir' no celular. Puxe as configurações rápidas (deslize do topo duas vezes) " +
+        "e toque em 'Transmitir' (Xiaomi), 'Smart View' (Samsung) ou 'Transmitir tela' / 'Espelhamento de tela' (outros). " +
+        "Se não aparecer, toque no lápis e adicione esse atalho.\n" +
         "• iPhone/iPad: Central de Controle > 'Espelhamento de Tela' (Apple TV/AirPlay).\n" +
         "• PC (Chrome/Edge): menu ⋮ > 'Transmitir...' e escolha a TV.\n" +
         "O jogo continua no seu aparelho e a TV mostra a mesma tela.");
@@ -2017,17 +2050,27 @@ function iniciarVideoParaTV(conexao) {
     conexao.onclose = conexao.onterminate = () => { if (transmissaoTV && transmissaoTV.conexao === conexao) { try { pc.close(); } catch (e) {} transmissaoTV = null; } };
     pc.createOffer().then(oferta => pc.setLocalDescription(oferta)).then(() => conexao.send(JSON.stringify({ tipo: "oferta", sdp: pc.localDescription })));
 }
+function motivoFalhaTransmissao(err) {
+    if (err && err.name === "NotFoundError") return "NENHUMA TV COM CHROMECAST/GOOGLE TV NA MESMA REDE WI-FI";
+    const texto = err ? String(err.message || err.name || err) : "";
+    return texto ? "ERRO: " + texto.slice(0, 80) : "NÃO FOI POSSÍVEL CONECTAR À TV";
+}
 function transmitirParaTV() {
     if (transmissaoTV) { encerrarTransmissaoTV(); return; }
     const suporta = typeof PresentationRequest === "function" && typeof RTCPeerConnection === "function" && canvas && typeof canvas.captureStream === "function";
-    if (!suporta) { ajudaTransmitirTV(); return; }
+    if (!suporta) { ajudaTransmitirTV("ESTE NAVEGADOR NÃO PERMITE: ABRA NO CHROME"); return; }
     try {
         const pedido = new PresentationRequest(["tv.html"]);
         pedido.start().then(conexao => {
+            refazerEncaixeDaTela();   // a lista de TVs pode deixar o canvas deslocado
             if (conexao.state === "connected") iniciarVideoParaTV(conexao);
             else conexao.onconnect = () => iniciarVideoParaTV(conexao);
-        }).catch(err => { if (!err || err.name !== "AbortError") ajudaTransmitirTV(); });   // cancelar a lista não mostra ajuda
-    } catch (e) { ajudaTransmitirTV(); }
+        }).catch(err => {
+            refazerEncaixeDaTela();
+            if (err && err.name === "AbortError") return;   // cancelar a lista não mostra ajuda
+            ajudaTransmitirTV(motivoFalhaTransmissao(err));
+        });
+    } catch (e) { ajudaTransmitirTV(motivoFalhaTransmissao(e)); }
 }
 
 // Tela de pausa (CONTINUAR / OPÇÕES / SAIR), por cima da luta ou do tutorial congelados.
@@ -2229,7 +2272,7 @@ function releaseTouchPress(e) {
 canvas.addEventListener("touchstart", (e) => {
     e.preventDefault();
     controlsTestTouches = Array.from(e.touches).map(t => getCanvasCoords(t.clientX, t.clientY));
-    isTouchDevice = true;
+    if (controlSelectionMode !== "joystick") isTouchDevice = true;   // no modo JOYSTICK os botões de toque ficam escondidos
     lastInputWasTouch = true;
     lastTouchStartAt = Date.now();
     padNav.visible = false;
@@ -2861,6 +2904,15 @@ function handleMenuClick(x, y) {
         else if (hitRect(x, y, MENU_LAYOUT.back)) setGameState(optionsReturnState);
     }
     else if (gameState === "options_controls") {
+        for (const row of MENU_LAYOUT.optionsControls.toggles) {
+            if (hitRect(x, y, row)) {
+                controlSelectionMode = row.key;
+                if (row.key !== "auto") { manualControlMode = row.key; autoControlOverride = null; }
+                applyEffectiveControlMode();
+                saveControls();
+                return;
+            }
+        }
         if (hitRect(x, y, MENU_LAYOUT.optionsControls.pc)) {
             setGameState("options_pc");
             return;
@@ -2909,15 +2961,6 @@ function handleMenuClick(x, y) {
         else if (hitRect(x, y, MENU_LAYOUT.optionsPc.profileP1)) { activeControlProfile = "p1"; }
         else if (hitRect(x, y, MENU_LAYOUT.optionsPc.profileP2)) { activeControlProfile = "p2"; }
 
-        for (const row of MENU_LAYOUT.optionsPc.toggles) {
-            if (hitRect(x, y, row)) {
-                if (row.key === "auto") controlSelectionMode = "auto";
-                else if (row.key === "pc") { controlSelectionMode = "pc"; manualControlMode = "pc"; }
-                else { controlSelectionMode = "touch"; manualControlMode = "touch"; }
-                saveControls();
-                break;
-            }
-        }
 
         if (hitRect(x, y, MENU_LAYOUT.optionsPc.keyboard)) { pcInputMode = "keyboard"; saveControls(); }
         else if (hitRect(x, y, MENU_LAYOUT.optionsPc.mouse)) { pcInputMode = "mouse"; saveControls(); }
@@ -5717,6 +5760,11 @@ function render() {
         drawBtnAt(MENU_LAYOUT.optionsControls.touch, "CONTROLES TOUCH", "#93c5fd");
         drawBtnAt(MENU_LAYOUT.optionsControls.gamepad, "CONTROLE JOYSTICK", "#c4b5fd");
         drawBtnAt(MENU_LAYOUT.optionsControls.test, "TESTAR CONTROLES", "#a7f3d0");
+        // chaves ON/OFF do modo de entrada: só a escolhida fica ligada
+        const cores = { auto: "#22c55e", pc: "#7dd3fc", touch: "#93c5fd", joystick: "#c4b5fd" };
+        MENU_LAYOUT.optionsControls.toggles.forEach(t => {
+            drawModeToggle(t, controlSelectionMode === t.key, cores[t.key]);
+        });
 
         drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
     }
@@ -5726,65 +5774,11 @@ function render() {
         drawDragonBallPanel(90, 15, 620, 333, "CONTROLES PC");
         drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
 
-        const activeMode = getEffectiveControlMode();
-        const autoMode = controlSelectionMode === "auto";
-        const pcMode = autoMode ? activeMode === "pc" : controlSelectionMode === "pc";
-        const touchMode = autoMode ? activeMode === "touch" : controlSelectionMode === "touch";
-
         const profileName = activeControlProfile === "p2" ? "CONTROLE 2" : "CONTROLE 1";
         ctx.fillStyle = "#e2e8f0";
         ctx.font = "bold 18px 'Courier New', monospace";
         ctx.textAlign = "center";
         ctx.fillText(profileName, 400, 68);
-
-        const drawToggleRow = (label, x, active, color) => {
-            const row = MENU_LAYOUT.optionsPc.toggles[0];
-            registerMenuTarget(x, row.y, row.w, row.h);
-            const pressed = beginButtonPress(x, row.y, row.w, row.h);
-            ctx.save();
-            ctx.fillStyle = "#e2e8f0";
-            ctx.font = "bold 14px 'Courier New', monospace";
-            ctx.textAlign = "center";
-            ctx.fillText(label, x + 106, 296);
-
-            ctx.fillStyle = "rgba(10, 20, 35, 0.9)";
-            ctx.beginPath();
-            ctx.moveTo(x + 70, 314);
-            ctx.lineTo(x + 142, 314);
-            ctx.quadraticCurveTo(x + 150, 314, x + 150, 322);
-            ctx.lineTo(x + 150, 334);
-            ctx.quadraticCurveTo(x + 150, 342, x + 142, 342);
-            ctx.lineTo(x + 70, 342);
-            ctx.quadraticCurveTo(x + 62, 342, x + 62, 334);
-            ctx.lineTo(x + 62, 322);
-            ctx.quadraticCurveTo(x + 62, 314, x + 70, 314);
-            ctx.closePath();
-            ctx.fill();
-            ctx.strokeStyle = active ? color : "#7dd3fc";
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            ctx.fillStyle = "#dbeafe";
-            ctx.font = "bold 9px 'Courier New', monospace";
-            ctx.textAlign = "center";
-            ctx.fillText("OFF", x + 74, 308);
-            ctx.fillText("ON", x + 140, 308);
-
-            ctx.fillStyle = active ? color : "#40566d";
-            ctx.beginPath();
-            ctx.strokeStyle = active ? color : "#557089";
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(x + 91, 328);
-            ctx.lineTo(x + 123, 328);
-            ctx.stroke();
-            ctx.fillStyle = active ? color : "#40566d";
-            ctx.beginPath();
-            ctx.arc(x + (active ? 123 : 91), 328, 8, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-            endButtonPress(pressed);
-        };
 
         drawBtnAt(MENU_LAYOUT.optionsPc.profileP1, "CONTROLE 1", activeControlProfile === "p1" ? "#fbbf24" : "#7dd3fc");
         drawBtnAt(MENU_LAYOUT.optionsPc.profileP2, "CONTROLE 2", activeControlProfile === "p2" ? "#fbbf24" : "#7dd3fc");
@@ -5792,8 +5786,6 @@ function render() {
         drawBtnAt(MENU_LAYOUT.optionsPc.keyboard, "MODO TECLADO", pcInputMode === "keyboard" ? "#fbbf24" : "#7dd3fc", "10px monospace");
         drawBtnAt(MENU_LAYOUT.optionsPc.mouse, "MODO MOUSE", pcInputMode === "mouse" ? "#fbbf24" : "#7dd3fc", "10px monospace");
 
-        const toggleState = { auto: [autoMode, "#22c55e"], pc: [pcMode, "#7dd3fc"], touch: [touchMode, "#93c5fd"] };
-        MENU_LAYOUT.optionsPc.toggles.forEach(t => drawToggleRow(t.label, t.x, toggleState[t.key][0], toggleState[t.key][1]));
 
         const profileKey = activeControlProfile || "p1";
         let acts = ["up", "down", "left", "right", "attack", "charge", "transform", "parry", "special"];
