@@ -83,20 +83,47 @@ function reloadWhenSafe() {
 // Botão ATUALIZAR (flecha girando) da janela UPDATES: baixa de novo todos os arquivos do jogo, ignorando a
 // cópia guardada pelo navegador, e recarrega na hora — sem precisar fechar e abrir o jogo várias vezes.
 let atualizandoAgora = false;
+// Texto da lista de novidades (sem espaços extras), para comparar a versão que está rodando com a do servidor.
+function textoListaUpdates(raiz) {
+    const lista = raiz && raiz.getElementById ? raiz.getElementById("lista-updates") : null;
+    return lista ? String(lista.textContent || "").replace(/\s+/g, " ").trim() : "";
+}
+
+// Lista de novidades do servidor (baixa a página sem cache). null = não deu para ler (sem internet etc.).
+async function lerListaUpdatesDoServidor() {
+    try {
+        const resposta = await fetch(String(location.href).split("#")[0], { cache: "reload" });
+        if (!resposta || !resposta.ok || typeof DOMParser !== "function") return null;
+        return textoListaUpdates(new DOMParser().parseFromString(await resposta.text(), "text/html"));
+    } catch (e) {
+        return null;
+    }
+}
+
+// Botão ATUALIZAR: só recarrega (e fecha a janela) quando a lista de novidades do servidor é diferente da que
+// está aberta. Se nada mudou, a janela UPDATES continua aberta e o botão avisa que já está na versão mais nova.
 async function atualizarJogoAgora() {
     if (atualizandoAgora) return;
     atualizandoAgora = true;
     const botao = document.getElementById("btn-atualizar-jogo");
-    if (botao) { botao.classList.add("girando"); botao.disabled = true; }
     const rotulo = document.getElementById("btn-atualizar-rotulo");
-    if (rotulo) rotulo.textContent = "ATUALIZANDO...";
-    try {
-        if (typeof fetch === "function") {
+    if (botao) { botao.classList.add("girando"); botao.disabled = true; }
+    if (rotulo) rotulo.textContent = "VERIFICANDO...";
+    const novaLista = typeof fetch === "function" ? await lerListaUpdatesDoServidor() : null;
+    const mudou = novaLista !== null && novaLista !== textoListaUpdates(document);
+    if (mudou) {
+        if (rotulo) rotulo.textContent = "ATUALIZANDO...";
+        try {
             await Promise.all(getGameFileUrls().map(url => fetch(url, { cache: "reload" }).catch(() => null)));
-        }
-    } catch (e) {}
-    try { sessionStorage.setItem("saiyan_atualizou_em", String(Date.now())); } catch (e) {}
-    location.reload();
+        } catch (e) {}
+        try { sessionStorage.setItem("saiyan_atualizou_em", String(Date.now())); } catch (e) {}
+        location.reload();
+        return;
+    }
+    if (botao) { botao.classList.remove("girando"); botao.disabled = false; }
+    if (rotulo) rotulo.textContent = novaLista === null ? "SEM CONEXÃO" : "JÁ ESTÁ ATUALIZADO";
+    setTimeout(() => { if (rotulo && !atualizandoAgora) rotulo.textContent = "ATUALIZAR"; }, 3000);
+    atualizandoAgora = false;
 }
 
 if (typeof fetch === "function" && typeof location !== "undefined" && /^https?:/.test(location.protocol)) {
