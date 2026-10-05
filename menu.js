@@ -845,7 +845,7 @@ function traceRoundedRect(x, y, w, h, radius) {
 // Plataforma em uso agora (a última que mexeu): "controle", "toque" ou "pc" (teclado/mouse).
 let lastPadInputAt = 0, lastKeyInputAt = 0;
 function getActiveInputPlatform() {
-    if (controlSelectionMode === "joystick") return "controle";
+    if (getEffectiveControlMode() === "joystick") return "controle";
     const toque = lastInputWasTouch ? (lastTouchStartAt || 1) : 0;
     if (lastPadInputAt > 0 && lastPadInputAt >= toque && lastPadInputAt >= lastKeyInputAt && getConnectedGamepads().length) return "controle";
     if (isTouchDevice && lastInputWasTouch) return "toque";
@@ -1802,10 +1802,20 @@ function scrollAxis() {
     return pads.some(p => p.axes && Math.abs(p.axes[1] || 0) > 0.4 && !(p.buttons && (p.buttons[12] && p.buttons[12].pressed || p.buttons[13] && p.buttons[13].pressed)));
 }
 
+// Usou o controle (botão, direcional ou analógico): no AUTOMÁTICO vira modo JOYSTICK (some o HUD de toque)
+// até usar toque/mouse/teclado de novo. Vale nos menus e na luta.
+function marcarEntradaControle() {
+    lastPadInputAt = Date.now();
+    if (controlSelectionMode === "auto" && autoControlOverride !== "joystick") { autoControlOverride = "joystick"; applyEffectiveControlMode(); }
+}
+// No Android o controle também gera teclas (direcional = setas) e o touchpad do PS5 move o mouse:
+// logo depois de usar o controle, esses eventos não trocam o AUTOMÁTICO para PC.
+function controleUsadoAgora() { return Date.now() - lastPadInputAt < 1500; }
 function pollGamepadMenu(dt) {
     const pads = getConnectedGamepads();
     const intents = pads.map(pad => getPadIntent(pad));
     const any = (k) => intents.some(i => i[k]);
+    if (intents.some(i => Object.keys(i).some(k => i[k])) || pads.some(pad => pad.buttons && pad.buttons.some(b => b && b.pressed))) marcarEntradaControle();
 
     // Tela "Controle PS5": esperando o jogador apertar o novo botão de uma ação.
     if (padCapture) {
@@ -1964,11 +1974,7 @@ function pollGamepads(dt) {
     }
     padPrevCreate = createDown;
 
-    if (getConnectedGamepads().some(pad => { const i = getPadIntent(pad); return Object.keys(i).some(k => i[k]); })) {
-        lastPadInputAt = Date.now();
-        // AUTOMÁTICO: pegou o controle → modo joystick (some o HUD de toque) até usar toque/mouse de novo
-        if (controlSelectionMode === "auto" && autoControlOverride !== "joystick") { autoControlOverride = "joystick"; applyEffectiveControlMode(); }
-    }
+    if (getConnectedGamepads().some(pad => { const i = getPadIntent(pad); return Object.keys(i).some(k => i[k]); })) marcarEntradaControle();
     const anyPause = ["p1", "p2"].some(profile => getPadIntent(assignments[profile]).pause);
     if (anyPause && !padPrevPause) {
         if (gameState === "tutorial") {
@@ -2150,7 +2156,7 @@ function getHudButtonAt(x, y) {
 canvas.onmousemove = (e) => {
     lastInputWasTouch = false;
     padNav.visible = false;
-    if (controlSelectionMode === "auto" && autoControlOverride !== "pc" && Date.now() - lastTouchStartAt > 1000) {
+    if (controlSelectionMode === "auto" && autoControlOverride !== "pc" && Date.now() - lastTouchStartAt > 1000 && !controleUsadoAgora()) {
         autoControlOverride = "pc";
         isTouchDevice = false;
     }
@@ -2588,9 +2594,9 @@ canvas.addEventListener("touchcancel", (e) => {
 }, { passive: false });
 
 window.onkeydown = (e) => {
-    lastKeyInputAt = Date.now();
+    if (!controleUsadoAgora()) lastKeyInputAt = Date.now();
     // AUTOMÁTICO: usou o teclado → modo PC
-    if (controlSelectionMode === "auto" && autoControlOverride !== "pc") { autoControlOverride = "pc"; applyEffectiveControlMode(); }
+    if (controlSelectionMode === "auto" && autoControlOverride !== "pc" && !controleUsadoAgora()) { autoControlOverride = "pc"; applyEffectiveControlMode(); }
     if (remappingKey) {
         let [p, act] = remappingKey.split(".");
         keyBindings[p][act] = e.code;
