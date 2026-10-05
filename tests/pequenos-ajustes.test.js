@@ -27,10 +27,9 @@ run("keysPressed = {}; gameMode = 'coop'; startGame(); keysPressed[keyBindings.p
 check("modo 2 jogadores: a mesma tecla continua carregando o jogador 2", run("player2.isCharging") === true);
 run("keysPressed = {}");
 
-// ---------- aura do chefe não muda com o jogador transformado ----------
-run("gameMode = 'singleplayer'; startGame(); player.isSSJ = true; world.auraParticles = []");
-run("Math.random = () => 0.1; updateAura(player2, 'gelo', true)");
-check("aura do chefe continua do tipo dele com o jogador transformado (não vira a do Super Saiyajin)", run("world.auraParticles.length > 0 && world.auraParticles.every(p => p.isWind)"));
+// ---------- aura antiga (riscos de luz) removida: só a aura nova (drawKiAura) ----------
+run("gameMode = 'singleplayer'; startGame(); player.isCharging = true; for (let i = 0; i < 30; i++) update(1/60)");
+check("sem os riscos de luz da aura antiga", run("typeof updateAura === 'undefined' && world.auraParticles === undefined"));
 
 // ---------- 2 jogadores não entra no ranking da fase ----------
 run("writeStorage('saiyan_stage_ranking', ''); gameMode = 'coop'; selectedStage = 'terra'; startGame(); score = 77; triggerGameOver()");

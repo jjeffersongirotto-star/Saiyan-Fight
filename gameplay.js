@@ -128,7 +128,6 @@ function startTutorial() {
     world.pickups = [];
     world.saibamans = [];
     world.blasts = [];
-    world.auraParticles = [];
     world.impactParticles = [];
     world.floatingTexts = [];
     world.beamActive = 0;
@@ -699,7 +698,7 @@ let player2 = {
 // agrupá-los exigiria uma reescrita ampla e arriscada sem testes em navegador
 // (ver AGENTS.md: "evitar grandes refatorações").
 let world = {
-    saibamans: [], obstacles: [], pickups: [], auraParticles: [], impactParticles: [], blasts: [],
+    saibamans: [], obstacles: [], pickups: [], impactParticles: [], blasts: [],
     mountainsFar: [], floatingTexts: [],
     beamActive: 0, currentBeamType: "KAMEHAMEHA", beamOwner: "p1", lastPlayerHp: 3,
     saibamanSpawnTimer: 0, pickupSpawnTimer: 0, stageScrollX: 0
@@ -755,7 +754,6 @@ function startGame() {
     let waveParams = getWaveParams(waveNumber);
 
     world.obstacles = [];
-    world.auraParticles = [];
     world.impactParticles = [];
     world.saibamans = [];
     world.blasts = [];
@@ -1107,7 +1105,7 @@ function spawnPickup() {
     });
 }
 
-// ==================== AURA & IMPACT PARTICLES ====================
+// ==================== IMPACT PARTICLES ====================
 function createImpactParticles(x, y, color = "#ffff00", count = 12) {
     const available = Math.max(0, MAX_PARTICLES - world.impactParticles.length);
     const particleCount = Math.min(count, available);
@@ -1129,33 +1127,6 @@ function createImpactParticles(x, y, color = "#ffff00", count = 12) {
 function addFloatingText(textData) {
     if (world.floatingTexts.length >= MAX_FLOATING_TEXTS) world.floatingTexts.shift();
     world.floatingTexts.push(textData);
-}
-
-function updateAura(entity, auraType, isBoss = false) {
-    // só o jogador 1 tem a aura dourada de Super Saiyajin; a aura do chefe não muda com isso
-    const ssjAura = !isBoss && player.isSSJ && player.transformPowerTimer > 0;   // cor da transformação só enquanto dura o poder extra
-    let colors = AURA_COLORS[auraType] || AURA_COLORS.gelo;
-    if (ssjAura) colors = AURA_COLORS[getTransformationAura(selectedCharacter, getTransformLevel(player))] || AURA_COLORS.amarelo;
-
-    let mult = ((!isBoss && player.isCharging) || (isBoss && player2.isCharging)) ? 3 : 1;
-    
-    for (let i = 0; i < mult; i++) {
-        if (Math.random() < 0.6 && world.auraParticles.length < MAX_PARTICLES) {
-            let px = isBoss ? entity.x + 10 + Math.random() * (entity.w - 10) : entity.x + Math.random() * (entity.w - 10);
-            let py = entity.y + entity.h - 5 + Math.random() * 10;
-            
-            world.auraParticles.push({
-                x: px,
-                y: py,
-                vx: (Math.random() - 0.5) * 1.2,
-                vy: -1.5 - Math.random() * 3,
-                size: (auraType === "gelo" && !ssjAura) ? 3 + Math.random() * 3 : 4 + Math.random() * 6,
-                alpha: 0.8,
-                color: colors[Math.floor(Math.random() * colors.length)],
-                isWind: auraType === "gelo" && !ssjAura
-            });
-        }
-    }
 }
 
 // ==================== REBATIMENTO / PARRY ====================
@@ -1625,16 +1596,6 @@ function update(dt) {
         if (ft.alpha <= 0) world.floatingTexts.splice(i, 1);
     }
 
-    for (let i = world.auraParticles.length - 1; i >= 0; i--) {
-        let p = world.auraParticles[i];
-        p.x += p.vx * dt * 60;
-        p.y += p.vy * dt * 60;
-        p.alpha -= 0.03 * dt * 60;
-        if (p.alpha <= 0 || p.x < -20 || p.x > canvas.width + 20 || p.y < -20 || p.y > canvas.height + 20) {
-            world.auraParticles.splice(i, 1);
-        }
-    }
-
     for (let i = world.impactParticles.length - 1; i >= 0; i--) {
         let p = world.impactParticles[i];
         p.x += p.vx * dt * 60;
@@ -1937,8 +1898,6 @@ function update(dt) {
     let bChar = characterDB[selectedBoss];
     [player2.w, player2.h] = getFighterBoxSize(selectedBoss);
 
-    updateAura(player, pChar && pChar.aura ? pChar.aura : "gelo");
-    if (gameMode !== "coop") updateAura(player2, bChar && bChar.aura ? bChar.aura : "gelo", true);
 
     if (player.isCharging) {
         player.ki = Math.min(player.maxKi, player.ki + (0.8 * dt * 60));
