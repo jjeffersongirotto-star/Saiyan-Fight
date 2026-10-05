@@ -21,7 +21,7 @@ const MENU_LAYOUT = {
     modeSelect: { single: rect(175, 176, 200, 58), coop: rect(425, 176, 200, 58) },
     paused: { resume: rect(300, 110, 200, 35), options: rect(300, 160, 200, 35), exit: rect(300, 210, 200, 35) },
     characters: { tabHeroes: rect(250, 45, 140, 25), tabVillains: rect(410, 45, 140, 25) },
-    optionsMain: { controls: rect(220, 145, 360, 42), audio: rect(220, 205, 360, 42) },
+    optionsMain: { controls: rect(220, 125, 360, 42), audio: rect(220, 180, 360, 42), cast: rect(220, 235, 360, 42) },
     optionsControls: { pc: rect(180, 144, 220, 46), touch: rect(420, 144, 220, 46), gamepad: rect(180, 204, 220, 46), test: rect(420, 204, 220, 46) },
     optionsGamepad: { reset: rect(570, 82, 120, 28), test: rect(570, 122, 120, 28) },
     optionsPc: {
@@ -548,6 +548,7 @@ function toggleFullscreen() {
 
 function drawFullscreenButton() {
     const rect = getFullscreenButtonRect();
+    if (padNavIsActiveState()) registerMenuTarget(rect.x, rect.y, rect.w, rect.h);   // o controle também alcança
     const hovered = inRect(mouseX, mouseY, rect.x, rect.y, rect.w, rect.h);
     const isActive = isFullscreenActive();
     const centerX = rect.x + rect.w / 2;
@@ -1638,7 +1639,8 @@ function isMenuBackTarget(t) {
 
 function padNavIsActiveState() {
     // controls_test: os botões do controle precisam acender na tela, não navegar
-    return gameState !== "playing" && gameState !== "options_hud" && gameState !== "controls_test";
+    // tutorial: o analógico mexe só o personagem (CREATE pula o passo, OPTIONS pausa — ver pollGamepads)
+    return gameState !== "playing" && gameState !== "tutorial" && gameState !== "options_hud" && gameState !== "controls_test";
 }
 
 // Acha o alvo que está sob o foco atual (ou o mais próximo, se a tela mudou); escolhe um inicial se não há foco.
@@ -1646,7 +1648,8 @@ function resolvePadFocus() {
     if (!menuTargetsPrev.length) return null;
     if (padNav.state !== gameState || !padNav.focus) {
         padNav.state = gameState;
-        const first = menuTargetsPrev.find(t => !isMenuBackTarget(t)) || menuTargetsPrev[0];
+        const fs = getFullscreenButtonRect();
+        const first = menuTargetsPrev.find(t => !isMenuBackTarget(t) && !(t.x === fs.x && t.y === fs.y)) || menuTargetsPrev[0];
         padNav.focus = { x: first.x + first.w / 2, y: first.y + first.h / 2 };
         return first;
     }
@@ -1818,6 +1821,7 @@ const padHeldKeys = { p1: {}, p2: {} };
 const padPrevPressed = { p1: {}, p2: {} };
 const padAttackCooldown = { p1: 0, p2: 0 };
 let padPrevPause = false;
+let padPrevCreate = false;   // botão CREATE/SHARE (pular passo do tutorial)
 
 function getConnectedGamepads() {
     try {
@@ -1851,6 +1855,15 @@ function setPadKey(profile, action, down) {
 function pollGamepads(dt) {
     const assignments = getGamepadAssignments();
     const playing = gameState === "playing" || gameState === "tutorial";
+
+    // tutorial: CREATE/SHARE (botão 8) pula o passo — o analógico não navega em PULAR/SAIR
+    const createDown = getConnectedGamepads().some(pad => pad.buttons && pad.buttons[8] && pad.buttons[8].pressed);
+    if (gameState === "tutorial" && createDown && !padPrevCreate) {
+        const ui = getTutorialUiLayout();
+        const alvo = ui.finished ? ui.voltar : ui.pular;
+        if (alvo) handleMenuClick(alvo.x + alvo.w / 2, alvo.y + alvo.h / 2);
+    }
+    padPrevCreate = createDown;
 
     const anyPause = ["p1", "p2"].some(profile => getPadIntent(assignments[profile]).pause);
     if (anyPause && !padPrevPause) {
@@ -1894,6 +1907,21 @@ function pollGamepads(dt) {
             padPrevPressed[profile][action] = intent[action];
         }
     }
+}
+
+// TRANSMITIR PARA A TV: explica como espelhar a tela do jogo numa TV pelo próprio aparelho.
+function ajudaTransmitirTV() {
+    showSystemAlert("TRANSMITIR PARA A TV",
+        "Espelhe a tela pelo aparelho:\n" +
+        "• Android: puxe as configurações rápidas e toque em 'Transmitir tela' / 'Smart View'.\n" +
+        "• iPhone/iPad: Central de Controle > 'Espelhamento de Tela' (Apple TV/AirPlay).\n" +
+        "• PC (Chrome/Edge): menu ⋮ > 'Transmitir...' e escolha a TV.\n" +
+        "O jogo continua no seu aparelho e a TV mostra a mesma tela.");
+}
+// (a API de apresentação abriria uma SEGUNDA cópia do jogo na TV, sem controle — por isso o caminho certo é
+// o espelhamento do próprio aparelho/navegador, que mostra exatamente esta tela)
+function transmitirParaTV() {
+    ajudaTransmitirTV();
 }
 
 // Tela de pausa (CONTINUAR / OPÇÕES / SAIR), por cima da luta ou do tutorial congelados.
@@ -2516,7 +2544,7 @@ function getTutorialInstructionLines(stepKey) {
         }
         if (padConnected) {
             const padNames = { move: "ANALÓGICO ESQUERDO OU DIRECIONAL", attack: describePadBinding(padBindings.attack), charge: describePadBinding(padBindings.charge), parry: describePadBinding(padBindings.parry), transform: describePadBinding(padBindings.transform), special: describePadBinding(padBindings.special), pause: describePadBinding(padBindings.pause) };
-            lines.push(`CONTROLE: ${padNames[stepKey]}`);
+            lines.push(`CONTROLE: ${padNames[stepKey]}   (CREATE = PULAR, OPTIONS = PAUSA/SAIR)`);
         }
         if (stepKey === "charge") lines.push("(SEGURE POR UM INSTANTE)");
     }
@@ -2641,6 +2669,9 @@ function isMenuClickOnButton(x, y) {
 
 function handleMenuClick(x, y) {
     initAudio();
+    // botão de tela cheia (o mouse e o toque já tratam antes; aqui chega pelo controle)
+    const fsRect = getFullscreenButtonRect();
+    if (inRect(x, y, fsRect.x, fsRect.y, fsRect.w, fsRect.h)) { toggleFullscreen(); return; }
     if (isMenuClickOnButton(x, y)) playSound("menu");
 
     if (gameState === "menu") {
@@ -2722,6 +2753,7 @@ function handleMenuClick(x, y) {
     else if (gameState === "options_main") {
         if (hitRect(x, y, MENU_LAYOUT.optionsMain.controls)) setGameState("options_controls");
         else if (hitRect(x, y, MENU_LAYOUT.optionsMain.audio)) setGameState("options_audio");
+        else if (hitRect(x, y, MENU_LAYOUT.optionsMain.cast)) transmitirParaTV();
         else if (hitRect(x, y, MENU_LAYOUT.back)) setGameState(optionsReturnState);
     }
     else if (gameState === "options_controls") {
@@ -2885,6 +2917,7 @@ function handleMenuClick(x, y) {
                 startGame();
             } else if (hitRect(x, y, MENU_LAYOUT.back)) {
                 stageChoicePendingId = null;   // a seta ← fecha a escolha do modo (como nas outras telas)
+                padNav.focus = null;
             }
             return;
         }
@@ -2895,6 +2928,7 @@ function handleMenuClick(x, y) {
                     stageLockedHintTimer = 120;
                 } else {
                     stageChoicePendingId = node.id;
+                    padNav.focus = null;   // o foco do controle começa no NORMAL do quadro
                 }
             }
         });
@@ -5566,6 +5600,7 @@ function render() {
 
         drawBtnAt(MENU_LAYOUT.optionsMain.controls, "CONTROLES", "#7dd3fc");
         drawBtnAt(MENU_LAYOUT.optionsMain.audio, "CONFIGURAÇÃO DE ÁUDIO", "#c4b5fd");
+        drawBtnAt(MENU_LAYOUT.optionsMain.cast, "TRANSMITIR PARA A TV", "#86efac");
 
         drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
     }
@@ -6090,7 +6125,8 @@ function render() {
         }
 
         nodes.forEach((node, i) => {
-            registerMenuTarget(node.x - STAGE_MAP_NODE_R, node.y - STAGE_MAP_NODE_R, STAGE_MAP_NODE_R * 2, STAGE_MAP_NODE_R * 2);
+            // com o quadro de modo aberto, os círculos ficam escondidos atrás: não entram na navegação do controle
+            if (!stageChoicePendingId) registerMenuTarget(node.x - STAGE_MAP_NODE_R, node.y - STAGE_MAP_NODE_R, STAGE_MAP_NODE_R * 2, STAGE_MAP_NODE_R * 2);
             const pressed = !stageChoicePendingId && beginButtonPress(node.x - STAGE_MAP_NODE_R, node.y - STAGE_MAP_NODE_R, STAGE_MAP_NODE_R * 2, STAGE_MAP_NODE_R * 2);
             const isSel = selectedStage === node.id;
             const theme = STAGE_THEME_COLOR[node.id] || "#8899aa";
