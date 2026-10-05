@@ -48,10 +48,20 @@ check("mapa de fases: a seta ← fecha a escolha de modo", run("stageChoicePendi
 run("setGameState('options_pc')");
 run("handleMenuClick(400, 345)");   // centro embaixo, entre os interruptores: não tem botão desenhado aqui
 check("controles PC: clicar embaixo, onde não há botão, não sai mais da tela", run("gameState") === "options_pc");
-run("controlSelectionMode = 'auto'; setGameState('options_pc')");
-const pc = run("MENU_LAYOUT.optionsPc.toggles.find(t => t.key === 'pc')");
-run(`handleMenuClick(${pc.x + 100}, ${pc.y + 26})`);   // parte de baixo do interruptor PC
-check("controles PC: a parte de baixo do interruptor PC só liga o PC (não sai da tela junto)", run("controlSelectionMode") === "pc" && run("gameState") === "options_pc");
+// ---------- interruptores AUTOMÁTICO / PC / TOUCH / JOYSTICK na tela CONTROLES ----------
+run("controlSelectionMode = 'auto'; autoControlOverride = null; setGameState('options_controls')");
+const toggle = (k) => run(`MENU_LAYOUT.optionsControls.toggles.find(t => t.key === '${k}')`);
+const pc = toggle("pc");
+run(`handleMenuClick(${pc.x + 55}, ${pc.y + 60})`);   // parte de baixo do interruptor PC
+check("controles: o interruptor PC liga só o PC e fica na tela", run("controlSelectionMode") === "pc" && run("gameState") === "options_controls");
+const js = toggle("joystick");
+run(`handleMenuClick(${js.x + 55}, ${js.y + 50})`);
+check("controles: JOYSTICK vira o modo principal (sem HUD de toque, tutorial do controle)",
+    run("controlSelectionMode") === "joystick" && run("getEffectiveControlMode()") === "joystick" && run("isTouchDevice") === false && run("getActiveInputPlatform()") === "controle");
+check("controles: só um interruptor ligado por vez", run("MENU_LAYOUT.optionsControls.toggles.filter(t => controlSelectionMode === t.key).length") === 1);
+check("controles: os 4 interruptores ficam abaixo dos 4 botões", run("MENU_LAYOUT.optionsControls.toggles.every(t => t.y >= MENU_LAYOUT.optionsControls.test.y + MENU_LAYOUT.optionsControls.test.h)"));
+run("setGameState('options_pc'); render()");
+check("controles PC: a tela abre sem os interruptores", run("gameState") === "options_pc");
 
 run("setGameState('menu')");
 process.exit(summary());
