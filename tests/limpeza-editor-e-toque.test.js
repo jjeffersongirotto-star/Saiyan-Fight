@@ -1,6 +1,6 @@
 // tests/limpeza-editor-e-toque.test.js — limpeza de código antigo/duplicado:
 // - botões de toque (ataque, parry, especial; o CARREGAR vira transformar com o ki cheio) passam pelo mesmo caminho do teclado (triggerAction),
-//   então o aviso "ENCHA O KI PARA TRANSFORMAR" agora aparece em qualquer controle, não só no toque;
+//   sem texto no meio da luta (o aviso "ENCHA O KI PARA TRANSFORMAR" saiu; a barra de ki já mostra);
 // - "ADICIONAR QUADRO AO MOVIMENTO" e "SALVAR FRAMES NA PRÉVIA" faziam o mesmo: ficou um botão só;
 // - o editor sem imagem nenhuma continua mostrando/salvando a imagem reserva.
 //
@@ -15,7 +15,7 @@ const avisos = () => run("world.floatingTexts.map(t => t.text)");
 // ---------- aviso de ki insuficiente: teclado e toque ----------
 run("gameMode = 'singleplayer'; stageMode = 'normal'; startGame(); player.ki = 0; world.floatingTexts = []");
 run("triggerAction('transform', player, false)");
-check("teclado/controle: transformar sem ki mostra o aviso", avisos().some(t => t.startsWith("ENCHA O KI")));
+check("teclado/controle: transformar sem ki não escreve nada na luta", avisos().length === 0);
 check("teclado/controle: sem ki não transforma", run("player.isSSJ") === false);
 
 run("world.floatingTexts = []; player.ki = 0");
@@ -31,7 +31,7 @@ check("com ki suficiente transforma normalmente (sem aviso)", run("player.isSSJ"
 run("world.floatingTexts = []");
 run("triggerAction('transform', player, false)");
 const temProxima = run("getTransformLevel(player) < getCharacterTransformations(selectedCharacter).length");
-check("ainda há outra transformação e o ki está vazio: avisa para encher", !temProxima || avisos().some(t => t.startsWith("ENCHA O KI")));
+check("ainda há outra transformação e o ki está vazio: não transforma nem escreve", avisos().length === 0 && (!temProxima || run("getTransformLevel(player)") >= 1));
 run("while (getTransformLevel(player) < getCharacterTransformations(selectedCharacter).length) { player.ki = player.maxKi; transformPlayer(player, false); }");
 run("world.floatingTexts = []");
 run("triggerAction('transform', player, false)");
