@@ -2132,6 +2132,7 @@ function loadCharacterData() {
 
             if (validCount > 0) {
                 seedNewDefaultCharacters();
+                atualizarFreezaSalvo();
                 return;
             }
         }
@@ -2145,6 +2146,13 @@ function loadCharacterData() {
 // Personagens iniciais: um para cada modelo da lista "COMEÇAR A PARTIR DE..." do construtor (SPRITE_PRESETS em
 // sprites.js), montados com o próprio construtor — já nascem com animações fluidas (voo, ataque, parry, carregar,
 // transformar). O construtor continua funcionando igual para criar personagens novos a partir desses modelos.
+const FREEZA_TRANSFORMACOES = [
+    { name: "Segunda forma", diff: { build: "gigante", headFeature: "capacete_chifres", bodyMarks: "carapaca_freeza", outerShirt: "none" }, ssj: false, aura: "roxo" },
+    { name: "Terceira forma", diff: { build: "musculoso", headFeature: "cabeca_longa", bodyMarks: "carapaca_freeza", outerShirt: "none" }, ssj: false, aura: "roxo" },
+    { name: "Forma final", diff: { build: "normal", headFeature: "none", bodyMarks: "freeza", outerShirt: "armadura_freeza", gloves: "nenhuma", shoes: "pes_garras", skinColor: "" }, ssj: false, aura: "roxo" },
+    { name: "Freeza ciborgue", diff: { build: "normal", headFeature: "meia_cabeca_metal", bodyMarks: "metal_freeza", outerShirt: "armadura_freeza", gloves: "nenhuma", shoes: "pes_garras", skinColor: "#c8d0de" }, ssj: false, aura: "roxo" }
+];
+
 const DEFAULT_CHARACTERS = {
     // Goku já vem com a Transformação 2 (cabelo longo de Super Saiyajin), criada pela aba TRANSFORMAÇÃO do editor
     goku_adult: { name: "GOKU", presetKey: "goku", align: "HERÓI", aura: "gelo", spec: "KAMEHAMEHA",
@@ -2154,7 +2162,9 @@ const DEFAULT_CHARACTERS = {
         ] },
     vegeta: { name: "VEGETA", presetKey: "vegeta", align: "ANTI-HERÓI", aura: "amarelo", spec: "FINAL FLASH" },
     piccolo: { name: "PICCOLO", presetKey: "piccolo", align: "HERÓI", aura: "verde", spec: "MAKAN KOSAPPO" },
-    freeza_1: { name: "FREEZA (FINAL)", presetKey: "freeza", align: "VILÃO", aura: "roxo", spec: "DEATH BEAM" },
+    // Freeza: começa na 1ª forma (armadura do exército) e cada TRANSFORMAR sobe uma forma, até o ciborgue
+    freeza_1: { name: "FREEZA", presetKey: "freeza", align: "VILÃO", aura: "roxo", spec: "DEATH BEAM",
+        transformations: FREEZA_TRANSFORMACOES },
     trunks: { name: "TRUNKS", presetKey: "trunks", align: "HERÓI", aura: "azul", spec: "BURNING ATTACK" },
     gohan: { name: "GOHAN", presetKey: "gohan", align: "HERÓI", aura: "gelo", spec: "MASENKO" },
     kaioshin: { name: "SUPREMO SR. KAIO", presetKey: "kaioshin", align: "HERÓI", aura: "rosa", spec: "KIAI SAGRADO" },
@@ -2224,6 +2234,19 @@ function loadDefaultCharacters() {
 
 // Perfil que já tinha personagens salvos: acrescenta, UMA vez, os personagens iniciais que ele ainda não recebeu
 // (ex.: os modelos novos do construtor). Um personagem inicial que o jogador apagar depois não volta sozinho.
+// Perfil com o Freeza antigo (só a forma final, sem transformações próprias): passa uma vez para o Freeza novo
+// (1ª forma + 4 transformações). Um Freeza que o jogador editou (outra aparência) fica como está.
+function atualizarFreezaSalvo() {
+    if (readStorage("saiyan_freeza_formas") === "1") return;
+    writeStorage("saiyan_freeza_formas", "1");
+    const c = characterDB.freeza_1;
+    const ap = c && c.builderAppearance;
+    if (!ap || ap.outerShirt !== "armadura_freeza" || ap.bodyMarks !== "freeza") return;
+    if (Array.isArray(c.transformations) && c.transformations.some(t => t && t.diff && Object.keys(t.diff).length)) return;
+    createDefaultCharacter("freeza_1");
+    saveCharacterData();
+}
+
 function seedNewDefaultCharacters() {
     let seeded = readJsonStorage("saiyan_defaults_seeded", null);
     if (!Array.isArray(seeded)) seeded = ORIGINAL_DEFAULT_CHARACTER_KEYS.slice();
@@ -2308,7 +2331,10 @@ function getBuilderAppearanceFromForm() {
     const autoSkin = document.getElementById("build-skin-auto");
     const skinInput = document.getElementById("build-skin");
     app.skinColor = (autoSkin && autoSkin.checked) ? "" : (skinInput ? skinInput.value : "");
-    return normalizeAppearance(app);
+    const final = normalizeAppearance(app);
+    // com a cor padrão marcada, a amostra mostra a cor da raça escolhida (antes ficava a da raça anterior)
+    if (autoSkin && autoSkin.checked && skinInput) skinInput.value = spriteSkin(final);
+    return final;
 }
 
 function setBuilderFormFromAppearance(appearance) {
@@ -2321,6 +2347,13 @@ function setBuilderFormFromAppearance(appearance) {
     const skinInput = document.getElementById("build-skin");
     if (autoSkin) autoSkin.checked = !app.skinColor;
     if (skinInput) skinInput.value = app.skinColor || spriteSkin(app);
+}
+
+// Escolher uma cor de pele vale em qualquer raça: desmarca "usar cor padrão da raça" na hora.
+function escolherCorDaPele() {
+    const autoSkin = document.getElementById("build-skin-auto");
+    if (autoSkin) autoSkin.checked = false;
+    refreshBuilderPreview();
 }
 
 function applyBuilderPreset() {

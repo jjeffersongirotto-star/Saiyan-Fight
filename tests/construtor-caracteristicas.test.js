@@ -21,7 +21,9 @@ const cor = (a, c) => Object.assign({}, a, { secondaryColor: c });
 check("homem sem calça fica de cueca", svg(cor(homem, "#ff0000")) !== svg(cor(homem, "#0000ff")));
 check("homem de calça e sem camisa: sem top", svg(cor(Object.assign({}, homem, { pants: "larga" }), "#ff0000")) === svg(cor(Object.assign({}, homem, { pants: "larga" }), "#0000ff")));
 check("mulher sem roupa em cima fica de top", svg(cor(Object.assign({}, mulher, { pants: "larga" }), "#ff0000")) !== svg(cor(Object.assign({}, mulher, { pants: "larga" }), "#0000ff")));
-check("Freeza (armadura do corpo) não ganha cueca", svg(cor(P.freeza.appearance, "#ff0000")) === svg(cor(P.freeza.appearance, "#0000ff")));
+// forma final do Freeza (a armadura é o próprio corpo); a 1ª forma usa short preto de propósito
+const formaFinal = Object.assign({}, P.freeza.appearance, { build: "normal", headFeature: "none", bodyMarks: "freeza", outerShirt: "armadura_freeza", gloves: "nenhuma", shoes: "pes_garras", skinColor: "" });
+check("Freeza (armadura do corpo) não ganha cueca", svg(cor(formaFinal, "#ff0000")) === svg(cor(formaFinal, "#0000ff")));
 check("corpo feminino é diferente do masculino", svg(mulher) !== svg(homem));
 check("Androide 18 é mulher", sp.normalizeAppearance(P.android18.appearance).gender === "feminino");
 
