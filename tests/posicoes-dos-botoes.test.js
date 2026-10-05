@@ -66,6 +66,14 @@ run("autoControlOverride = 'joystick'; applyEffectiveControlMode()");
 check("AUTOMÁTICO: usar o controle acende o JOYSTICK e esconde o toque", run("getEffectiveControlMode()") === "joystick" && run("isTouchDevice") === false);
 run("autoControlOverride = 'touch'; applyEffectiveControlMode()");
 check("AUTOMÁTICO: tocar na tela acende o TOUCH", run("getEffectiveControlMode()") === "touch" && run("controlSelectionMode") === "auto");
+// controle nos menus (sem luta): AUTOMÁTICO acende o JOYSTICK, e as teclas que o Android gera junto não trocam para PC
+run("controlSelectionMode = 'auto'; autoControlOverride = 'pc'; lastPadInputAt = 0; setGameState('options_controls')");
+run("navigator.getGamepads = () => [{ index: 0, connected: true, id: 'pad', mapping: 'standard', axes: [0, 0, 0, 0], buttons: Array.from({ length: 17 }, (_, i) => ({ pressed: i === 13, value: i === 13 ? 1 : 0 })) }]");
+run("pollGamepadMenu(1/60)");
+check("AUTOMÁTICO: mexer no controle nos menus acende o JOYSTICK", run("getEffectiveControlMode()") === "joystick" && run("getActiveInputPlatform()") === "controle");
+run("window.onkeydown({ code: 'ArrowDown', key: 'ArrowDown', preventDefault(){} })");
+check("AUTOMÁTICO: tecla gerada pelo controle (Android) não troca para PC", run("getEffectiveControlMode()") === "joystick");
+run("navigator.getGamepads = () => []");
 check("controles: os 4 interruptores ficam abaixo dos 4 botões", run("MENU_LAYOUT.optionsControls.toggles.every(t => t.y >= MENU_LAYOUT.optionsControls.test.y + MENU_LAYOUT.optionsControls.test.h)"));
 run("setGameState('options_pc'); render()");
 check("controles PC: a tela abre sem os interruptores", run("gameState") === "options_pc");

@@ -26,11 +26,11 @@ check("CRUZ aperta o botão destacado (mesmo com a janela cobrindo a tela)", run
 run("__modal.style.display = 'none'; render();");
 
 // tutorial: comandos da plataforma em uso
-run("startTutorial(); tutorialStepIndex = 1; setupTutorialStep(); lastPadInputAt = 0; lastKeyInputAt = Date.now(); lastInputWasTouch = false; isTouchDevice = false;");
+run("startTutorial(); tutorialStepIndex = 1; setupTutorialStep(); lastPadInputAt = 0; autoControlOverride = 'pc'; lastKeyInputAt = Date.now(); lastInputWasTouch = false; isTouchDevice = false;");
 check("no PC o tutorial mostra só teclado/mouse", run("getTutorialInstructionLines('attack').join(' ')").startsWith("TECLADO") && !run("getTutorialInstructionLines('attack').join(' ')").includes("CONTROLE"));
 run("lastPadInputAt = Date.now() + 1000;");
 check("usando o controle mostra só os botões do controle", run("getTutorialInstructionLines('attack')[0]").startsWith("CONTROLE: QUADRADO"));
-run("lastPadInputAt = 0; isTouchDevice = true; lastInputWasTouch = true; lastTouchStartAt = Date.now() + 2000;");
+run("autoControlOverride = 'touch'; lastPadInputAt = 0; isTouchDevice = true; lastInputWasTouch = true; lastTouchStartAt = Date.now() + 2000;");
 check("no celular mostra só o toque", /TOQUE|SEGURE/.test(run("getTutorialInstructionLines('attack')[0]")));
 check("durante os passos o controle não navega", run("padNavIsActiveState()") === false);
 run("tutorialPhase = 'finished';");
@@ -39,7 +39,7 @@ check("no fim do tutorial o controle volta a navegar (alcança VOLTAR AO MENU)",
 // laranja de passar o mouse só com mouse
 run("setGameState('menu'); lastInputWasTouch = true;");
 check("depois de um toque nenhum botão fica laranja", run("isMouseHovering()") === false);
-run("lastInputWasTouch = false; isTouchDevice = false; padNav.visible = false; lastPadInputAt = 0; lastKeyInputAt = 0;");
+run("lastInputWasTouch = false; isTouchDevice = false; padNav.visible = false; lastPadInputAt = 0; autoControlOverride = 'pc'; lastKeyInputAt = 0;");
 check("com o mouse o laranja volta", run("isMouseHovering()") === true);
 run("navigator.getGamepads = undefined;");
 
