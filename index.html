@@ -1154,6 +1154,8 @@
                         <select id="build-head-feature" onchange="refreshBuilderPreview()">
                             <option value="none">Nenhuma</option><option value="antenas">Antenas</option>
                             <option value="majin_antena">Antena curva com ponta</option><option value="chifres">Chifres</option>
+                            <option value="capacete_freeza">Capacete com chifres finos</option><option value="capacete_chifres">Capacete com chifres grandes</option>
+                            <option value="cabeca_longa">Cabeça alongada com espinhos</option><option value="meia_cabeca_metal">Meia cabeça de metal com lente</option>
                         </select>
                     </div>
                 </div>
@@ -1176,8 +1178,9 @@
                 <div class="sprite-control-row">
                     <div class="form-group"><label for="build-body-marks">MARCAS DA RAÇA</label>
                         <select id="build-body-marks" onchange="refreshBuilderPreview()">
-                            <option value="none">Nenhuma</option><option value="namek">Linhas na testa</option>
+                            <option value="none">Nenhuma</option><option value="namek">Placas rosadas e estrias</option>
                             <option value="cell">Marcas no rosto</option><option value="freeza">Domo e placas roxas</option>
+                            <option value="listras_freeza">Pele rosada listrada</option><option value="carapaca_freeza">Placas brancas e pele listrada</option><option value="metal_freeza">Corpo de metal (ciborgue)</option>
                         </select>
                     </div>
                     <div class="form-group"><label for="build-scar">CICATRIZ</label>
@@ -1207,6 +1210,7 @@
                             </optgroup>
                             <optgroup label="Armaduras">
                                 <option value="armadura_saiyajin">Armadura de combate</option>
+                                <option value="armadura_exercito">Armadura com ombreiras douradas</option>
                             </optgroup>
                             <optgroup label="Casacos e coletes">
                                 <option value="jaqueta_trunks">Jaqueta curta</option>
@@ -1239,10 +1243,11 @@
                             <option value="botas_artes">Botas de artes marciais</option><option value="botas_saiyajin">Botas brancas</option>
                             <option value="botas_trunks">Botas marrons altas</option><option value="botas_kaioshin">Sandálias</option>
                             <option value="botas_marrons">Botas simples</option><option value="botas_cell">Botas escuras</option><option value="descalco">Descalço</option>
+                            <option value="pes_garras">Pés com garras</option><option value="caneleiras_freeza">Caneleiras e pés com garras</option>
                         </select>
                     </div>
                     <div class="form-group"><label for="build-gloves">LUVAS</label>
-                        <select id="build-gloves" onchange="refreshBuilderPreview()"><option value="pulseiras">Munhequeiras</option><option value="luvas_saiyajin">Luvas brancas</option><option value="luvas_pretas">Luvas pretas</option><option value="nenhuma">Nenhuma</option></select>
+                        <select id="build-gloves" onchange="refreshBuilderPreview()"><option value="pulseiras">Munhequeiras</option><option value="luvas_saiyajin">Luvas brancas</option><option value="luvas_pretas">Luvas pretas</option><option value="bracadeiras_freeza">Braçadeiras brancas</option><option value="nenhuma">Nenhuma</option></select>
                     </div>
                     <div class="form-group"><label for="build-hat">NA CABEÇA</label>
                         <select id="build-hat" onchange="refreshBuilderPreview()"><option value="none">Nada</option><option value="turbante">Turbante</option><option value="faixa">Faixa na testa</option></select>
@@ -1312,7 +1317,10 @@
                 Novidades e correções do jogo.
             </p>
             <ul id="lista-updates" style="margin: 0 0 18px; color: #ddd; line-height: 1.5; padding: 0 4px 0 0; list-style: none; overflow-y: auto;">
-                <li class="upd-versao"><h3>Versão 0.69 (ATUAL)</h3><p>Cor da pele livre</p></li>
+                <li class="upd-versao"><h3>Versão 0.69 (ATUAL)</h3><p>Freeza em 5 formas, Piccolo e cor da pele</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Freeza com as 5 formas</strong><p>O Freeza começa na 1ª forma (armadura com ombreiras douradas, capacete com chifres finos, pele rosada listrada) e cada TRANSFORMAR sobe uma forma: 2ª forma gigante de chifres grandes, 3ª forma de cabeça alongada com espinhos, forma final branca com placas roxas e o Freeza ciborgue de metal.</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Peças novas no construtor</strong><p>Capacetes e cabeças da raça do Freeza, meia cabeça de metal com lente, armadura com ombreiras douradas, pele rosada listrada, placas brancas, corpo de metal, braçadeiras brancas e pés com garras (com ou sem caneleiras).</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Marcas Namek no Piccolo</strong><p>Placas rosadas com estrias nos braços, faixa vermelha no punho, centro do abdômen rosado e estrias no pescoço.</p></li>
                 <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Cor da pele em qualquer raça</strong><p>No CONSTRUTOR, escolher uma cor de pele já vale na hora, em qualquer raça (desmarca sozinho "usar cor padrão da raça"). Com a opção marcada, a amostra mostra a cor da raça escolhida.</p></li>
                 <li class="upd-versao"><h3>Versão 0.68</h3><p>Músculos e controles</p></li>
                 <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Músculos estilo Dragon Ball</strong><p>Sem camisa: peitoral com volume, gomos do abdômen, oblíquos, bíceps, antebraço, coxa e panturrilha marcados. Com roupa, o tecido marca o peito, os braços e as coxas. A força das marcas segue o porte físico, no editor e na luta.</p></li>

@@ -180,6 +180,51 @@ function spriteMuscleLine(x1, y1, x2, y2, w, t0, t1, off, curv, color, width, op
     return `<path d="M${_n2(p0[0])} ${_n2(p0[1])} Q${_n2(m[0])} ${_n2(m[1])} ${_n2(p1[0])} ${_n2(p1[1])}" fill="none" stroke="${color}" stroke-width="${_n2(width)}" stroke-linecap="round" opacity="${_n2(opacity)}"/>`;
 }
 
+// Raça do Freeza (formas 1 a 3): braços, pernas, barriga e cauda rosados com listras; rosto, mãos e pés na cor da pele.
+const SPRITE_MARCAS_ROSA = ["listras_freeza", "carapaca_freeza"];
+const SPRITE_ROSA_FREEZA = "#ee7d98";
+const SPRITE_MARCAS_FREEZA = ["freeza", "listras_freeza", "carapaca_freeza", "metal_freeza"];   // lábios roxos
+function spriteLimbSkin(a, skin) { return SPRITE_MARCAS_ROSA.includes(a.bodyMarks) ? SPRITE_ROSA_FREEZA : skin; }
+
+// Listras atravessando um membro (pele listrada do Freeza, estrias do Namek, segmentos de metal): n traços
+// perpendiculares de t0 a t1, acompanhando a grossura do membro (w1 no início, w2 no fim).
+function spriteStripes(x1, y1, x2, y2, w1, w2, t0, t1, n, color, width, opacity, frac) {
+    const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1, nx = -dy / len, ny = dx / len, ux = dx / len, uy = dy / len;
+    let d = "";
+    for (let i = 0; i < n; i++) {
+        const t = n === 1 ? (t0 + t1) / 2 : t0 + (t1 - t0) * i / (n - 1);
+        const cx = x1 + dx * t, cy = y1 + dy * t, h = (w1 + (w2 - w1) * t) * (frac || 0.44);
+        d += `M${_n2(cx - nx * h)} ${_n2(cy - ny * h)} Q${_n2(cx + ux * 0.8)} ${_n2(cy + uy * 0.8)} ${_n2(cx + nx * h)} ${_n2(cy + ny * h)} `;
+    }
+    return `<path d="${d.trim()}" fill="none" stroke="${color}" stroke-width="${_n2(width)}" stroke-linecap="round" opacity="${_n2(opacity)}"/>`;
+}
+
+// Meia peça sobre um membro (braçadeira/caneleira do Freeza): o lado da sombra numa segunda cor, com frisos.
+function spriteHalfGuard(x1, y1, x2, y2, w1, w2, color, ribs) {
+    const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1;
+    let nx = -dy / len, ny = dx / len;
+    if (nx * SPRITE_LIGHT.x + ny * SPRITE_LIGHT.y < 0) { nx = -nx; ny = -ny; }   // n aponta para a luz; a peça fica do outro lado
+    const p = [[x1 - nx * w1 * 0.06, y1 - ny * w1 * 0.06], [x2 - nx * w2 * 0.06, y2 - ny * w2 * 0.06], [x2 - nx * w2 * 0.5, y2 - ny * w2 * 0.5], [x1 - nx * w1 * 0.5, y1 - ny * w1 * 0.5]];
+    const fill = `<path d="M${p.map(q => `${_n2(q[0])} ${_n2(q[1])}`).join(" L")} Z" fill="${color}" stroke="${SPRITE_OUTLINE}" stroke-width="0.7" stroke-linejoin="round"/>`;
+    const lines = ribs ? spriteStripes(x1 - nx * w1 * 0.28, y1 - ny * w1 * 0.28, x2 - nx * w2 * 0.28, y2 - ny * w2 * 0.28, w1 * 0.5, w2 * 0.5, 0.18, 0.82, ribs, spriteShade(color, -0.45), 0.7, 0.85) : "";
+    return fill + lines;
+}
+
+// Pé de 3 dedos (raça do Freeza): sola comprida, dedos para a frente e garras pretas.
+function spriteClawFoot(f, side, rot, color) {
+    const o = SPRITE_OUTLINE, x = f[0], y = f[1], sd = side;
+    const dark = spriteShade(color, -0.4), light = spriteShade(color, 0.35);
+    let g = `<path d="M${_n2(x - sd * 3.6)} ${_n2(y - 1.4)} L${_n2(x + sd * 2.6)} ${_n2(y - 1.2)} Q${_n2(x + sd * 4.4)} ${_n2(y + 0.4)} ${_n2(x + sd * 4.6)} ${_n2(y + 3.2)} L${_n2(x - sd * 3.8)} ${_n2(y + 3.6)} Z" fill="${color}" stroke="${o}" stroke-width="1.1" stroke-linejoin="round"/>`;
+    [[0.4, 1.1, 8.6], [2.0, 2.4, 9.6], [3.4, 3.4, 8.2]].forEach(([dy0, dy1, len]) => {
+        const bx = x + sd * 3, tx = x + sd * len;
+        g += `<path d="M${_n2(bx)} ${_n2(y + dy0 - 0.9)} Q${_n2(tx - sd * 1.2)} ${_n2(y + dy1 - 1.1)} ${_n2(tx)} ${_n2(y + dy1)} Q${_n2(tx - sd * 1.4)} ${_n2(y + dy1 + 0.9)} ${_n2(bx)} ${_n2(y + dy0 + 0.9)} Z" fill="${color}" stroke="${o}" stroke-width="0.9" stroke-linejoin="round"/>`;
+        g += `<path d="M${_n2(tx - sd * 0.2)} ${_n2(y + dy1 - 0.7)} L${_n2(tx + sd * 1.8)} ${_n2(y + dy1 + 0.2)} L${_n2(tx - sd * 0.2)} ${_n2(y + dy1 + 0.8)} Z" fill="#141018"/>`;
+    });
+    g += `<path d="M${_n2(x - sd * 3)} ${_n2(y - 0.4)} L${_n2(x + sd * 2.4)} ${_n2(y - 0.2)}" stroke="${light}" stroke-width="0.9" opacity="0.7"/>`;
+    g += `<path d="M${_n2(x - sd * 3.4)} ${_n2(y + 2.8)} L${_n2(x + sd * 3.6)} ${_n2(y + 2.6)}" stroke="${dark}" stroke-width="1"/>`;
+    return `<g transform="rotate(${_n2(rot)} ${_n2(x)} ${_n2(y)})">${g}</g>`;
+}
+
 // Proporções de anime (como os sprites de luta de Dragon Ball): cabeça menor, pernas longas, ombros largos e
 // cintura fina (~5 cabeças de altura), sombras recortadas.
 const SPRITE_ANIME_BODY = {
@@ -523,7 +568,7 @@ function spriteAnimeFace(a, pose, skin, browColor) {
     const wide = type === "wide";
     const ly = (pose.lookY || 0) * 0.6;
     const noBrow = a.eyeType === "freeza";
-    const freezaLips = a.bodyMarks === "freeza";
+    const freezaLips = SPRITE_MARCAS_FREEZA.includes(a.bodyMarks);
     const lipColor = freezaLips ? "#5b2a86" : spriteShade(skin, -0.5);
     let s = "";
     const eye = (x, y, k, inner) => {
@@ -588,7 +633,18 @@ function spriteHead(R, a, B, pose, ctx) {
         s += spritePath("M-6 -12.4 Q-1 -15.4 3 -14.6 Q-1 -12.4 -4.6 -9.4 Z", "#f3e3ff", `opacity="0.7"`, "");
         s += `<path d="M2.4 4.4 L5.4 5.6 M-6.4 4.4 L-4.2 5.2" stroke="#7f4fc0" stroke-width="1.2" stroke-linecap="round"/>`;
     }
-    if (marks === "namek") s += `<path d="M-4 -9.6 Q0 -11.2 4 -9.6 M-3 -7.4 Q0 -8.8 3 -7.4" fill="none" stroke="${spriteShade(skin, -0.45)}" stroke-width="0.9" stroke-linecap="round"/>`;
+    if (marks === "namek") {
+        s += `<path d="M-4 -9.6 Q0 -11.2 4 -9.6 M-3 -7.4 Q0 -8.8 3 -7.4" fill="none" stroke="${spriteShade(skin, -0.45)}" stroke-width="0.9" stroke-linecap="round"/>`;
+        // estrias do pescoço (músculos do pescoço do Namek)
+        s += `<path d="M-3.6 ${_n2(ry - 4.6)} L-2.8 ${_n2(ry + 1.8)} M0 ${_n2(ry - 4)} L0.4 ${_n2(ry + 2)} M3.2 ${_n2(ry - 4.6)} L3.4 ${_n2(ry + 1.8)}" stroke="${spriteShade(skin, -0.45)}" stroke-width="0.7" opacity="0.8"/>`;
+    }
+    if (SPRITE_MARCAS_ROSA.includes(marks)) {
+        // bochechas e queixo rosados com listras (formas 1 a 3 do Freeza)
+        const bochecha = (d) => spritePath(d, SPRITE_ROSA_FREEZA, `stroke="${spriteShade(SPRITE_ROSA_FREEZA, -0.45)}" stroke-width="0.7"`, "");
+        s += bochecha(`M${_n2(rx - 2.4)} 1.6 L${_n2(rx + 0.4)} 1 L${_n2(rx - 0.2)} 5 L7.4 10 L5.4 8.6 Z`);
+        s += bochecha(`M${_n2(-rx + 3.4)} 1.4 L-5.6 4 L-4.4 10.4 L${_n2(-rx + 2.6)} 6 Z`);
+        s += `<path d="M${_n2(rx - 1.8)} 2.8 L${_n2(rx + 0.2)} 2.4 M${_n2(rx - 2)} 4.6 L${_n2(rx - 0.2)} 4.4 M8.4 6.6 L${_n2(rx - 1.2)} 6.4 M7.6 8.4 L9.2 8.2 M${_n2(-rx + 3.4)} 3.4 L-5.8 5.2 M${_n2(-rx + 3.2)} 5.6 L-5.2 7.4 M-6.6 8.6 L-4.8 9.4" stroke="#a8344f" stroke-width="0.6"/>`;
+    }
     if (ear === "majin") s += `<circle cx="-9" cy="-5" r="1.1" fill="${spriteShade(skin, -0.55)}"/><circle cx="-10" cy="-0.6" r="1.1" fill="${spriteShade(skin, -0.55)}"/><circle cx="-8.6" cy="3.8" r="1" fill="${spriteShade(skin, -0.55)}"/>`;
     if (marks === "cell") s += `<path d="M3.4 4.6 L4.6 9.6 M-5.6 4.6 L-4.8 9" stroke="#b0457e" stroke-width="1.2" stroke-linecap="round"/>`;   // marcas do Cell
     s += spriteAnimeFace(a, pose, skin, browColor);
@@ -598,6 +654,60 @@ function spriteHead(R, a, B, pose, ctx) {
     s += hairWrap(hair.front);
     s += spriteHeadAccessory(R, a, ctx, skin, pose, rx, ry);
     return { back: hairWrap(hair.back), front: s };
+}
+
+// Cabeças da raça do Freeza: capacete branco com domo roxo e chifres finos (1ª forma) ou grandes para cima
+// (2ª), crânio alongado para trás com espinhos (3ª) e meia cabeça de metal com lente (ciborgue).
+function spriteFreezaHead(R, a, rx, ry) {
+    const hf = a.headFeature, o = SPRITE_OUTLINE;
+    const branco = R.lin(-14, -24, 12, 8, [[0, "#ffffff"], [0.55, "#ecebf2"], [1, "#a8a6b8"]]);
+    const roxo = R.lin(-10, -30, 8, -4, [[0, spriteShade(a.primaryColor, 0.6)], [0.4, a.primaryColor], [1, spriteShade(a.primaryColor, -0.55)]]);
+    const metal = R.lin(-14, -24, 12, 8, [[0, "#f2f6ff"], [0.45, "#b8c4d8"], [1, "#5a6a88"]]);
+    // borda de baixo do capacete (testa e lateral de trás, até o maxilar): igual nas formas com capacete
+    const borda = `L${_n2(-rx - 1.8)} 7 Q${_n2(-rx + 1.6)} 10.6 ${_n2(-rx + 5.4)} 9 L${_n2(-rx + 4.2)} 2 Q${_n2(-rx + 4)} -4.6 -1 -6.4 Q${_n2(rx - 3)} -7.4`;
+    let s = "";
+    const chifre = (pts, w) => {
+        // chifre cônico: base larga (w) afinando até a ponta, seguindo a curva b → c → t
+        const [b, c, t] = pts, L = Math.hypot(c[0] - b[0], c[1] - b[1]) || 1;
+        const nx = -(c[1] - b[1]) / L * w, ny = (c[0] - b[0]) / L * w;
+        const P = (q) => `${_n2(q[0])} ${_n2(q[1])}`;
+        const b1 = [b[0] + nx, b[1] + ny], b2 = [b[0] - nx, b[1] - ny], c1 = [c[0] + nx * 0.55, c[1] + ny * 0.55], c2 = [c[0] - nx * 0.55, c[1] - ny * 0.55];
+        return `<path d="M${P(b1)} Q${P(c1)} ${P(t)} Q${P(c2)} ${P(b2)} Z" fill="#1d1a22" stroke="${o}" stroke-width="0.8" stroke-linejoin="round"/>` +
+            `<path d="M${P([b[0] + nx * 0.4, b[1] + ny * 0.4])} Q${P([c[0] + nx * 0.25, c[1] + ny * 0.25])} ${P([t[0] + (c[0] - t[0]) * 0.25, t[1] + (c[1] - t[1]) * 0.25])}" fill="none" stroke="#77738a" stroke-width="0.8" stroke-linecap="round"/>`;
+    };
+    if (hf === "capacete_freeza" || hf === "capacete_chifres") {
+        if (hf === "capacete_freeza") {
+            s += chifre([[-rx, -8], [-rx - 8, -10.6], [-rx - 16.6, -15.4]], 2.2);   // chifres finos para os lados
+            s += chifre([[rx - 1.4, -9], [rx + 6.4, -11.6], [rx + 14, -16.6]], 2);
+        } else {
+            s += chifre([[-rx + 1.4, -11], [-rx - 6.4, -16], [-rx - 4.6, -29]], 3.6);   // chifres grossos, curvados para cima
+            s += chifre([[rx - 3.4, -12], [rx + 4.6, -17], [rx + 3, -29.6]], 3.4);
+        }
+        s += spritePath(`M${_n2(rx + 0.8)} -3.6 C${_n2(rx + 2)} -19.6 ${_n2(-rx - 3.4)} -21.4 ${_n2(-rx - 2.4)} -4 ${borda} ${_n2(rx + 0.8)} -3.6 Z`, branco);
+        s += spritePath(`M${_n2(rx - 2.2)} -7.2 C${_n2(rx - 1.4)} -18.8 ${_n2(-rx + 0.6)} -20.4 ${_n2(-rx + 1.6)} -7.6 Q-2 -10.6 ${_n2(rx - 2.2)} -7.2 Z`, roxo);
+        s += `<ellipse cx="-3" cy="-15.4" rx="4" ry="1.8" fill="#ffffff" opacity="0.6" transform="rotate(-14 -3 -15.4)"/>`;
+        s += `<path d="M${_n2(-rx - 1.4)} -2 Q${_n2(-rx - 0.6)} 4 ${_n2(-rx + 3)} 8" fill="none" stroke="#a8a6b8" stroke-width="0.7"/>`;
+    }
+    if (hf === "cabeca_longa") {
+        // crânio comprido para trás e para cima (≈45°), domo roxo alongado e espinhos brancos na borda
+        const espinho = (bx, by, tx, ty, bw) => {
+            const L = Math.hypot(tx - bx, ty - by) || 1, nx = -(ty - by) / L * bw / 2, ny = (tx - bx) / L * bw / 2;
+            return spritePath(`M${_n2(bx + nx)} ${_n2(by + ny)} Q${_n2((bx + tx) / 2 + nx * 0.5)} ${_n2((by + ty) / 2 + ny * 0.5)} ${_n2(tx)} ${_n2(ty)} Q${_n2((bx + tx) / 2 - nx * 0.5)} ${_n2((by + ty) / 2 - ny * 0.5)} ${_n2(bx - nx)} ${_n2(by - ny)} Z`, "#f2f1f6");
+        };
+        s += espinho(3, -16, 9.6, -26, 10) + espinho(-7, -22, -6, -34, 10.6) + espinho(-18, -27, -22, -39, 10) + espinho(-27, -27, -38, -31, 9) + espinho(-rx - 1, -8, -rx - 11, -13.6, 8.4);
+        s += spritePath(`M${_n2(rx + 0.6)} -4 C${_n2(rx + 1.4)} -15 -2 -22 -14 -29 Q-28 -36 -33 -29 Q-34 -20 ${_n2(-rx - 2.4)} -4 ${borda} ${_n2(rx + 0.6)} -4 Z`, branco);
+        s += spritePath(`M${_n2(rx - 2.4)} -7.6 C${_n2(rx - 1.6)} -15.4 -3 -20.4 -14 -26.2 Q-26 -32.6 -29.4 -27.6 Q-29 -19 ${_n2(-rx + 1.4)} -7.8 Q-2 -10.6 ${_n2(rx - 2.4)} -7.6 Z`, roxo);
+        s += `<path d="M1 -14 Q-8 -20.4 -18 -25" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.55"/>`;
+    }
+    if (hf === "meia_cabeca_metal") {
+        // ciborgue: topo e lado de trás da cabeça em metal com rebites; lente verde no olho de trás; maxilar de metal
+        s += spritePath(`M${_n2(rx - 1)} -6.4 C${_n2(rx)} -19.4 ${_n2(-rx - 3)} -21 ${_n2(-rx - 2.2)} -4 L${_n2(-rx - 1.6)} 8 Q${_n2(-rx + 2)} 12 -2.6 11.6 L-2.6 -2.6 Q2 -7.6 ${_n2(rx - 1)} -6.4 Z`, metal);
+        s += `<path d="M-2.6 -2.6 Q-4 -12 4 -18 M${_n2(-rx - 1.4)} 0 L-2.8 0 M-6 -18 L-6 -6" fill="none" stroke="#2a3a6a" stroke-width="0.9"/>`;
+        [[2, -12], [-8, -14], [-9, 5], [-4.4, 9]].forEach(([x, y]) => { s += `<circle cx="${x}" cy="${y}" r="0.7" fill="#2a3a6a"/>`; });
+        s += `<ellipse cx="-5.2" cy="1.4" rx="3.4" ry="3" fill="${R.rad(-6, 0.4, 3.6, [[0, "#d9fff4"], [0.45, "#3fe0b8"], [1, "#0a6a5a"]])}" stroke="${o}" stroke-width="0.9"/>`;
+        s += `<ellipse cx="-6.2" cy="0.4" rx="1" ry="0.7" fill="#ffffff" opacity="0.85"/>`;
+    }
+    return s;
 }
 
 function spriteHeadAccessory(R, a, ctx, skin, pose, rx, ry) {
@@ -613,6 +723,7 @@ function spriteHeadAccessory(R, a, ctx, skin, pose, rx, ry) {
         const horn = (side) => spritePath(`M${side * 6} -12 Q${side * 9} -17 ${side * 13} -22 Q${side * 12} -14 ${side * 10.4} -9 Z`, "#f3ecf8");
         s += horn(-1) + horn(1);
     }
+    if (["capacete_freeza", "capacete_chifres", "cabeca_longa", "meia_cabeca_metal"].includes(a.headFeature)) s += spriteFreezaHead(R, a, rx, ry);
     if (a.headFeature === "majin_antena") {
         s += `<path d="M2 -13 Q9 -22 4 -30" fill="none" stroke="${SPRITE_OUTLINE}" stroke-width="4" stroke-linecap="round"/><path d="M2 -13 Q9 -22 4 -30" fill="none" stroke="${spriteShade(skin, 0.05)}" stroke-width="2.6" stroke-linecap="round"/><circle cx="4" cy="-31" r="3.2" fill="${R.rad(3, -32, 4, [[0, spriteShade(skin, 0.4)], [1, spriteShade(skin, -0.15)]])}" stroke="${SPRITE_OUTLINE}" stroke-width="0.9"/>`;
     }
@@ -649,13 +760,14 @@ const SPRITE_OUTFITS = {
     kimono: { covers: true, chest: true }, gi_piccolo: { covers: true, chest: true }, roupa_kaioshin: { covers: true, chest: true },
     armadura_saiyajin: { chest: true }, jaqueta_trunks: { covers: true, chest: true, sleeves: "full" },
     colete_fusao: {}, colete_buu: {}, traje_android: { covers: true, chest: true, sleeves: "full" },
-    armadura_cell: { covers: true, chest: true, sleeves: "cell" }, armadura_freeza: { chest: true }
+    armadura_cell: { covers: true, chest: true, sleeves: "cell" }, armadura_freeza: { chest: true }, armadura_exercito: { chest: true }
 };
 function spriteOutfitSpec(a, skin) {
     const o = SPRITE_OUTFITS[a.outerShirt] || {};
     const inner = a.innerShirt && a.innerShirt !== "nenhuma" ? a.innerShirt : null;
-    const spec = { kind: a.outerShirt, torso: inner ? a.shirtColor : skin, armUpper: skin, armLower: skin, sleeve: null,
-        leg: a.pantsColor, legWide: a.pants === "larga", legCover: a.pants !== "nenhuma", bare: !inner && !o.chest };
+    const limb = spriteLimbSkin(a, skin);   // raça do Freeza: membros e barriga rosados listrados
+    const spec = { kind: a.outerShirt, torso: inner ? a.shirtColor : limb, armUpper: limb, armLower: limb, sleeve: null,
+        leg: a.pantsColor, legSkin: limb, legWide: a.pants === "larga", legCover: a.pants !== "nenhuma", bare: !inner && !o.chest };
     // camisa por baixo: camiseta = manguinha curta; malha = manga comprida; regata = sem manga
     if (inner === "camiseta") spec.sleeve = { color: a.shirtColor, frac: 0.3 };
     if (inner === "malha") spec.armUpper = spec.armLower = a.shirtColor;
@@ -673,6 +785,8 @@ function spriteBootSpec(a) {
         case "botas_kaioshin": return { color: "#efd28a", trim: a.secondaryColor, h: 0.45 };
         case "botas_marrons": return { color: "#5a3d2b", trim: "#2f2015", h: 0.5 };
         case "botas_cell": return { color: "#2a2532", trim: "#e9e3ee", h: 0.42 };
+        case "caneleiras_freeza": return { color: "#f4f4f2", trim: "#8a4a1a", h: 0.62, guard: true, claws: true };
+        case "pes_garras": return { claws: true };
         default: return null;
     }
 }
@@ -681,6 +795,7 @@ function spriteGloveSpec(a) {
     if (a.gloves === "luvas_saiyajin") return { color: "#f4f4f6", trim: a.accentColor, full: true };
     if (a.gloves === "luvas_pretas") return { color: "#2a2a30", trim: a.accentColor, full: true };
     if (a.gloves === "pulseiras") return { color: a.secondaryColor, trim: null, full: false };
+    if (a.gloves === "bracadeiras_freeza") return { color: "#f4f4f2", trim: null, full: false, guard: "#8a4a1a" };
     return null;
 }
 
@@ -699,6 +814,16 @@ function spriteTorso(R, a, B, spec, skin, pose) {
     const base = spec.torso;
     const fill = R.lin(x0, 46, x1, 70, [[0, spriteShade(base, 0.32)], [0.45, base], [1, spriteShade(base, -0.42)]]);
     let s = spritePath(body, fill);
+    if (base === SPRITE_ROSA_FREEZA) {
+        // pele rosada listrada (raça do Freeza): faixas horizontais do peito ao quadril, levemente curvas
+        let st = "";
+        for (let y = y0b + 4; y < yh - 0.5; y += 2.3) {
+            // meia largura do corpo nessa altura (ombros → cintura → quadril), para a listra não sair do contorno
+            const hwy = y < yw ? sw / 2 + (ww / 2 - sw / 2) * (y - y0b) / (yw - y0b) : ww / 2 + (hw / 2 - ww / 2) * (y - yw) / (yh - yw);
+            st += `M${_n2(48 - hwy + 0.8)} ${_n2(y)} Q48 ${_n2(y + 1.1)} ${_n2(48 + hwy - 0.8)} ${_n2(y)} `;
+        }
+        s += `<path d="${st}" fill="none" stroke="#a8344f" stroke-width="0.7" opacity="0.8"/>`;
+    }
     let d = "";
     const lapel = spriteShade(base, -0.28);
     switch (spec.kind) {
@@ -755,10 +880,28 @@ function spriteTorso(R, a, B, spec, skin, pose) {
             break;
         }
         case "armadura_freeza": {
-            const purple = R.lin(x0, 48, x1, 70, [[0, "#b98be6"], [0.5, "#7a46bd"], [1, "#3a1d6a"]]);
-            d += spritePath(`M${_n2(48 - 9)} ${_n2(y0b + 3)} Q48 ${_n2(y0b - 1)} ${_n2(48 + 9)} ${_n2(y0b + 3)} L${_n2(48 + 8)} 62 Q48 66 ${_n2(48 - 8)} 62 Z`, purple);
-            d += `<path d="M48 ${_n2(y0b + 2)} L48 63" stroke="#2a1150" stroke-width="0.9"/><ellipse cx="42" cy="53" rx="2.4" ry="1.5" fill="#e7d3ff" opacity="0.6"/>`;
-            d += spritePath(`M${_n2(48 - ww / 2)} 67 Q48 71 ${_n2(48 + ww / 2)} 67 L${_n2(48 + hw / 2)} ${yh} L${_n2(48 - hw / 2)} ${yh} Z`, spriteShade(spec.torso, -0.16));
+            // forma final: o corpo liso é a própria armadura — músculos marcados e a gota roxa brilhante no meio do
+            // peito (as placas dos ombros ficam em spriteShoulderPads); sem cueca, a virilha só tem a sombra do quadril
+            d += spriteBareTorsoMuscles(Object.assign({}, B, { mus: Math.max(B.mus, 0.7), female: false }), spec.torso, ww, y0b);
+            const gema = R.lin(44, y0b + 5, 52, y0b + 16, [[0, spriteShade(a.primaryColor, 0.55)], [0.45, a.primaryColor], [1, spriteShade(a.primaryColor, -0.5)]]);
+            d += spritePath(`M${_n2(48 - 5.2)} ${_n2(y0b + 6.4)} Q48 ${_n2(y0b + 4.2)} ${_n2(48 + 5.2)} ${_n2(y0b + 6.4)} Q${_n2(48 + 4.6)} ${_n2(y0b + 11.6)} 48 ${_n2(y0b + 16)} Q${_n2(48 - 4.6)} ${_n2(y0b + 11.6)} ${_n2(48 - 5.2)} ${_n2(y0b + 6.4)} Z`, gema);
+            d += `<ellipse cx="${_n2(48 - 1.8)}" cy="${_n2(y0b + 7.4)}" rx="2" ry="1" fill="#ffffff" opacity="0.7"/>`;
+            d += `<path d="M${_n2(48 - hw / 2 + 1)} ${yh - 1.5} Q48 ${yh + 1.6} ${_n2(48 + hw / 2 - 1)} ${yh - 1.5}" fill="none" stroke="${spriteShade(spec.torso, -0.4)}" stroke-width="0.9" opacity="0.7"/>`;
+            break;
+        }
+        case "armadura_exercito": {
+            // armadura do exército do Freeza: colar branco, peitoral roxo com borda branca e a barriga dourada em
+            // arco com frisos (as ombreiras douradas grandes ficam em spriteShoulderPads)
+            const roxo = R.lin(x0, y0b, x1, 60, [[0, spriteShade(a.primaryColor, 0.45)], [0.5, a.primaryColor], [1, spriteShade(a.primaryColor, -0.45)]]);
+            const ouro = R.lin(0, 57, 0, 67, [[0, spriteShade(a.accentColor, 0.4)], [0.55, a.accentColor], [1, spriteShade(a.accentColor, -0.5)]]);
+            d += spritePath(`M${_n2(x0 + 2.4)} ${_n2(y0b + 4.4)} Q48 ${_n2(y0b + 0.2)} ${_n2(x1 - 2.4)} ${_n2(y0b + 4.4)} L${_n2(x1 - 1.6)} 54 Q${_n2(x1 - 2)} 59 ${_n2(48 + ww / 2 + 0.6)} 60.6 L${_n2(48 - ww / 2 - 0.6)} 60.6 Q${_n2(x0 + 2)} 59 ${_n2(x0 + 1.6)} 54 Z`, roxo);
+            d += `<path d="M${_n2(x0 + 2)} 54.4 Q${_n2(x0 + 2.6)} 59.6 ${_n2(48 - ww / 2 - 0.6)} 60.8 L${_n2(48 + ww / 2 + 0.6)} 60.8 Q${_n2(x1 - 2.6)} 59.6 ${_n2(x1 - 2)} 54.4" fill="none" stroke="#f4f4f2" stroke-width="1.5"/>`;
+            d += `<path d="M48 ${_n2(y0b + 3)} L48 58 M${_n2(48 - sw * 0.3)} ${_n2(y0b + 10)} Q${_n2(48 - sw * 0.14)} ${_n2(y0b + 12.6)} 48 ${_n2(y0b + 10.4)} Q${_n2(48 + sw * 0.14)} ${_n2(y0b + 12.6)} ${_n2(48 + sw * 0.3)} ${_n2(y0b + 10)}" fill="none" stroke="${spriteShade(a.primaryColor, -0.5)}" stroke-width="0.9" opacity="0.8"/>`;
+            d += `<ellipse cx="${_n2(48 - sw * 0.18)}" cy="${_n2(y0b + 6.4)}" rx="3" ry="1.5" fill="#ffffff" opacity="0.4"/>`;
+            d += spritePath(`M${_n2(x0 + 2.4)} ${_n2(y0b + 1.6)} Q48 ${_n2(y0b - 3.4)} ${_n2(x1 - 2.4)} ${_n2(y0b + 1.6)} L${_n2(x1 - 3.2)} ${_n2(y0b + 4.4)} Q48 ${_n2(y0b + 0.2)} ${_n2(x0 + 3.2)} ${_n2(y0b + 4.4)} Z`, "#f4f4f2");   // colar branco
+            const bx = ww * 0.42;
+            d += spritePath(`M${_n2(48 - bx)} 67 L${_n2(48 - bx)} 61.4 Q48 56.8 ${_n2(48 + bx)} 61.4 L${_n2(48 + bx)} 67 Z`, ouro, `stroke="#f4f4f2" stroke-width="1.6"`, "");
+            d += `<path d="M${_n2(48 - bx * 0.5)} 60.4 L${_n2(48 - bx * 0.5)} 66.6 M48 59.4 L48 66.6 M${_n2(48 + bx * 0.5)} 60.4 L${_n2(48 + bx * 0.5)} 66.6" stroke="${spriteShade(a.accentColor, -0.5)}" stroke-width="0.8" opacity="0.85"/>`;
             break;
         }
         case "armadura_cell": {
@@ -788,8 +931,8 @@ function spriteTorso(R, a, B, spec, skin, pose) {
             break;
         }
         default: {
-            if (spec.torso === skin) d += spriteBareTorsoMuscles(B, skin, ww, y0b);
-            else if (B.mus > 0.3) {
+            if (spec.torso === skin || base === SPRITE_ROSA_FREEZA) d += spriteBareTorsoMuscles(B, base, ww, y0b);
+            else if (B.mus > 0.3 && base !== SPRITE_ROSA_FREEZA) {
                 // com camisa/malha: o tecido marca o peitoral e o abdômen por baixo
                 const dobra = spriteShade(base, -0.4), k = B.mus;
                 d += `<path d="M${_n2(48 - sw * 0.33)} ${_n2(y0b + 9)} Q${_n2(48 - sw * 0.16)} ${_n2(y0b + 12.4)} 48 ${_n2(y0b + 9.6)} Q${_n2(48 + sw * 0.16)} ${_n2(y0b + 12.4)} ${_n2(48 + sw * 0.33)} ${_n2(y0b + 9)}" fill="none" stroke="${dobra}" stroke-width="${_n2(0.8 + 0.4 * k)}" stroke-linecap="round" opacity="${_n2(0.3 + 0.3 * k)}"/>`;
@@ -802,6 +945,7 @@ function spriteTorso(R, a, B, spec, skin, pose) {
             }
         }
     }
+    if (spec.bare) d += spriteTorsoMarks(R, a, B, skin, x0, x1, ww, y0b);
     const bare = spec.bare;   // peito à mostra (sem camisa e sem roupa de cima que cubra o peito)
     if (bare && a.scar === "peito") d += `<path d="M${_n2(48 + 1)} 50.6 L${_n2(48 + 8)} 61 M${_n2(48 + 7.6)} 51.4 L${_n2(48 + 2)} 60" stroke="#8a2a20" stroke-width="1.2" stroke-linecap="round"/>`;
     if (bare && B.female) {
@@ -815,13 +959,48 @@ function spriteTorso(R, a, B, spec, skin, pose) {
         const brief = a.secondaryColor;
         d += spritePath(`M${_n2(48 - ww / 2 - 0.8)} 69.4 L${_n2(48 + ww / 2 + 0.8)} 69.4 L${_n2(48 + hw / 2 + 0.8)} ${yh} Q${_n2(48 + 3)} ${_n2(yh + 2.6)} 48 ${_n2(yh + 3.6)} Q${_n2(48 - 3)} ${_n2(yh + 2.6)} ${_n2(48 - hw / 2 - 0.8)} ${yh} Z`,
             R.lin(0, 69, 0, yh + 3, [[0, spriteShade(brief, 0.25)], [1, spriteShade(brief, -0.35)]]));
-        d += `<path d="M${_n2(48 - ww / 2 - 0.6)} 71 L${_n2(48 + ww / 2 + 0.6)} 71" stroke="${a.accentColor}" stroke-width="1.2"/>`;
+        if (!SPRITE_MARCAS_FREEZA.includes(a.bodyMarks)) d += `<path d="M${_n2(48 - ww / 2 - 0.6)} 71 L${_n2(48 + ww / 2 + 0.6)} 71" stroke="${a.accentColor}" stroke-width="1.2"/>`;
     }
     s += d;
     // dobras de tecido / luz de contorno
     s += `<path d="M${_n2(x1 - 1)} ${_n2(y0b + 5)} Q${_n2(x1 + 0.4)} 58 ${_n2(48 + ww / 2 - 0.6)} 68" fill="none" stroke="${spriteShade(base, 0.55)}" stroke-width="1.1" opacity="0.4" stroke-linecap="round"/>`;
     s += `<path d="M${_n2(x0 + 4)} 58 Q${_n2(x0 + 6)} 62 ${_n2(48 - ww / 2 + 1)} 66" fill="none" stroke="${spriteShade(base, -0.5)}" stroke-width="0.8" opacity="0.28"/>`;
     return s;
+}
+
+// Marcas da raça sobre o tronco à mostra: carapaça branca com gota roxa (Freeza 2ª e 3ª formas), placas de
+// metal (ciborgue) e gomos rosados + estrias no peito verde (Namek).
+function spriteTorsoMarks(R, a, B, skin, x0, x1, ww, y0b) {
+    const m = a.bodyMarks;
+    let d = "";
+    if (m === "carapaca_freeza") {
+        const branco = R.lin(x0, y0b, x1, 62, [[0, "#ffffff"], [0.55, "#eceaf2"], [1, "#a9a6b8"]]);
+        d += spritePath(`M${_n2(x0 - 1)} ${_n2(y0b + 1)} Q48 ${_n2(y0b - 4.4)} ${_n2(x1 + 1)} ${_n2(y0b + 1)} L${_n2(x1 - 0.6)} 56 Q${_n2(x1 - 3)} 61.4 ${_n2(48 + ww * 0.3)} 61 L48 63.4 L${_n2(48 - ww * 0.3)} 61 Q${_n2(x0 + 3)} 61.4 ${_n2(x0 + 0.6)} 56 Z`, branco);
+        d += `<path d="M${_n2(48 - B.sw * 0.3)} ${_n2(y0b + 8.4)} Q${_n2(48 - B.sw * 0.14)} ${_n2(y0b + 11.4)} 48 ${_n2(y0b + 9.4)} Q${_n2(48 + B.sw * 0.14)} ${_n2(y0b + 11.4)} ${_n2(48 + B.sw * 0.3)} ${_n2(y0b + 8.4)}" fill="none" stroke="#8d8aa0" stroke-width="1" opacity="0.8"/>`;
+        const gema = R.lin(44, 52, 52, 62, [[0, spriteShade(a.primaryColor, 0.6)], [0.45, a.primaryColor], [1, spriteShade(a.primaryColor, -0.5)]]);
+        d += spritePath(`M${_n2(48 - 6)} ${_n2(y0b + 11)} Q48 ${_n2(y0b + 9)} ${_n2(48 + 6)} ${_n2(y0b + 11)} Q${_n2(48 + 5)} ${_n2(y0b + 15.4)} 48 ${_n2(y0b + 17.6)} Q${_n2(48 - 5)} ${_n2(y0b + 15.4)} ${_n2(48 - 6)} ${_n2(y0b + 11)} Z`, gema);
+        d += `<ellipse cx="${_n2(48 - 2)}" cy="${_n2(y0b + 11.8)}" rx="2.4" ry="1" fill="#ffffff" opacity="0.7"/>`;
+    }
+    if (m === "metal_freeza") {
+        // peito de metal: placas com rebites, duas lentes roxas e a barriga em gomos azul-escuros
+        const junta = "#2a3a6a";
+        d += `<path d="M48 ${_n2(y0b + 2)} L48 60 M${_n2(48 - ww * 0.5)} 60 L${_n2(48 + ww * 0.5)} 60 M${_n2(48 - ww * 0.44)} 64 L${_n2(48 + ww * 0.44)} 64" stroke="${junta}" stroke-width="1" opacity="0.9"/>`;
+        [-1, 1].forEach(sd => {
+            const cx = 48 + sd * B.sw * 0.17, cy = y0b + 8;
+            d += `<ellipse cx="${_n2(cx)}" cy="${_n2(cy)}" rx="2.6" ry="2" fill="${R.rad(cx - 0.8, cy - 0.8, 3, [[0, "#e7c6ff"], [0.5, a.primaryColor], [1, "#2a1150"]])}" stroke="${SPRITE_OUTLINE}" stroke-width="0.7"/>`;
+            d += `<circle cx="${_n2(48 + sd * ww * 0.36)}" cy="61.6" r="0.6" fill="${junta}"/><circle cx="${_n2(48 + sd * ww * 0.36)}" cy="66" r="0.6" fill="${junta}"/>`;
+        });
+    }
+    if (m === "namek") {
+        // centro do abdômen rosado com estrias e linhas finas na pele verde do peitoral
+        const rosa = "#e5938f";
+        d += spritePath(`M${_n2(48 - ww * 0.26)} ${_n2(y0b + 12)} Q48 ${_n2(y0b + 10.6)} ${_n2(48 + ww * 0.26)} ${_n2(y0b + 12)} L${_n2(48 + ww * 0.22)} 68 Q48 69.6 ${_n2(48 - ww * 0.22)} 68 Z`, rosa, `stroke="${spriteShade(skin, -0.5)}" stroke-width="0.8"`, "");
+        let st = "";
+        for (let y = y0b + 14; y < 67.5; y += 2.2) st += `M${_n2(48 - ww * 0.22)} ${_n2(y)} L${_n2(48 + ww * 0.22)} ${_n2(y)} `;
+        d += `<path d="${st}" stroke="#9c4a4a" stroke-width="0.6" opacity="0.8"/>`;
+        d += `<path d="M${_n2(48 - B.sw * 0.38)} ${_n2(y0b + 3)} Q${_n2(48 - B.sw * 0.3)} ${_n2(y0b + 7)} ${_n2(48 - B.sw * 0.34)} ${_n2(y0b + 10)} M${_n2(48 + B.sw * 0.38)} ${_n2(y0b + 3)} Q${_n2(48 + B.sw * 0.3)} ${_n2(y0b + 7)} ${_n2(48 + B.sw * 0.34)} ${_n2(y0b + 10)}" fill="none" stroke="${spriteShade(skin, -0.45)}" stroke-width="0.6" opacity="0.7"/>`;
+    }
+    return d;
 }
 
 // Peito à mostra: peitoral em duas placas com sombra embaixo e luz em cima, abdômen em gomos (3 pares), linha do
@@ -904,19 +1083,20 @@ function spriteArm(R, a, B, spec, glove, skin, side, angles, handKind) {
         spriteMuscle(e[0], e[1], h[0], h[1], w * (1.0 + 0.06 * mus), w * 0.72, spec.armLower, { bulge: 0.14 + 0.06 * mus, parts: true }));
     if (mus > 0) {
         const lin = (c) => spriteShade(c, -0.48), luz = (c) => spriteShade(c, 0.48);
-        if (spec.armUpper === skin) {
+        const peleUp = spec.armUpper === skin || spec.armUpper === SPRITE_ROSA_FREEZA;
+        if (peleUp) {
             // separação bíceps/tríceps (sombra do lado de trás) e brilho na barriga do bíceps
-            s += spriteMuscleLine(sx, sy, e[0], e[1], w, 0.4, 0.9, -0.2, -0.16, lin(skin), 0.6 + 0.4 * mus, 0.3 + 0.35 * mus);
-            s += spriteMuscleLine(sx, sy, e[0], e[1], w, 0.5, 0.78, 0.22, 0.1, luz(skin), 0.8 + 0.6 * mus, 0.18 + 0.2 * mus);
+            s += spriteMuscleLine(sx, sy, e[0], e[1], w, 0.4, 0.9, -0.2, -0.16, lin(spec.armUpper), 0.6 + 0.4 * mus, 0.3 + 0.35 * mus);
+            s += spriteMuscleLine(sx, sy, e[0], e[1], w, 0.5, 0.78, 0.22, 0.1, luz(spec.armUpper), 0.8 + 0.6 * mus, 0.18 + 0.2 * mus);
         } else if (mus > 0.3) {
             s += spriteMuscleLine(sx, sy, e[0], e[1], w, 0.45, 0.85, -0.15, -0.18, lin(spec.armUpper), 0.7, 0.2 + 0.2 * mus);   // dobra da manga no bíceps
         }
-        if (spec.armLower === skin) {
+        if (spec.armLower === skin || spec.armLower === SPRITE_ROSA_FREEZA) {
             // antebraço: músculo grosso perto do cotovelo afinando no punho
-            s += spriteMuscleLine(e[0], e[1], h[0], h[1], w, 0.1, 0.55, 0.14, 0.18, lin(skin), 0.5 + 0.4 * mus, 0.25 + 0.3 * mus);
+            s += spriteMuscleLine(e[0], e[1], h[0], h[1], w, 0.1, 0.55, 0.14, 0.18, lin(spec.armLower), 0.5 + 0.4 * mus, 0.25 + 0.3 * mus);
         }
     }
-    if (a.bodyMarks === "freeza") s += spritePlate(R, e[0], e[1], h[0], h[1], 0.5, B.l2 * 0.62, w * 0.82, a.primaryColor);
+    s += spriteArmMarks(R, a, B, spec, skin, sx, sy, e, h, w);
     if (spec.spots) s += spriteSpots(sx, sy, e[0], e[1], [0.35, 0.68], w * 0.26);
     if (spec.sleeve) {
         const p = [sx + (e[0] - sx) * spec.sleeve.frac, sy + (e[1] - sy) * spec.sleeve.frac];
@@ -925,8 +1105,15 @@ function spriteArm(R, a, B, spec, glove, skin, side, angles, handKind) {
     if (glove) {
         const from = glove.full ? 0.5 : 0.6, to = glove.full ? 1 : 0.86;
         const q1 = [e[0] + (h[0] - e[0]) * from, e[1] + (h[1] - e[1]) * from], q2 = [e[0] + (h[0] - e[0]) * to, e[1] + (h[1] - e[1]) * to];
-        s += spriteMuscle(q1[0], q1[1], q2[0], q2[1], w * 0.98, w * 0.86, glove.color, { bulge: 0 });
-        if (glove.trim) s += spriteBand(q1[0], q1[1], q2[0], q2[1], w * 1.0, glove.trim, 1.5);
+        if (glove.guard) {
+            // braçadeira do Freeza: branca, larga, cobrindo do meio do antebraço ao punho, com a parte de fora marrom
+            const g1 = [e[0] + (h[0] - e[0]) * 0.5, e[1] + (h[1] - e[1]) * 0.5], g2 = [e[0] + (h[0] - e[0]) * 0.9, e[1] + (h[1] - e[1]) * 0.9];
+            s += spriteMuscle(g1[0], g1[1], g2[0], g2[1], w * 1.14, w * 1.02, glove.color, { bulge: 0.02 });
+            s += spriteHalfGuard(g1[0], g1[1], g2[0], g2[1], w * 1.14, w * 1.02, glove.guard, 0);
+        } else {
+            s += spriteMuscle(q1[0], q1[1], q2[0], q2[1], w * 0.98, w * 0.86, glove.color, { bulge: 0 });
+            if (glove.trim) s += spriteBand(q1[0], q1[1], q2[0], q2[1], w * 1.0, glove.trim, 1.5);
+        }
     }
     const handColor = glove && glove.full ? glove.color : skin;
     const dirA = Math.atan2(h[0] - e[0], -(h[1] - e[1])) * 180 / Math.PI;
@@ -934,12 +1121,60 @@ function spriteArm(R, a, B, spec, glove, skin, side, angles, handKind) {
     return { svg: s, hand: h, elbow: e };
 }
 
+// Marcas no braço à mostra: listras rosadas (Freeza 1–3), placas roxas (forma final), segmentos de metal
+// (ciborgue) e placas rosadas com estrias + faixa vermelha no punho (Namek).
+function spriteArmMarks(R, a, B, spec, skin, sx, sy, e, h, w) {
+    const m = a.bodyMarks;
+    let s = "";
+    if (spec.armUpper === SPRITE_ROSA_FREEZA) s += spriteStripes(sx, sy, e[0], e[1], w * 1.35, w * 0.9, 0.12, 0.94, 9, "#a8344f", 0.7, 0.8);
+    if (spec.armLower === SPRITE_ROSA_FREEZA) s += spriteStripes(e[0], e[1], h[0], h[1], w * 1.05, w * 0.72, 0.08, 0.6, 5, "#a8344f", 0.7, 0.8);
+    if (m === "freeza" && spec.armLower === skin) s += spritePlate(R, e[0], e[1], h[0], h[1], 0.72, B.l2 * 0.46, w * 0.86, a.primaryColor);   // faixa roxa perto do punho
+    if (m === "metal_freeza") {
+        const junta = "#2a3a6a";
+        if (spec.armUpper === skin) s += spriteStripes(sx, sy, e[0], e[1], w * 1.35, w * 0.9, 0.35, 0.8, 3, junta, 0.9, 0.9);
+        if (spec.armLower === skin) s += spriteStripes(e[0], e[1], h[0], h[1], w, w * 0.72, 0.25, 0.85, 4, junta, 0.9, 0.9);
+        s += `<circle cx="${_n2(e[0])}" cy="${_n2(e[1])}" r="${_n2(w * 0.42)}" fill="${junta}" stroke="${SPRITE_OUTLINE}" stroke-width="0.7"/>`;
+    }
+    if (m === "namek") {
+        // placas rosadas com estrias no braço (ombro/bíceps e antebraço), separadas pela pele verde
+        const rosa = "#e5938f", estria = "#9c4a4a";
+        const placa = (p1, p2, t0, t1, w1, w2) => {
+            const q1 = [p1[0] + (p2[0] - p1[0]) * t0, p1[1] + (p2[1] - p1[1]) * t0], q2 = [p1[0] + (p2[0] - p1[0]) * t1, p1[1] + (p2[1] - p1[1]) * t1];
+            return spriteMuscle(q1[0], q1[1], q2[0], q2[1], w1, w2, rosa, { bulge: 0.1 }) + spriteStripes(q1[0], q1[1], q2[0], q2[1], w1, w2, 0.1, 0.9, 6, estria, 0.6, 0.85, 0.38);
+        };
+        if (spec.armUpper === skin) s += placa([sx, sy], e, 0.16, 0.86, w * 1.0, w * 0.66);
+        if (spec.armLower === skin) {
+            s += placa(e, h, 0.12, 0.74, w * 0.78, w * 0.56);
+            const b1 = [e[0] + (h[0] - e[0]) * 0.8, e[1] + (h[1] - e[1]) * 0.8], b2 = [e[0] + (h[0] - e[0]) * 0.9, e[1] + (h[1] - e[1]) * 0.9];
+            s += spriteMuscle(b1[0], b1[1], b2[0], b2[1], w * 0.8, w * 0.76, "#b3262e", { bulge: 0 });   // faixa vermelha no punho
+        }
+    }
+    return s;
+}
+
+function spriteLegMarks(R, a, B, color, hx, hy, k, f, w) {
+    const m = a.bodyMarks;
+    let s = "";
+    if (color === SPRITE_ROSA_FREEZA) {
+        s += spriteStripes(hx, hy, k[0], k[1], w * 1.3, w * 0.92, 0.08, 0.94, 10, "#a8344f", 0.7, 0.8);
+        s += spriteStripes(k[0], k[1], f[0], f[1], w * 0.95, w * 0.66, 0.06, 0.5, 4, "#a8344f", 0.7, 0.8);
+    }
+    if (m === "freeza") s += spritePlate(R, k[0], k[1], f[0], f[1], 0.42, B.t2 * 0.55, w * 0.78, a.primaryColor);   // placa roxa na canela
+    if (m === "metal_freeza") {
+        s += spriteStripes(hx, hy, k[0], k[1], w * 1.3, w * 0.92, 0.3, 0.85, 3, "#2a3a6a", 0.9, 0.9);
+        s += spriteStripes(k[0], k[1], f[0], f[1], w * 0.95, w * 0.66, 0.3, 0.85, 3, "#2a3a6a", 0.9, 0.9);
+        const joelho = R.rad(k[0] - 1, k[1] - 1, w * 0.7, [[0, "#ffb27a"], [0.6, "#d06a2a"], [1, "#7a3412"]]);
+        s += `<ellipse cx="${_n2(k[0])}" cy="${_n2(k[1])}" rx="${_n2(w * 0.62)}" ry="${_n2(w * 0.52)}" fill="${joelho}" stroke="${SPRITE_OUTLINE}" stroke-width="0.8"/>`;   // joelheira cobre
+    }
+    return s;
+}
+
 function spriteLeg(R, a, B, spec, boot, skin, side, angles) {
     const hx = 48 + side * B.hw * 0.23 + SPRITE_TURN * (side > 0 ? 0.35 : -0.12), hy = B.hipY;
     const k = spriteSeg(hx, hy, angles[0], B.t1);
     const f = spriteSeg(k[0], k[1], angles[1], B.t2);
     const w = B.leg * (spec.legWide ? 1.13 : 1);
-    const color = spec.legCover ? spec.leg : skin;
+    const color = spec.legCover ? spec.leg : (spec.legSkin || skin);
     let s = "";
     // anime: coxa larga afinando no joelho; calça folgada (gi) cai larga até a bota.
     const wide = spec.legCover && spec.legWide;
@@ -948,7 +1183,7 @@ function spriteLeg(R, a, B, spec, boot, skin, side, angles) {
     const mus = B.mus || 0;
     if (mus > 0) {
         const lin = spriteShade(color, -0.48), luz = spriteShade(color, 0.48);
-        if (color === skin) {
+        if (color === skin || color === SPRITE_ROSA_FREEZA) {
             // quadríceps (gota acima do joelho) e panturrilha
             s += spriteMuscleLine(hx, hy, k[0], k[1], w, 0.35, 0.92, 0.2, 0.26, lin, 0.6 + 0.4 * mus, 0.3 + 0.35 * mus);
             s += spriteMuscleLine(k[0], k[1], f[0], f[1], w, 0.1, 0.55, -0.28, -0.2, lin, 0.5 + 0.4 * mus, 0.28 + 0.32 * mus);
@@ -957,13 +1192,19 @@ function spriteLeg(R, a, B, spec, boot, skin, side, angles) {
             s += spriteMuscleLine(hx, hy, k[0], k[1], w, 0.35, 0.85, 0.18, 0.22, lin, 0.7, 0.18 + 0.2 * mus);
         }
     }
-    if (a.bodyMarks === "freeza") s += spritePlate(R, k[0], k[1], f[0], f[1], 0.42, B.t2 * 0.55, w * 0.78, a.primaryColor);
+    if (!spec.legCover) s += spriteLegMarks(R, a, B, color, hx, hy, k, f, w);
     if (a.bodyMarks === "cell") s += spriteSpots(hx, hy, k[0], k[1], [0.3, 0.66], w * 0.28);   // pintas do Cell (corpo, não calça)
-    if (boot) {
+    if (boot && boot.guard) {
+        // caneleira do Freeza: branca, do meio da canela ao tornozelo, com a parte de fora marrom e frisos
+        const from = [f[0] + (k[0] - f[0]) * boot.h, f[1] + (k[1] - f[1]) * boot.h], to = [f[0] + (k[0] - f[0]) * 0.06, f[1] + (k[1] - f[1]) * 0.06];
+        s += spriteMuscle(from[0], from[1], to[0], to[1], w * 1.12, w * 1.0, boot.color, { bulge: 0.03 });
+        s += spriteHalfGuard(from[0], from[1], to[0], to[1], w * 1.12, w * 1.0, boot.trim, 4);
+    } else if (boot && boot.color) {
         const from = [f[0] + (k[0] - f[0]) * boot.h, f[1] + (k[1] - f[1]) * boot.h];
         s += spriteMuscle(from[0], from[1], f[0], f[1], w * 0.98, w * 0.86, boot.color, { bulge: 0 });
         s += spriteBand(from[0], from[1], f[0], f[1], w * 1.04, boot.trim, 1.8);
     }
+    if (boot && boot.claws) return { svg: s + spriteClawFoot(f, side, angles[1] * 0.45 + side * 4, skin), foot: f, knee: k };
     const fc = boot ? boot.color : skin;
     s += `<g transform="rotate(${_n2(angles[1] * 0.45 + side * 4)} ${_n2(f[0])} ${_n2(f[1])})">` +
         `<path d="M${_n2(f[0] - 3.4)} ${_n2(f[1] - 1)} L${_n2(f[0] + 3.4)} ${_n2(f[1] - 1)} Q${_n2(f[0] + side * 7.6 + (side < 0 ? 2 : 0))} ${_n2(f[1] + 0.4)} ${_n2(f[0] + side * 6.4 + (side < 0 ? 1.4 : 0))} ${_n2(f[1] + 3.6)} L${_n2(f[0] - 3.8)} ${_n2(f[1] + 3.6)} Z" fill="${fc}" stroke="${SPRITE_OUTLINE}" stroke-width="1.2" stroke-linejoin="round"/>` +
@@ -972,7 +1213,7 @@ function spriteLeg(R, a, B, spec, boot, skin, side, angles) {
 }
 
 // Curva cônica (cauda, capa): amostra uma Bézier cúbica e desenha segmentos com espessura decrescente.
-function spriteTaper(pts, w0, w1, color, tipColor) {
+function spriteTaper(pts, w0, w1, color, tipColor, stripe) {
     const [p0, p1, p2, p3] = pts;
     const N = 12;
     const at = (t) => {
@@ -986,6 +1227,14 @@ function spriteTaper(pts, w0, w1, color, tipColor) {
         o += `<line x1="${_n2(A[0])}" y1="${_n2(A[1])}" x2="${_n2(Bp[0])}" y2="${_n2(Bp[1])}" stroke="${SPRITE_OUTLINE}" stroke-width="${_n2(w + 2.2)}" stroke-linecap="round"/>`;
         c += `<line x1="${_n2(A[0])}" y1="${_n2(A[1])}" x2="${_n2(Bp[0])}" y2="${_n2(Bp[1])}" stroke="${col}" stroke-width="${_n2(w)}" stroke-linecap="round"/>`;
         h += `<line x1="${_n2(A[0] - 0.7)}" y1="${_n2(A[1] - 0.7)}" x2="${_n2(Bp[0] - 0.7)}" y2="${_n2(Bp[1] - 0.7)}" stroke="${spriteShade(col, 0.5)}" stroke-width="${_n2(Math.max(0.6, w * 0.28))}" stroke-linecap="round" opacity="0.55"/>`;
+        if (stripe && col === color) {
+            // listras/gomos atravessando a cauda (duas por trecho)
+            for (const t of [0.25, 0.75]) {
+                const P = [A[0] + (Bp[0] - A[0]) * t, A[1] + (Bp[1] - A[1]) * t], L = Math.hypot(Bp[0] - A[0], Bp[1] - A[1]) || 1;
+                const nx = -(Bp[1] - A[1]) / L * w * 0.48, ny = (Bp[0] - A[0]) / L * w * 0.48;
+                h += `<line x1="${_n2(P[0] - nx)}" y1="${_n2(P[1] - ny)}" x2="${_n2(P[0] + nx)}" y2="${_n2(P[1] + ny)}" stroke="${stripe}" stroke-width="0.7" opacity="0.85"/>`;
+            }
+        }
     }
     return o + c + h;
 }
@@ -1027,7 +1276,10 @@ function spriteBack(R, a, B, pose, skin) {
     }
     if (a.tail === "freeza") {
         const tw = 1.5;   // rabo grosso (visível no pixel art)
-        s += spriteTaper([[47, 77], [36 - sw * 2, 92], [58 + sw * 4, 104], [78 + sw * 6, 92]], 6.6 * tw, 2.4 * tw, "#f1eef6", "#7f4fc0");
+        // rosado listrado com ponta roxa (formas 1 a 3), de metal em gomos (ciborgue) ou liso na cor do corpo (forma final)
+        const rosa = SPRITE_MARCAS_ROSA.includes(a.bodyMarks), metal = a.bodyMarks === "metal_freeza";
+        const cor = rosa ? SPRITE_ROSA_FREEZA : (metal ? "#c3ccd9" : skin);
+        s += spriteTaper([[47, 77], [36 - sw * 2, 92], [58 + sw * 4, 104], [78 + sw * 6, 92]], 6.6 * tw, 2.4 * tw, cor, rosa ? a.primaryColor : null, rosa ? "#a8344f" : (metal ? "#2a3a6a" : null));
     }
     if (a.backWeapon === "espada_trunks") {
         s += spriteLimb(60.4, 34, 32.6, 86, 4.4, "#2f2620");
@@ -1059,8 +1311,33 @@ function spriteShoulderPads(R, a, B) {
     if (a.outerShirt === "armadura_saiyajin") {
         s += pad(-1, "#f4f4f6", a.accentColor) + pad(1, "#f4f4f6", a.accentColor);
     }
+    const dome = (side, rx, ry, base, rim) => {
+        // placa arredondada com cúpula brilhante (ombros da raça do Freeza / ciborgue)
+        const cx = 48 + side * (B.sw / 2 - 0.4), cy = 46.6;
+        const f = R.rad(cx - side * 1.6 - 1.4, cy - 2, rx * 1.3, [[0, spriteShade(base, 0.6)], [0.45, base], [1, spriteShade(base, -0.5)]]);
+        return (rim ? `<ellipse cx="${_n2(cx)}" cy="${_n2(cy + 0.6)}" rx="${_n2(rx + 2.4)}" ry="${_n2(ry + 2)}" fill="${rim}" stroke="${SPRITE_OUTLINE}" stroke-width="1"/>` : "") +
+            `<ellipse cx="${_n2(cx)}" cy="${_n2(cy)}" rx="${_n2(rx)}" ry="${_n2(ry)}" fill="${f}" stroke="${SPRITE_OUTLINE}" stroke-width="0.9"/>` +
+            `<ellipse cx="${_n2(cx - side * 1.4 - 1)}" cy="${_n2(cy - ry * 0.4)}" rx="${_n2(rx * 0.35)}" ry="${_n2(ry * 0.25)}" fill="#ffffff" opacity="0.7"/>`;
+    };
+    const bracoNu = !(a.innerShirt && a.innerShirt !== "nenhuma") && !["jaqueta_trunks", "traje_android", "armadura_cell"].includes(a.outerShirt);
     if (a.outerShirt === "armadura_freeza") {
-        s += pad(-1, "#7f4fc0", "#3a1d6a") + pad(1, "#7f4fc0", "#3a1d6a");
+        const cor = a.bodyMarks === "metal_freeza" ? "#d06a2a" : a.primaryColor;   // ciborgue: ombros de cobre
+        s += dome(-1, 4.6, 3.6, cor) + dome(1, 4.6, 3.6, cor);
+    } else if (a.bodyMarks === "carapaca_freeza" && bracoNu) {
+        s += dome(-1, 4.4, 3.4, a.primaryColor, "#f2f1f6") + dome(1, 4.4, 3.4, a.primaryColor, "#f2f1f6");
+    }
+    if (a.outerShirt === "armadura_exercito") {
+        // ombreiras do exército do Freeza: largas, douradas com frisos e borda branca, apontando para os lados
+        const asa = (side) => {
+            const r = 48 + side * (B.sw / 2 + 13), m = 48 + side * 4;
+            const f = R.lin(m, 41, m, 51, [[0, spriteShade(a.accentColor, 0.2)], [0.45, a.accentColor], [1, spriteShade(a.accentColor, -0.55)]]);
+            let g = spritePath(`M${_n2(m)} 43.4 Q${_n2(48 + side * (B.sw / 2 + 3))} 38.4 ${_n2(r)} 43.4 Q${_n2(r + side * 1.6)} 47.6 ${_n2(r - side * 1.6)} 50.6 L${_n2(48 + side * (B.sw / 2 - 3))} 51.6 Q${_n2(m + side * 2)} 48 ${_n2(m)} 43.4 Z`, f, `stroke="#f4f4f2" stroke-width="1.6"`, "");
+            let fr = "";
+            for (let i = 1; i <= 4; i++) { const x = m + (r - m) * (i / 5); fr += `M${_n2(x)} ${_n2(42.4 + i * 0.2)} L${_n2(x - side * 0.6)} ${_n2(49.4 - i * 0.1)} `; }
+            g += `<path d="${fr}" stroke="${spriteShade(a.accentColor, -0.5)}" stroke-width="0.8" opacity="0.85"/>`;
+            return g + `<path d="M${_n2(m)} 43.4 Q${_n2(48 + side * (B.sw / 2 + 3))} 38.4 ${_n2(r)} 43.4 Q${_n2(r + side * 1.6)} 47.6 ${_n2(r - side * 1.6)} 50.6 L${_n2(48 + side * (B.sw / 2 - 3))} 51.6 Q${_n2(m + side * 2)} 48 ${_n2(m)} 43.4 Z" fill="none" stroke="${SPRITE_OUTLINE}" stroke-width="0.7"/>`;
+        };
+        s += asa(-1) + asa(1);
     }
     return s;
 }
@@ -1307,7 +1584,7 @@ const SPRITE_PRESETS = {
     goku: { label: "Goku", appearance: { gender: "masculino", race: "Saiyajin", build: "musculoso", hairStyle: "goku", hairColor: "#16110f", eyeType: "normal", irisColor: "#1a1210", mouthType: "smile", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "none", outerShirt: "kimono", innerShirt: "camiseta", pants: "larga", shoes: "botas_artes", gloves: "pulseiras", primaryColor: "#f2680d", secondaryColor: "#1c45b0", accentColor: "#f7d23c", shirtColor: "#1c45b0", pantsColor: "#f2680d", symbol: "kai", kiColor: "#5be3ff" } },
     vegeta: { label: "Vegeta", appearance: { gender: "masculino", race: "Saiyajin", build: "normal", hairStyle: "vegeta", hairColor: "#100e18", eyeType: "serio", irisColor: "#161a24", mouthType: "serio", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "none", outerShirt: "armadura_saiyajin", innerShirt: "malha", pants: "justa", shoes: "botas_saiyajin", gloves: "luvas_saiyajin", primaryColor: "#1b3fa0", secondaryColor: "#f4f4f8", accentColor: "#e8b93a", shirtColor: "#1b3fa0", pantsColor: "#1b3fa0", kiColor: "#ffe45a" } },
     piccolo: { label: "Piccolo", appearance: { gender: "masculino", race: "Namekuseijin", build: "musculoso", hairStyle: "careca", eyeType: "bravo", irisColor: "#151515", mouthType: "serio", earType: "pontuda", headFeature: "antenas", bodyMarks: "namek", accessory: "none", hat: "turbante", outerShirt: "gi_piccolo", innerShirt: "nenhuma", pants: "larga", shoes: "botas_marrons", gloves: "nenhuma", primaryColor: "#5b2e91", secondaryColor: "#20336f", accentColor: "#f5f5f7", shirtColor: "#20336f", pantsColor: "#5b2e91", cape: "capa_ombreiras", capeColor: "#f6f6f8", kiColor: "#e9ff7a" } },
-    freeza: { label: "Freeza (final)", appearance: { gender: "masculino", race: "Raça Freeza", build: "magro", hairStyle: "careca", eyeType: "freeza", irisColor: "#d81f3f", mouthType: "serio", earType: "nenhuma", headFeature: "none", bodyMarks: "freeza", accessory: "none", outerShirt: "armadura_freeza", innerShirt: "nenhuma", pants: "nenhuma", shoes: "descalco", gloves: "nenhuma", primaryColor: "#7f4fc0", secondaryColor: "#3a1d6a", accentColor: "#e7d3ff", shirtColor: "#3a1d6a", pantsColor: "#7f4fc0", tail: "freeza", kiColor: "#ff5be0" } },
+    freeza: { label: "Freeza", appearance: { gender: "masculino", race: "Raça Freeza", build: "magro", skinColor: "#cdb8ea", hairStyle: "careca", eyeType: "freeza", irisColor: "#d81f3f", mouthType: "maligno", earType: "nenhuma", headFeature: "capacete_freeza", bodyMarks: "listras_freeza", accessory: "none", outerShirt: "armadura_exercito", innerShirt: "nenhuma", pants: "nenhuma", shoes: "caneleiras_freeza", gloves: "bracadeiras_freeza", primaryColor: "#8a3fc0", secondaryColor: "#17141c", accentColor: "#d0962e", shirtColor: "#17141c", pantsColor: "#17141c", tail: "freeza", kiColor: "#ff5be0" } },
     trunks: { label: "Trunks do Futuro", appearance: { gender: "masculino", race: "Saiyajin", build: "normal", hairStyle: "trunks_futuro", hairColor: "#8c7ee0", eyeType: "serio", irisColor: "#2a4a86", mouthType: "serio", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "none", outerShirt: "jaqueta_trunks", innerShirt: "malha", pants: "justa", shoes: "botas_trunks", gloves: "nenhuma", primaryColor: "#3f66c8", secondaryColor: "#20263a", accentColor: "#d7b25a", shirtColor: "#20263a", pantsColor: "#1e2437", symbol: "cc", backWeapon: "espada_trunks", kiColor: "#9fd0ff" } },
     gohan: { label: "Gohan (jovem)", appearance: { gender: "masculino", race: "Saiyajin", build: "normal", hairStyle: "gohan", hairColor: "#16110f", eyeType: "gentil", irisColor: "#1a1210", mouthType: "smile", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "none", outerShirt: "gi_piccolo", innerShirt: "nenhuma", pants: "larga", shoes: "botas_marrons", gloves: "nenhuma", primaryColor: "#5b2e91", secondaryColor: "#20336f", accentColor: "#f5f5f7", shirtColor: "#20336f", pantsColor: "#5b2e91", cape: "capa_ombreiras", capeColor: "#f6f6f8", kiColor: "#ffd45b" } },
     kaioshin: { label: "Supremo Sr. Kaio", appearance: { gender: "masculino", race: "Kaioshin", build: "magro", hairStyle: "kaioshin_moicano", hairColor: "#f4f4f4", eyeType: "gentil", irisColor: "#2a2a44", mouthType: "smile", earType: "pontuda", headFeature: "none", bodyMarks: "none", accessory: "potara", outerShirt: "roupa_kaioshin", innerShirt: "nenhuma", pants: "larga", shoes: "botas_kaioshin", gloves: "nenhuma", primaryColor: "#5648b8", secondaryColor: "#f3eedd", accentColor: "#f2c94c", shirtColor: "#f3eedd", pantsColor: "#f3eedd", kiColor: "#c9a0ff" } },
