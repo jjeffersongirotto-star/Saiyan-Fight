@@ -1879,7 +1879,9 @@ function pollGamepadMenu(dt) {
             const eixos = pads.length && pads[0].axes ? pads[0].axes : [];
             const ay = Math.abs(eixos[3] || 0) > Math.abs(eixos[1] || 0) ? (eixos[3] || 0) : (eixos[1] || 0);
             if (Math.abs(ay) > 0.4 && modal) {
-                const rolavel = Array.from(modal.querySelectorAll ? modal.querySelectorAll("ul, p, div") : []).find(el => el.scrollHeight > el.clientHeight + 4);
+                // UPDATES: sempre a lista de novidades (a única barra de rolagem); avisos: o primeiro texto que rola
+                const lista = updatesOpen ? document.getElementById("lista-updates") : null;
+                const rolavel = lista || Array.from(modal.querySelectorAll ? modal.querySelectorAll("ul, p, div") : []).find(el => el.scrollHeight > el.clientHeight + 4);
                 if (rolavel) rolavel.scrollTop += ay * 10;
             }
             if (confirm && !padNav.prevConfirm && buttons[padNav.modalIndex]) buttons[padNav.modalIndex].click();
