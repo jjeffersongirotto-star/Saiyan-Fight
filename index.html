@@ -141,6 +141,19 @@
             padding: 10px;
         }
 
+        /* UPDATES: só a lista de novidades rola (uma barra só); cabeçalho e FECHAR ficam sempre visíveis */
+        #modal-updates .modal-content {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        #modal-updates .modal-content > * { flex: 0 0 auto; }
+        #modal-updates #lista-updates {
+            flex: 1 1 auto;
+            min-height: 0;
+            overscroll-behavior: contain;
+        }
+
         .modal-content {
             background: var(--panel-bg);
             border: 2px solid var(--cyan);
@@ -1261,7 +1274,8 @@
             <p style="margin: 0 0 12px; color: #ccc; font-size: 14px;">
                 Novidades e correções do jogo.
             </p>
-            <ul id="lista-updates" style="margin: 0 0 18px; color: #ddd; line-height: 1.6; padding-left: 18px; max-height: 50vh; overflow-y: auto;">
+            <ul id="lista-updates" style="margin: 0 0 18px; color: #ddd; line-height: 1.6; padding-left: 18px; overflow-y: auto;">
+                <li>UPDATES: só a lista de novidades tem barra de rolagem, e os dois analógicos do controle rolam essa lista até as novidades mais antigas.</li>
                 <li>UPDATES: o botão ATUALIZAR só recarrega o jogo quando a lista de novidades mudou; se já estiver na versão mais nova, a janela continua aberta e avisa.</li>
                 <li>SELEÇÃO DE PERSONAGEM pergunta antes de trocar; no VERSUS cada jogador escolhe qualquer personagem. Parry com área maior e um círculo do tamanho exato da área. Controle: sensibilidade do analógico (− / +), analógico direito rola UPDATES e o touchpad do PS5 maximiza/minimiza a tela.</li>
                 <li>Luta sem textos no meio da tela: pegar um item mostra só um ícone rápido (+ verde, escudo, sandália com asas, punho). Na derrota, X ou BOLA do controle voltam direto (o foco não para mais na tela cheia). O especial do TESTE DE CONTROLES aparece igual ao da luta.</li>
