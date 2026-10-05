@@ -5622,18 +5622,6 @@ function render() {
         drawSaibamans();
         drawPickups();
 
-        world.auraParticles.forEach(p => {
-            ctx.save();
-            ctx.globalAlpha = p.alpha;
-            ctx.strokeStyle = p.color;
-            ctx.lineWidth = Math.max(1, p.size * 0.35);
-            ctx.beginPath();
-            ctx.moveTo(p.x, p.y + p.size);
-            ctx.lineTo(p.x + p.vx * 2, p.y - p.size * 1.8);
-            ctx.stroke();
-            ctx.restore();
-        });
-
         drawPlayerEntity(player, characterDB[selectedCharacter], false);
         drawGrabbingSaibamans();
         drawSaibamanBlasts();   // explosão por cima do herói

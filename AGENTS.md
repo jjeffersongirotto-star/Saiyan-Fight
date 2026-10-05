@@ -60,7 +60,7 @@ The active animation states are `idle`, `flyRight`, `flyLeft`, `flyUp`, `flyDown
 ## UPDATES (version notes)
 - `#lista-updates` (index.html) is a list of versions, newest first, starting from 0.1: a `li.upd-versao` header (`<h3>Versão 0.X (ATUAL)</h3><p>summary</p>`) followed by one `li.upd-item` card per change: `<span class="upd-tag">` + `<strong>title</strong>` + `<p>description</p>`.
 - Tags: `upd-novo` NOVO (green) = new in the current version; `upd-corrigido` CORRIGIDO (yellow) = bug fixes; `upd-melhorado` MELHORADO (blue) = improvements to something that existed; `upd-criacao` CRIAÇÃO (gold) = something that did not exist before (older versions).
-- Each PR adds a new version block on top (next number, marked ATUAL); remove "(ATUAL)" from the previous one and turn its NOVO tags into CRIAÇÃO. The ATUALIZAR button compares this list's text, so every PR must change it.
+- One version per merged PR (0.1 = PR #1, 0.66 = PR #66, ...). Each PR adds a new version block on top (next number, marked ATUAL); remove "(ATUAL)" from the previous one and turn its NOVO tags into CRIAÇÃO. The ATUALIZAR button compares this list's text, so every PR must change it.
 
 ## Saving tokens (the user pays per use)
 - **Batch mode:** when the user says "espera eu falar" (or similar), only note each request in 1–2 lines (a task) — do not open files, run tests or take screenshots. Start everything only on "fazer todas as alterações", then do one test run and one PR for the whole batch.
