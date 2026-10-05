@@ -16,23 +16,31 @@ function c3Hash(n) {
 // Copia uma paisagem de 360° (faixa) deslocada conforme o ângulo da câmera que gira em volta do centro.
 function c3BlitPanorama(pano, ang, F, CX) {
     if (!pano) return false;
-    const W = pano.width;
+    const W = pano.__w || pano.width, H = pano.__h || pano.height;
     let u0 = (-(ang + Math.PI) * F) % W;
     if (u0 < 0) u0 += W;
     const x0 = CX - u0;
-    ctx.drawImage(pano, x0, 0);
-    ctx.drawImage(pano, x0 + W, 0);
-    if (x0 > 0) ctx.drawImage(pano, x0 - W, 0);
+    ctx.drawImage(pano, x0, 0, W, H);
+    ctx.drawImage(pano, x0 + W, 0, W, H);
+    if (x0 > 0) ctx.drawImage(pano, x0 - W, 0, W, H);
     return true;
 }
 
+// Imagem guardada de um cenário, feita na resolução REAL da tela (renderScale): fica nítida como o resto do
+// jogo. Medidas lógicas em c.__w/c.__h (o contexto já vem escalado); c.__k diz em que resolução foi feita.
 function c3NovaFaixa(largura, altura) {
+    const k = typeof renderScale === "number" ? renderScale : 1;
     const c = document.createElement("canvas");
-    c.width = largura;
-    c.height = altura;
+    c.width = Math.ceil(largura * k);
+    c.height = Math.ceil(altura * k);
+    c.__w = largura; c.__h = altura; c.__k = k;
     const g = c.getContext && c.getContext("2d");
+    if (g && g.scale) g.scale(k, k);
     return g ? { c, g } : null;
 }
+// a imagem guardada ainda serve? (refeita quando a resolução da tela muda)
+function c3Valida(c) { return !!c && (c.__k || 1) === (typeof renderScale === "number" ? renderScale : 1); }
+function c3Img(img, x, y) { ctx.drawImage(img, x, y, img.__w || img.width, img.__h || img.height); }
 
 // Desenha algo numa faixa de 360° repetindo nas emendas (para não ficar cortado na volta).
 function c3NaVolta(W, x, larg, desenha) {
@@ -128,14 +136,14 @@ function kpDrawCoisa(o, p) {
 
 let kpCeu = null;
 function getKaioSky() {
-    if (kpCeu) return kpCeu;
+    if (c3Valida(kpCeu)) return kpCeu;
     const f = c3NovaFaixa(canvas.width, canvas.height);
     if (!f) return null;
     const { c, g } = f;
-    const ceu = g.createLinearGradient(0, 0, 0, c.height);
+    const ceu = g.createLinearGradient(0, 0, 0, c.__h);
     ceu.addColorStop(0, "#f2a3cf"); ceu.addColorStop(0.55, "#f7c4de"); ceu.addColorStop(1, "#fbe0ec");
     g.fillStyle = ceu;
-    g.fillRect(0, 0, c.width, c.height);
+    g.fillRect(0, 0, c.__w, c.__h);
     // nuvens rosadas bem clarinhas
     g.fillStyle = "rgba(255, 240, 248, 0.6)";
     [[90, 50, 50], [640, 70, 64], [330, 30, 38], [730, 180, 40], [40, 200, 34]].forEach(([x, y, r]) => {
@@ -147,7 +155,7 @@ function getKaioSky() {
 
 function drawKaioPlanetStage(ang) {
     const ceu = getKaioSky();
-    if (ceu) ctx.drawImage(ceu, 0, 0);
+    if (ceu) c3Img(ceu, 0, 0);
     else { ctx.fillStyle = "#f7c4de"; ctx.fillRect(0, 0, canvas.width, canvas.height); }
 
     // mar de nuvens douradas lá embaixo (o Caminho da Serpente), andando devagar
@@ -225,7 +233,7 @@ const TA_MURO_R = 540, TA_MURO_ALT = 34, TA_PORTAO_Z = -450;
 
 let taPanorama = null;
 function getTerraPanorama() {
-    if (taPanorama) return taPanorama;
+    if (c3Valida(taPanorama)) return taPanorama;
     const W = Math.round(Math.PI * 2 * CA_F), base = CA_HY + 4;
     const f = c3NovaFaixa(W, CA_HY + 8);
     if (!f) return null;
@@ -233,7 +241,7 @@ function getTerraPanorama() {
     const ceu = g.createLinearGradient(0, 0, 0, base);
     ceu.addColorStop(0, "#3f8ee0"); ceu.addColorStop(0.7, "#9ad0f5"); ceu.addColorStop(1, "#dff1fb");
     g.fillStyle = ceu;
-    g.fillRect(0, 0, W, c.height);
+    g.fillRect(0, 0, W, c.__h);
     g.fillStyle = "rgba(255, 255, 255, 0.92)";
     for (let i = 0; i < 12; i++) {
         const x = c3Hash(i + 40) * W, y = 16 + c3Hash(i + 41) * 50, r = 10 + c3Hash(i + 42) * 12;
@@ -275,7 +283,7 @@ function getTerraPanorama() {
 let taPortao = null;
 const TA_PORTAO = { larg: 240, alt: 150 };
 function getTerraGate() {
-    if (taPortao) return taPortao;
+    if (c3Valida(taPortao)) return taPortao;
     const E = 2, f = c3NovaFaixa(TA_PORTAO.larg * E, TA_PORTAO.alt * E);
     if (!f) return null;
     const { c, g } = f;
@@ -346,7 +354,7 @@ const TA_PLATEIA_CORES = ["#e74c3c", "#f1c40f", "#3498db", "#2ecc71", "#ecf0f1",
 const TA_PLATEIA_ALT = 26;   // altura das cabeças acima do muro
 let taPlateiaTex = null;
 function getTerraCrowdTiles() {
-    if (taPlateiaTex) return taPlateiaTex;
+    if (taPlateiaTex && c3Valida(taPlateiaTex[0])) return taPlateiaTex;
     const lista = [];
     for (let v = 0; v < 4; v++) {
         const f = c3NovaFaixa(48, TA_MURO_ALT + TA_PLATEIA_ALT);
@@ -459,6 +467,7 @@ let ksPanorama = null;
 // Planetas do céu do Supremo Kaioh: cada um de um tipo (lua, gigante gasoso, planeta oceano, planeta como a
 // Terra) — esfera com volume (luz do alto à esquerda, sombra no lado oposto e brilho na borda).
 const KS_TIPOS_PLANETA = ["lua", "jupiter", "oceano", "terra"];
+const KS_TIPOS_GRANDES = ["lua", "jupiter", "terra", "lua", "oceano", "jupiter", "lua", "terra", "jupiter"];
 function ksPlaneta(g, x, y, r, tipo, semente) {
     const h = (k) => c3Hash(semente * 7 + k);
     g.save();
@@ -477,10 +486,10 @@ function ksPlaneta(g, x, y, r, tipo, semente) {
         const mar = g.createLinearGradient(x, y - r, x, y + r);
         mar.addColorStop(0, "#3fb6e8"); mar.addColorStop(1, "#1a5fae");
         g.fillStyle = mar; g.fillRect(x - r, y - r, r * 2, r * 2);
-        g.strokeStyle = "rgba(255, 255, 255, 0.55)"; g.lineWidth = Math.max(1, r * 0.06); g.lineCap = "round";
-        for (let i = 0; i < 5; i++) {   // nuvens em redemoinho sobre o mar
-            const cx = x + (h(i) - 0.5) * r * 1.4, cy = y + (h(i + 9) - 0.5) * r * 1.4, rr = r * (0.18 + h(i + 4) * 0.2);
-            g.beginPath(); g.arc(cx, cy, rr, Math.PI * 0.2, Math.PI * 1.5); g.stroke();
+        for (let i = 0; i < 5; i++) {   // manchas mais claras de água rasa (sem traços)
+            const cx = x + (h(i) - 0.5) * r * 1.4, cy = y + (h(i + 9) - 0.5) * r * 1.4, rr = r * (0.16 + h(i + 4) * 0.18);
+            g.fillStyle = "rgba(140, 220, 255, 0.28)";
+            g.beginPath(); g.ellipse(cx, cy, rr, rr * 0.6, h(i + 2) * 3, 0, Math.PI * 2); g.fill();
         }
         g.fillStyle = "#e9f7ff";   // calotas polares
         g.beginPath(); g.ellipse(x, y - r, r * 0.6, r * 0.18, 0, 0, Math.PI * 2); g.fill();
@@ -521,7 +530,7 @@ function ksPlaneta(g, x, y, r, tipo, semente) {
     g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.stroke();
 }
 function getKaioshinPanorama() {
-    if (ksPanorama) return ksPanorama;
+    if (c3Valida(ksPanorama)) return ksPanorama;
     const W = Math.round(Math.PI * 2 * CA_F), base = CA_HY + 4;
     const f = c3NovaFaixa(W, CA_HY + 8);
     if (!f) return null;
@@ -529,11 +538,12 @@ function getKaioshinPanorama() {
     const ceu = g.createLinearGradient(0, 0, 0, base);
     ceu.addColorStop(0, "#6f55c9"); ceu.addColorStop(0.55, "#a690e0"); ceu.addColorStop(0.9, "#e4c6ec"); ceu.addColorStop(1, "#f6d6e2");
     g.fillStyle = ceu;
-    g.fillRect(0, 0, W, c.height);
+    g.fillRect(0, 0, W, c.__h);
     // vários planetas de tamanhos e tipos diferentes espalhados pelo céu (lua, gigante gasoso, oceano, "Terra")
     for (let i = 0; i < 26; i++) {
         const x = c3Hash(i + 200) * W, r = i % 3 === 0 ? 28 + c3Hash(i + 201) * 22 : 6 + c3Hash(i + 202) * 16, y = 10 + r + c3Hash(i + 203) * (base - 46 - r * 2);
-        const tipo = KS_TIPOS_PLANETA[i % KS_TIPOS_PLANETA.length];
+        // os grandes seguem uma ordem própria (só um planeta oceano entre eles, sem dois azuis iguais)
+        const tipo = i % 3 === 0 ? KS_TIPOS_GRANDES[(i / 3) % KS_TIPOS_GRANDES.length] : KS_TIPOS_PLANETA[i % KS_TIPOS_PLANETA.length];
         c3NaVolta(W, x, r, x0 => ksPlaneta(g, x0, Math.max(r + 4, y), r, tipo, i));
     }
     // morros verdes ao longe, com penhascos de rocha clara
@@ -661,19 +671,19 @@ function nfFaixasDoChao(andado, cor) {
 // ---------- Planeta Namek ----------
 let nmCeu = null;
 function getNamekSky() {
-    if (nmCeu) return nmCeu;
+    if (c3Valida(nmCeu)) return nmCeu;
     const f = c3NovaFaixa(canvas.width, NF.HY + 6);
     if (!f) return null;
     const { c, g } = f;
     const ceu = g.createLinearGradient(0, 0, 0, NF.HY);
     ceu.addColorStop(0, "#3fb34a"); ceu.addColorStop(0.55, "#9ad84f"); ceu.addColorStop(1, "#eef3b0");
     g.fillStyle = ceu;
-    g.fillRect(0, 0, c.width, c.height);
+    g.fillRect(0, 0, c.__w, c.__h);
     // morros claros lá longe, apagados pela distância
     g.fillStyle = "rgba(170, 205, 220, 0.75)";
     g.beginPath(); g.moveTo(0, NF.HY + 2);
-    for (let x = 0; x <= c.width; x += 10) g.lineTo(x, NF.HY - 8 - Math.abs(Math.sin(x * 0.013)) * 16 - Math.abs(Math.sin(x * 0.031 + 1)) * 8);
-    g.lineTo(c.width, NF.HY + 2); g.closePath(); g.fill();
+    for (let x = 0; x <= c.__w; x += 10) g.lineTo(x, NF.HY - 8 - Math.abs(Math.sin(x * 0.013)) * 16 - Math.abs(Math.sin(x * 0.031 + 1)) * 8);
+    g.lineTo(c.__w, NF.HY + 2); g.closePath(); g.fill();
     nmCeu = c;
     return c;
 }
@@ -747,7 +757,7 @@ function nmDesenhar(it, z) {
 
 function drawNamekStage(andado) {
     const ceu = getNamekSky();
-    if (ceu) ctx.drawImage(ceu, 0, 0); else { ctx.fillStyle = "#9ad84f"; ctx.fillRect(0, 0, canvas.width, NF.HY); }
+    if (ceu) c3Img(ceu, 0, 0); else { ctx.fillStyle = "#9ad84f"; ctx.fillRect(0, 0, canvas.width, NF.HY); }
     // nuvens amareladas passando devagar
     const t = typeof gameplayClock === "number" ? gameplayClock : 0;
     ctx.fillStyle = "rgba(250, 245, 170, 0.6)";
@@ -769,25 +779,25 @@ function drawNamekStage(andado) {
 // pedras caindo, ilhas de pedra rachadas na água e arcos de lava entre elas.
 let nxCeu = null;
 function getNamekExplodingSky() {
-    if (nxCeu) return nxCeu;
+    if (c3Valida(nxCeu)) return nxCeu;
     const f = c3NovaFaixa(canvas.width, NF.HY + 6);
     if (!f) return null;
     const { c, g } = f;
     const ceu = g.createLinearGradient(0, 0, 0, NF.HY);
     ceu.addColorStop(0, "#14361f"); ceu.addColorStop(0.45, "#2f6b35"); ceu.addColorStop(0.85, "#8fa74c"); ceu.addColorStop(1, "#d6c070");
     g.fillStyle = ceu;
-    g.fillRect(0, 0, c.width, c.height);
+    g.fillRect(0, 0, c.__w, c.__h);
     // nuvens de tempestade escuras
     g.fillStyle = "rgba(20, 35, 25, 0.55)";
     for (let i = 0; i < 9; i++) {
-        const x = c3Hash(i + 500) * c.width, y = 10 + c3Hash(i + 501) * 60, r = 30 + c3Hash(i + 502) * 40;
+        const x = c3Hash(i + 500) * c.__w, y = 10 + c3Hash(i + 501) * 60, r = 30 + c3Hash(i + 502) * 40;
         g.beginPath(); g.ellipse(x, y, r * 2.2, r * 0.5, 0, 0, Math.PI * 2); g.fill();
     }
     // terra rachada ao longe com brilho de lava
     g.fillStyle = "#5e5a4a";
     g.beginPath(); g.moveTo(0, NF.HY + 2);
-    for (let x = 0; x <= c.width; x += 12) g.lineTo(x, NF.HY - 4 - Math.abs(Math.sin(x * 0.02)) * 10);
-    g.lineTo(c.width, NF.HY + 2); g.closePath(); g.fill();
+    for (let x = 0; x <= c.__w; x += 12) g.lineTo(x, NF.HY - 4 - Math.abs(Math.sin(x * 0.02)) * 10);
+    g.lineTo(c.__w, NF.HY + 2); g.closePath(); g.fill();
     nxCeu = c;
     return c;
 }
@@ -878,7 +888,7 @@ function nxDesenhar(it, z) {
 
 function drawNamekExplodingStage(andado) {
     const ceu = getNamekExplodingSky();
-    if (ceu) ctx.drawImage(ceu, 0, 0); else { ctx.fillStyle = "#2f6b35"; ctx.fillRect(0, 0, canvas.width, NF.HY); }
+    if (ceu) c3Img(ceu, 0, 0); else { ctx.fillStyle = "#2f6b35"; ctx.fillRect(0, 0, canvas.width, NF.HY); }
     const t = typeof gameplayClock === "number" ? gameplayClock : 0;
     // raio de vez em quando (com clarão rápido)
     const ciclo = t % 3.2;

@@ -1162,6 +1162,7 @@ function updateAura(entity, auraType, isBoss = false) {
 // Cor do ki depois de rebatido — diferente da cor original (do jogador ou do chefe), pra ficar claro visualmente
 // que aquele projétil agora é "seu" e não do dono original.
 const PARRY_REFLECT_COLOR = "#fff23f";
+const BOSS_SHOT_SCALE = 1.5;   // tamanho dos tiros do vilão em relação ao normal
 // Parry que não pega nada deixa um tempo de espera antes do próximo — sem isso, segurar a tecla (repetição
 // automática do teclado) ou apertar sem parar rebatia tudo o tempo todo. Parry que acerta não tem espera,
 // então rebater golpes seguidos no tempo certo continua valendo.
@@ -1471,6 +1472,8 @@ function spawnBossAttack() {
 
     if (bChar && bChar.projSize === "small") baseRadius = 8;
     if (bChar && bChar.projSize === "large") baseRadius = 16;
+    // a bola de poder do vilão é 50% maior que o tiro comum do herói (destaca na tela)
+    baseRadius *= BOSS_SHOT_SCALE;
 
     playSound("shoot");
 
