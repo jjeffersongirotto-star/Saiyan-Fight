@@ -552,7 +552,8 @@ function toggleFullscreen() {
 
 function drawFullscreenButton() {
     const rect = getFullscreenButtonRect();
-    if (padNavIsActiveState()) registerMenuTarget(rect.x, rect.y, rect.w, rect.h);   // o controle também alcança
+    // o controle também alcança (menos na derrota/vitória: lá X ou BOLA só voltam ao mapa/menu)
+    if (padNavIsActiveState() && gameState !== "gameover") registerMenuTarget(rect.x, rect.y, rect.w, rect.h);
     const hovered = isMouseHovering() && inRect(mouseX, mouseY, rect.x, rect.y, rect.w, rect.h);
     const isActive = isFullscreenActive();
     const centerX = rect.x + rect.w / 2;
@@ -1514,15 +1515,22 @@ function drawTesteGoku(pads) {
         const s = Math.max(q.w / foto.width, q.h / foto.height);
         ctx.drawImage(foto, q.x + (q.w - foto.width * s) / 2, q.y + (q.h - foto.height * s) / 2, foto.width * s, foto.height * s);
     } else { ctx.fillStyle = "#7ec8f2"; ctx.fillRect(q.x, q.y, q.w, q.h); }
-    // feixe do especial
-    if (g.feixe > 0) {
-        const y = g.y + g.h * 0.45, x0 = g.x + g.w * 0.8;
-        ctx.fillStyle = "rgba(120, 200, 255, 0.55)"; ctx.fillRect(x0, y - 9, q.x + q.w - x0, 18);
-        ctx.fillStyle = "#eaf6ff"; ctx.fillRect(x0, y - 4, q.x + q.w - x0, 8);
-    }
     const antes = selectedCharacter;
     selectedCharacter = "goku_adult";   // o desenho do lutador usa o personagem selecionado
     try { drawPlayerEntity(g, characterDB.goku_adult, false); } finally { selectedCharacter = antes; }
+    // feixe do especial: igual ao da luta (azul com miolo branco e anéis), saindo da mão, por cima do Goku
+    if (g.feixe > 0) {
+        const y = g.y + g.h / 2, x0 = g.x + g.w, larg = q.x + q.w - x0;
+        const meia = 13 * Math.min(1, g.feixe / 8, (40 - Math.min(40, g.feixe)) / 6 + 0.35);   // abre e fecha rápido
+        ctx.fillStyle = "#00ffff"; ctx.fillRect(x0, y - meia, larg, meia * 2);
+        ctx.fillStyle = "#ffffff"; ctx.fillRect(x0, y - meia * 0.4, larg, meia * 0.8);
+        ctx.beginPath(); ctx.arc(x0, y, meia * 1.2, 0, Math.PI * 2); ctx.fillStyle = "#00ffff"; ctx.fill();
+        ctx.beginPath(); ctx.arc(x0, y, meia * 0.7, 0, Math.PI * 2); ctx.fillStyle = "#ffffff"; ctx.fill();
+        ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2;
+        for (let x = x0; x < x0 + larg; x += 24) {
+            ctx.beginPath(); ctx.arc(x + (g.feixe * 3 % 24), y, meia * 0.9, 0, Math.PI * 2); ctx.stroke();
+        }
+    }
     g.tiros.forEach(t => {
         ctx.fillStyle = "rgba(120, 220, 255, 0.5)"; ctx.beginPath(); ctx.arc(t.x, t.y, 9, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = "#f0fbff"; ctx.beginPath(); ctx.arc(t.x, t.y, 5, 0, Math.PI * 2); ctx.fill();
@@ -2797,12 +2805,8 @@ function triggerAction(actionName, targetPlayer, isP2 = false) {
         fireKiBarrage(targetPlayer, isP2);
     }
     else if (actionName === "transform") {
-        // Sem ki suficiente avisa em qualquer controle (toque, teclado, mouse ou controle), não só no toque.
-        // já na última transformação da lista: apertar de novo não faz nada (nem avisa)
-        const naUltima = getTransformLevel(targetPlayer) >= getCharacterTransformations(isP2 ? selectedBoss : selectedCharacter).length;
-        if (!transformPlayer(targetPlayer, isP2) && !naUltima) {
-            addFloatingText({ text: "ENCHA O KI PARA TRANSFORMAR", x: targetPlayer.x + targetPlayer.w / 2, y: targetPlayer.y - 10, alpha: 1, color: "#ffcc00" });
-        }
+        // sem ki suficiente não transforma (a barra de ki mostra; nada de texto no meio da luta)
+        transformPlayer(targetPlayer, isP2);
     }
     else if (actionName === "parry") tryReflect(targetPlayer, isP2);
     else if (actionName === "special") triggerSpecialAttack(isP2);
@@ -5116,6 +5120,7 @@ function drawHUD() {
     }
 
     world.floatingTexts.forEach(ft => {
+        if (ft.icon) { drawPickupFeedbackIcon(ft); return; }
         ctx.save();
         ctx.globalAlpha = ft.alpha;
         ctx.fillStyle = ft.color || "#ffffff";
@@ -5125,6 +5130,55 @@ function drawHUD() {
         ctx.restore();
     });
 
+    ctx.restore();
+}
+
+// Ícone rápido ao pegar um item (sem texto no meio da luta): sobe e some como os antigos avisos.
+// senzu = + verde, cápsula = escudo, nuvem voadora = sandália com asas, bastão mágico = punho de força.
+function drawPickupFeedbackIcon(ft) {
+    const pop = (0.7 + Math.min(1, (1 - ft.alpha) * 6) * 0.3) * 1.4;   // cresce rápido ao aparecer
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, ft.alpha * 1.4));
+    ctx.translate(ft.x, ft.y);
+    ctx.scale(pop, pop);
+    ctx.lineJoin = "round"; ctx.lineCap = "round";
+    ctx.strokeStyle = "#0b1020"; ctx.lineWidth = 3;
+    if (ft.icon === "senzu") {
+        ctx.beginPath();
+        ctx.moveTo(-4, -12); ctx.lineTo(4, -12); ctx.lineTo(4, -4); ctx.lineTo(12, -4); ctx.lineTo(12, 4); ctx.lineTo(4, 4);
+        ctx.lineTo(4, 12); ctx.lineTo(-4, 12); ctx.lineTo(-4, 4); ctx.lineTo(-12, 4); ctx.lineTo(-12, -4); ctx.lineTo(-4, -4); ctx.closePath();
+        ctx.fillStyle = "#4ade80"; ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#bbf7d0"; ctx.fillRect(-2, -10, 3, 7);
+    } else if (ft.icon === "capsule") {
+        ctx.beginPath();
+        ctx.moveTo(0, -13); ctx.lineTo(11, -9); ctx.lineTo(10, 2); ctx.quadraticCurveTo(7, 10, 0, 14); ctx.quadraticCurveTo(-7, 10, -10, 2); ctx.lineTo(-11, -9); ctx.closePath();
+        ctx.fillStyle = "#38bdf8"; ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, -9); ctx.lineTo(7, -6); ctx.lineTo(6, 2); ctx.quadraticCurveTo(4, 7, 0, 10); ctx.closePath();
+        ctx.fillStyle = "#bae6fd"; ctx.fill();
+    } else if (ft.icon === "cloud") {
+        // asas brancas atrás da sandália
+        [-1, 1].forEach(lado => {
+            ctx.beginPath();
+            ctx.moveTo(lado * 4, -2); ctx.quadraticCurveTo(lado * 14, -16, lado * 17, -10); ctx.quadraticCurveTo(lado * 13, -8, lado * 15, -4);
+            ctx.quadraticCurveTo(lado * 10, -3, lado * 12, 1); ctx.quadraticCurveTo(lado * 8, 1, lado * 4, 3); ctx.closePath();
+            ctx.fillStyle = "#ffffff"; ctx.fill(); ctx.lineWidth = 2; ctx.stroke();
+        });
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.ellipse(0, 7, 12, 4, 0, 0, Math.PI * 2);   // sola
+        ctx.fillStyle = "#a16207"; ctx.fill(); ctx.stroke();
+        ctx.strokeStyle = "#fde68a"; ctx.lineWidth = 2.5;   // tiras
+        ctx.beginPath(); ctx.moveTo(-6, 6); ctx.quadraticCurveTo(0, -3, 6, 6); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-1, 6); ctx.lineTo(3, 1); ctx.stroke();
+    } else {
+        // punho fechado com linhas de impacto
+        ctx.strokeStyle = "#fde047"; ctx.lineWidth = 2;
+        [[-15, -9, -11, -6], [-16, 0, -12, 0], [-15, 9, -11, 6]].forEach(([a, b, c, d]) => { ctx.beginPath(); ctx.moveTo(a, b); ctx.lineTo(c, d); ctx.stroke(); });
+        ctx.strokeStyle = "#0b1020"; ctx.lineWidth = 2.5;
+        ctx.fillStyle = "#fb923c";
+        ctx.beginPath(); ctx.roundRect ? ctx.roundRect(-8, -9, 18, 18, 5) : ctx.rect(-8, -9, 18, 18); ctx.fill(); ctx.stroke();
+        for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.moveTo(-8, -5 + i * 4.5); ctx.lineTo(1, -5 + i * 4.5); ctx.stroke(); }
+        ctx.beginPath(); ctx.ellipse(4, 6, 6, 3.5, -0.3, 0, Math.PI * 2); ctx.fillStyle = "#fdba74"; ctx.fill(); ctx.stroke();   // polegar
+    }
     ctx.restore();
 }
 

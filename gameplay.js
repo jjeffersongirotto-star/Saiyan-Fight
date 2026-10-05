@@ -916,13 +916,6 @@ function respawnBoss() {
     player2.isTransformed = false;
     player2.ki = 0;
 
-    addFloatingText({
-        text: `FASE ${waveNumber}! VILÃO RETORNOU!`,
-        x: canvas.width / 2,
-        y: 100,
-        alpha: 1,
-        color: "#ff0055"
-    });
 
     playSound("powerup");
     triggerScreenShake(10, 20);
@@ -1031,7 +1024,6 @@ function transformPlayer(p, isP2 = false, force = false) {
         setActionState(p, "transform", 45);
         unlockAchievement("ssj_transform");
         bumpStat("transformsTotal", 1);
-        if (lista.length > 1) addFloatingText({ text: String(lista[nivel].name || "TRANSFORMAÇÃO").toUpperCase() + "!", x: p.x + p.w / 2, y: p.y - 14, alpha: 1, color: "#ffe34d" });
     } else {
         p.isTransformed = true;
         if (!bonusJaAtivo) {
@@ -1043,13 +1035,6 @@ function transformPlayer(p, isP2 = false, force = false) {
         p.transformPowerTimer = TRANSFORM_POWER_DURATION;
         setActionState(p, "transform", 45);
 
-        addFloatingText({
-            text: nivel > 0 ? "VILÃO TRANSFORMOU-SE DE NOVO!" : "VILÃO TRANSFORMOU-SE!",
-            x: canvas.width / 2,
-            y: 100,
-            alpha: 1,
-            color: "#ff0055"
-        });
     }
     playSound("transform");
     if (!isP2) vibrate([60, 40, 120]);
@@ -1066,7 +1051,6 @@ function updateTransformPower(p, isP2, dt) {
     if (!isP2) p.speed = Math.max(4.5, p.speed - 1.0);
     else p.aggressiveness = Math.max(0, (p.aggressiveness || 0) - (p.transformAggroBonus || 0));
     p.transformAggroBonus = 0;
-    addFloatingText({ text: "PODER EXTRA ACABOU", x: p.x + p.w / 2, y: p.y - 10, alpha: 1, color: "#cfd8e6" });
 }
 
 // ==================== SAIBAMANS ====================
@@ -1232,7 +1216,6 @@ function tryReflect(target = player, isP2 = false) {
             if (bonus > 0 && bonus !== player.lastParryComboBonus) {
                 player.ki = Math.min(player.maxKi, player.ki + bonus);
                 player.lastParryComboBonus = bonus;
-                addFloatingText({ text: `COMBO x${player.parryCombo}! +${bonus} KI`, x: target.x + target.w / 2, y: target.y - 26, alpha: 1, color: "#fff23f" });
             }
         }
     }
@@ -1261,7 +1244,6 @@ function attemptZenkaiRevival() {
     triggerScreenShake(14, 24);
     playSound("powerup");
     vibrate([60, 30, 60, 30, 160]);
-    addFloatingText({ text: "ZENKAI! RESSURGIU MAIS FORTE!", x: player.x + player.w / 2, y: player.y - 24, alpha: 1, color: "#ffe45a" });
     return true;
 }
 
@@ -1312,12 +1294,8 @@ function triggerSpecialAttack(isP2 = false) {
     if (isP2 && gameMode !== "coop") return;
     if (player2.isDying) return;
 
-    // Especial SÓ com o ki cheio: avisa quanto falta em vez de falhar em silêncio.
+    // Especial SÓ com o ki cheio (a barra de ki mostra quanto falta; nada de texto no meio da luta).
     if (!canUseSpecial(caster.ki, caster.maxKi)) {
-        addFloatingText({
-            text: `ESPECIAL SÓ COM KI CHEIO (${Math.floor((caster.ki / caster.maxKi) * 100)}%)`,
-            x: caster.x + caster.w / 2, y: caster.y - 10, alpha: 1, color: "#ffcc00"
-        });
         return;
     }
 
@@ -1332,7 +1310,6 @@ function triggerSpecialAttack(isP2 = false) {
     setActionState(caster, "attackKi", 40);
     if (hasPowerBuff) {
         triggerScreenFlash("#fff3b0", 26);
-        addFloatingText({ text: "SUPER ATAQUE!", x: caster.x + caster.w / 2, y: caster.y - 22, alpha: 1, color: "#ffcf3f" });
         bumpStat("superAttacksTotal", 1);
     }
 
@@ -1388,7 +1365,6 @@ function resolveBeamClash(newOwner, newCaster) {
     triggerScreenShake(10, 20);
     triggerScreenFlash("#ffffff", 18);
     vibrate([90, 40, 90]);
-    addFloatingText({ text: "APERTE ATAQUE SEM PARAR!", x: canvas.width / 2, y: 60, alpha: 1, color: "#ffffff" });
 }
 
 // Chamado pelo triggerAction quando o ATAQUE é apertado DURANTE um choque de feixes em andamento — em vez de
@@ -1433,7 +1409,6 @@ function resolveClashDamage() {
     player2.hp -= p2Dmg;
     player2.hitTimer = 20;
     if (player2.hp <= 0) { score += 3; advanceWave(); }
-    addFloatingText({ text: "CHOQUE DE FEIXES!", x: canvas.width / 2, y: 60, alpha: 1, color: "#ffffff" });
 }
 
 function fireKiBarrage(p, isP2 = false, withPose = true) {
@@ -1680,18 +1655,18 @@ function update(dt) {
             const PICKUP_COLORS = { senzu: "#9cff57", capsule: "#62eaff", cloud: "#fff4c2", staff: "#ff9d3d" };
             if (pickup.type === "senzu") {
                 player.hp = Math.min(player.maxHp, player.hp + 1);
-                addFloatingText({ text: "+1 VIDA", x: player.x + player.w / 2, y: player.y - 10, alpha: 1, color: PICKUP_COLORS.senzu });
+                addFloatingText({ icon: "senzu", x: player.x + player.w / 2, y: player.y - 14, alpha: 1 });
             } else if (pickup.type === "capsule") {
                 player.shield = true;
-                addFloatingText({ text: "ESCUDO ATIVADO", x: player.x + player.w / 2, y: player.y - 10, alpha: 1, color: PICKUP_COLORS.capsule });
+                addFloatingText({ icon: "capsule", x: player.x + player.w / 2, y: player.y - 14, alpha: 1 });
             } else if (pickup.type === "cloud") {
                 // Nuvem voadora: velocidade de movimento aumentada por um tempo (empilha a duração, não o efeito).
                 player.speedBuffTimer = Math.min(PICKUP_BUFF_MAX_DURATION, player.speedBuffTimer + PICKUP_BUFF_DURATION);
-                addFloatingText({ text: "NUVEM VOADORA! +VELOCIDADE", x: player.x + player.w / 2, y: player.y - 10, alpha: 1, color: PICKUP_COLORS.cloud });
+                addFloatingText({ icon: "cloud", x: player.x + player.w / 2, y: player.y - 14, alpha: 1 });
             } else {
                 // Bastão mágico: força no ataque normal; se estiver ativo quando o especial sair, vira SUPER ATAQUE.
                 player.powerBuffTimer = Math.min(PICKUP_BUFF_MAX_DURATION, player.powerBuffTimer + PICKUP_BUFF_DURATION);
-                addFloatingText({ text: "BASTÃO MÁGICO! +FORÇA", x: player.x + player.w / 2, y: player.y - 10, alpha: 1, color: PICKUP_COLORS.staff });
+                addFloatingText({ icon: "staff", x: player.x + player.w / 2, y: player.y - 14, alpha: 1 });
             }
             playSound("powerup");
             createImpactParticles(pickup.x + pickup.w / 2, pickup.y + pickup.h / 2, PICKUP_COLORS[pickup.type], 16);
@@ -1810,7 +1785,6 @@ function update(dt) {
             if (player.isCharging || player.parryHighlightTimer > 0) {
                 // parry ou carregar o ki joga o Saibaman para trás; ele solta e pode ser destruído antes de voltar
                 throwSaibaman(s);
-                addFloatingText({ text: "SOLTOU!", x: player.x + player.w / 2, y: player.y - 8, alpha: 1, color: "#ffffff" });
                 continue;
             }
             s.grabTimer -= dt * 60;
@@ -1841,7 +1815,6 @@ function update(dt) {
             // (o desenho do herói é maior que a caixa, com os pés perto da base: braços do Saibaman nas canelas/joelhos)
             s.grabOffsetX = player.w * 0.46;
             s.grabOffsetY = player.h * 0.25;
-            addFloatingText({ text: "AGARROU!", x: player.x + player.w / 2, y: player.y - 8, alpha: 1, color: "#7dff5a" });
             continue;
         }
 
