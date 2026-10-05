@@ -3550,20 +3550,20 @@ const trCena = { passo: null, canvas: null };
 // anda 1/4 de grau. Usada pela Sala do Tempo e pela Nave de Freeza.
 function drawCachedOrbitLayer(cena, ang, desenhar) {
     const passo = Math.round(ang / (Math.PI * 2) * TR_PASSOS_POR_VOLTA) % TR_PASSOS_POR_VOLTA;
-    if (!cena.canvas) {
-        cena.canvas = document.createElement("canvas");
-        cena.canvas.width = canvas.width;
-        cena.canvas.height = canvas.height;
+    if (!c3Valida(cena.canvas)) {
+        const f = c3NovaFaixa(canvas.width, canvas.height);   // camada na resolução real da tela
+        cena.canvas = f ? f.c : null;
+        cena.passo = null;
     }
-    const g = cena.canvas.getContext && cena.canvas.getContext("2d");
+    const g = cena.canvas && cena.canvas.getContext && cena.canvas.getContext("2d");
     if (!g) { trG = ctx; desenhar(ang); return; }
     if (cena.passo !== passo) {
-        g.clearRect(0, 0, cena.canvas.width, cena.canvas.height);
+        g.clearRect(0, 0, canvas.width, canvas.height);
         trG = g;
         try { desenhar(passo / TR_PASSOS_POR_VOLTA * Math.PI * 2); } finally { trG = ctx; }
         cena.passo = passo;
     }
-    ctx.drawImage(cena.canvas, 0, 0);
+    ctx.drawImage(cena.canvas, 0, 0, canvas.width, canvas.height);
 }
 function drawTimeRoomStage(ang) {
     drawTimeRoomFloor(ang);
@@ -3665,20 +3665,18 @@ function caLine(x0, y0, z0, x1, y1, z1, ang) {
 const CA_PANO_W = Math.round(Math.PI * 2 * CA_F);
 let caPanorama = null;
 function getCellArenaPanorama() {
-    if (caPanorama) return caPanorama;
-    const c = document.createElement("canvas");
-    c.width = CA_PANO_W;
-    c.height = CA_HY + 40;
-    const g = c.getContext && c.getContext("2d");
-    if (!g) return null;
-    const W = c.width, base = CA_HY + 6;
+    if (c3Valida(caPanorama)) return caPanorama;
+    const f = c3NovaFaixa(CA_PANO_W, CA_HY + 40);   // na resolução real da tela (nítido)
+    if (!f) return null;
+    const { c, g } = f;
+    const W = CA_PANO_W, base = CA_HY + 6;
     // altura de uma serra que dá a volta certinho (soma de senos com períodos inteiros)
     const serra = (u, amp, fases) => fases.reduce((h, f) => h + Math.sin(u / W * Math.PI * 2 * f[0] + f[1]) * f[2], 0) * amp;
     // céu
     const ceu = g.createLinearGradient(0, 0, 0, base);
     ceu.addColorStop(0, "#3d8fe0"); ceu.addColorStop(0.65, "#8cc8f2"); ceu.addColorStop(1, "#d6eefb");
     g.fillStyle = ceu;
-    g.fillRect(0, 0, W, c.height);
+    g.fillRect(0, 0, W, c.__h);
     // nuvens
     g.fillStyle = "rgba(255, 255, 255, 0.92)";
     for (let i = 0; i < 14; i++) {
@@ -3760,14 +3758,8 @@ function caDrawPillar(px, py, esc) {
 function drawCellArenaStage(ang) {
     // paisagem ao fundo: posição na faixa de 360° conforme o ângulo da câmera
     const pano = getCellArenaPanorama();
-    const phi0 = ang + Math.PI;                       // direção que está no meio da tela
     if (pano) {
-        let u0 = (-phi0 * CA_F) % CA_PANO_W;
-        if (u0 < 0) u0 += CA_PANO_W;
-        const x0 = CA_CX - u0;
-        ctx.drawImage(pano, x0, 0);
-        ctx.drawImage(pano, x0 + CA_PANO_W, 0);
-        if (x0 > 0) ctx.drawImage(pano, x0 - CA_PANO_W, 0);
+        c3BlitPanorama(pano, ang, CA_F, CA_CX);
     } else {
         ctx.fillStyle = "#8cc8f2";
         ctx.fillRect(0, 0, canvas.width, CA_HY + 6);
@@ -4053,17 +4045,15 @@ function drawFreezaShipScene(ang) {
 const NV_PANO_W = Math.round(Math.PI * 2 * NV_CAM.F);
 let nvPanorama = null;
 function getFreezaShipPanorama() {
-    if (nvPanorama) return nvPanorama;
-    const c = document.createElement("canvas");
-    c.width = NV_PANO_W;
-    c.height = NV_CAM.HY + 8;
-    const g = c.getContext && c.getContext("2d");
-    if (!g) return null;
-    const W = c.width, base = NV_CAM.HY + 4;
+    if (c3Valida(nvPanorama)) return nvPanorama;
+    const f = c3NovaFaixa(NV_PANO_W, NV_CAM.HY + 8);   // na resolução real da tela (nítido)
+    if (!f) return null;
+    const { c, g } = f;
+    const W = NV_PANO_W, base = NV_CAM.HY + 4;
     const ceu = g.createLinearGradient(0, 0, 0, base);
     ceu.addColorStop(0, "#7ccf5a"); ceu.addColorStop(0.6, "#c4e87a"); ceu.addColorStop(1, "#e9f6b4");
     g.fillStyle = ceu;
-    g.fillRect(0, 0, W, c.height);
+    g.fillRect(0, 0, W, c.__h);
     // nuvens claras
     g.fillStyle = "rgba(245, 255, 220, 0.75)";
     for (let i = 0; i < 12; i++) {
@@ -4125,14 +4115,8 @@ const NV_CHAO = (() => {
 
 function drawFreezaShipGround(ang) {
     const pano = getFreezaShipPanorama();
-    const phi0 = ang + Math.PI;
     if (pano) {
-        let u0 = (-phi0 * NV_CAM.F) % NV_PANO_W;
-        if (u0 < 0) u0 += NV_PANO_W;
-        const x0 = NV_CAM.CX - u0;
-        ctx.drawImage(pano, x0, 0);
-        ctx.drawImage(pano, x0 + NV_PANO_W, 0);
-        if (x0 > 0) ctx.drawImage(pano, x0 - NV_PANO_W, 0);
+        c3BlitPanorama(pano, ang, NV_CAM.F, NV_CAM.CX);
     } else {
         ctx.fillStyle = "#c4e87a";
         ctx.fillRect(0, 0, canvas.width, NV_CAM.HY);
@@ -6418,9 +6402,17 @@ function render() {
             ctx.textAlign = "center";
             ctx.fillText(String(i + 1), node.x - STAGE_MAP_NODE_R + 3, node.y - STAGE_MAP_NODE_R + 6);
 
+            // fundo escuro atrás do nome e dos estados: a linha tracejada entre as fases não passa por cima do texto
+            {
+                const linhas = node.unlocked ? (node.record > 0 ? 4 : 3) : 1;
+                ctx.font = "bold 9px monospace";
+                const larg = Math.min(118, ctx.measureText(node.name).width) + 10;
+                ctx.fillStyle = "rgba(8, 12, 30, 0.92)";
+                ctx.fillRect(Math.round(node.x - larg / 2), Math.round(node.y + STAGE_MAP_NODE_R + 3), Math.round(larg), linhas === 1 ? 12 : linhas * 9 + 5);
+            }
             ctx.fillStyle = node.unlocked ? "#dbe6ff" : "#5a5a68";
             ctx.font = "bold 9px monospace";
-            ctx.fillText(node.name, node.x, node.y + STAGE_MAP_NODE_R + 12, 110);
+            ctx.fillText(node.name, node.x, node.y + STAGE_MAP_NODE_R + 12, 116);
             if (node.unlocked) {
                 const p = stageProgress[node.id] || {};
                 ctx.font = "8px monospace";

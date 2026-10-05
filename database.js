@@ -48,6 +48,9 @@ function setRenderScale(escala) {
     if (canvasEl.width !== w) canvasEl.width = w;
     if (canvasEl.height !== h) canvasEl.height = h;
     renderScale = escala;
+    // com mais pixels de verdade, o navegador estica a imagem de forma suave (esticar "em blocos" dobrava umas
+    // linhas e outras não, deixando letras amassadas); só a resolução 1x mantém o visual de pixel puro
+    if (canvasEl.style) canvasEl.style.imageRendering = escala > 1 ? "auto" : "pixelated";
     applyRenderTransform();
 }
 const fileInput = document.getElementById("file-input");
