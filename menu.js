@@ -195,7 +195,7 @@ function prepareNextStageCardThumb() {
     selectedStage = stg.id;
     world.stageScrollX = 0;
     ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    applyRenderTransform();
     try { drawStageBackground(); } finally { ctx.restore(); }
     selectedStage = antesFase;
     world.stageScrollX = antesScroll;
@@ -206,7 +206,7 @@ function prepareNextStageCardThumb() {
     const cor = document.createElement("canvas");
     cor.width = w; cor.height = h;
     const g = cor.getContext("2d");
-    if (g) g.drawImage(canvas, (canvas.width - srcW) / 2, 0, srcW, srcH, 0, 0, w, h);
+    if (g) g.drawImage(canvasEl, (canvas.width - srcW) / 2 * renderScale, 0, srcW * renderScale, srcH * renderScale, 0, 0, w, h);
     const cinza = document.createElement("canvas");
     cinza.width = w; cinza.height = h;
     const gc = cinza.getContext("2d");
@@ -477,6 +477,70 @@ function getCharacterCardImage(cItem) {
         databaseImageCache[cItem.defaultUrl] = img;
     }
     return databaseImageCache[cItem.defaultUrl];
+}
+// Retrato dos cartões (SELEÇÃO DE PERSONAGEM e DATABASE): personagem grande, liso (sem serrilhado), sem distorção
+// e na resolução real da tela. Desenhos do jogo/construtor (SVG) são refeitos no tamanho exato e recortados nas
+// bordas vazias, então o personagem ocupa o cartão; vale igual para personagens novos criados no editor.
+// Imagens enviadas (folhas de sprite) usam o 1º quadro, sem esticar. Fica guardado por personagem e tamanho.
+const cardPortraitCache = new Map();
+function getCardPortrait(cItem, w, h) {
+    const src = cItem && cItem.defaultUrl;
+    if (!src || !String(src).startsWith("data:image/svg") || typeof document === "undefined") return null;
+    const pw = Math.max(1, Math.round(w * renderScale)), ph = Math.max(1, Math.round(h * renderScale));
+    const chave = src.length + ":" + src.slice(-48) + "|" + pw + "x" + ph;
+    if (cardPortraitCache.has(chave)) return cardPortraitCache.get(chave);
+    cardPortraitCache.set(chave, null);
+    if (cardPortraitCache.size > 160) cardPortraitCache.delete(cardPortraitCache.keys().next().value);
+    // desenha 2x maior que o espaço (para ainda caber depois de cortar as bordas vazias) e com bordas suaves
+    const escalaDesenho = 2.2;
+    const larguraSvg = Math.round(ph * escalaDesenho * (96 / 112)), alturaSvg = Math.round(ph * escalaDesenho);
+    const liso = String(src).replace(/shape-rendering%3D%22crispEdges%22/g, "shape-rendering%3D%22geometricPrecision%22")
+        .replace(/width%3D%22[\d.]+%22%20height%3D%22[\d.]+%22/, `width%3D%22${larguraSvg}%22%20height%3D%22${alturaSvg}%22`);
+    const img = new Image();
+    img.onload = () => {
+        try {
+            const c = document.createElement("canvas");
+            c.width = larguraSvg; c.height = alturaSvg;
+            const g = c.getContext("2d", { willReadFrequently: true });
+            g.drawImage(img, 0, 0, larguraSvg, alturaSvg);
+            // recorta as bordas transparentes (o desenho tem margem para aura/cabelo)
+            const d = g.getImageData(0, 0, larguraSvg, alturaSvg).data;
+            let x0 = larguraSvg, y0 = alturaSvg, x1 = -1, y1 = -1;
+            for (let y = 0; y < alturaSvg; y++) for (let x = 0; x < larguraSvg; x++) {
+                if (d[(y * larguraSvg + x) * 4 + 3] > 24) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+            }
+            if (x1 < 0) { cardPortraitCache.set(chave, c); return; }
+            const cw = x1 - x0 + 1, ch = y1 - y0 + 1, k = Math.min(pw / cw, ph / ch);
+            const out = document.createElement("canvas");
+            out.width = pw; out.height = ph;
+            const o = out.getContext("2d");
+            o.imageSmoothingEnabled = true;
+            if ("imageSmoothingQuality" in o) o.imageSmoothingQuality = "high";
+            const dw = cw * k, dh = ch * k;
+            o.drawImage(c, x0, y0, cw, ch, (pw - dw) / 2, ph - dh, dw, dh);   // pés embaixo, centralizado
+            cardPortraitCache.set(chave, out);
+        } catch (e) { cardPortraitCache.delete(chave); }
+    };
+    img.src = liso;
+    return null;
+}
+function drawCharacterPortrait(cItem, x, y, w, h) {
+    const retrato = getCardPortrait(cItem, w, h);
+    if (retrato) { ctx.drawImage(retrato, x, y, w, h); return true; }
+    let img = getCutoutSource(getCharacterCardImage(cItem), cItem && cItem.bgRemoval);
+    if (!isDrawableSource(img)) return false;
+    try {
+        const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
+        // folha de sprite: só o 1º quadro
+        const fw = cItem && cItem.frameWidth && cItem.totalFrames > 1 ? Math.min(iw, cItem.frameWidth) : iw;
+        const fh = cItem && cItem.frameHeight && cItem.totalFrames > 1 ? Math.min(ih, cItem.frameHeight) : ih;
+        const k = Math.min(w / fw, h / fh), dw = fw * k, dh = fh * k;
+        const liso = ctx.imageSmoothingEnabled;
+        ctx.imageSmoothingEnabled = !(img.__svgImage || String(img.src || "").includes("crispEdges")) ? true : liso;
+        ctx.drawImage(img, 0, 0, fw, fh, x + (w - dw) / 2, y + h - dh, dw, dh);
+        ctx.imageSmoothingEnabled = liso;
+    } catch (e) { return false; }
+    return true;
 }
 const DATABASE_COLUMNS = 5;
 const FULLSCREEN_BUTTON = { w: 44, h: 28, margin: 8 };
@@ -4243,20 +4307,23 @@ function drawPlayerEntity(p, charData, isBoss = false) {
         artY = feetY - artH * (103 / 112);
     }
     drawKiAura(p, charData, artX + artW / 2, artY + artH * (103 / 112), artW, artH * 0.9);
-    const pixelArt = isDrawableSource(animationFrame) ? getPixelArtSource(animationFrame, artW, artH) : null;
+    // pixel art feita na resolução REAL da tela (renderScale): bem mais nítida em telas grandes e na TV
+    const pixelArt = isDrawableSource(animationFrame) ? getPixelArtSource(animationFrame, artW * renderScale, artH * renderScale) : null;
     // Último desenho deste personagem: se o quadro novo ainda não ficou pronto (1ª vez daquele movimento/tamanho),
     // repete o último em vez de sumir ou trocar de estilo por um instante (era a "piscada" ao se mover).
     const last = p.lastSpriteDraw && p.lastSpriteDraw.key === fallbackKey ? p.lastSpriteDraw : null;
     const pixelPending = isPixel && !pixelArt;
     if (pixelArt) {
-        // pixel art no tamanho exato: desenha 1:1 numa posição inteira (sem esticar = pixels nítidos)
-        ctx.drawImage(pixelArt.img, Math.round(artX) - pixelArt.pad, Math.round(artY) - pixelArt.pad);
-        p.lastSpriteDraw = { key: fallbackKey, img: pixelArt.img, pad: pixelArt.pad, w: artW, h: artH };
+        // pixel art no tamanho exato: 1 pixel do desenho = 1 pixel real da tela (sem esticar = nítido)
+        const k = renderScale, ax = Math.round(artX * k) / k, ay = Math.round(artY * k) / k;
+        ctx.drawImage(pixelArt.img, ax - pixelArt.pad / k, ay - pixelArt.pad / k, pixelArt.img.width / k, pixelArt.img.height / k);
+        p.lastSpriteDraw = { key: fallbackKey, img: pixelArt.img, pad: pixelArt.pad / k, k, w: artW, h: artH };
     } else if (last && (pixelPending || !isDrawableSource(animationFrame))) {
         if (last.pad) {
             const sx = artW / last.w, sy = artH / last.h, smooth = ctx.imageSmoothingEnabled;
             ctx.imageSmoothingEnabled = false;
-            ctx.drawImage(last.img, Math.round(artX - last.pad * sx), Math.round(artY - last.pad * sy), last.img.width * sx, last.img.height * sy);
+            const lk = last.k || 1;
+            ctx.drawImage(last.img, artX - last.pad * sx, artY - last.pad * sy, last.img.width / lk * sx, last.img.height / lk * sy);
             ctx.imageSmoothingEnabled = smooth;
         } else {
             ctx.drawImage(last.img, artX, artY, artW, artH);
@@ -5519,6 +5586,7 @@ function render() {
     pollGamepadMenu(deltaTime);
     pollControlsTestExit();
 
+    applyRenderTransform();   // base do quadro: escala da resolução real (sem tremor/rotação sobrando)
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     ctx.save();
@@ -5715,16 +5783,7 @@ function render() {
             ctx.strokeRect(cx, cy, UI.GRID_CARD_WIDTH, UI.GRID_CARD_HEIGHT);
 
             let cItem = characterDB[key];
-            let spriteImg = getCharacterCardImage(cItem);
-
-            spriteImg = getCutoutSource(spriteImg, cItem && cItem.bgRemoval);
-            if (isDrawableSource(spriteImg)) {
-                try {
-                    const spriteWidth = spriteImg.naturalWidth || spriteImg.width;
-                    const spriteHeight = spriteImg.naturalHeight || spriteImg.height;
-                    ctx.drawImage(spriteImg, 0, 0, spriteWidth, spriteHeight, cx + 48, cy + 10, 40, 40);
-                } catch (e) {}
-            } else {
+            if (!drawCharacterPortrait(cItem, cx + 6, cy + 4, UI.GRID_CARD_WIDTH - 12, 64)) {
                 ctx.fillStyle = "#0b1d37";
                 ctx.fillRect(cx + 48, cy + 10, 40, 40);
                 ctx.strokeStyle = "#f2a900";
@@ -5734,7 +5793,7 @@ function render() {
             ctx.fillStyle = "#ffffff";
             ctx.font = "bold 10px monospace";
             ctx.textAlign = "center";
-            ctx.fillText(cItem ? cItem.name : key, cx + UI.GRID_CARD_WIDTH / 2, cy + 70);
+            ctx.fillText(cItem ? cItem.name : key, cx + UI.GRID_CARD_WIDTH / 2, cy + 82);
             endButtonPress(pressed);
         });
         ctx.restore();
@@ -6471,18 +6530,9 @@ function render() {
             ctx.strokeStyle = "#00ffff";
             ctx.strokeRect(cx, cy, layout.cardWidth, layout.cardHeight);
 
-            let spriteImg = getCharacterCardImage(cItem);
-
             const geo = getDatabaseCardGeometry(layout, cx, cy);
 
-            spriteImg = getCutoutSource(spriteImg, cItem && cItem.bgRemoval);
-            if (isDrawableSource(spriteImg)) {
-                try {
-                    const spriteWidth = spriteImg.naturalWidth || spriteImg.width;
-                    const spriteHeight = spriteImg.naturalHeight || spriteImg.height;
-                    ctx.drawImage(spriteImg, 0, 0, spriteWidth, spriteHeight, geo.imageX, geo.imageY, geo.imageSize, geo.imageSize);
-                } catch (e) {}
-            } else {
+            if (!drawCharacterPortrait(cItem, cx + 6, geo.imageY - 4, layout.cardWidth - 12, geo.imageSize + 6)) {
                 ctx.fillStyle = "#1a1a1a";
                 ctx.fillRect(geo.imageX, geo.imageY, geo.imageSize, geo.imageSize);
                 ctx.strokeStyle = "#00ffff";
