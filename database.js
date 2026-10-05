@@ -107,14 +107,23 @@ function fitCanvasToViewport() {
     // Girado por CSS: o que visualmente vira "largura" disponível pro jogo é a ALTURA física da tela (e
     // vice-versa) — é exatamente isso que a rotação troca. Sem essa troca aqui, o canvas calculava o tamanho
     // como se ainda estivesse em pé e ficava pequeno demais, ou saía da área rotacionada.
+    // Área realmente visível: no app (atalho na tela inicial) o innerWidth/innerHeight pode incluir a faixa das
+    // barras do sistema e o jogo ficava descentralizado (mais abaixo/à direita e cortado embaixo). O visualViewport
+    // diz o tamanho que aparece de fato; a altura também vai para o CSS (--altura-visivel), que centraliza o jogo.
+    const vv = window.visualViewport;
+    const janelaW = vv && vv.width > 0 ? Math.min(window.innerWidth, vv.width) : window.innerWidth;
+    const janelaH = vv && vv.height > 0 ? Math.min(window.innerHeight, vv.height) : window.innerHeight;
+    if (document.documentElement && document.documentElement.style && document.documentElement.style.setProperty) {
+        document.documentElement.style.setProperty("--altura-visivel", `${Math.round(janelaH)}px`);
+    }
     const viewportWidth = isForcedLandscape ? Math.max(1, window.innerHeight)
-        : Math.max(1, Math.min(window.innerWidth, containerWidth || window.innerWidth));
+        : Math.max(1, Math.min(janelaW, containerWidth || janelaW));
     // Fora da tela cheia desconta só o espaçamento (padding) de cima e de baixo da página — 12px cada no PC,
     // 8px no celular (ver o CSS do body) —, senão a página passa da altura da janela e aparece rolagem.
     const bodyStyle = typeof getComputedStyle === "function" && document.body ? getComputedStyle(document.body) : null;
     const pagePaddingY = bodyStyle ? (parseFloat(bodyStyle.paddingTop) || 0) + (parseFloat(bodyStyle.paddingBottom) || 0) : 24;
     const viewportHeight = isForcedLandscape ? Math.max(1, window.innerWidth)
-        : Math.max(1, isFullscreen ? window.innerHeight : window.innerHeight - pagePaddingY);
+        : Math.max(1, isFullscreen ? janelaH : janelaH - pagePaddingY);
 
     // A resolução lógica do canvas fica SEMPRE fixa em GAME_WIDTH x GAME_HEIGHT
     // (ver AGENTS.md). Existia aqui um "modo adaptativo" que trocava o canvas.width/
@@ -201,6 +210,7 @@ window.addEventListener("pageshow", refazerEncaixeDaTela);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) refazerEncaixeDaTela(); });
 document.addEventListener("fullscreenchange", refazerEncaixeDaTela);
 window.addEventListener("orientationchange", fitCanvasToViewport);
+if (window.visualViewport && window.visualViewport.addEventListener) window.visualViewport.addEventListener("resize", fitCanvasToViewport);
 
 if (typeof ResizeObserver === "function" && canvas.parentElement) {
     new ResizeObserver(fitCanvasToViewport).observe(canvas.parentElement);
@@ -345,7 +355,8 @@ let hudEditorDragging = false;
 let hudDragOffsetX = 0, hudDragOffsetY = 0;
 let remappingKey = null;
 
-fitCanvasToViewport();
+// No app instalado o tamanho da tela só fica certo um instante depois de abrir: refaz o encaixe logo no início.
+refazerEncaixeDaTela();
 
 // ==================== ACHIEVEMENTS ====================
 
