@@ -52,6 +52,16 @@ The active animation states are `idle`, `flyRight`, `flyLeft`, `flyUp`, `flyDown
 - Preserve frame rectangle positions when changing global frame width/height or spacing. Only selected frames should be moved or spaced.
 - FPS changes in the preview are live. Preview frame selection and reorder operations must not mutate the source sprite sheet.
 
+## Planning big requests
+- For **big requests** (a new stage or mode, a visual/architecture change across many files, anything that touches performance or many systems at once), first reply with a **short plan in Portuguese**: what will change, which files/systems, how it will look, and the risks (performance on phones, memory). Implement only after the user approves (or adjusts) the plan.
+- Small, clear requests (a size/color/text tweak, a single bug fix) go straight to implementation — no plan.
+- In batch mode the plan, when needed, comes after "fazer todas as alterações" and before touching code.
+
+## UPDATES (version notes)
+- `#lista-updates` (index.html) is a list of versions, newest first, starting from 0.1: a `li.upd-versao` header (`<h3>Versão 0.X (ATUAL)</h3><p>summary</p>`) followed by one `li.upd-item` card per change: `<span class="upd-tag">` + `<strong>title</strong>` + `<p>description</p>`.
+- Tags: `upd-novo` NOVO (green) = new in the current version; `upd-corrigido` CORRIGIDO (yellow) = bug fixes; `upd-melhorado` MELHORADO (blue) = improvements to something that existed; `upd-criacao` CRIAÇÃO (gold) = something that did not exist before (older versions).
+- Each PR adds a new version block on top (next number, marked ATUAL); remove "(ATUAL)" from the previous one and turn its NOVO tags into CRIAÇÃO. The ATUALIZAR button compares this list's text, so every PR must change it.
+
 ## Saving tokens (the user pays per use)
 - **Batch mode:** when the user says "espera eu falar" (or similar), only note each request in 1–2 lines (a task) — do not open files, run tests or take screenshots. Start everything only on "fazer todas as alterações", then do one test run and one PR for the whole batch.
 - **Default verification is economical:** the automated tests plus one quick check of what changed. No screenshots unless the user asks or the change is new visual work (then at most 1–2, viewed once). FPS/stress runs, all-device passes and all-screen sweeps only when the user explicitly asks for them.
