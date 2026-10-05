@@ -44,16 +44,25 @@ check("o botão fica dentro do jogo (funciona em tela cheia)", html.indexOf('id=
 
 context.__recarregou = 0;
 context.__baixou = [];
+context.__listaServidor = "Novidade A";
 run(`
     location = { href: "https://exemplo/jogo/", protocol: "https:", reload() { __recarregou++; } };
     URL = class { constructor(p, base) { this.href = base + p; } };
     document.querySelectorAll = (sel) => sel === "script[src]" ? [{ src: "https://exemplo/jogo/menu.js" }] : [];
     sessionStorage = { _d: {}, getItem(k) { return this._d[k] || null; }, setItem(k, v) { this._d[k] = v; } };
-    fetch = async (url, opts) => { if (opts && opts.cache === "reload") __baixou.push(url); return { ok: true, headers: { get: () => null } }; };
+    (() => { const ul = document.getElementById("lista-updates") || document.createElement("ul"); ul.id = "lista-updates"; ul.textContent = "Novidade A"; window.__ulUpdates = ul;
+        const get = document.getElementById.bind(document); document.getElementById = (id) => id === "lista-updates" ? ul : get(id); })();
+    DOMParser = class { parseFromString() { return { getElementById: (id) => id === "lista-updates" ? { textContent: __listaServidor } : null }; } };
+    fetch = async (url, opts) => { if (opts && opts.cache === "reload") __baixou.push(url); return { ok: true, headers: { get: () => null }, text: async () => "<html></html>" }; };
 `);
 (async () => {
     await run("atualizarJogoAgora()");
-    check("ATUALIZAR baixa de novo os arquivos do jogo sem usar a cópia guardada", context.__baixou.length >= 3);
+    check("lista de novidades igual: não recarrega (a janela UPDATES continua aberta)", context.__recarregou === 0);
+    check("e o botão avisa que já está atualizado", String(run("document.getElementById('btn-atualizar-rotulo') && document.getElementById('btn-atualizar-rotulo').textContent")).includes("ATUALIZADO") || run("document.getElementById('btn-atualizar-rotulo')") === null);
+    context.__baixou.length = 0;
+    context.__listaServidor = "Novidade B  Novidade A";
+    await run("atualizarJogoAgora()");
+    check("lista de novidades mudou: baixa de novo os arquivos do jogo sem usar a cópia guardada", context.__baixou.length >= 3);
     check("e recarrega o jogo na hora", context.__recarregou === 1);
     summary();
 })();
