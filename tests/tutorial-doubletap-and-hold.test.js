@@ -16,6 +16,7 @@ const parryBtnCenter = (() => { const r = run('getHudButtonRect("parry")'); retu
 check("tocando exatamente onde o botão PARRY ficaria, o jogo não reconhece como esse botão (ele está desativado)", run(`getHudButtonAt(${parryBtnCenter[0]}, ${parryBtnCenter[1]})`) !== "parry");
 
 // a instrução agora pede duplo toque, não mais o botão que não existe
+run("lastInputWasTouch = true;");   // o tutorial mostra os comandos da plataforma em uso (aqui, o toque)
 const lines = run('getTutorialInstructionLines("parry")');
 check("a instrução do passo de PARRY (toque, duplo-toque ligado) pede duplo toque, não um botão", /2 VEZES/.test(lines[0]) && !/BOTÃO/.test(lines[0]));
 

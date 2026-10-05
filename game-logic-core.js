@@ -219,14 +219,16 @@ function pickCornerColor(data, width, height) {
 // Índices: 0 cruz, 1 bola, 2 quadrado, 3 triângulo, 4 L1, 5 R1, 6 L2, 7 R2, 8 criar, 9 options, 10 L3, 11 R3,
 // 12-15 direcional (cima, baixo, esquerda, direita), 16 PS, 17 TOUCHPAD (clique).
 const PAD_ACTIONS = ["attack", "parry", "charge", "transform", "special", "pause"];
+// Padrão escolhido pelo jogador (PADRÃO PS5). Mudou? Suba PAD_BINDINGS_VERSION para quem não personalizou.
 const DEFAULT_PAD_BINDINGS = {
-    attack: [0],          // cruz
-    parry: [1],           // bola
-    charge: [2],          // quadrado
+    attack: [2],          // quadrado
+    parry: [5],           // R1
+    charge: [0],          // cruz
     transform: [3],       // triângulo
-    special: [5, 7, 17],  // R1, R2 ou clique no touchpad
+    special: [1],         // bola
     pause: [9]            // options
 };
+const PAD_BINDINGS_VERSION = 2;
 const PAD_BUTTON_NAMES = ["CRUZ", "BOLA", "QUADRADO", "TRIÂNGULO", "L1", "R1", "L2", "R2", "CRIAR", "OPTIONS", "L3", "R3", "↑", "↓", "←", "→", "PS", "TOUCHPAD"];
 
 function getPadButtonName(index) {
@@ -651,6 +653,7 @@ if (typeof module !== "undefined" && module.exports) {
         pickCornerColor,
         PAD_ACTIONS,
         DEFAULT_PAD_BINDINGS,
+        PAD_BINDINGS_VERSION,
         PAD_BUTTON_NAMES,
         getPadButtonName,
         normalizePadBindings,

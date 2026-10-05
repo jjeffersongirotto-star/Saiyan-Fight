@@ -37,12 +37,12 @@ const pauseRect = { x: 800 / 2 - 22, y: 8, w: 44, h: 28 };
 check("balão do tutorial fica abaixo do ícone de pausa, nunca em cima", ui.bubbleY >= pauseRect.y + pauseRect.h);
 
 // os botões PULAR/SAIR do próprio painel também não podem cair em cima dos botões do jogo
-const pularRect = ui.pular, sairRect = ui.sair;
+const pularRect = ui.pular;
+check("o tutorial não tem mais o botão SAIR (sai pela pausa)", ui.sair === undefined);
 const rectsOverlap = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 hudButtons.forEach(key => {
     const r = run(`getHudButtonRect("${key}")`);
     check(`botão PULAR do tutorial não cai em cima do botão de ${key.toUpperCase()}`, !rectsOverlap(pularRect, r));
-    check(`botão SAIR do tutorial não cai em cima do botão de ${key.toUpperCase()}`, !rectsOverlap(sairRect, r));
 });
 
 // ---------- tutorial: tocar de verdade no botão de ATAQUE (passo 2) funciona, sem nada bloqueando ----------

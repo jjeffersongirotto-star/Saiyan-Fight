@@ -77,7 +77,7 @@ check("choque: segurar a tecla de ATAQUE conta só 1 aperto (a repetição autom
 
 let botaoApertado = false;
 run("navigator.getGamepads = () => [__pad]");
-context.__pad = { connected: true, id: "teste", axes: [0, 0], buttons: Array.from({ length: 18 }, (_, i) => ({ get pressed() { return i === 0 && botaoApertado; }, value: 0 })) };
+context.__pad = { connected: true, id: "teste", axes: [0, 0], buttons: Array.from({ length: 18 }, (_, i) => ({ get pressed() { return i === 2 && botaoApertado; }, value: 0 })) };
 run("isTouchDevice = false; world.clashMashP1 = 0; padPrevPressed.p1 = {}");   // PC: o 1º controle é do jogador 1
 for (let i = 0; i < 4; i++) {
     botaoApertado = true; run("pollGamepads(1/60)");

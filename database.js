@@ -348,6 +348,12 @@ function initSettings() {
         vibrationEnabled = readStorage("saiyan_vibration") !== "false";
         touchAutoFire = readStorage("saiyan_autofire") !== "false";
         padBindings = normalizePadBindings(readJsonStorage("saiyan_pad_bindings", null));
+        if (readStorage("saiyan_pad_bindings_v") !== String(PAD_BINDINGS_VERSION)) {
+            // padrão do controle mudou: todos passam para o novo PADRÃO PS5 uma vez
+            padBindings = normalizePadBindings(null);
+            writeStorage("saiyan_pad_bindings", JSON.stringify(padBindings));
+            writeStorage("saiyan_pad_bindings_v", String(PAD_BINDINGS_VERSION));
+        }
         autofireHintSeen = readStorage("saiyan_hint_autofire") === "1";
         applyEffectiveControlMode();
 

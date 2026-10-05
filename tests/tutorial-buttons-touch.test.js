@@ -9,16 +9,11 @@ const { createHarness } = require("./harness.js");
 const h = createHarness(__dirname + "/..", 800);
 const { run, check, fire, touch, summary } = h;
 
-// ---------- toque de verdade no botão SAIR ----------
+// ---------- o botão SAIR saiu do tutorial (para sair: pausa > SAIR PARA MENU) ----------
 run("isTouchDevice = true; startTutorial(); tutorialStepIndex = 1; setupTutorialStep()");
-const uiWaiting = run("getTutorialUiLayout()");
-const sairCenter = [uiWaiting.sair.x + uiWaiting.sair.w / 2, uiWaiting.sair.y + uiWaiting.sair.h / 2];
-fire("touchstart", [touch(1, sairCenter[0], sairCenter[1])], [touch(1, sairCenter[0], sairCenter[1])]);
-// como um botão físico: encostar o dedo só "afunda" o botão; a ação acontece ao soltar
-check("só encostar o dedo no SAIR ainda não sai do tutorial (o botão está afundado)", run("gameState") === "tutorial");
-fire("touchend", [], [touch(1, sairCenter[0], sairCenter[1])]);
-run("flushButtonActions()");   // a ação acontece depois de o botão subir de volta
-check("tocar de verdade no botão SAIR volta pro menu (antes não respondia no celular)", run("gameState") === "menu");
+check("o tutorial não tem mais o botão SAIR", run("getTutorialUiLayout().sair") === undefined);
+run("pauseGame(); (() => { const r = MENU_LAYOUT.paused.exit; handleMenuClick(r.x + r.w / 2, r.y + r.h / 2); })()");
+check("pela pausa, SAIR PARA MENU sai do tutorial", run("gameState") === "menu");
 
 // ---------- toque de verdade no botão PULAR ----------
 run("startTutorial()");
