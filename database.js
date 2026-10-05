@@ -2308,7 +2308,10 @@ function getBuilderAppearanceFromForm() {
     const autoSkin = document.getElementById("build-skin-auto");
     const skinInput = document.getElementById("build-skin");
     app.skinColor = (autoSkin && autoSkin.checked) ? "" : (skinInput ? skinInput.value : "");
-    return normalizeAppearance(app);
+    const final = normalizeAppearance(app);
+    // com a cor padrão marcada, a amostra mostra a cor da raça escolhida (antes ficava a da raça anterior)
+    if (autoSkin && autoSkin.checked && skinInput) skinInput.value = spriteSkin(final);
+    return final;
 }
 
 function setBuilderFormFromAppearance(appearance) {
@@ -2321,6 +2324,13 @@ function setBuilderFormFromAppearance(appearance) {
     const skinInput = document.getElementById("build-skin");
     if (autoSkin) autoSkin.checked = !app.skinColor;
     if (skinInput) skinInput.value = app.skinColor || spriteSkin(app);
+}
+
+// Escolher uma cor de pele vale em qualquer raça: desmarca "usar cor padrão da raça" na hora.
+function escolherCorDaPele() {
+    const autoSkin = document.getElementById("build-skin-auto");
+    if (autoSkin) autoSkin.checked = false;
+    refreshBuilderPreview();
 }
 
 function applyBuilderPreset() {

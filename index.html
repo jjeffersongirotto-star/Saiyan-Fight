@@ -1123,8 +1123,8 @@
                             <option value="jovem">Jovem/Criança</option><option value="gordo">Gordo</option>
                         </select>
                     </div>
-                    <div class="form-group"><label for="build-skin">COR DA PELE (vazio = da raça)</label>
-                        <input type="color" id="build-skin" value="#f3c29a" oninput="refreshBuilderPreview()">
+                    <div class="form-group"><label for="build-skin">COR DA PELE</label>
+                        <input type="color" id="build-skin" value="#f3c29a" oninput="escolherCorDaPele()">
                         <label style="font-weight:normal; margin-top:4px;"><input type="checkbox" id="build-skin-auto" checked onchange="refreshBuilderPreview()"> usar cor padrão da raça</label>
                     </div>
                 </div>
@@ -1312,11 +1312,13 @@
                 Novidades e correções do jogo.
             </p>
             <ul id="lista-updates" style="margin: 0 0 18px; color: #ddd; line-height: 1.5; padding: 0 4px 0 0; list-style: none; overflow-y: auto;">
-                <li class="upd-versao"><h3>Versão 0.68 (ATUAL)</h3><p>Músculos e controles</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Músculos estilo Dragon Ball</strong><p>Sem camisa: peitoral com volume, gomos do abdômen, oblíquos, bíceps, antebraço, coxa e panturrilha marcados. Com roupa, o tecido marca o peito, os braços e as coxas. A força das marcas segue o porte físico, no editor e na luta.</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Novo padrão de teclas do PC</strong><p>Jogador 1: setas para mover, mouse esquerdo ataca, S carrega, A transforma, ESPAÇO parry e Q especial. Jogador 2 no teclado numérico: 5/2/1/3 movem, ENTER ataca, NUM ENTER carrega, 9 transforma, 0 parry e 7 especial.</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Tela CONTROLE JOYSTICK mais limpa</strong><p>SENSIBILIDADE DO ANALÓGICO, sem as linhas de texto embaixo dos botões e com mais espaço abaixo do título.</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Personagem do construtor salvo certo</strong><p>Mudar o modelo ou o cabelo no CONSTRUTOR e clicar em SALVAR agora salva o que aparece na prévia (antes podia salvar o Goku).</p></li>
+                <li class="upd-versao"><h3>Versão 0.69 (ATUAL)</h3><p>Cor da pele livre</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Cor da pele em qualquer raça</strong><p>No CONSTRUTOR, escolher uma cor de pele já vale na hora, em qualquer raça (desmarca sozinho "usar cor padrão da raça"). Com a opção marcada, a amostra mostra a cor da raça escolhida.</p></li>
+                <li class="upd-versao"><h3>Versão 0.68</h3><p>Músculos e controles</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Músculos estilo Dragon Ball</strong><p>Sem camisa: peitoral com volume, gomos do abdômen, oblíquos, bíceps, antebraço, coxa e panturrilha marcados. Com roupa, o tecido marca o peito, os braços e as coxas. A força das marcas segue o porte físico, no editor e na luta.</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Novo padrão de teclas do PC</strong><p>Jogador 1: setas para mover, mouse esquerdo ataca, S carrega, A transforma, ESPAÇO parry e Q especial. Jogador 2 no teclado numérico: 5/2/1/3 movem, ENTER ataca, NUM ENTER carrega, 9 transforma, 0 parry e 7 especial.</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Tela CONTROLE JOYSTICK mais limpa</strong><p>SENSIBILIDADE DO ANALÓGICO, sem as linhas de texto embaixo dos botões e com mais espaço abaixo do título.</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Personagem do construtor salvo certo</strong><p>Mudar o modelo ou o cabelo no CONSTRUTOR e clicar em SALVAR agora salva o que aparece na prévia (antes podia salvar o Goku).</p></li>
                 <li class="upd-versao"><h3>Versão 0.67</h3><p>Aura limpa e histórico completo</p></li>
                 <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Sem os riscos da aura antiga</strong><p>Saíram os riscos de luz que subiam em volta dos personagens; fica só a aura nova em labareda.</p></li>
                 <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>UPDATES com todo o histórico</strong><p>Uma versão para cada atualização do jogo, da primeira (0.1) até esta.</p></li>

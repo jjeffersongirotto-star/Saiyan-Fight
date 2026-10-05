@@ -21,6 +21,13 @@ check("salvo com a aparência do construtor (não a do Goku)", run(`characterDB[
 check("o card usa o desenho dele", run(`characterDB['${chave}'].animations.idle[0] === getProceduralFrameUrls(characterDB['${chave}'].builderAppearance, 'idle')[0]`) === true);
 run("closeModal(); document.getElementById('modal-alert').style.display = 'none'");
 
+// ---------- cor da pele em qualquer raça ----------
+run("openModal(null); setBuilderFormFromAppearance(Object.assign({}, SPRITE_PRESETS.trunks.appearance, { race: 'Namekuseijin', skinColor: '' }))");
+check("com a cor padrão, a amostra mostra a cor da raça", run("getBuilderAppearanceFromForm(); document.getElementById('build-skin').value") === run("SPRITE_RACE_SKIN.Namekuseijin"));
+run("document.getElementById('build-skin').value = '#f3c29a'; escolherCorDaPele()");
+check("escolher a cor desmarca o padrão da raça e vale no personagem", run("getBuilderAppearanceFromForm().skinColor") === "#f3c29a");
+run("closeModal()");
+
 // ---------- padrão das teclas do PC ----------
 check("J1: setas, mouse esquerdo ataca, S carrega, A transforma, espaço parry, Q especial",
     run("JSON.stringify(keyBindings.p1)") === JSON.stringify({ up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight", attack: "MouseLeft", charge: "KeyS", transform: "KeyA", parry: "Space", special: "KeyQ" }));
