@@ -2710,7 +2710,7 @@ function getTutorialInstructionLines(stepKey) {
     const plataforma = getActiveInputPlatform();
     if (plataforma === "controle") {
         const padNames = { move: "ANALÓGICO ESQUERDO OU DIRECIONAL", attack: describePadBinding(padBindings.attack), charge: describePadBinding(padBindings.charge), parry: describePadBinding(padBindings.parry), transform: describePadBinding(padBindings.transform), special: describePadBinding(padBindings.special), pause: describePadBinding(padBindings.pause) };
-        lines.push(`CONTROLE: ${padNames[stepKey]}   (CREATE = PULAR, OPTIONS = PAUSA/SAIR)`);
+        lines.push(`CONTROLE: ${padNames[stepKey]}`);
         if (stepKey === "charge") lines.push("(SEGURE POR UM INSTANTE)");
     } else if (plataforma === "toque") {
         if (stepKey === "move") {
