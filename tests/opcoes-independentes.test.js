@@ -14,7 +14,7 @@ const html = fs.readFileSync(__dirname + "/../index.html", "utf8");
 const IDS = { "gender": "gender", "race": "race", "build": "build", "hair-style": "hairStyle", "ear-type": "earType", "head-feature": "headFeature",
     "eye-type": "eyeType", "mouth-type": "mouthType", "body-marks": "bodyMarks", "scar": "scar", "tail": "tail", "wings": "wings", "inner-shirt": "innerShirt",
     "outer-shirt": "outerShirt", "pants": "pants", "symbol": "symbol", "shoes": "shoes", "gloves": "gloves", "hat": "hat", "cape": "cape",
-    "accessory": "accessory", "back-weapon": "backWeapon" };
+    "accessory": "accessory", "back-weapon": "backWeapon", "arm-pose": "armPose" };
 const campos = {};
 for (const m of html.matchAll(/<select id="build-([a-z-]+)"[^>]*>([\s\S]*?)<\/select>/g)) {
     if (IDS[m[1]]) campos[IDS[m[1]]] = [...m[2].matchAll(/value="([^"]*)"/g)].map(x => x[1]);
