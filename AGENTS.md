@@ -68,6 +68,7 @@ The active animation states are `idle`, `flyRight`, `flyLeft`, `flyUp`, `flyDown
 - Don't stop to ask for confirmation when the request is clear; ask one single question up front only when a visual request lacks "how it should look" and guessing would likely mean redoing it.
 - Keep replies short: a brief summary at the end, not a replay of every step.
 - After a PR is merged, suggest starting the next batch in a new conversation (long conversations cost more per message).
+- PR flow (the user's choice): after opening a PR, turn on GitHub auto-merge for it (`enable_pr_auto_merge`) so it merges by itself once CI is green; never merge directly. After the merge, reset the work branch to `main` with a force push (`git fetch -q origin main && git checkout -qB claude/repository-verification-pacq7h origin/main && git push -qf origin claude/repository-verification-pacq7h`; allowed in `.claude/settings.json`).
 
 ## Run and validation
 - Open [index.html](index.html) directly in a browser for quick checks, or serve the folder locally with a simple static server if browser restrictions require it.
