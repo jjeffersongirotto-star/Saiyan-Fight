@@ -17,7 +17,8 @@ run(`selectedCharacter = "gohan"; selectedBoss = "vegeta"; gameMode = "singlepla
 check("começar a luta não prepara tudo de uma vez (vai para a fila, sem travar)", run("backgroundWork.frames.length") >= 13 * 4);
 check("cada quadro do jogo adianta só um pedaço da fila", (() => { const antes = tamanhoFila(); run("runBackgroundWork(0)"); return tamanhoFila() === antes - 1; })());
 run("terminarFila()");
-const ssjPronto = (key) => run(`SUB_ANIM_KEYS.every(st => _spriteFrameCache.has(JSON.stringify([normalizeAppearance(characterDB["${key}"].builderAppearance), st, true, "", true])))`);
+// aparência da 1ª transformação (base + diferenças dela, como getTransformedFrames; ex.: o Gohan tira a capa)
+const ssjPronto = (key) => run(`(() => { const t = getCharacterTransformations("${key}")[0], b = characterDB["${key}"].builderAppearance; const app = t.diff && Object.keys(t.diff).length ? spriteTransformAppearance(b, t) : normalizeAppearance(b); return SUB_ANIM_KEYS.every(st => _spriteFrameCache.has(JSON.stringify([app, st, true, "", true]))); })()`);
 check("a fila já calcula o cabelo amarelo dos dois (transformar não trava)", run("backgroundWork.frames.length") === 0 && ssjPronto("gohan") && ssjPronto("vegeta"));
 check("ao começar a luta, todos os movimentos do jogador já estão sendo carregados", todosCarregados("gohan", false));
 check("e os do rival também", todosCarregados("vegeta", false));

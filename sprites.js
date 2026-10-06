@@ -516,11 +516,29 @@ function spriteHair(R, style, color, sway, lift, ssj) {
             break;
         }
         case "trunks_futuro": {
-            back = piece("M-13.6 -4 C-16 8 -15.5 16 -11 20 L11 20 C15.5 16 16 8 13.6 -4 Z");
+            // Trunks do Futuro: curto e liso, repartido ao meio, as laterais cobrindo as orelhas até a mandíbula e
+            // mechas da franja caindo na testa (sem faixa, sem cabelo comprido)
+            back = piece("M-14 -3 C-15.8 5 -15.2 10 -12.6 11.6 L-10 8.4 L10 8.4 L12.6 11.6 C15.2 10 15.8 5 14 -3 Z");
             front = cap() + capShine +
-                piece("M-13.4 -3 C-13.2 -15 -2.5 -15.4 1 -13 Q-5.6 -7.5 -8.4 2.4 Q-12.2 3 -13.4 -3 Z") +
-                piece("M13.4 -3 C13.2 -15 4.5 -15 1 -13 Q7 -7 9 2.4 Q12.4 3 13.4 -3 Z") +
-                piece("M-12.6 0 L-14.8 15 Q-11.6 15.4 -9.6 10 L-9 0 Z") + piece("M12.6 0 L14.8 15 Q11.6 15.4 9.6 10 L9 0 Z");
+                piece("M-13.6 -2 C-13.8 -15 -3 -16 -0.4 -13.6 Q-4.8 -9.4 -7.4 -3.4 Q-8.8 2.4 -9.8 9.4 Q-12.8 10 -13.8 5.6 Z") +
+                piece("M13.6 -2 C13.8 -15 3 -16 0.4 -13.6 Q5.4 -9 8 -3 Q9.4 2.6 10.6 9.4 Q13.2 9.8 14 5.6 Z") +
+                piece(spriteSpike(-1.2, -13.4, -4.6, -4.2, 3.6, 0.6)) + piece(spriteSpike(1.2, -13.4, 4.2, -5.4, 3.4, -0.6)) +
+                shine("M-9 -11 Q-5 -14.6 -1.4 -13.4 Q-5.4 -11.6 -8 -8 Z");
+            break;
+        }
+        case "gohan_ssj2": {
+            // Super Saiyajin 2 do Gohan: muitas mechas finas e afiadas subindo, uma única mecha caindo na testa e,
+            // transformado, raios elétricos azulados estalando em volta do cabelo
+            back = animeSilhouette([[-12, 4], { t: [-21, 2], v: [-14, -4] }, { t: [-27, -14], v: [-13, -11] }, { t: [-25, -29], v: [-9.5, -17] },
+                { t: [-15, -40], v: [-5, -19.5] }, { t: [-4.5, -46], v: [0, -20.5] }, { t: [7, -44], v: [4.5, -20] }, { t: [17.5, -37], v: [8.5, -17] },
+                { t: [25.5, -24], v: [12, -11] }, { t: [27, -9], v: [13.5, -4] }, { t: [20, 4], v: [12, 4] }]) +
+                animeGlow([-8, -19], [-14, -37], 1.8) + animeGlow([-1, -20], [-4.5, -42], 1.8) + animeGlow([5, -19], [7, -40], 1.8) + animeGlow([9, -16], [17, -34], 1.6);
+            front = animeCap() + animePiece(spriteSpike(-8, -10, -11.4, -3.4, 5.4, 0.6)) + animePiece(spriteSpike(-3, -11, -3.6, -4.6, 4.4, 0)) +
+                animePiece(spriteSpike(2.6, -11, 7.4, 4.4, 4.2, -0.9));   // a mecha única caindo na testa
+            if (ssj) {
+                const raio = (pts) => { const d = "M" + pts.map(q => `${_n2(q[0])} ${_n2(q[1])}`).join(" L"); return `<path d="${d}" fill="none" stroke="#5fc8ff" stroke-width="1.6" stroke-linejoin="round" opacity="0.8"/><path d="${d}" fill="none" stroke="#ffffff" stroke-width="0.6" stroke-linejoin="round"/>`; };
+                front += raio([[-26, -22], [-21, -18], [-24, -14], [-18, -10]]) + raio([[22, -34], [19, -29], [24, -26], [20, -21]]) + raio([[-6, -46], [-3, -41], [-7, -38]]);
+            }
             break;
         }
         case "trunks_kid": {
@@ -600,7 +618,7 @@ function spriteHair(R, style, color, sway, lift, ssj) {
     return { back, front };
 }
 
-const SPRITE_SAIYAN_HAIR = ["goku", "vegeta", "gohan", "bardock", "raditz", "broly", "gotenks", "trunks_futuro", "trunks_kid", "ssj_longo"];
+const SPRITE_SAIYAN_HAIR = ["goku", "vegeta", "gohan", "gohan_ssj2", "bardock", "raditz", "broly", "gotenks", "trunks_futuro", "trunks_kid", "ssj_longo"];
 
 // ---------------------------------------------------------------------------
 // TRANSFORMAÇÕES: cada uma guarda só o que muda em relação ao personagem base (diff); a aparência de cada
@@ -837,12 +855,15 @@ function spriteCellHead(R, a, rx, ry) {
         return spritePath(`M${P([b[0] + nx, b[1] + ny])} Q${P([c[0] + nx * 0.6, c[1] + ny * 0.6])} ${P(t)} Q${P([c[0] - nx * 0.6, c[1] - ny * 0.6])} ${P([b[0] - nx, b[1] - ny])} Z`, verde(cor));
     };
     const borda = `L${_n2(-rx - 1.4)} 6 Q${_n2(-rx + 1.6)} 9.6 ${_n2(-rx + 5)} 8 L${_n2(-rx + 4)} 1 Q${_n2(-rx + 4)} -4.6 -1 -6.4 Q${_n2(rx - 3)} -7.4`;
+    // o mesmo volume do outro lado, cobrindo a orelha da frente (carapaça simétrica, como "fones" verdes)
+    const lobo = (cor, sem) => spritePath(`M${_n2(rx + 0.8)} -4.4 L${_n2(rx + 1.4)} 6 Q${_n2(rx - 1.6)} 9.6 ${_n2(rx - 5)} 8 L${_n2(rx - 4)} 1 Q${_n2(rx - 4)} -4.2 ${_n2(rx - 6.4)} -6.6 Z`, verde(cor)) +
+        pinta(rx - 1.6, 1.6, 1) + pinta(rx - 2.4, 6.2, 0.8);
     let s = "";
     if (hf === "capacete_cell1") {
         // coroa orgânica: duas abas largas e achatadas que sobem abrindo em V (para cima e para fora)
         s += ponta([-7, -11], [-15, -22], [-21, -38], 6.8, cel.D);
         s += ponta([6, -12], [13, -24], [17, -40], 7.2, cel.D);
-        s += spritePath(`M${_n2(rx + 0.8)} -3.6 C${_n2(rx + 2)} -19.6 ${_n2(-rx - 3.4)} -21.4 ${_n2(-rx - 2.4)} -4 ${borda} ${_n2(rx + 0.8)} -3.6 Z`, verde(cel.D));
+        s += spritePath(`M${_n2(rx + 0.8)} -3.6 C${_n2(rx + 2)} -19.6 ${_n2(-rx - 3.4)} -21.4 ${_n2(-rx - 2.4)} -4 ${borda} ${_n2(rx + 0.8)} -3.6 Z`, verde(cel.D)) + lobo(cel.D);
         // casco oval preto e liso no meio da testa, com reflexo
         s += `<ellipse cx="0.8" cy="-12" rx="3.2" ry="6.4" fill="${SPRITE_CELL_PRETO}" stroke="${o}" stroke-width="0.8"/><ellipse cx="0" cy="-14" rx="1" ry="2.6" fill="#ffffff" opacity="0.55"/>`;
         [[-9, -10, 1.3], [7.4, -9, 1.1], [-12, -20, 1.2], [-15, -27, 1], [-18, -33, 0.8], [10, -20, 1.2], [13, -28, 1], [15, -34, 0.8], [-9, 2, 1.1], [-6, -16, 0.9]].forEach(([x, y, r]) => { s += pinta(x, y, r); });
@@ -854,11 +875,12 @@ function spriteCellHead(R, a, rx, ry) {
         // duas pontas altas e finas subindo retas pelas laterais, levemente abertas para fora
         s += ponta([-rx + 2.4, -8], [-rx - 1.6, alto * 0.55], [-rx - 1.4, alto], 3.4, lados);
         s += ponta([rx - 3, -8], [rx + 1.2, alto * 0.55], [rx + 1, alto], 3.1, lados);
-        s += spritePath(`M${_n2(rx + 0.8)} -3.6 C${_n2(rx + 2)} -19.6 ${_n2(-rx - 3.4)} -21.4 ${_n2(-rx - 2.4)} -4 ${borda} ${_n2(rx + 0.8)} -3.6 Z`, verde(lados));
+        s += spritePath(`M${_n2(rx + 0.8)} -3.6 C${_n2(rx + 2)} -19.6 ${_n2(-rx - 3.4)} -21.4 ${_n2(-rx - 2.4)} -4 ${borda} ${_n2(rx + 0.8)} -3.6 Z`, verde(lados)) + lobo(lados);
         if (perf) {
-            // perfeito: casco preto-azulado liso cobrindo o alto da cabeça, só entre as pontas
-            s += spritePath(`M${_n2(-rx + 4.4)} -7 C${_n2(-rx + 4)} -20 ${_n2(rx - 4)} -20 ${_n2(rx - 4.2)} -7 Q0 -9.6 ${_n2(-rx + 4.4)} -7 Z`, R.lin(-6, -20, 6, -6, [[0, "#5a5482"], [0.45, "#1e1a3a"], [1, "#07060f"]]));
-            s += `<ellipse cx="-2" cy="-15" rx="2.2" ry="1.2" fill="#ffffff" opacity="0.4"/>`;
+            // perfeito: a placa preta-azulada cobre todo o alto da cabeça ("coco") até logo acima da testa; o verde
+            // fica só nos dois volumes das orelhas e nas pontas
+            s += spritePath(`M${_n2(-rx - 2.6)} -3.4 C${_n2(-rx - 3.6)} -21.6 ${_n2(rx + 2.2)} -19.8 ${_n2(rx + 1)} -3 Q${_n2(rx - 3)} -7.6 0 -7.4 Q${_n2(-rx + 3)} -7.6 ${_n2(-rx - 2.6)} -3.4 Z`, R.lin(-6, -20, 6, -6, [[0, "#5a5482"], [0.45, "#1e1a3a"], [1, "#07060f"]]));
+            s += `<ellipse cx="-3" cy="-15" rx="3" ry="1.4" fill="#ffffff" opacity="0.35"/>`;
         } else {
             // semi-perfeito: placa oval roxo-azulada pequena no meio da testa
             s += `<ellipse cx="0.6" cy="-11.6" rx="3" ry="5.4" fill="${R.lin(-3, -17, 3, -6, [[0, "#8a7ad8"], [0.5, "#3a2f8a"], [1, "#150f3a"]])}" stroke="${o}" stroke-width="0.8"/><ellipse cx="-0.2" cy="-13.6" rx="0.9" ry="2" fill="#ffffff" opacity="0.55"/>`;
@@ -899,9 +921,12 @@ function spriteHeadAccessory(R, a, ctx, skin, pose, rx, ry) {
         s += spritePath(`M${-rx - 0.6} -6.6 Q0 -11.6 ${rx + 0.6} -6.6 L${rx + 0.6} -2.6 Q0 -7.6 ${-rx - 0.6} -2.6 Z`, band);
         s += spritePath(`M${rx - 0.6} -5 Q${rx + 8} ${-3 + sway * 3} ${rx + 12 + sway * 6} ${1 + sway * 4} L${rx + 9 + sway * 5} ${3.4 + sway * 3} Q${rx + 5} ${-1.4} ${rx - 1.6} -2.4 Z`, "#b3182a");
     }
-    if (acc === "scouter") {
-        s += `<path d="M-12.4 -0.6 Q-14 4 -11.6 8" fill="none" stroke="#2b2b30" stroke-width="1.6" stroke-linecap="round"/>`;
-        s += `<ellipse cx="${_n2(-5.4 + (pose.lookX || 0) * 0.9)}" cy="1.6" rx="5" ry="4.3" fill="${R.lin(-9, -3, -2, 6, [[0, "#b8ffd8", 0.75], [1, "#20b866", 0.6]])}" stroke="#123d28" stroke-width="1"/>`;
+    if (acc === "scouter" || acc === "scouter_vermelho") {
+        // scouter: verde (Bardock, Raditz) ou com lente rosa-avermelhada e peça prateada (Vegeta)
+        const verm = acc === "scouter_vermelho";
+        s += `<path d="M-12.4 -0.6 Q-14 4 -11.6 8" fill="none" stroke="${verm ? "#9aa2b0" : "#2b2b30"}" stroke-width="1.6" stroke-linecap="round"/>`;
+        if (verm) s += `<rect x="-15.2" y="-4.4" width="4.6" height="7.6" rx="1.2" fill="${R.lin(-15, -4, -10, 3, [[0, "#ffffff"], [1, "#9aa2b0"]])}" stroke="${SPRITE_OUTLINE}" stroke-width="0.8"/>`;
+        s += `<ellipse cx="${_n2(-5.4 + (pose.lookX || 0) * 0.9)}" cy="1.6" rx="5" ry="4.3" fill="${verm ? R.lin(-9, -3, -2, 6, [[0, "#ffc4dc", 0.8], [1, "#e0306a", 0.65]]) : R.lin(-9, -3, -2, 6, [[0, "#b8ffd8", 0.75], [1, "#20b866", 0.6]])}" stroke="${verm ? "#5a1028" : "#123d28"}" stroke-width="1"/>`;
         s += `<path d="M-8.6 -0.6 Q-6 -2.8 -3 -1.6" fill="none" stroke="#fff" stroke-width="0.9" opacity="0.8" stroke-linecap="round"/>`;
         s += `<circle cx="-11.6" cy="-2.4" r="1.4" fill="#e23b3b" stroke="#123d28" stroke-width="0.6"/>`;
     }
@@ -918,7 +943,7 @@ function spriteHeadAccessory(R, a, ctx, skin, pose, rx, ry) {
 // Roupa de cima: covers = cobre o tronco com a cor principal; chest = cobre o peito; sleeves = mangas da própria
 // roupa. Cada escolha mexe só na sua parte: a calça (pernas) e a camisa (por baixo) têm opção e cor próprias.
 const SPRITE_OUTFITS = {
-    kimono: { covers: true, chest: true }, gi_piccolo: { covers: true, chest: true }, roupa_kaioshin: { covers: true, chest: true },
+    kimono: { covers: true, chest: true }, gi_piccolo: { covers: true, chest: true }, gi_rasgado: { covers: true, chest: true }, roupa_kaioshin: { covers: true, chest: true },
     armadura_saiyajin: { chest: true }, jaqueta_trunks: { covers: true, chest: true, sleeves: "full" },
     colete_fusao: {}, colete_buu: {}, traje_android: { covers: true, chest: true, sleeves: "full" },
     armadura_cell: { covers: true, chest: true, sleeves: "cell" }, armadura_freeza: { chest: true }, armadura_exercito: { chest: true }
@@ -941,11 +966,12 @@ function spriteOutfitSpec(a, skin) {
 
 function spriteBootSpec(a) {
     switch (a.shoes) {
-        case "botas_artes": return { color: a.secondaryColor, trim: a.accentColor, h: 0.5 };
+        case "botas_artes": return { color: "#22356e", trim: "#d23a2a", h: 0.5, cordao: "#e8c040", faixa: "#d23a2a" };
         case "botas_saiyajin": return { color: "#f4f4f6", trim: a.accentColor, h: 0.5 };
-        case "botas_trunks": return { color: "#6d4b2b", trim: "#3d2913", h: 0.5 };
+        case "botas_trunks": return { color: "#f2c21c", trim: "#c99210", h: 0.56, ponta: "#94503e" };
         case "botas_kaioshin": return { color: "#efd28a", trim: a.secondaryColor, h: 0.45 };
         case "botas_marrons": return { color: "#5a3d2b", trim: "#2f2015", h: 0.5 };
+        case "botas_dobradas": return { color: "#b8502a", trim: "#d27040", h: 0.44, dobra: true };
         case "botas_cell": return { color: "#2a2532", trim: "#e9e3ee", h: 0.42 };
         case "caneleiras_freeza": return { color: "#f4f4f2", trim: "#8a4a1a", h: 0.62, guard: true, claws: true };
         case "pes_garras": return { claws: true };
@@ -1019,8 +1045,17 @@ function spriteTorso(R, a, B, spec, skin, pose) {
             d += spritePath(`M${_n2(x0 + 2.6)} ${_n2(y0b + 2)} Q48 ${_n2(y0b - 2)} ${_n2(x1 - 2.6)} ${_n2(y0b + 2)} L${_n2(x1 - 3.4)} 60 Q${_n2(x1 - 4)} 65 ${_n2(48 + ww / 2 + 0.6)} 66.6 L${_n2(48 - ww / 2 - 0.6)} 66.6 Q${_n2(x0 + 4)} 65 ${_n2(x0 + 3.4)} 60 Z`, plate);
             d += `<path d="M48 ${_n2(y0b + 1)} L48 65" stroke="${spriteShade(a.accentColor, -0.15)}" stroke-width="1.1" opacity="0.9"/>`;
             d += `<path d="M${_n2(x0 + 3)} ${_n2(y0b + 2.4)} Q48 ${_n2(y0b - 1)} ${_n2(x1 - 3)} ${_n2(y0b + 2.4)}" fill="none" stroke="${a.accentColor}" stroke-width="1.4"/>`;
-            d += spritePath(`M${_n2(48 - ww / 2 - 1)} 66.6 L${_n2(48 + ww / 2 + 1)} 66.6 L${_n2(48 + hw / 2 + 0.4)} 77 L${_n2(48 - hw / 2 - 0.4)} 77 Z`, R.lin(0, 66, 0, 77, [[0, "#f7f8fb"], [1, "#b5bccb"]]));
-            d += `<path d="M48 67 L48 77" stroke="#8791a8" stroke-width="0.8"/><path d="M${_n2(48 - ww / 2)} 70.6 L${_n2(48 + ww / 2)} 70.6" stroke="${a.accentColor}" stroke-width="1"/>`;
+            // barriga em gomos na cor de destaque (bege-dourado) e as duas abas longas caindo sobre as coxas
+            const ouro = R.lin(0, 60, 0, 90, [[0, spriteShade(a.accentColor, 0.3)], [0.5, a.accentColor], [1, spriteShade(a.accentColor, -0.4)]]);
+            const borda = `stroke="#f4f4f6" stroke-width="0.9" stroke-linejoin="round"`;   // borda branca fina (traço < 1 não engrossa)
+            d += spritePath(`M${_n2(48 - ww / 2 - 1)} 66.6 L${_n2(48 + ww / 2 + 1)} 66.6 L${_n2(48 + hw / 2 + 0.4)} 77 L${_n2(48 - hw / 2 - 0.4)} 77 Z`, ouro, borda, "");
+            d += `<path d="M${_n2(48 - ww / 2)} 69.8 L${_n2(48 + ww / 2)} 69.8 M${_n2(48 - ww / 2 - 0.2)} 73.2 L${_n2(48 + ww / 2 + 0.2)} 73.2" stroke="${spriteShade(a.accentColor, -0.45)}" stroke-width="0.7"/>`;
+            const aba = (side) => {
+                const xi = 48 + side * 0.8, xo = 48 + side * (hw / 2 + 2.6);
+                return spritePath(`M${_n2(xi)} 75 L${_n2(xo)} 74.4 L${_n2(xo + side * 0.8)} 90 Q${_n2((xi + xo) / 2)} 94 ${_n2(xi + side * 1.4)} 89 Z`, ouro, borda, "") +
+                    `<path d="M${_n2(xi + side * 0.6)} 79.4 L${_n2(xo + side * 0.2)} 79 M${_n2(xi + side * 0.8)} 84 L${_n2(xo + side * 0.5)} 83.6" stroke="${spriteShade(a.accentColor, -0.45)}" stroke-width="0.7"/>`;
+            };
+            d += aba(-1) + aba(1);
             break;
         }
         case "jaqueta_trunks": {
@@ -1030,7 +1065,14 @@ function spriteTorso(R, a, B, spec, skin, pose) {
             d += spritePath(`M${_n2(48 - 8)} ${_n2(y0b - 2.4)} L${_n2(48 - 4)} ${_n2(y0b + 2)} L${_n2(48 - 0.8)} ${_n2(y0b - 1)} L${_n2(48 - 3.6)} ${_n2(y0b - 5)} Z`, spriteShade(base, 0.12));
             d += spritePath(`M${_n2(48 + 8)} ${_n2(y0b - 2.4)} L${_n2(48 + 4)} ${_n2(y0b + 2)} L${_n2(48 + 0.8)} ${_n2(y0b - 1)} L${_n2(48 + 3.6)} ${_n2(y0b - 5)} Z`, spriteShade(base, -0.08));
             d += `<path d="M${_n2(x0 + 1.4)} 62 Q${_n2(48 - ww / 2)} 68 ${_n2(48 - ww / 2 - 0.4)} ${yh - 1} M${_n2(x1 - 1.4)} 62 Q${_n2(48 + ww / 2)} 68 ${_n2(48 + ww / 2 + 0.4)} ${yh - 1}" stroke="${spriteShade(base, -0.4)}" stroke-width="0.8" fill="none" opacity="0.7"/>`;
-            d += spritePath(`M${_n2(48 - hw / 2)} ${yh - 3} L${_n2(48 + hw / 2)} ${yh - 3} L${_n2(48 + hw / 2)} ${yh} L${_n2(48 - hw / 2)} ${yh} Z`, spriteShade(shirt, -0.1), "", "");
+            // jaqueta curta: acaba acima da cintura e mostra a regata por baixo; cinto amarelo com a fivela
+            // (branca, centro vermelho, laterais turquesa)
+            d += spritePath(`M${_n2(48 - ww / 2 - 0.4)} 63.4 L${_n2(48 + ww / 2 + 0.4)} 63.4 L${_n2(48 + hw / 2)} ${yh} L${_n2(48 - hw / 2)} ${yh} Z`, R.lin(0, 63, 0, yh, [[0, spriteShade(shirt, -0.25)], [1, shirt]]), "", "");
+            d += `<path d="M${_n2(48 - ww / 2 - 0.8)} 63.4 L${_n2(48 + ww / 2 + 0.8)} 63.4" stroke="${spriteShade(base, -0.5)}" stroke-width="1.4"/>`;
+            const cinto = R.lin(0, 70, 0, 75, [[0, "#ffe27a"], [0.5, "#f2c21c"], [1, "#b88a10"]]);
+            d += spritePath(`M${_n2(48 - hw / 2 - 0.8)} 70.6 L${_n2(48 + hw / 2 + 0.8)} 70.6 L${_n2(48 + hw / 2 + 1)} 74.8 L${_n2(48 - hw / 2 - 1)} 74.8 Z`, cinto);
+            d += spritePath("M45 70.2 L51.4 70.2 L51.4 75.2 L45 75.2 Z", "#f4f6f8", `stroke="${SPRITE_OUTLINE}" stroke-width="0.6"`, "") +
+                `<rect x="46.9" y="71.3" width="2.6" height="2.8" fill="#d8302a"/><rect x="45.4" y="71.6" width="1.1" height="2.2" fill="#4fd0d8"/><rect x="49.9" y="71.6" width="1.1" height="2.2" fill="#4fd0d8"/>`;
             break;
         }
         case "colete_fusao": {
@@ -1050,11 +1092,22 @@ function spriteTorso(R, a, B, spec, skin, pose) {
             d += spritePath("M46 72 L44 81 L48.6 79.2 L49 72.4 Z", spriteShade(a.accentColor, -0.15));
             break;
         }
+        case "gi_rasgado":
         case "gi_piccolo": {
-            d += `<path d="M${_n2(48 - 6)} ${_n2(y0b)} L${_n2(48 + 4)} ${yw - 2} M${_n2(48 + 6)} ${_n2(y0b)} L${_n2(48 - 4)} ${yw - 2}" stroke="${lapel}" stroke-width="1.3" fill="none"/>`;
+            if (spec.kind === "gi_rasgado") {
+                // gi rasgado na luta: decote em V aberto mostrando o peito e bordas desfiadas nos ombros
+                const pele = skin;
+                d += spritePath(`M${_n2(48 - 7.4)} ${_n2(y0b - 0.6)} L${_n2(48 - 5.6)} ${_n2(y0b + 3)} L${_n2(48 - 4.2)} ${_n2(y0b + 4.6)} L${_n2(48 - 3.4)} ${_n2(y0b + 8.6)} L${_n2(48 - 1.6)} ${_n2(y0b + 9.6)} L48 ${_n2(y0b + 14)} L${_n2(48 + 1.6)} ${_n2(y0b + 10)} L${_n2(48 + 3.6)} ${_n2(y0b + 8.4)} L${_n2(48 + 4.4)} ${_n2(y0b + 4.4)} L${_n2(48 + 6)} ${_n2(y0b + 3)} L${_n2(48 + 7.4)} ${_n2(y0b - 0.6)} Z`,
+                    R.lin(44, y0b, 52, y0b + 14, [[0, spriteShade(pele, 0.15)], [1, spriteShade(pele, -0.2)]]), `stroke="${spriteShade(base, -0.5)}" stroke-width="0.8" stroke-linejoin="round"`, "");
+                d += `<path d="M${_n2(48 - 4.6)} ${_n2(y0b + 6)} Q48 ${_n2(y0b + 8.4)} ${_n2(48 + 4.6)} ${_n2(y0b + 6)} M48 ${_n2(y0b + 7.4)} L48 ${_n2(y0b + 12)}" fill="none" stroke="${spriteShade(pele, -0.42)}" stroke-width="0.7"/>`;
+                [-1, 1].forEach(sd => {
+                    const xs = 48 + sd * (sw / 2 - 0.4);
+                    d += spritePath(`M${_n2(xs - sd * 2.4)} ${_n2(y0b + 0.6)} L${_n2(xs + sd * 1.8)} ${_n2(y0b + 1.6)} L${_n2(xs + sd * 0.4)} ${_n2(y0b + 3.2)} L${_n2(xs + sd * 2)} ${_n2(y0b + 4.6)} L${_n2(xs + sd * 0.2)} ${_n2(y0b + 6)} L${_n2(xs - sd * 1)} ${_n2(y0b + 5.4)} Z`, spriteShade(base, -0.05), `stroke="${spriteShade(base, -0.55)}" stroke-width="0.6"`, "");
+                });
+            } else d += `<path d="M${_n2(48 - 6)} ${_n2(y0b)} L${_n2(48 + 4)} ${yw - 2} M${_n2(48 + 6)} ${_n2(y0b)} L${_n2(48 - 4)} ${yw - 2}" stroke="${lapel}" stroke-width="1.3" fill="none"/>`;
             const sash = R.lin(0, 65, 0, 73, [[0, spriteShade(a.secondaryColor, 0.3)], [1, spriteShade(a.secondaryColor, -0.4)]]);
             d += spritePath(`M${_n2(48 - ww / 2 - 1.4)} 65.4 L${_n2(48 + ww / 2 + 1.4)} 65.4 L${_n2(48 + ww / 2 + 2.2)} 72.6 L${_n2(48 - ww / 2 - 2.2)} 72.6 Z`, sash);
-            d += spritePath("M44 72 L42 79.6 L46.4 78.4 L47 72.4 Z", spriteShade(a.secondaryColor, -0.15));
+            if (spec.kind === "gi_piccolo") d += spritePath("M44 72 L42 79.6 L46.4 78.4 L47 72.4 Z", spriteShade(a.secondaryColor, -0.15));
             break;
         }
         case "armadura_freeza": {
@@ -1177,15 +1230,17 @@ function spriteTorsoMarks(R, a, B, skin, x0, x1, ww, y0b) {
             for (let y = y0r + passo * 0.6; y < y1r - 0.4; y += passo) st += `M${_n2(x0r)} ${_n2(y)} L${_n2(x1r)} ${_n2(y)} `;
             return `<path d="${st}" stroke="#8a2f10" stroke-width="0.7" opacity="0.85"/>`;
         };
-        const laranja = (d) => spritePath(d, R.lin(40, 50, 56, 72, [[0, "#ffa060"], [0.5, SPRITE_CELL_LARANJA], [1, "#a8401a"]]));
-        const preto = (d) => spritePath(d, R.lin(44, 48, 52, 66, [[0, "#4a4458"], [0.4, SPRITE_CELL_PRETO], [1, "#050407"]]));
+        // contornos suaves (traço fino num tom escuro da própria peça), como no Cell perfeito — nada de linha preta grossa
+        const suave = (d, fill, traco) => spritePath(d, fill, `stroke="${traco}" stroke-width="0.8" stroke-linejoin="round"`, "");
+        const laranja = (d) => suave(d, R.lin(40, 50, 56, 72, [[0, "#ffa060"], [0.5, SPRITE_CELL_LARANJA], [1, "#a8401a"]]), "#8a2f10");
+        const preto = (d) => suave(d, R.lin(44, 48, 52, 66, [[0, "#4a4458"], [0.4, SPRITE_CELL_PRETO], [1, "#050407"]]), "#2a2436");
         if (m === "cell_imperfeito") {
             // topo do peito e ombros verde escuro, placa laranja riscada até a cintura, escudo preto no meio do peito
-            d += spritePath(`M${P(x0 - 1, y0b + 1)} Q48 ${_n2(y0b - 4.4)} ${P(x1 + 1, y0b + 1)} L${P(x1 - 1.4, y0b + 8)} Q48 ${_n2(y0b + 10.6)} ${P(x0 + 1.4, y0b + 8)} Z`, cel.D);
+            d += suave(`M${P(x0 - 1, y0b + 1)} Q48 ${_n2(y0b - 4.4)} ${P(x1 + 1, y0b + 1)} L${P(x1 - 1.4, y0b + 8)} Q48 ${_n2(y0b + 10.6)} ${P(x0 + 1.4, y0b + 8)} Z`, cel.D, spriteShade(cel.D, -0.45));
             d += laranja(`M${P(48 - ww * 0.46, y0b + 9)} Q48 ${_n2(y0b + 11.4)} ${P(48 + ww * 0.46, y0b + 9)} L${P(48 + ww * 0.42, 69)} L${P(48 - ww * 0.42, 69)} Z`);
             d += listras(48 - ww * 0.44, 48 + ww * 0.44, y0b + 10, 69, 2.2);
             // placa oval preta vertical no meio do peito (do pescoço até a barriga), com reflexo azul-arroxeado
-            d += spritePath(`M48 ${_n2(y0b + 3)} C${P(48 + 5.4, y0b + 3.4)} ${P(48 + 4.6, y0b + 15)} 48 ${_n2(y0b + 18)} C${P(48 - 4.6, y0b + 15)} ${P(48 - 5.4, y0b + 3.4)} 48 ${_n2(y0b + 3)} Z`, R.lin(44, y0b + 3, 52, y0b + 18, [[0, "#5a5482"], [0.4, SPRITE_CELL_PRETO], [1, "#050407"]]));
+            d += suave(`M48 ${_n2(y0b + 3)} C${P(48 + 5.4, y0b + 3.4)} ${P(48 + 4.6, y0b + 15)} 48 ${_n2(y0b + 18)} C${P(48 - 4.6, y0b + 15)} ${P(48 - 5.4, y0b + 3.4)} 48 ${_n2(y0b + 3)} Z`, R.lin(44, y0b + 3, 52, y0b + 18, [[0, "#5a5482"], [0.4, SPRITE_CELL_PRETO], [1, "#050407"]]), "#2a2436");
             d += `<ellipse cx="${_n2(48 - 1.6)}" cy="${_n2(y0b + 8)}" rx="1.3" ry="3.4" fill="#b8b0f0" opacity="0.55"/>`;
             d += laranja(`M${P(48 - hw * 0.34, 69.4)} L${P(48 + hw * 0.34, 69.4)} L${P(48 + hw * 0.2, yh + 2.4)} Q48 ${_n2(yh + 4)} ${P(48 - hw * 0.2, yh + 2.4)} Z`) + listras(48 - hw * 0.3, 48 + hw * 0.3, 69.6, yh + 2.6, 1.9);
             d += spriteCellPintas(x0 + 1, 52, 48 - ww * 0.46, 66, 3.2, 3.2, 3, 21, cel.pinta) + spriteCellPintas(x1 - 1, 52, 48 + ww * 0.46, 66, 3.2, 3.2, 3, 22, cel.pinta);
@@ -1198,7 +1253,7 @@ function spriteTorsoMarks(R, a, B, skin, x0, x1, ww, y0b) {
             d += listras(48 - ww * 0.47, 48 + ww * 0.47, y0b + 12, 69.6, 2.2);
             d += preto(`M${P(48 - sw * 0.3, y0b + 5)} Q48 ${_n2(y0b + 7.6)} ${P(48 + sw * 0.3, y0b + 5)} L${P(48 + 2.6, y0b + 17)} L${P(48, y0b + 20)} L${P(48 - 2.6, y0b + 17)} Z`);
             d += `<ellipse cx="48" cy="${_n2(y0b + 11.6)}" rx="2.2" ry="2.8" fill="${R.lin(46, y0b + 9, 50, y0b + 14, [[0, "#b0a8ff"], [0.5, "#4a3fc0"], [1, "#1a1450"]])}" stroke="${SPRITE_OUTLINE}" stroke-width="0.6"/><ellipse cx="47.3" cy="${_n2(y0b + 10.6)}" rx="0.7" ry="1" fill="#ffffff" opacity="0.7"/>`;
-            d += spritePath(`M${P(48 - hw * 0.46, 69.2)} L${P(48 + hw * 0.46, 69.2)} L${P(48 + hw * 0.3, yh + 3)} Q48 ${_n2(yh + 5)} ${P(48 - hw * 0.3, yh + 3)} Z`, cel.D);
+            d += suave(`M${P(48 - hw * 0.46, 69.2)} L${P(48 + hw * 0.46, 69.2)} L${P(48 + hw * 0.3, yh + 3)} Q48 ${_n2(yh + 5)} ${P(48 - hw * 0.3, yh + 3)} Z`, cel.D, spriteShade(cel.D, -0.45));
             d += laranja(`M${P(48 - hw * 0.26, 70.4)} L${P(48 + hw * 0.26, 70.4)} L${P(48 + hw * 0.16, yh + 2.2)} Q48 ${_n2(yh + 3.4)} ${P(48 - hw * 0.16, yh + 2.2)} Z`) + listras(48 - hw * 0.24, 48 + hw * 0.24, 70.6, yh + 2.4, 1.8);
             d += spriteCellPintas(x0 + 2, y0b + 3, x1 - 2, y0b + 3, 5, 5, 6, 24, cel.pinta) + spriteCellPintas(x0 + 3, y0b + 8, 48 - 5, y0b + 8, 4, 4, 2, 25, cel.pinta) + spriteCellPintas(48 + 5, y0b + 8, x1 - 3, y0b + 8, 4, 4, 2, 26, cel.pinta);
         }
@@ -1274,6 +1329,14 @@ function spriteSymbol(a, B) {
     switch (a.symbol) {
         case "kame": return `<circle cx="${_n2(cx)}" cy="${cy}" r="4.4" fill="#fff8e0" stroke="${o}" stroke-width="0.8"/><path d="M${_n2(cx - 2.4)} ${cy - 1.6} L${_n2(cx + 2.4)} ${cy - 1.6} M${_n2(cx)} ${cy - 2.6} L${_n2(cx)} ${cy + 2.6} M${_n2(cx - 2.2)} ${cy + 0.6} L${_n2(cx + 2.2)} ${cy + 0.6}" stroke="#c0392b" stroke-width="0.9" fill="none"/>`;
         case "kai": return `<circle cx="${_n2(cx)}" cy="${cy}" r="4.4" fill="#fff8e0" stroke="${o}" stroke-width="0.8"/><path d="M${_n2(cx - 2.6)} ${cy - 2.4} L${_n2(cx + 2.6)} ${cy - 2.4} M${_n2(cx)} ${cy - 3} L${_n2(cx)} ${cy + 3} M${_n2(cx - 2.4)} ${cy + 1} L${_n2(cx + 2.4)} ${cy + 1}" stroke="#c0392b" stroke-width="0.9" fill="none"/>`;
+        case "go": {
+            // 悟 (Go): radical do coração (traço vertical com dois pingos) + 五 em cima de 口, em azul-marinho
+            const k = "#1e2a6a", X = (v) => _n2(cx + v), Y = (v) => _n2(cy + v);
+            return `<circle cx="${_n2(cx)}" cy="${cy}" r="4.6" fill="#fff8ee" stroke="${o}" stroke-width="0.8"/>` +
+                `<path d="M${X(-2.1)} ${Y(-3)} L${X(-2.1)} ${Y(3.2)} M${X(-3.3)} ${Y(-1.4)} L${X(-2.9)} ${Y(-0.2)} M${X(-1.3)} ${Y(-1.8)} L${X(-0.9)} ${Y(-0.9)} ` +
+                `M${X(-0.4)} ${Y(-2.8)} L${X(3.2)} ${Y(-2.8)} M${X(1.2)} ${Y(-2.8)} L${X(0.8)} ${Y(-0.4)} M${X(-0.2)} ${Y(-1.5)} L${X(2.6)} ${Y(-1.5)} L${X(2.6)} ${Y(-0.4)} M${X(-0.6)} ${Y(-0.4)} L${X(3.4)} ${Y(-0.4)} ` +
+                `M${X(0)} ${Y(0.6)} L${X(2.9)} ${Y(0.6)} L${X(2.9)} ${Y(2.9)} L${X(0)} ${Y(2.9)} Z" fill="none" stroke="${k}" stroke-width="0.62" stroke-linejoin="round"/>`;
+        }
         case "cc": return `<circle cx="${_n2(cx)}" cy="${cy}" r="4.2" fill="#ffffff" stroke="${o}" stroke-width="0.8"/><path d="M${_n2(cx - 3.4)} ${cy + 0.4} A3.6 3.6 0 0 1 ${_n2(cx + 3.4)} ${cy + 0.4}" fill="none" stroke="#d92b2b" stroke-width="1.2"/><circle cx="${_n2(cx)}" cy="${cy + 0.6}" r="1.4" fill="#d92b2b"/>`;
         case "redribbon": return `<rect x="${_n2(cx - 4)}" y="${cy - 3.6}" width="8" height="7.2" rx="1.2" fill="#c0281f" stroke="${o}" stroke-width="0.8"/><path d="M${_n2(cx - 2)} ${cy + 2} L${_n2(cx - 2)} ${cy - 1.6} L${_n2(cx + 2)} ${cy + 1.6} L${_n2(cx + 2)} ${cy - 2}" stroke="#ffe066" stroke-width="1" fill="none"/>`;
         case "saiyajin": return `<path d="M${_n2(cx - 3.4)} ${cy + 3.2} L${_n2(cx)} ${cy - 3.6} L${_n2(cx + 3.4)} ${cy + 3.2} Z" fill="${a.accentColor}" stroke="${o}" stroke-width="0.8"/>`;
@@ -1468,13 +1531,23 @@ function spriteLeg(R, a, B, spec, boot, skin, side, angles) {
         s += spriteHalfGuard(from[0], from[1], to[0], to[1], w * 1.12, w * 1.0, boot.trim, 4);
     } else if (boot && boot.color) {
         const from = [f[0] + (k[0] - f[0]) * boot.h, f[1] + (k[1] - f[1]) * boot.h];
-        s += spriteMuscle(from[0], from[1], f[0], f[1], w * 0.98, w * 0.86, boot.color, { bulge: 0 });
-        s += spriteBand(from[0], from[1], f[0], f[1], w * 1.04, boot.trim, 1.8);
+        s += spriteMuscle(from[0], from[1], f[0], f[1], w * (boot.dobra ? 1.08 : 0.98), w * 0.86, boot.color, { bulge: 0 });
+        s += spriteBand(from[0], from[1], f[0], f[1], w * (boot.dobra ? 1.16 : 1.04), boot.trim, boot.dobra ? 3.4 : 1.8);   // dobra: cano largo dobrado
+        if (boot.faixa) s += `<path d="M${_n2(from[0] + side * w * 0.22)} ${_n2(from[1] + 1.4)} L${_n2(f[0] + side * w * 0.2)} ${_n2(f[1] - 0.6)}" stroke="${boot.faixa}" stroke-width="0.8" opacity="0.95"/>`;   // costura vermelha
+        if (boot.cordao) {
+            // cordão amarelo amarrado em volta do tornozelo, com o nó e as pontas soltas
+            const c = [f[0] + (from[0] - f[0]) * 0.36, f[1] + (from[1] - f[1]) * 0.36];
+            s += spriteBand(c[0] - (from[0] - f[0]) * 0.04, c[1] - (from[1] - f[1]) * 0.04, f[0], f[1], w * 1.0, boot.cordao, 0.9);
+            s += `<path d="M${_n2(c[0] - side * w * 0.3)} ${_n2(c[1])} l${_n2(-side * 1.4)} 2.4 M${_n2(c[0] - side * w * 0.3)} ${_n2(c[1])} l${_n2(-side * 0.2)} 2.8" stroke="${boot.cordao}" stroke-width="0.7" stroke-linecap="round"/>`;
+        }
     }
     const celP = spriteCellCores(a);
     if (garras) return { svg: s + spriteClawFoot(f, side, angles[1] * 0.45 + side * 4, a.bodyMarks === "metal_freeza" ? SPRITE_METAL : (celP ? celP.pe : skin)), foot: f, knee: k };
     if (boot && boot.sapato) return { svg: s + spriteCellShoe(f, side, angles[1] * 0.45 + side * 4, boot.sapato), foot: f, knee: k };
-    s += `<g transform="${peGiro}"><path d="${pePath}" fill="${fc}"/>` +
+    // ponta da bota em outra cor com listras (botas do Trunks)
+    const ponta = boot && boot.ponta ? `<path d="M${_n2(f[0] + side * 1.4)} ${_n2(f[1] - 1)} Q${_n2(f[0] + side * 7.6 + (side < 0 ? 2 : 0))} ${_n2(f[1] + 0.4)} ${_n2(f[0] + side * 6.4 + (side < 0 ? 1.4 : 0))} ${_n2(f[1] + 3.6)} L${_n2(f[0] + side * 1)} ${_n2(f[1] + 3.6)} Z" fill="${boot.ponta}"/>` +
+        `<path d="M${_n2(f[0] + side * 2.8)} ${_n2(f[1] - 0.6)} L${_n2(f[0] + side * 2.4)} ${_n2(f[1] + 3.4)} M${_n2(f[0] + side * 4.4)} ${_n2(f[1] - 0.2)} L${_n2(f[0] + side * 4.2)} ${_n2(f[1] + 3.4)}" stroke="${spriteShade(boot.ponta, -0.45)}" stroke-width="0.6"/>` : "";
+    s += `<g transform="${peGiro}"><path d="${pePath}" fill="${fc}"/>${ponta}` +
         `<path d="M${_n2(f[0] - 3.6)} ${_n2(f[1] + 2.4)} L${_n2(f[0] + side * 6.2)} ${_n2(f[1] + 2.4)}" stroke="${spriteShade(fc, -0.45)}" stroke-width="1.3"/></g>`;
     return { svg: s, foot: f, knee: k };
 }
@@ -1568,7 +1641,8 @@ function spriteBack(R, a, B, pose, skin) {
         const sway = (pose.capeSway || 0) * 11;
         const cc = a.capeColor || "#ffffff";
         const x0 = 48 - B.sw / 2 - 1, x1 = 48 + B.sw / 2 + 1, yb = 118;   // tronco encolhido do anime: a capa desce mais
-        const fill = R.lin(x0, 46, x1, yb, [[0, spriteShade(cc, 0.12)], [0.6, cc], [1, spriteShade(cc, -0.4)]]);
+        const sombra = cc.toLowerCase() >= "#e0e0e0" ? spriteMix(cc, "#6f93de", 0.62) : spriteShade(cc, -0.4);   // capa branca: sombra azul-clara
+        const fill = R.lin(x0, 46, x1, yb, [[0, spriteShade(cc, 0.12)], [0.5, cc], [1, sombra]]);
         s += spritePath(`M${_n2(x0)} 46 C${_n2(x0 - 4)} 62 ${_n2(x0 - 9 + sway)} 80 ${_n2(x0 - 10 + sway)} ${yb} Q${_n2(48 + sway * 1.2)} ${yb + 5 + Math.abs(sway) * 0.3} ${_n2(x1 + 10 + sway)} ${yb} C${_n2(x1 + 9 + sway)} 80 ${_n2(x1 + 4)} 62 ${_n2(x1)} 46 Z`, fill);
         s += `<path d="M${_n2(x0 - 5 + sway * 0.4)} 70 Q${_n2(x0 - 7 + sway * 0.8)} 84 ${_n2(x0 - 9 + sway)} ${yb - 3} M${_n2(x1 + 5 + sway * 0.4)} 70 Q${_n2(x1 + 7 + sway * 0.8)} 84 ${_n2(x1 + 9 + sway)} ${yb - 3}" stroke="${spriteShade(cc, -0.4)}" stroke-width="0.8" fill="none" opacity="0.6"/>`;
     }
@@ -1586,12 +1660,13 @@ function spriteBack(R, a, B, pose, skin) {
         s += spriteTaper([[47, 77], [36 - sw * 2, 92], [58 + sw * 4, 104], [78 + sw * 6, 92]], 6.6 * tw, 2.4 * tw, cor, rosa ? a.primaryColor : null, rosa ? "#a8344f" : (metal ? "#2a3a6a" : null));
     }
     if (a.backWeapon === "espada_trunks") {
-        s += spriteLimb(60.4, 34, 32.6, 86, 4.4, "#2f2620");
-        s += spriteLimb(52, 48.6, 50.6, 51.4, 4.8, "#d7b25a");
-        s += spriteLimb(60.4, 34, 65.2, 25.6, 3.4, "#4a3324");
-        s += spriteLimb(59.2, 36, 62.4, 30.4, 3.6, "#8d1f2a");
-        s += spriteLimb(57.4, 34.2, 63.6, 33.6, 1.8, "#e6c75f", { cap: "butt" });
-        s += `<circle cx="65.6" cy="24.8" r="2" fill="#e6c75f" stroke="${SPRITE_OUTLINE}" stroke-width="0.8"/>`;
+        // espada do Trunks: bainha marrom-avermelhada com ponta branca, guarda cinza, cabo marrom enrolado e pomo claro
+        s += spriteLimb(60.4, 34, 32.6, 86, 4.4, "#7a3424");
+        s += spriteLimb(35, 82.4, 32.6, 86, 4.6, "#f2f2f4");
+        s += spriteLimb(60.4, 34, 65.2, 25.6, 3.4, "#5a3a26");
+        s += `<path d="M61.6 31.8 L62.8 32.6 M62.6 30 L63.8 30.8 M63.6 28.2 L64.8 29" stroke="#2a1a10" stroke-width="0.6"/>`;
+        s += spriteLimb(57.4, 34.2, 63.6, 33.6, 2.4, "#9aa0aa", { cap: "butt" });
+        s += `<circle cx="65.6" cy="24.8" r="2.1" fill="#e8eaef" stroke="${SPRITE_OUTLINE}" stroke-width="0.8"/>`;
     }
     if (a.backWeapon === "bastao") {
         s += spriteLimb(66, 20, 30, 98, 3.4, "#c62b22");
@@ -1613,7 +1688,18 @@ function spriteShoulderPads(R, a, B) {
         s += pad(-1, cc, spriteShade(cc, -0.3)) + pad(1, cc, spriteShade(cc, -0.3));
     }
     if (a.outerShirt === "armadura_saiyajin") {
-        s += pad(-1, "#f4f4f6", a.accentColor) + pad(1, "#f4f4f6", a.accentColor);
+        // ombreiras grandes da armadura Saiyajin: bege-douradas com frisos e borda branca, arqueadas para cima e para fora
+        const ombreira = (side) => {
+            const m = 48 + side * 3, r = 48 + side * (B.sw / 2 + 12.5);
+            const contorno = `M${_n2(m)} 44.6 Q${_n2(48 + side * (B.sw / 2 + 2))} 41.4 ${_n2(r)} 36.4 Q${_n2(r + side * 1.4)} 42 ${_n2(r - side * 2.4)} 47.6 Q${_n2(48 + side * (B.sw / 2 + 2))} 51.6 ${_n2(48 + side * (B.sw / 2 - 3.4))} 52.6 Q${_n2(m + side * 2)} 49 ${_n2(m)} 44.6 Z`;
+            const f = R.lin(m, 38, m, 53, [[0, spriteShade(a.accentColor, 0.35)], [0.5, a.accentColor], [1, spriteShade(a.accentColor, -0.5)]]);
+            let fr = "";
+            for (let i = 1; i <= 4; i++) { const x = m + (r - m) * (i / 5); fr += `M${_n2(x)} ${_n2(43.6 - i * 1.3)} L${_n2(x - side * 0.4)} ${_n2(50.6 - i * 0.6)} `; }
+            return spritePath(contorno, f, `stroke="#f4f4f6" stroke-width="1.6" stroke-linejoin="round"`, "") +
+                `<path d="${fr}" stroke="${spriteShade(a.accentColor, -0.5)}" stroke-width="0.8" opacity="0.85"/>` +
+                `<path d="${contorno}" fill="none" stroke="${SPRITE_OUTLINE}" stroke-width="0.7"/>`;
+        };
+        s += ombreira(-1) + ombreira(1);
     }
     const dome = (side, rx, ry, base, rim) => {
         // placa arredondada com cúpula brilhante (ombros da raça do Freeza / ciborgue)
@@ -1814,9 +1900,16 @@ function spriteRenderFigure(a, pose, opts) {
     let torso = spriteTorso(R, a, B, spec, skin, pose);
     if (a.tail === "cinto_saiyajin") {
         torso += spritePath(`M${_n2(48 - B.ww / 2 - 1)} 66.6 L${_n2(48 + B.ww / 2 + 1)} 66.6 L${_n2(48 + B.ww / 2 + 1.6)} 71.4 L${_n2(48 - B.ww / 2 - 1.6)} 71.4 Z`, R.lin(0, 66, 0, 72, [[0, "#b98a52"], [1, "#6d4522"]]));
-        torso += spriteTaper([[40, 70], [37, 76], [39, 82 + (pose.tailSwing || 0) * 1.5], [41, 86]], 3.4, 2.2, "#8a5a2b", "#c9a26a");
+        torso += spriteTaper([[41, 69.4], [38.6, 72], [40, 75.4], [43.4, 74.6]], 3.4, 2.4, "#8a5a2b", "#c9a26a");   // ponta enfiada no cinto (não pendurada)
     }
     torso += spriteSymbol(a, B);
+    if (a.backWeapon === "espada_trunks") {
+        // alça turquesa da espada cruzando o peito (ombro da frente → quadril de trás), com a fivela vermelha e branca
+        const x1 = 48 + B.sw / 2 - 2.4, x2 = 48 - B.ww / 2 - 0.4;
+        torso += `<path d="M${_n2(x1)} 45.6 L${_n2(x2)} 66" stroke="${SPRITE_OUTLINE}" stroke-width="3.6" stroke-linecap="butt"/><path d="M${_n2(x1)} 45.6 L${_n2(x2)} 66" stroke="#4fd0d8" stroke-width="2.4" stroke-linecap="butt"/>`;
+        const mx = (x1 + x2) / 2, my = 55.8;
+        torso += `<g transform="rotate(${_n2(Math.atan2(66 - 45.6, x2 - x1) * 180 / Math.PI)} ${_n2(mx)} ${_n2(my)})"><rect x="${_n2(mx - 2.2)}" y="${_n2(my - 2)}" width="4.4" height="4" fill="#f4f6f8" stroke="${SPRITE_OUTLINE}" stroke-width="0.6"/><rect x="${_n2(mx - 1)}" y="${_n2(my - 1)}" width="2" height="2" fill="#d8302a"/></g>`;
+    }
     fig += torsoWrap(torso);
     fig += armR.svg;                          // braço da frente (direito, rumo ao adversário) fica por cima
     fig += torsoWrap(spriteShoulderPads(R, a, B));
@@ -1899,12 +1992,12 @@ function getProceduralFrameUrls(appearance, state, opts) {
 // MODELOS (presets): personagens do anime montados com as peças do construtor.
 // ---------------------------------------------------------------------------
 const SPRITE_PRESETS = {
-    goku: { label: "Goku", appearance: { gender: "masculino", race: "Saiyajin", build: "musculoso", hairStyle: "goku", hairColor: "#16110f", eyeType: "normal", irisColor: "#1a1210", mouthType: "smile", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "none", outerShirt: "kimono", innerShirt: "camiseta", pants: "larga", shoes: "botas_artes", gloves: "pulseiras", primaryColor: "#f2680d", secondaryColor: "#1c45b0", accentColor: "#f7d23c", shirtColor: "#1c45b0", pantsColor: "#f2680d", symbol: "kai", kiColor: "#5be3ff" } },
-    vegeta: { label: "Vegeta", appearance: { gender: "masculino", race: "Saiyajin", build: "normal", hairStyle: "vegeta", hairColor: "#100e18", eyeType: "serio", irisColor: "#161a24", mouthType: "serio", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "none", outerShirt: "armadura_saiyajin", innerShirt: "malha", pants: "justa", shoes: "botas_saiyajin", gloves: "luvas_saiyajin", primaryColor: "#1b3fa0", secondaryColor: "#f4f4f8", accentColor: "#e8b93a", shirtColor: "#1b3fa0", pantsColor: "#1b3fa0", kiColor: "#ffe45a" } },
+    goku: { label: "Goku", appearance: { gender: "masculino", race: "Saiyajin", build: "musculoso", hairStyle: "goku", hairColor: "#16110f", eyeType: "normal", irisColor: "#1a1210", mouthType: "smile", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "none", outerShirt: "kimono", innerShirt: "camiseta", pants: "larga", shoes: "botas_artes", gloves: "pulseiras", primaryColor: "#f2680d", secondaryColor: "#3a46b8", accentColor: "#f7d23c", shirtColor: "#1e3a8a", pantsColor: "#f2680d", symbol: "go", kiColor: "#5be3ff" } },
+    vegeta: { label: "Vegeta", appearance: { gender: "masculino", race: "Saiyajin", build: "normal", hairStyle: "vegeta", hairColor: "#14101a", eyeType: "serio", irisColor: "#161a24", mouthType: "serio", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "scouter_vermelho", outerShirt: "armadura_saiyajin", innerShirt: "malha", pants: "justa", shoes: "botas_saiyajin", gloves: "luvas_saiyajin", primaryColor: "#1b3fa0", secondaryColor: "#f4f4f8", accentColor: "#f0c050", shirtColor: "#1b3fa0", pantsColor: "#1b3fa0", tail: "cinto_saiyajin", kiColor: "#ffe45a" } },
     piccolo: { label: "Piccolo", appearance: { gender: "masculino", race: "Namekuseijin", build: "musculoso", hairStyle: "careca", eyeType: "bravo", irisColor: "#151515", mouthType: "serio", earType: "pontuda", headFeature: "antenas", bodyMarks: "namek", accessory: "none", hat: "turbante", outerShirt: "gi_piccolo", innerShirt: "nenhuma", pants: "larga", shoes: "botas_marrons", gloves: "nenhuma", primaryColor: "#5b2e91", secondaryColor: "#20336f", accentColor: "#f5f5f7", shirtColor: "#20336f", pantsColor: "#5b2e91", cape: "capa_ombreiras", capeColor: "#f6f6f8", kiColor: "#e9ff7a" } },
     freeza: { label: "Freeza", appearance: { gender: "masculino", race: "Raça Freeza", build: "magro", skinColor: "#cdb8ea", hairStyle: "careca", eyeType: "freeza", irisColor: "#d81f3f", mouthType: "maligno", earType: "nenhuma", headFeature: "capacete_freeza", bodyMarks: "listras_freeza", accessory: "none", outerShirt: "armadura_exercito", innerShirt: "nenhuma", pants: "nenhuma", shoes: "caneleiras_freeza", gloves: "bracadeiras_freeza", primaryColor: "#8a3fc0", secondaryColor: "#17141c", accentColor: "#d0962e", shirtColor: "#17141c", pantsColor: "#17141c", tail: "freeza", kiColor: "#ff5be0" } },
-    trunks: { label: "Trunks do Futuro", appearance: { gender: "masculino", race: "Saiyajin", build: "normal", hairStyle: "trunks_futuro", hairColor: "#8c7ee0", eyeType: "serio", irisColor: "#2a4a86", mouthType: "serio", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "none", outerShirt: "jaqueta_trunks", innerShirt: "malha", pants: "justa", shoes: "botas_trunks", gloves: "nenhuma", primaryColor: "#3f66c8", secondaryColor: "#20263a", accentColor: "#d7b25a", shirtColor: "#20263a", pantsColor: "#1e2437", symbol: "cc", backWeapon: "espada_trunks", kiColor: "#9fd0ff" } },
-    gohan: { label: "Gohan (jovem)", appearance: { gender: "masculino", race: "Saiyajin", build: "normal", hairStyle: "gohan", hairColor: "#16110f", eyeType: "gentil", irisColor: "#1a1210", mouthType: "smile", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "none", outerShirt: "gi_piccolo", innerShirt: "nenhuma", pants: "larga", shoes: "botas_marrons", gloves: "nenhuma", primaryColor: "#5b2e91", secondaryColor: "#20336f", accentColor: "#f5f5f7", shirtColor: "#20336f", pantsColor: "#5b2e91", cape: "capa_ombreiras", capeColor: "#f6f6f8", kiColor: "#ffd45b" } },
+    trunks: { label: "Trunks do Futuro", appearance: { gender: "masculino", race: "Saiyajin", build: "normal", hairStyle: "trunks_futuro", hairColor: "#c9b3ec", eyeType: "serio", irisColor: "#2a8ad8", mouthType: "serio", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "none", outerShirt: "jaqueta_trunks", innerShirt: "regata", pants: "larga", shoes: "botas_trunks", gloves: "nenhuma", primaryColor: "#5a4fd0", secondaryColor: "#20263a", accentColor: "#d7b25a", shirtColor: "#17161c", pantsColor: "#2c2c33", symbol: "none", backWeapon: "espada_trunks", kiColor: "#9fd0ff" } },
+    gohan: { label: "Gohan (jovem)", appearance: { gender: "masculino", race: "Saiyajin", build: "normal", hairStyle: "gohan", hairColor: "#16110f", eyeType: "serio", irisColor: "#1a1210", mouthType: "serio", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "none", outerShirt: "gi_piccolo", innerShirt: "nenhuma", pants: "larga", shoes: "botas_dobradas", gloves: "pulseiras", primaryColor: "#7a1fb0", secondaryColor: "#4a66d8", accentColor: "#f5f5f7", shirtColor: "#20336f", pantsColor: "#7a1fb0", cape: "capa_ombreiras", capeColor: "#f6f6f8", kiColor: "#ffd45b" } },
     kaioshin: { label: "Supremo Sr. Kaio", appearance: { gender: "masculino", race: "Kaioshin", build: "magro", hairStyle: "kaioshin_moicano", hairColor: "#f4f4f4", eyeType: "gentil", irisColor: "#2a2a44", mouthType: "smile", earType: "pontuda", headFeature: "none", bodyMarks: "none", accessory: "potara", outerShirt: "roupa_kaioshin", innerShirt: "nenhuma", pants: "larga", shoes: "botas_kaioshin", gloves: "nenhuma", primaryColor: "#5648b8", secondaryColor: "#f3eedd", accentColor: "#f2c94c", shirtColor: "#f3eedd", pantsColor: "#f3eedd", kiColor: "#c9a0ff" } },
     fusao: { label: "Fusão (Gogeta)", appearance: { gender: "masculino", race: "Saiyajin", build: "musculoso", hairStyle: "goku", hairColor: "#111018", eyeType: "serio", irisColor: "#161a24", mouthType: "maligno", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "potara", outerShirt: "colete_fusao", innerShirt: "regata", pants: "larga", shoes: "botas_saiyajin", gloves: "pulseiras", primaryColor: "#1c3fb0", secondaryColor: "#2a2f45", accentColor: "#f5c518", shirtColor: "#262a3e", pantsColor: "#f4f1e8", kiColor: "#7fd8ff" } },
     bardock: { label: "Bardock", appearance: { gender: "masculino", race: "Saiyajin", build: "musculoso", hairStyle: "bardock", hairColor: "#0e0c10", eyeType: "bravo", irisColor: "#141014", mouthType: "maligno", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "scouter", hat: "faixa", outerShirt: "armadura_saiyajin", innerShirt: "malha", pants: "justa", shoes: "botas_saiyajin", gloves: "luvas_pretas", primaryColor: "#2b2430", secondaryColor: "#5a4636", accentColor: "#b88a3a", shirtColor: "#2b2430", pantsColor: "#2b2430", tail: "cinto_saiyajin", scar: "bochecha", kiColor: "#ff9a5b" } },

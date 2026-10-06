@@ -60,7 +60,7 @@ const antigo = (a) => { const b = Object.assign({}, a); delete b.shirtColor; del
 const vegetaVelho = Object.assign(antigo(sp.SPRITE_PRESETS.vegeta.appearance), { innerShirt: "malha" });
 check("Vegeta salvo antes: macacão azul por baixo da armadura vira malha azul", (() => { const a = sp.normalizeAppearance(vegetaVelho); return a.innerShirt === "malha" && a.shirtColor === vegetaVelho.primaryColor && a.pantsColor === vegetaVelho.primaryColor; })());
 check("Goku salvo antes: camiseta de manguinha e calça laranja", (() => { const a = sp.normalizeAppearance(Object.assign(antigo(sp.SPRITE_PRESETS.goku.appearance), { innerShirt: "regata" })); return a.innerShirt === "camiseta" && a.pantsColor === "#f2680d"; })());
-check("Trunks salvo antes: calça escura do jeito que era", sp.normalizeAppearance(antigo(sp.SPRITE_PRESETS.trunks.appearance)).pantsColor === sp.SPRITE_PRESETS.trunks.appearance.pantsColor);
+check("Trunks salvo antes: calça escura do jeito que era", sp.normalizeAppearance(antigo(Object.assign({}, sp.SPRITE_PRESETS.trunks.appearance, { secondaryColor: "#20263a" }))).pantsColor === "#1e2437");
 check("construtor tem COR DA CAMISA e COR DA CALÇA", html.includes('id="build-shirt-color"') && html.includes('id="build-pants-color"'));
 run(`setBuilderFormFromAppearance(SPRITE_PRESETS.trunks.appearance)`);
 check("o construtor lê e grava a cor da calça", run(`getBuilderAppearanceFromForm().pantsColor`) === sp.SPRITE_PRESETS.trunks.appearance.pantsColor);
