@@ -3208,6 +3208,7 @@ function handleMenuClick(x, y) {
 
         if (inRect(x, y, layout.createButtonX, layout.createButtonY, layout.createButtonWidth, 30)) { openModal(null); return; }
         if (hitRect(x, y, MENU_LAYOUT.back)) { setGameState("menu"); return; }
+        if (y < layout.gridTop - 4) return;   // acima do quadro dos cartões (parte recortada) não clica em cartão
 
         keys.forEach((k, idx) => {
             const row = Math.floor(idx / layout.columns);
@@ -6506,6 +6507,12 @@ function render() {
             ctx.fillRect(scrollbarX, thumbY, 8, thumbH);
         }
 
+        // os cartões rolam dentro de um quadro fixo abaixo do título: o que sobe além dele fica recortado na borda
+        // (nunca por cima do título, do CRIAR NOVO ou da seta)
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, layout.gridTop - 4, canvas.width - 20, canvas.height - layout.gridTop + 4);
+        ctx.clip();
         keys.forEach((k, idx) => {
             const row = Math.floor(idx / layout.columns);
             const col = idx % layout.columns;
@@ -6544,6 +6551,7 @@ function render() {
             drawBtn(geo.firstBtnX, geo.actionY, geo.btnW, 20, "EDITAR", "#00ffff", "8px monospace");
             drawBtn(geo.firstBtnX + geo.btnW + 10, geo.actionY, geo.btnW, 20, "EXCLUIR", "#ff0055", "8px monospace");
         });
+        ctx.restore();
 
         drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
     }

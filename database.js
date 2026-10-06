@@ -2089,9 +2089,6 @@ function saveCharacterFromModal() {
 
 // ==================== DATABASE DE PERSONAGENS ====================
 function loadCharacterData() {
-    // uma vez: a blusa do "Gi com faixa" virou a camisa (ver spriteGiVirouCamisa)
-    const migrarGi = readStorage("saiyan_gi_camisa") !== "1";
-    let giMigrado = false;
     try {
         let saved = readStorage("saiyan_db_v8_8bit");
         if (saved) {
@@ -2124,7 +2121,6 @@ function loadCharacterData() {
                 // por versões antigas, no estilo antigo, passa a usar o desenho atual).
                 if (character.builderAppearance) {
                     character.builderAppearance = normalizeAppearance(character.builderAppearance);
-                    if (migrarGi && spriteGiVirouCamisa(character.builderAppearance)) giMigrado = true;
                     Object.assign(character, buildProceduralAnimations(character.builderAppearance));
                     character.defaultUrl = generateSpriteFrameUrl(character.builderAppearance, "idle", 0);
                 }
@@ -2135,8 +2131,6 @@ function loadCharacterData() {
             }
 
             if (validCount > 0) {
-                if (giMigrado) saveCharacterData();
-                writeStorage("saiyan_gi_camisa", "1");
                 seedNewDefaultCharacters();
                 atualizarFreezaSalvo();
                 atualizarCellSalvo();
@@ -2147,7 +2141,6 @@ function loadCharacterData() {
         console.warn("Erro ao carregar database:", e);
     }
 
-    writeStorage("saiyan_gi_camisa", "1");   // os personagens novos já nascem com a blusa do gi como camisa
     loadDefaultCharacters();
 }
 
@@ -2158,7 +2151,10 @@ const FREEZA_TRANSFORMACOES = [
     { name: "Segunda forma", diff: { build: "gigante", headFeature: "capacete_chifres", bodyMarks: "carapaca_freeza", outerShirt: "none" }, ssj: false, aura: "roxo" },
     { name: "Terceira forma", diff: { build: "musculoso", headFeature: "cabeca_longa", bodyMarks: "carapaca_freeza", outerShirt: "none", mouthType: "risada" }, ssj: false, aura: "roxo" },
     { name: "Forma final", diff: { build: "normal", headFeature: "none", bodyMarks: "freeza", outerShirt: "armadura_freeza", gloves: "nenhuma", shoes: "pes_garras", skinColor: "" }, ssj: false, aura: "roxo" },
-    { name: "Freeza ciborgue", diff: { build: "normal", headFeature: "meia_cabeca_metal", bodyMarks: "metal_freeza", outerShirt: "armadura_freeza", gloves: "nenhuma", shoes: "pes_garras", skinColor: "" }, ssj: false, aura: "roxo" }
+    { name: "Freeza ciborgue", diff: { build: "normal", headFeature: "meia_cabeca_metal", bodyMarks: "metal_freeza", outerShirt: "armadura_freeza", gloves: "nenhuma", shoes: "pes_garras", skinColor: "" }, ssj: false, aura: "roxo" },
+    // Golden e Black (mangá): o corpo da forma final com as cores trocadas
+    { name: "Golden Freeza", diff: { build: "normal", headFeature: "none", bodyMarks: "freeza", outerShirt: "armadura_freeza", gloves: "nenhuma", shoes: "pes_garras", skinColor: "#f2c233", primaryColor: "#7b3ab8" }, ssj: false, aura: "amarelo" },
+    { name: "Black Freeza", diff: { build: "normal", headFeature: "none", bodyMarks: "freeza", outerShirt: "armadura_freeza", gloves: "nenhuma", shoes: "pes_garras", skinColor: "#25212c", primaryColor: "#b04ad8" }, ssj: false, aura: "roxo" }
 ];
 
 const CELL_TRANSFORMACOES = [
@@ -2251,6 +2247,15 @@ function loadDefaultCharacters() {
 // Perfil com o Freeza antigo (só a forma final, sem transformações próprias): passa uma vez para o Freeza novo
 // (1ª forma + 4 transformações). Um Freeza que o jogador editou (outra aparência) fica como está.
 function atualizarFreezaSalvo() {
+    // uma vez: o Freeza com transformações já salvas ganha também o Golden e o Black no fim da lista
+    if (readStorage("saiyan_freeza_golden") !== "1") {
+        writeStorage("saiyan_freeza_golden", "1");
+        const f = characterDB.freeza_1;
+        if (f && Array.isArray(f.transformations) && f.transformations.length && !f.transformations.some(t => t && /golden|black/i.test(t.name || ""))) {
+            f.transformations.push(...JSON.parse(JSON.stringify(FREEZA_TRANSFORMACOES.slice(-2))));
+            saveCharacterData();
+        }
+    }
     if (readStorage("saiyan_freeza_formas") === "1") return;
     writeStorage("saiyan_freeza_formas", "1");
     const c = characterDB.freeza_1;
@@ -2374,6 +2379,14 @@ function setBuilderFormFromAppearance(appearance) {
     const skinInput = document.getElementById("build-skin");
     if (autoSkin) autoSkin.checked = !app.skinColor;
     if (skinInput) skinInput.value = app.skinColor || spriteSkin(app);
+}
+
+// Trocar a raça mostra na hora a pele dela: volta para "usar cor padrão da raça" (a raça só muda a cor da pele;
+// com uma cor própria marcada, trocar a raça não mudava nada na prévia).
+function escolherRaca() {
+    const autoSkin = document.getElementById("build-skin-auto");
+    if (autoSkin) autoSkin.checked = true;
+    refreshBuilderPreview();
 }
 
 // Escolher uma cor de pele vale em qualquer raça: desmarca "usar cor padrão da raça" na hora.
@@ -2533,9 +2546,18 @@ function renderTransformationList() {
             botao("✕", "Apagar transformação", () => removeTransformation(i), tempTransformations.length <= 1));
         list.appendChild(card);
     });
+    // "COPIAR O CORPO DE": a transformação nova pode começar da original ou de qualquer transformação da lista
+    const copia = document.getElementById("transform-copy-from");
+    if (copia) {
+        const atual = copia.value;
+        copia.innerHTML = "";
+        copia.add(new Option("Original", ""));
+        tempTransformations.forEach((t, i) => copia.add(new Option((i + 1) + "º — " + t.name, String(i))));
+        copia.value = atual !== "" && Number(atual) < tempTransformations.length ? atual : "";
+    }
     const status = document.getElementById("transform-status");
     if (status) status.textContent = base
-        ? "Toque em + para adicionar: ela começa igual ao personagem e você muda no construtor."
+        ? "Toque em + para adicionar: ela começa igual à forma escolhida em COPIAR O CORPO DE e você muda no construtor."
         : "Para mudar a aparência das transformações, gere o personagem no CONSTRUTOR (USAR ESTE PERSONAGEM). Sem isso, elas mudam só a aura, o poder e os raios.";
 }
 
@@ -2555,9 +2577,12 @@ function removeTransformation(i) {
     }, "APAGAR");
 }
 
-// Nova transformação: começa igual ao personagem normal (sem diferenças) e já abre no construtor.
+// Nova transformação: começa igual ao personagem normal (ou a uma transformação escolhida em "COPIAR O CORPO DE",
+// copiando as diferenças dela) e já abre no construtor.
 function addTransformation() {
-    tempTransformations.push({ name: "Transformação " + (tempTransformations.length + 1), diff: {}, ssj: false, aura: "amarelo" });
+    const copia = document.getElementById("transform-copy-from");
+    const origem = copia && copia.value !== "" ? tempTransformations[Number(copia.value)] : null;
+    tempTransformations.push({ name: "Transformação " + (tempTransformations.length + 1), diff: origem ? JSON.parse(JSON.stringify(origem.diff || {})) : {}, ssj: origem ? !!origem.ssj : false, aura: origem ? (origem.aura || "amarelo") : "amarelo" });
     renderTransformationList();
     if (getTransformBase()) editTransformation(tempTransformations.length - 1);
 }
