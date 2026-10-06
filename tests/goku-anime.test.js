@@ -34,7 +34,7 @@ run(`var __velho = Object.assign({}, SPRITE_PRESETS.goku.appearance, { proporcao
      characterDB = {}; loadCharacterData();`);
 check("personagem salvo no estilo antigo carrega no desenho atual", run("decodeURIComponent(characterDB.meu_goku.defaultUrl).includes('crispEdges')") && run("characterDB.meu_goku.animations.idle.length") > 0);
 check("e mantém as escolhas do jogador (sem o campo de estilo)", run("characterDB.meu_goku.builderAppearance.primaryColor") === "#00ff00" && run("'proporcao' in characterDB.meu_goku.builderAppearance") === false);
-check("Majin Boo é o Boo gordo (barriga, colete e luvas)", (() => { const m = sprites.SPRITE_PRESETS.majin.appearance; return m.build === "gordo" && m.outerShirt === "colete_buu"; })());
+check("Majin Buu: base é o Kid Buu e a transformação é o Buu gordo (barriga, colete e luvas)", (() => { const m = sprites.SPRITE_PRESETS.majin.appearance, t = run("getCharacterTransformations('majin_buu')[0].diff"); return m.build === "jovem" && m.outerShirt === "faixa_majin" && t.build === "gordo" && t.outerShirt === "colete_buu"; })());
 check("o Cell entra no elenco inicial", run("!!SPRITE_PRESETS.cell && DEFAULT_CHARACTERS.cell.name === 'CELL'"));
 check("construtor tem as peças do Cell e do Boo", ["cell_crista", "armadura_cell", "botas_cell", "Bio-Androide", 'value="gordo"', "colete_buu"].every(v => html.includes(v)));
 

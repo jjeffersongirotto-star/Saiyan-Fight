@@ -2135,6 +2135,7 @@ function loadCharacterData() {
                 atualizarFreezaSalvo();
                 atualizarCellSalvo();
                 atualizarHeroisSalvos();
+                atualizarPersonagens075();
                 return;
             }
         }
@@ -2164,6 +2165,17 @@ const GOHAN_TRANSFORMACOES = [
     { name: "Super Saiyajin 2", diff: { cape: "none", irisColor: "#2ab8b0", hairStyle: "gohan_ssj2", outerShirt: "gi_rasgado", build: "musculoso", primaryColor: "#7a3fc8", pantsColor: "#7a3fc8", secondaryColor: "#2a7ad8", shoes: "botas_dobradas" }, ssj: true, aura: "amarelo" }
 ];
 
+// Broly (Super): base de armadura; 1 = Super Saiyajin Lendário (cabelo verde-limão, olhos brancos, sem armadura,
+// ombreiras e coleira, músculos enormes e cicatrizes; mantém calça, manto, munhequeiras e botas)
+const BROLY_TRANSFORMACOES = [
+    { name: "Super Saiyajin Lendário", diff: { hairStyle: "broly_lssj", hairColor: "#b6ff3c", eyeType: "vazio", mouthType: "grito", outerShirt: "none", accessory: "none", build: "gigante", scar: "lendario" }, ssj: true, aura: "verde" }
+];
+
+// Majin Buu: a base é o Kid Buu; 1 = Buu gordo (capa com nó, colete curto, luvas e botas douradas)
+const BUU_TRANSFORMACOES = [
+    { name: "Buu gordo", diff: { build: "gordo", headFeature: "majin_antena", eyeType: "fechado", mouthType: "alegre", outerShirt: "colete_buu", cape: "capa_no", gloves: "luvas_douradas", shoes: "botas_douradas", scleraColor: "#ffffff", irisColor: "#101010" }, ssj: false, aura: "rosa" }
+];
+
 const CELL_TRANSFORMACOES = [
     { name: "Semi-perfeito", diff: { build: "gigante", headFeature: "capacete_cell2", bodyMarks: "cell_semi", skinColor: "#b5cf45", shoes: "sapato_cell", mouthType: "risada", wings: "cell" }, ssj: false, aura: "verde" },
     { name: "Perfeito", diff: { build: "musculoso", headFeature: "capacete_cell3", bodyMarks: "cell_perfeito", skinColor: "#e6e4ee", shoes: "sapato_ponta", tail: "none", irisColor: "#7a3fa0", wings: "cell_capa" }, ssj: false, aura: "verde" }
@@ -2184,13 +2196,14 @@ const DEFAULT_CHARACTERS = {
     trunks: { name: "TRUNKS", presetKey: "trunks", align: "HERÓI", aura: "azul", spec: "BURNING ATTACK" },
     gohan: { name: "GOHAN", presetKey: "gohan", align: "HERÓI", aura: "gelo", spec: "MASENKO", transformations: GOHAN_TRANSFORMACOES },
     kaioshin: { name: "SUPREMO SR. KAIO", presetKey: "kaioshin", align: "HERÓI", aura: "rosa", spec: "KIAI SAGRADO" },
-    gogeta: { name: "GOGETA", presetKey: "fusao", align: "HERÓI", aura: "amarelo", spec: "BIG BANG KAMEHAMEHA" },
+    gogeta: { name: "VEGETTO", presetKey: "fusao", align: "HERÓI", aura: "amarelo", spec: "FINAL KAMEHAMEHA" },
     bardock: { name: "BARDOCK", presetKey: "bardock", align: "ANTI-HERÓI", aura: "azul", spec: "RIOT JAVELIN" },
     android17: { name: "ANDROIDE 17", presetKey: "android17", align: "ANTI-HERÓI", aura: "verde", spec: "POWER BLITZ" },
     android18: { name: "ANDROIDE 18", presetKey: "android18", align: "ANTI-HERÓI", aura: "azul", spec: "DESTRUCTO DISC" },
-    majin_buu: { name: "MAJIN BUU", presetKey: "majin", align: "VILÃO", aura: "rosa", spec: "CHOCOLATE BEAM" },
+    majin_buu: { name: "MAJIN BUU", presetKey: "majin", align: "VILÃO", aura: "rosa", spec: "CHOCOLATE BEAM", transformations: BUU_TRANSFORMACOES },
     raditz: { name: "RADITZ", presetKey: "raditz", align: "VILÃO", aura: "roxo", spec: "DOUBLE SUNDAY" },
-    broly: { name: "BROLY", presetKey: "broly", align: "VILÃO", aura: "verde", spec: "ERASER CANNON" },
+    broly: { name: "BROLY", presetKey: "broly", align: "VILÃO", aura: "verde", spec: "ERASER CANNON", transformations: BROLY_TRANSFORMACOES },
+    gotenks: { name: "GOTENKS", presetKey: "gotenks", align: "HERÓI", aura: "amarelo", spec: "SUPER GHOST KAMIKAZE" },
     // Cell: começa na 1ª forma (imperfeito) e transforma em semi-perfeito e perfeito
     cell: { name: "CELL", presetKey: "cell", align: "VILÃO", aura: "verde", spec: "KAMEHAMEHA PERFEITO", transformations: CELL_TRANSFORMACOES }
 };
@@ -2316,6 +2329,36 @@ function atualizarHeroisSalvos() {
     if (mudou) saveCharacterData();
 }
 
+// Uma vez (versão 0.75): GOGETA vira VEGETTO; Vegetto, Majin Buu (agora Kid Buu, com o Buu gordo de transformação) e
+// Broly (Super, com o Lendário) salvos com a aparência antiga, sem edição do jogador, passam para o visual novo.
+const PERSONAGENS_ANTIGOS_075 = {
+    gogeta: { preset: "fusao", antiga: { gender: "masculino", race: "Saiyajin", build: "musculoso", hairStyle: "goku", hairColor: "#111018", eyeType: "serio", irisColor: "#161a24", mouthType: "maligno", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "potara", outerShirt: "colete_fusao", innerShirt: "regata", pants: "larga", shoes: "botas_saiyajin", gloves: "pulseiras", primaryColor: "#1c3fb0", secondaryColor: "#2a2f45", accentColor: "#f5c518", shirtColor: "#262a3e", pantsColor: "#f4f1e8", kiColor: "#7fd8ff" } },
+    majin_buu: { preset: "majin", antiga: { gender: "masculino", race: "Majin", build: "gordo", hairStyle: "careca", eyeType: "normal", irisColor: "#101010", mouthType: "smile", earType: "majin", headFeature: "majin_antena", bodyMarks: "none", accessory: "none", outerShirt: "colete_buu", innerShirt: "nenhuma", pants: "larga", shoes: "botas_kaioshin", gloves: "luvas_saiyajin", primaryColor: "#f4f1e8", secondaryColor: "#7a3f8f", accentColor: "#d7a23a", shirtColor: "#7a3f8f", pantsColor: "#f4f1e8", cape: "capa", capeColor: "#5a2f7a", kiColor: "#ff9de0" } },
+    broly: { preset: "broly", antiga: { gender: "masculino", race: "Saiyajin", build: "gigante", hairStyle: "broly", hairColor: "#213018", eyeType: "bravo", irisColor: "#1a2a1a", mouthType: "serio", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "none", outerShirt: "none", innerShirt: "nenhuma", pants: "larga", shoes: "descalco", gloves: "pulseiras", primaryColor: "#8a6a2a", secondaryColor: "#c9a13a", accentColor: "#e8c04a", shirtColor: "#c9a13a", pantsColor: "#8a6a2a", kiColor: "#7dff7a" } }
+};
+function atualizarPersonagens075() {
+    if (readStorage("saiyan_personagens_075") === "1") return;
+    writeStorage("saiyan_personagens_075", "1");
+    let mudou = false;
+    const g = characterDB.gogeta;
+    if (g && g.name === "GOGETA") { g.name = "VEGETTO"; mudou = true; }
+    if (g && g.special === "BIG BANG KAMEHAMEHA") { g.special = "FINAL KAMEHAMEHA"; mudou = true; }
+    const igual = (x, y) => { const a = normalizeAppearance(x), b = normalizeAppearance(y); return Object.keys(Object.assign({}, a, b)).every(k => a[k] === b[k]); };
+    for (const k in PERSONAGENS_ANTIGOS_075) {
+        const c = characterDB[k], info = PERSONAGENS_ANTIGOS_075[k];
+        if (!c || !c.builderAppearance || !igual(c.builderAppearance, info.antiga)) continue;
+        c.builderAppearance = normalizeAppearance(SPRITE_PRESETS[info.preset].appearance);
+        Object.assign(c, buildProceduralAnimations(c.builderAppearance));
+        c.defaultUrl = generateSpriteFrameUrl(c.builderAppearance, "idle", 0);
+        c.imageObj = null;
+        loadImageSecure(c.defaultUrl, (img) => { if (characterDB[k]) characterDB[k].imageObj = img; });
+        // com a transformação padrão (sem mudança de visual), passa a usar as transformações novas do personagem
+        if (Array.isArray(c.transformations) && c.transformations.length === 1 && !Object.keys(c.transformations[0].diff || {}).length) delete c.transformations;
+        mudou = true;
+    }
+    if (mudou) saveCharacterData();
+}
+
 function seedNewDefaultCharacters() {
     let seeded = readJsonStorage("saiyan_defaults_seeded", null);
     if (!Array.isArray(seeded)) seeded = ORIGINAL_DEFAULT_CHARACTER_KEYS.slice();
@@ -2368,7 +2411,7 @@ let builderPreviewTimer = null;
 let builderPreviewFrame = 0;
 
 const BUILDER_FIELD_IDS = {
-    gender: "build-gender", race: "build-race", build: "build-build", hairStyle: "build-hair-style", hairColor: "build-hair-color",
+    gender: "build-gender", race: "build-race", build: "build-build", hairStyle: "build-hair-style", hairColor: "build-hair-color", hairColor2: "build-hair-color2",
     eyeType: "build-eye-type", irisColor: "build-iris-color", scleraColor: "build-sclera-color",
     earType: "build-ear-type", headFeature: "build-head-feature", bodyMarks: "build-body-marks",
     mouthType: "build-mouth-type", scar: "build-scar", accessory: "build-accessory",
@@ -2472,7 +2515,10 @@ function refreshBuilderPreviewNow() {
     // Cada quadro vira uma imagem só uma vez (antes criava e decodificava uma imagem nova a cada 130 ms).
     const tEdit = editingTransformIndex !== null ? tempTransformations[editingTransformIndex] : null;
     const ssjPrevia = state === "transform" || !!(tEdit && tEdit.ssj && SPRITE_SAIYAN_HAIR.includes(appearance.hairStyle));
-    const list = getProceduralFrameUrls(appearance, state, { ssj: ssjPrevia });
+    // editando uma transformação com outra cor de cabelo: o cabelo transformado fica nessa cor (não no amarelo padrão)
+    const baseT = tEdit ? getTransformBase() : null;
+    const ssjColor = baseT && tEdit.ssj && appearance.hairColor !== normalizeAppearance(baseT).hairColor ? appearance.hairColor : undefined;
+    const list = getProceduralFrameUrls(appearance, state, { ssj: ssjPrevia, ssjColor });
     const images = list.map(src => { const img = new Image(); img.src = src; return img; });
     const draw = () => {
         const img = images[builderPreviewFrame % images.length];
@@ -2530,7 +2576,7 @@ function getTransformThumbnail(t) {
     const base = getTransformBase();
     if (base) {
         const app = spriteTransformAppearance(base, t);
-        return generateSpriteFrameUrl(app, "idle", 0, { ssj: !!t.ssj && SPRITE_SAIYAN_HAIR.includes(app.hairStyle), noGlow: true });
+        return generateSpriteFrameUrl(app, "idle", 0, { ssj: !!t.ssj && SPRITE_SAIYAN_HAIR.includes(app.hairStyle), noGlow: true, ssjColor: spriteSsjColor(t) });
     }
     const c = editingKey ? characterDB[editingKey] : null;
     return (tempAnimations.idle && tempAnimations.idle[0]) || (c && c.defaultUrl) || getFallbackSpriteSvg();

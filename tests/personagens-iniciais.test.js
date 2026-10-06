@@ -23,7 +23,7 @@ h.check("o construtor continua oferecendo todos os modelos em 'COMEÇAR A PARTIR
 
 // um personagem inicial pode ser usado numa partida de verdade
 h.run("selectedCharacter = 'gogeta'; selectedBoss = 'broly'; gameMode = 'singleplayer'; stageMode = 'normal'; startGame(); for (let i = 0; i < 20; i++) { update(1/60); render(); }");
-h.check("dá para jogar com os personagens novos (GOGETA contra BROLY)", h.run("gameState") === "playing" && h.run("characterDB[selectedCharacter].name") === "GOGETA");
+h.check("dá para jogar com os personagens novos (VEGETTO contra BROLY)", h.run("gameState") === "playing" && h.run("characterDB[selectedCharacter].name") === "VEGETTO");
 
 // ---------- perfil antigo: recebe os novos UMA vez, sem ressuscitar o que o jogador apagou ----------
 const antigo = {};

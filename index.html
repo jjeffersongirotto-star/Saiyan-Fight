@@ -1136,14 +1136,21 @@
                             <option value="careca">Careca / sem cabelo</option>
                             <option value="goku">Espetado</option><option value="vegeta">Em chamas, para cima</option>
                             <option value="gohan">Repicado com mecha</option><option value="gohan_ssj2">Super Saiyajin 2 (mechas finas)</option><option value="cell_crista">Crista com pintas</option><option value="bardock">Espetado para trás</option>
-                            <option value="raditz">Longo solto</option><option value="broly">Selvagem</option>
-                            <option value="gotenks">3 picos</option>
+                            <option value="raditz">Longo solto</option><option value="broly">Longo, denso e espetado</option>
+                            <option value="gotenks">3 picos</option><option value="gotenks_bicolor">Espetado de duas cores (centro e laterais)</option>
+                            <option value="vegetto">Espetado alto com 2 mechas na testa</option><option value="broly_lssj">Espetos enormes (Lendário)</option>
                             <option value="trunks_futuro">Curto repartido ao meio</option><option value="trunks_kid">Liso curto</option>
                             <option value="android17">Liso até o ombro</option><option value="android18">Curto com franja lateral</option>
                             <option value="kaioshin_moicano">Moicano</option><option value="ssj_longo">Longo espetado até a cintura</option>
+                            <optgroup label="Super Saiyajin (mechas contornadas)">
+                                <option value="ssj_solto">Solto, mechas caindo na testa</option><option value="ssj_volumoso">Volumoso, muitas pontas</option>
+                                <option value="ssj_vegeta">Chama compacta e alta</option><option value="blue_goku">Pontas altas e franja curva (Blue)</option>
+                                <option value="blue_vegeta">Compacto (Blue)</option>
+                            </optgroup>
                         </select>
                     </div>
                     <div class="form-group"><label for="build-hair-color">COR DO CABELO</label><input type="color" id="build-hair-color" value="#16110f" oninput="refreshBuilderPreview()"></div>
+                    <div class="form-group"><label for="build-hair-color2">COR 2 DO CABELO (laterais do de duas cores)</label><input type="color" id="build-hair-color2" value="#b58ce0" oninput="refreshBuilderPreview()"></div>
                     <div class="form-group"><label for="build-ear-type">ORELHAS</label>
                         <select id="build-ear-type" onchange="refreshBuilderPreview()">
                             <option value="normal">Normais</option><option value="pontuda">Pontudas</option>
@@ -1156,6 +1163,7 @@
                             <option value="majin_antena">Antena curva com ponta</option><option value="chifres">Chifres</option>
                             <option value="capacete_freeza">Capacete com chifres finos</option><option value="capacete_chifres">Capacete com chifres grandes</option>
                             <option value="cabeca_longa">Cabeça alongada com espinhos</option><option value="meia_cabeca_metal">Meia cabeça de metal com lente</option>
+                            <option value="antena_longa">Antena longa curvada para a frente</option>
                             <option value="capacete_cell1">Capacete de inseto com pontas cruzadas</option><option value="capacete_cell2">Chapa preta e pontas laterais</option><option value="capacete_cell3">Chapa preta e pontas altas</option>
                         </select>
                     </div>
@@ -1165,13 +1173,13 @@
                         <select id="build-eye-type" onchange="refreshBuilderPreview()">
                             <option value="normal">Normal</option><option value="gentil">Gentil</option><option value="serio">Sério</option>
                             <option value="bravo">Bravo/franzido</option><option value="wide">Arregalado</option>
-                            <option value="freeza">Sem sobrancelha</option><option value="android">Frio, pupila pequena</option><option value="fechado">Fechados</option>
+                            <option value="freeza">Sem sobrancelha</option><option value="android">Frio, pupila pequena</option><option value="fechado">Fechados</option><option value="vazio">Brancos, sem pupila</option>
                         </select>
                     </div>
                     <div class="form-group"><label for="build-iris-color">COR DA ÍRIS</label><input type="color" id="build-iris-color" value="#1a1210" oninput="refreshBuilderPreview()"></div>
                     <div class="form-group"><label for="build-sclera-color">COR DO OLHO (fundo)</label><input type="color" id="build-sclera-color" value="#ffffff" oninput="refreshBuilderPreview()"></div>
                     <div class="form-group"><label for="build-mouth-type">BOCA / EXPRESSÃO</label>
-                        <select id="build-mouth-type" onchange="refreshBuilderPreview()"><option value="smile">Sorridente</option><option value="serio">Séria</option><option value="grito">Gritando</option><option value="maligno">Maligna</option><option value="risada">Risada maligna</option></select>
+                        <select id="build-mouth-type" onchange="refreshBuilderPreview()"><option value="smile">Sorridente</option><option value="serio">Séria</option><option value="grito">Gritando</option><option value="maligno">Maligna</option><option value="risada">Risada maligna</option><option value="sadico">Sorriso sádico com dentes</option><option value="alegre">Aberta e alegre</option></select>
                     </div>
                 </div>
 
@@ -1182,11 +1190,12 @@
                             <option value="none">Nenhuma</option><option value="namek">Placas rosadas e estrias</option>
                             <option value="cell">Marcas no rosto</option><option value="freeza">Domo e placas roxas</option>
                             <option value="listras_freeza">Pele rosada listrada</option><option value="carapaca_freeza">Placas brancas e pele listrada</option><option value="metal_freeza">Corpo de metal (ciborgue)</option>
+                            <option value="majin">Furinhos nos braços</option>
                             <option value="cell_imperfeito">Bio-androide (1ª forma)</option><option value="cell_semi">Bio-androide (semi-perfeito)</option><option value="cell_perfeito">Bio-androide (perfeito)</option>
                         </select>
                     </div>
                     <div class="form-group"><label for="build-scar">CICATRIZ</label>
-                        <select id="build-scar" onchange="refreshBuilderPreview()"><option value="none">Nenhuma</option><option value="olho">No olho</option><option value="bochecha">Na bochecha</option><option value="peito">No peito (aparece sem camisa)</option></select>
+                        <select id="build-scar" onchange="refreshBuilderPreview()"><option value="none">Nenhuma</option><option value="olho">No olho</option><option value="bochecha">Na bochecha</option><option value="peito">No peito (aparece sem camisa)</option><option value="lendario">De batalha: X no peito, ombro e barriga</option></select>
                     </div>
                     <div class="form-group"><label for="build-tail">RABO</label>
                         <select id="build-tail" onchange="refreshBuilderPreview()"><option value="none">Nenhum</option><option value="saiyajin">De macaco, solto</option><option value="cinto_saiyajin">De macaco, na cintura</option><option value="freeza">Longo e liso, de réptil</option><option value="cell">Grande com ferrão</option></select>
@@ -1199,7 +1208,7 @@
                 <div class="build-section-title">ROUPAS</div>
                 <div class="sprite-control-row">
                     <div class="form-group"><label for="build-inner-shirt">CAMISA (por baixo)</label>
-                        <select id="build-inner-shirt" onchange="refreshBuilderPreview()"><option value="camiseta">Camiseta de manguinha</option><option value="regata">Regata, sem manga</option><option value="malha">Malha de manga comprida</option><option value="nenhuma">Nenhuma (pele à mostra)</option></select>
+                        <select id="build-inner-shirt" onchange="refreshBuilderPreview()"><option value="camiseta">Camiseta de manguinha</option><option value="regata">Regata, sem manga</option><option value="malha">Malha de manga comprida</option><option value="malha_gola">Malha gola alta</option><option value="nenhuma">Nenhuma (pele à mostra)</option></select>
                     </div>
                     <div class="form-group"><label for="build-shirt-color">COR DA CAMISA</label><input type="color" id="build-shirt-color" value="#1f4fbf" oninput="refreshBuilderPreview()"></div>
                     <div class="form-group"><label for="build-outer-shirt">ROUPA DE CIMA / CASACO</label>
@@ -1213,11 +1222,14 @@
                             <optgroup label="Armaduras">
                                 <option value="armadura_saiyajin">Armadura de combate</option>
                                 <option value="armadura_exercito">Armadura com ombreiras douradas</option>
+                                <option value="armadura_broly">Peitoral com gema e ombreiras verdes</option>
                             </optgroup>
                             <optgroup label="Casacos e coletes">
                                 <option value="jaqueta_trunks">Jaqueta curta</option>
                                 <option value="colete_fusao">Colete aberto com faixa</option>
                                 <option value="colete_buu">Colete curto com cinto</option>
+                                <option value="colete_metamoran">Colete acolchoado aberto (fusão)</option>
+                                <option value="faixa_majin">Só o cinto largo com fivela M</option>
                             </optgroup>
                             <optgroup label="Trajes">
                                 <option value="traje_android">Traje com gola</option>
@@ -1229,7 +1241,7 @@
                         </select>
                     </div>
                     <div class="form-group"><label for="build-pants">CALÇA</label>
-                        <select id="build-pants" onchange="refreshBuilderPreview()"><option value="larga">Larga</option><option value="justa">Justa</option><option value="nenhuma">Nenhuma (fica de cueca)</option></select>
+                        <select id="build-pants" onchange="refreshBuilderPreview()"><option value="larga">Larga</option><option value="justa">Justa</option><option value="bufante">Bufante (balão)</option><option value="nenhuma">Nenhuma (fica de cueca)</option></select>
                     </div>
                     <div class="form-group"><label for="build-pants-color">COR DA CALÇA</label><input type="color" id="build-pants-color" value="#f26a0f" oninput="refreshBuilderPreview()"></div>
                     <div class="form-group"><label for="build-symbol">SÍMBOLO NO PEITO</label>
@@ -1246,10 +1258,13 @@
                             <option value="botas_trunks">Botas amarelas altas</option><option value="botas_dobradas">Botas de pano dobradas</option><option value="botas_kaioshin">Sandálias</option>
                             <option value="botas_marrons">Botas simples</option><option value="botas_cell">Botas escuras</option><option value="descalco">Descalço</option>
                             <option value="pes_garras">Pés com garras</option><option value="sapato_cell">Sapato preto de pontas laranjas</option><option value="sapato_ponta">Sapato de ponta comprida</option><option value="caneleiras_freeza">Caneleiras e pés com garras</option>
+                            <option value="botas_vegetto">Botas brancas altas de ponta dourada</option><option value="botas_broly">Botas brancas de cano escuro e ponta verde</option>
+                            <option value="botas_majin">Botas pretas de dobra dourada</option><option value="botas_douradas">Botas douradas dobradas com meia</option>
+                            <option value="sapatilhas_faixa">Sapatilhas com faixas no tornozelo</option>
                         </select>
                     </div>
                     <div class="form-group"><label for="build-gloves">LUVAS</label>
-                        <select id="build-gloves" onchange="refreshBuilderPreview()"><option value="pulseiras">Munhequeiras</option><option value="luvas_saiyajin">Luvas brancas</option><option value="luvas_pretas">Luvas pretas</option><option value="bracadeiras_freeza">Braçadeiras brancas</option><option value="nenhuma">Nenhuma</option></select>
+                        <select id="build-gloves" onchange="refreshBuilderPreview()"><option value="pulseiras">Munhequeiras</option><option value="luvas_saiyajin">Luvas brancas</option><option value="luvas_pretas">Luvas pretas</option><option value="bracadeiras_freeza">Braçadeiras brancas</option><option value="munhequeiras_borda">Munhequeiras escuras de borda branca</option><option value="munhequeiras_escuras">Munhequeiras pretas</option><option value="bracadeiras_majin">Braçadeiras pretas longas (unhas pretas)</option><option value="luvas_douradas">Luvas douradas</option><option value="nenhuma">Nenhuma</option></select>
                     </div>
                     <div class="form-group"><label for="build-hat">NA CABEÇA</label>
                         <select id="build-hat" onchange="refreshBuilderPreview()"><option value="none">Nada</option><option value="turbante">Turbante</option><option value="faixa">Faixa na testa</option></select>
@@ -1258,13 +1273,13 @@
 
                 <div class="build-section-title">ACESSÓRIOS</div>
                 <div class="sprite-control-row">
-                    <div class="form-group"><label for="build-accessory">NO ROSTO / ORELHA</label>
+                    <div class="form-group"><label for="build-accessory">NO ROSTO / ORELHA / PESCOÇO</label>
                         <select id="build-accessory" onchange="refreshBuilderPreview()">
-                            <option value="none">Nenhum</option><option value="potara">Brincos Potara</option><option value="scouter">Scouter</option><option value="scouter_vermelho">Scouter vermelho</option>
+                            <option value="none">Nenhum</option><option value="potara">Brincos Potara</option><option value="scouter">Scouter</option><option value="scouter_vermelho">Scouter vermelho</option><option value="potara_amarelo">Brincos Potara amarelos</option><option value="coleira">Coleira de metal (pescoço)</option>
                         </select>
                     </div>
                     <div class="form-group"><label for="build-cape">NAS COSTAS: CAPA / OMBREIRAS</label>
-                        <select id="build-cape" onchange="refreshBuilderPreview()"><option value="none">Nenhuma</option><option value="capa">Capa</option><option value="ombreiras">Ombreiras</option><option value="capa_ombreiras">Capa + ombreiras</option></select>
+                        <select id="build-cape" onchange="refreshBuilderPreview()"><option value="none">Nenhuma</option><option value="capa">Capa</option><option value="ombreiras">Ombreiras</option><option value="capa_ombreiras">Capa + ombreiras</option><option value="capa_no">Capa com nó no pescoço</option><option value="manto_cintura">Manto felpudo na cintura</option></select>
                     </div>
                     <div class="form-group"><label for="build-cape-color">COR DA CAPA</label><input type="color" id="build-cape-color" value="#ffffff" oninput="refreshBuilderPreview()"></div>
                     <div class="form-group"><label for="build-back-weapon">NAS COSTAS: ARMA</label>
@@ -1321,14 +1336,23 @@
                 Novidades e correções do jogo.
             </p>
             <ul id="lista-updates" style="margin: 0 0 18px; color: #ddd; line-height: 1.5; padding: 0 4px 0 0; list-style: none; overflow-y: auto;">
-                <li class="upd-versao"><h3>Versão 0.74 (ATUAL)</h3><p>Goku, Vegeta, Trunks e Gohan fiéis às referências</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Gohan com Super Saiyajin e Super Saiyajin 2</strong><p>Transformação 1: cabelo amarelo, sem capa e ombreiras. Transformação 2: Super Saiyajin 2 com mechas finas, gi rasgado sem mangas, mais musculoso e raios azulados em volta do cabelo.</p></li>
+                <li class="upd-versao"><h3>Versão 0.75 (ATUAL)</h3><p>Vegetto, Broly Lendário, Kid Buu, Gotenks e cabelos de Super Saiyajin</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Gotenks</strong><p>Personagem novo: cabelo espetado preto no centro e lilás nas laterais, colete Metamoran com gola e ombreiras douradas, calça branca bufante, faixa verde-água e especial SUPER GHOST KAMIKAZE.</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Broly Super Saiyajin Lendário</strong><p>A transformação do Broly: cabelo verde-limão, olhos brancos, sem armadura e coleira, músculos enormes e cicatrizes.</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Buu gordo</strong><p>O Majin Buu começa como Kid Buu e se transforma no Buu gordo: capa com nó, colete curto, luvas e botas douradas.</p></li>
+                <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>Gogeta virou Vegetto</strong><p>Cabelo alto com reflexo vermelho e duas mechas na testa, brincos Potara amarelos, gi azul-escuro sobre camiseta laranja, calça azul-escura, luvas e botas brancas.</p></li>
+                <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>Broly (Super)</strong><p>Cabelo preto longo e denso, coleira de metal, armadura com gema e ombreiras verdes, calça roxa, manto felpudo na cintura e botas brancas.</p></li>
+                <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>Kid Buu</strong><p>Pequeno e definido, antena longa, furinhos, sorriso sádico, cinto com fivela M, braçadeiras pretas e calça bufante.</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Cabelos de Super Saiyajin no construtor</strong><p>5 formatos com mechas contornadas (solto, volumoso, chama compacta e dois Blue). A transformação usa a cor de cabelo escolhida nela (Blue, verde...) em vez do amarelo fixo.</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Peças novas no construtor</strong><p>Malha gola alta, calça bufante, cor 2 do cabelo, coleira, Potara amarelos, manto na cintura, capa com nó, olhos sem pupila, sorriso sádico, novas botas, luvas e braçadeiras.</p></li>
+                <li class="upd-versao"><h3>Versão 0.74</h3><p>Goku, Vegeta, Trunks e Gohan fiéis às referências</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Gohan com Super Saiyajin e Super Saiyajin 2</strong><p>Transformação 1: cabelo amarelo, sem capa e ombreiras. Transformação 2: Super Saiyajin 2 com mechas finas, gi rasgado sem mangas, mais musculoso e raios azulados em volta do cabelo.</p></li>
                 <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>Goku</strong><p>Kanji 悟 no peito, camiseta azul-marinho com faixa e munhequeiras azul-royal, botas azul-marinho com costura vermelha e cordão amarelo.</p></li>
                 <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>Vegeta</strong><p>Armadura Saiyajin com ombreiras grandes douradas arqueadas, barriga e abas sobre as coxas, cauda enrolada na cintura e scouter de lente vermelha.</p></li>
                 <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>Trunks do Futuro</strong><p>Cabelo curto repartido ao meio, jaqueta curta azul-violeta, regata preta, cinto amarelo com fivela, calça preta folgada, botas amarelas e alça turquesa da espada no peito.</p></li>
                 <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>Gohan</strong><p>Gi roxo sem mangas, faixa e munhequeiras azul-royal, capa com sombra azul-clara e botas de pano dobradas.</p></li>
                 <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>Cabeça e tronco do Cell</strong><p>Carapaça da cabeça com o mesmo volume dos dois lados, cobrindo as orelhas; no perfeito a placa preta cobre todo o alto da cabeça. Contornos mais suaves no peito e na barriga da 1ª forma e do semi-perfeito.</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Peças novas no construtor</strong><p>Símbolo Go (悟), scouter vermelho, cabelo Super Saiyajin 2, gi rasgado e botas de pano dobradas. Personagens salvos sem edição passam para o visual novo.</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Peças novas no construtor</strong><p>Símbolo Go (悟), scouter vermelho, cabelo Super Saiyajin 2, gi rasgado e botas de pano dobradas. Personagens salvos sem edição passam para o visual novo.</p></li>
                 <li class="upd-versao"><h3>Versão 0.73</h3><p>Golden e Black Freeza, editor de transformações</p></li>
                 <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Golden Freeza e Black Freeza</strong><p>O Freeza ganha a 5ª transformação (Golden: corpo dourado com placas roxas) e a 6ª (Black: corpo preto com placas roxas brilhantes), com o corpo da forma final e as cores do mangá. Quem já tinha o Freeza salvo recebe as duas no fim da lista.</p></li>
                 <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Copiar o corpo de outra transformação</strong><p>Na aba TRANSFORMAÇÃO, "COPIAR O CORPO DE" escolhe de onde a transformação nova começa: a forma original ou qualquer transformação da lista.</p></li>
