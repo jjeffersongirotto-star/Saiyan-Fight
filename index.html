@@ -622,6 +622,8 @@
         .conj-btn .conj-nome { text-transform: uppercase; }
         .conj-tag { font-size: 9px; font-weight: 900; background: #0f172a; color: #22d3ee; padding: 1px 5px; border-radius: 6px; }
         .conj-grupo { display: inline-flex; align-items: center; gap: 2px; }
+        .conj-lapis { background: #10243a !important; color: #9fd0ff !important; border-color: #1f4f7f !important; }
+        .conj-lapis.aberto { background: #22d3ee !important; color: #0f172a !important; }
         .conj-x { background: #3a1010; color: #fca5a5; border: 1px solid #7f1d1d; border-radius: 6px; cursor: pointer; padding: 2px 6px; font-size: 11px; }
         .conj-forma { display: inline-flex; flex-direction: column; align-items: center; gap: 3px; padding: 5px; border: 1px solid #334155; border-radius: 8px; background: #0f172a; font-size: 10px; color: #cbd5e1; }
         .conj-forma img, .conj-forma-vazia { width: 44px; height: 44px; object-fit: contain; image-rendering: pixelated; background: #020617; border-radius: 4px; display: flex; align-items: center; justify-content: center; }
@@ -1384,11 +1386,14 @@
                 Novidades e correções do jogo.
             </p>
             <ul id="lista-updates" style="margin: 0 0 18px; color: #ddd; line-height: 1.5; padding: 0 4px 0 0; list-style: none; overflow-y: auto;">
-                <li class="upd-versao"><h3>Versão 0.76 (ATUAL)</h3><p>Conjuntos de sprites, Vegeta em sprites e braços cruzados</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Conjuntos de sprites</strong><p>Na aba ANIMAÇÕES do editor: o botão dourado ORIGINAL guarda as animações do jogo; monte formas (base e transformações, em ordem), agrupe uma base com a transformação 1 num botão azul e escolha qual usar. O conjunto em uso fica destacado e a luta usa a base e cada transformação dele.</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Vegeta em sprites</strong><p>O Vegeta ganhou o conjunto azul VEGETA SPRITES, com todos os movimentos desenhados em sprites e o Super Saiyajin de cabelo amarelo e olhos azuis. Ative no editor do Vegeta, aba ANIMAÇÕES.</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Posição dos braços</strong><p>Nova opção no construtor: braços cruzados, parado e voando, como o Vegeta.</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Peças novas no construtor</strong><p>Cabelo em chama jogada para trás, armadura curta de ombreiras pequenas, macacão justo, luvas brancas de punho largo e botas brancas de bico dourado.</p></li>
+                <li class="upd-versao"><h3>Versão 0.77 (ATUAL)</h3><p>Conjuntos de sprites valendo na hora</p></li>
+                <li class="upd-item upd-corrigido"><span class="upd-tag">CORRIGIDO</span><strong>Escolher um conjunto</strong><p>Tocar num conjunto e confirmar já troca o personagem na hora: prévia do editor, cartões do DATABASE e da seleção e a luta (não precisa mais SALVAR PERSONAGEM).</p></li>
+                <li class="upd-item upd-corrigido"><span class="upd-tag">CORRIGIDO</span><strong>Formas agrupadas</strong><p>As formas que já estão num conjunto azul saem da linha de baixo. Para ver ou editar, toque no ✎ ao lado do conjunto.</p></li>
+                <li class="upd-versao"><h3>Versão 0.76</h3><p>Conjuntos de sprites, Vegeta em sprites e braços cruzados</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Conjuntos de sprites</strong><p>Na aba ANIMAÇÕES do editor: o botão dourado ORIGINAL guarda as animações do jogo; monte formas (base e transformações, em ordem), agrupe uma base com a transformação 1 num botão azul e escolha qual usar. O conjunto em uso fica destacado e a luta usa a base e cada transformação dele.</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Vegeta em sprites</strong><p>O Vegeta ganhou o conjunto azul VEGETA SPRITES, com todos os movimentos desenhados em sprites e o Super Saiyajin de cabelo amarelo e olhos azuis. Ative no editor do Vegeta, aba ANIMAÇÕES.</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Posição dos braços</strong><p>Nova opção no construtor: braços cruzados, parado e voando, como o Vegeta.</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Peças novas no construtor</strong><p>Cabelo em chama jogada para trás, armadura curta de ombreiras pequenas, macacão justo, luvas brancas de punho largo e botas brancas de bico dourado.</p></li>
                 <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>Lista de quadros</strong><p>A fileira de quadros só aparece montando ou editando uma forma, para não mexer sem querer nas animações originais.</p></li>
                 <li class="upd-versao"><h3>Versão 0.75</h3><p>Vegetto, Broly Lendário, Kid Buu, Gotenks e cabelos de Super Saiyajin</p></li>
                 <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Gotenks</strong><p>Personagem novo: cabelo espetado preto no centro e lilás nas laterais, colete Metamoran com gola e ombreiras douradas, calça branca bufante, faixa verde-água e especial SUPER GHOST KAMIKAZE.</p></li>
