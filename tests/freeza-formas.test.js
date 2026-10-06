@@ -12,9 +12,14 @@ const { run, check, summary } = h;
 const base = sp.SPRITE_PRESETS.freeza.appearance;
 check("o Freeza começa na 1ª forma (armadura do exército, capacete com chifres finos)", base.outerShirt === "armadura_exercito" && base.headFeature === "capacete_freeza" && base.bodyMarks === "listras_freeza");
 const formas = run(`getCharacterTransformations("freeza_1").map(t => t.name)`);
-check("4 transformações na ordem: 2ª, 3ª, final e ciborgue", JSON.stringify(formas) === JSON.stringify(["Segunda forma", "Terceira forma", "Forma final", "Freeza ciborgue"]));
+check("6 transformações na ordem: 2ª, 3ª, final, ciborgue, Golden e Black", JSON.stringify(formas) === JSON.stringify(["Segunda forma", "Terceira forma", "Forma final", "Freeza ciborgue", "Golden Freeza", "Black Freeza"]));
 const desenhos = run(`[SPRITE_PRESETS.freeza.appearance].concat(getCharacterTransformations("freeza_1").map(t => spriteTransformAppearance(SPRITE_PRESETS.freeza.appearance, t))).map(a => generateSpriteFrameSvg(a, "idle", 0))`);
-check("as 5 formas desenham diferente uma da outra", new Set(desenhos).size === 5);
+check("as 7 formas desenham diferente uma da outra", new Set(desenhos).size === 7);
+check("Golden e Black: o corpo da forma final só com outras cores", run(`getCharacterTransformations("freeza_1").slice(-2).every(t => t.diff.bodyMarks === "freeza" && t.diff.outerShirt === "armadura_freeza" && t.diff.skinColor)`));
+// Freeza com transformações já salvas (sem Golden/Black) ganha as duas no fim, uma vez
+run(`characterDB.freeza_1.transformations = JSON.parse(JSON.stringify(FREEZA_TRANSFORMACOES.slice(0, 4))); writeStorage("saiyan_freeza_golden", ""); atualizarFreezaSalvo(); atualizarFreezaSalvo()`);
+check("Freeza salvo ganha Golden e Black uma vez", JSON.stringify(run(`characterDB.freeza_1.transformations.map(t => t.name)`).slice(-3)) === JSON.stringify(["Freeza ciborgue", "Golden Freeza", "Black Freeza"]) && run(`characterDB.freeza_1.transformations.length`) === 6);
+run(`delete characterDB.freeza_1.transformations`);
 check("SVG de cada forma é válido (sem atributo repetido)", desenhos.every(svg => !/<[^>]*\bstroke-width="[^"]*"[^>]*\bstroke-width=/.test(svg)));
 check("transformar não deixa o cabelo amarelo (o Freeza é careca)", run(`getCharacterTransformations("freeza_1").every(t => t.ssj === false)`));
 
