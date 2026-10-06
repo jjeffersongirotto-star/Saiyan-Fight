@@ -190,24 +190,24 @@ const SPRITE_METAL = "#c3ccd9";
 const SPRITE_CELL = {
     cell_imperfeito: { L: "#86bf3e", D: "#3e8a2c", up: "L", lo: "D", coxa: "L", canela: "D", tronco: "L", pe: "D" },
     cell_semi: { L: "#b5cf45", D: "#2f9440", up: "L", lo: "K", coxa: "L", canela: "K", tronco: "D", pe: "K" },
-    cell_perfeito: { L: "#a6d54a", D: "#2f8f3a", up: "L", lo: "L", coxa: "L", canela: "K", tronco: "L", pe: "K" }
+    cell_perfeito: { L: "#a6d54a", D: "#a6d54a", pinta: "#2f7a2a", up: "L", lo: "L", coxa: "L", canela: "K", tronco: "L", pe: "K" }   // perfeito: tudo verde claro, pintas verde escuro
 };
 const SPRITE_CELL_PRETO = "#17141c", SPRITE_CELL_LARANJA = "#e8662a", SPRITE_CELL_JUNTA = "#2e3a8c";
 function spriteCellCores(a) {
     const c = SPRITE_CELL[a.bodyMarks];
     if (!c) return null;
     const cor = (k) => k === "K" ? SPRITE_CELL_PRETO : c[k];
-    return { L: c.L, D: c.D, up: cor(c.up), lo: cor(c.lo), coxa: cor(c.coxa), canela: cor(c.canela), tronco: cor(c.tronco), pe: cor(c.pe), verde: (x) => x === c.L || x === c.D };
+    return { L: c.L, D: c.D, pinta: c.pinta || "#141414", up: cor(c.up), lo: cor(c.lo), coxa: cor(c.coxa), canela: cor(c.canela), tronco: cor(c.tronco), pe: cor(c.pe), verde: (x) => x === c.L || x === c.D };
 }
 // Pintas pretas espalhadas ao longo de um membro verde (posições fixas por "semente", sempre iguais)
-function spriteCellPintas(x1, y1, x2, y2, w1, w2, n, semente) {
+function spriteCellPintas(x1, y1, x2, y2, w1, w2, n, semente, cor) {
     const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1, nx = -dy / len, ny = dx / len;
     let s = "";
     for (let i = 0; i < n; i++) {
         const r1 = Math.abs(Math.sin((i + 1) * 12.9898 + semente * 78.233)), r2 = Math.abs(Math.sin((i + 1) * 39.346 + semente * 11.135));
         const t = 0.12 + 0.76 * ((i + r1 * 0.8) / n), w = w1 + (w2 - w1) * t, off = (r2 - 0.5) * w * 0.62;
         const rr = w * (0.08 + r1 * 0.06);
-        s += `<ellipse cx="${_n2(x1 + dx * t + nx * off)}" cy="${_n2(y1 + dy * t + ny * off)}" rx="${_n2(rr)}" ry="${_n2(rr * 0.8)}" fill="#141414"/>`;
+        s += `<ellipse cx="${_n2(x1 + dx * t + nx * off)}" cy="${_n2(y1 + dy * t + ny * off)}" rx="${_n2(rr)}" ry="${_n2(rr * 0.8)}" fill="${cor || "#141414"}"/>`;
     }
     return s;
 }   // partes de metal do Freeza ciborgue
@@ -807,7 +807,7 @@ function spriteCellHead(R, a, rx, ry) {
     const hf = a.headFeature, o = SPRITE_OUTLINE;
     const cel = spriteCellCores(a) || { L: "#86bf3e", D: "#3e8a2c" };
     const verde = (c) => R.lin(-14, -36, 12, 4, [[0, spriteShade(c, 0.35)], [0.5, c], [1, spriteShade(c, -0.4)]]);
-    const pinta = (x, y, r) => `<ellipse cx="${_n2(x)}" cy="${_n2(y)}" rx="${_n2(r)}" ry="${_n2(r * 0.8)}" fill="#141414"/>`;
+    const pinta = (x, y, r) => `<ellipse cx="${_n2(x)}" cy="${_n2(y)}" rx="${_n2(r)}" ry="${_n2(r * 0.8)}" fill="${cel.pinta || "#141414"}"/>`;
     const ponta = (b, c, t, w, cor) => {
         const L = Math.hypot(c[0] - b[0], c[1] - b[1]) || 1, nx = -(c[1] - b[1]) / L * w, ny = (c[0] - b[0]) / L * w;
         const P = (q) => `${_n2(q[0])} ${_n2(q[1])}`;
@@ -834,7 +834,6 @@ function spriteCellHead(R, a, rx, ry) {
         s += spritePath(`M${_n2(-rx + 3.2)} -7 C${_n2(-rx + 2.6)} -21 ${_n2(rx - 2.6)} -21 ${_n2(rx - 3)} -7 Q0 -10.4 ${_n2(-rx + 3.2)} -7 Z`, R.lin(-6, -20, 6, -6, [[0, "#4a4458"], [0.45, SPRITE_CELL_PRETO], [1, "#050407"]]));
         s += `<ellipse cx="-2.6" cy="-15" rx="2.6" ry="1.4" fill="#ffffff" opacity="0.35"/>`;
         [[-rx + 0.6, -10, 1], [rx - 1, -11, 1], [-rx - 1.4, alto * 0.5, 1.1], [rx + 1, alto * 0.5, 1], [-rx - 1, alto * 0.75, 0.9], [rx + 0.6, alto * 0.78, 0.9], [-rx + 1, 2, 1]].forEach(([x, y, r], i) => {
-            if (hf === "capacete_cell3" && Math.abs(y) > 12) return;   // perfeito: pontas lisas, verde escuro; pintas só no verde claro
             s += pinta(x, y, r);
         });
     }
@@ -1158,8 +1157,8 @@ function spriteTorsoMarks(R, a, B, skin, x0, x1, ww, y0b) {
             d += preto(`M${P(48 - 4.6, y0b + 4)} L${P(48 + 4.6, y0b + 4)} L${P(48 + 3.6, y0b + 13)} L${P(48, y0b + 17)} L${P(48 - 3.6, y0b + 13)} Z`);
             d += `<ellipse cx="${_n2(48 - 1.4)}" cy="${_n2(y0b + 6.6)}" rx="1.6" ry="2.4" fill="#ffffff" opacity="0.5"/>`;
             d += laranja(`M${P(48 - hw * 0.34, 69.4)} L${P(48 + hw * 0.34, 69.4)} L${P(48 + hw * 0.2, yh + 2.4)} Q48 ${_n2(yh + 4)} ${P(48 - hw * 0.2, yh + 2.4)} Z`) + listras(48 - hw * 0.3, 48 + hw * 0.3, 69.6, yh + 2.6, 1.9);
-            d += spriteCellPintas(x0 + 1, 52, 48 - ww * 0.46, 66, 3.2, 3.2, 3, 21) + spriteCellPintas(x1 - 1, 52, 48 + ww * 0.46, 66, 3.2, 3.2, 3, 22);
-            d += spriteCellPintas(x0 + 3, y0b + 2.4, x1 - 3, y0b + 2.4, 4, 4, 5, 23);
+            d += spriteCellPintas(x0 + 1, 52, 48 - ww * 0.46, 66, 3.2, 3.2, 3, 21, cel.pinta) + spriteCellPintas(x1 - 1, 52, 48 + ww * 0.46, 66, 3.2, 3.2, 3, 22, cel.pinta);
+            d += spriteCellPintas(x0 + 3, y0b + 2.4, x1 - 3, y0b + 2.4, 4, 4, 5, 23, cel.pinta);
         }
         if (m === "cell_semi") {
             // verde escuro no peito/costas; barriga com chapa preta no meio e laterais laranja riscadas até a virilha
@@ -1168,14 +1167,14 @@ function spriteTorsoMarks(R, a, B, skin, x0, x1, ww, y0b) {
             d += listras(48 - ww * 0.46, 48 - 3.6, y0b + 13, 69.6, 2.1) + listras(48 + 3.6, 48 + ww * 0.46, y0b + 13, 69.6, 2.1);
             d += spritePath(`M${P(48 - hw * 0.46, 69.2)} L${P(48 + hw * 0.46, 69.2)} L${P(48 + hw * 0.3, yh + 3)} Q48 ${_n2(yh + 5)} ${P(48 - hw * 0.3, yh + 3)} Z`, cel.D);
             d += laranja(`M${P(48 - hw * 0.26, 70.4)} L${P(48 + hw * 0.26, 70.4)} L${P(48 + hw * 0.16, yh + 2.2)} Q48 ${_n2(yh + 3.4)} ${P(48 - hw * 0.16, yh + 2.2)} Z`) + listras(48 - hw * 0.24, 48 + hw * 0.24, 70.6, yh + 2.4, 1.8);
-            d += spriteCellPintas(x0 + 2, y0b + 3, x1 - 2, y0b + 3, 5, 5, 6, 24) + spriteCellPintas(x0 + 3, y0b + 8, 48 - 5, y0b + 8, 4, 4, 2, 25) + spriteCellPintas(48 + 5, y0b + 8, x1 - 3, y0b + 8, 4, 4, 2, 26);
+            d += spriteCellPintas(x0 + 2, y0b + 3, x1 - 2, y0b + 3, 5, 5, 6, 24, cel.pinta) + spriteCellPintas(x0 + 3, y0b + 8, 48 - 5, y0b + 8, 4, 4, 2, 25, cel.pinta) + spriteCellPintas(48 + 5, y0b + 8, x1 - 3, y0b + 8, 4, 4, 2, 26, cel.pinta);
         }
         if (m === "cell_perfeito") {
             // peito e ombros pretos, chapa preta no meio da barriga, faixa roxa na cintura e protetor oval preto
             d += preto(`M${P(x0 - 1, y0b + 1)} Q48 ${_n2(y0b - 4.4)} ${P(x1 + 1, y0b + 1)} L${P(x1 - 0.6, y0b + 11)} Q${_n2(48 + sw * 0.2)} ${_n2(y0b + 15)} ${P(48, y0b + 12.6)} Q${_n2(48 - sw * 0.2)} ${_n2(y0b + 15)} ${P(x0 + 0.6, y0b + 11)} Z`);
             d += `<path d="M48 ${_n2(y0b + 2)} L48 ${_n2(y0b + 12)}" stroke="#3a3448" stroke-width="0.9"/>`;
             d += preto(`M${P(48 - 3, y0b + 12)} L${P(48 + 3, y0b + 12)} L${P(48 + 2.6, 66)} L${P(48 - 2.6, 66)} Z`);
-            d += spriteCellPintas(x0 + 2, 58, 48 - 4, 64, 4, 4, 3, 27) + spriteCellPintas(48 + 4, 58, x1 - 2, 64, 4, 4, 3, 28);
+            d += spriteCellPintas(x0 + 2, 58, 48 - 4, 64, 4, 4, 3, 27, cel.pinta) + spriteCellPintas(48 + 4, 58, x1 - 2, 64, 4, 4, 3, 28, cel.pinta);
             d += spritePath(`M${P(48 - ww / 2 - 0.8, 66)} L${P(48 + ww / 2 + 0.8, 66)} L${P(48 + ww / 2 + 1, 70)} L${P(48 - ww / 2 - 1, 70)} Z`, "#5a2a8a");
             d += `<path d="M${P(48 - ww / 2, 67.6)} L${P(48 + ww / 2, 67.6)}" stroke="#8a5ac0" stroke-width="0.7"/>`;
             d += spritePath(`M${P(48 - hw * 0.4, 70)} L${P(48 + hw * 0.4, 70)} L${P(48 + 2.2, yh + 3)} L${P(48 - 2.2, yh + 3)} Z`, "#5a2a8a");
@@ -1331,8 +1330,8 @@ function spriteArmMarks(R, a, B, spec, skin, sx, sy, e, h, w, side) {
     if (spec.armLower === SPRITE_ROSA_FREEZA) s += spriteStripes(e[0], e[1], h[0], h[1], w * 1.05, w * 0.72, 0.08, 0.6, 5, "#a8344f", 0.7, 0.8);
     const cel = spriteCellCores(a);
     if (cel) {
-        if (cel.verde(spec.armUpper)) s += spriteCellPintas(sx, sy, e[0], e[1], w * 1.35, w * 0.9, 5, 1 + side);
-        if (cel.verde(spec.armLower)) s += spriteCellPintas(e[0], e[1], h[0], h[1], w, w * 0.72, 4, 5 + side);
+        if (cel.verde(spec.armUpper)) s += spriteCellPintas(sx, sy, e[0], e[1], w * 1.35, w * 0.9, 5, 1 + side, cel.pinta);
+        if (cel.verde(spec.armLower)) s += spriteCellPintas(e[0], e[1], h[0], h[1], w, w * 0.72, 4, 5 + side, cel.pinta);
         if (m === "cell_imperfeito") {
             s += `<ellipse cx="${_n2(e[0])}" cy="${_n2(e[1])}" rx="${_n2(w * 0.46)}" ry="${_n2(w * 0.36)}" fill="${SPRITE_CELL_JUNTA}" stroke="${SPRITE_OUTLINE}" stroke-width="0.7"/>`;
             s += `<ellipse cx="${_n2(sx)}" cy="${_n2(sy + 1.6)}" rx="${_n2(w * 0.5)}" ry="${_n2(w * 0.3)}" fill="${SPRITE_CELL_JUNTA}"/>`;
@@ -1370,15 +1369,15 @@ function spriteLegMarks(R, a, B, color, hx, hy, k, f, w, colorLo, side) {
     const cel = spriteCellCores(a);
     if (cel) {
         // Cell: pintas só nas partes verdes; juntas azuis (1ª forma) e joelheira verde escura (2ª forma)
-        if (cel.verde(color)) s += spriteCellPintas(hx, hy, k[0], k[1], w * 1.3, w * 0.92, 6, 3 + side);
-        if (cel.verde(colorLo)) s += spriteCellPintas(k[0], k[1], f[0], f[1], w * 0.95, w * 0.66, 4, 7 + side);
+        if (cel.verde(color)) s += spriteCellPintas(hx, hy, k[0], k[1], w * 1.3, w * 0.92, 6, 3 + side, cel.pinta);
+        if (cel.verde(colorLo)) s += spriteCellPintas(k[0], k[1], f[0], f[1], w * 0.95, w * 0.66, 4, 7 + side, cel.pinta);
         if (m === "cell_imperfeito") {
             s += `<ellipse cx="${_n2(k[0])}" cy="${_n2(k[1])}" rx="${_n2(w * 0.5)}" ry="${_n2(w * 0.36)}" fill="${SPRITE_CELL_JUNTA}" stroke="${SPRITE_OUTLINE}" stroke-width="0.7"/>`;
             s += `<ellipse cx="${_n2(f[0])}" cy="${_n2(f[1] - 1)}" rx="${_n2(w * 0.4)}" ry="${_n2(w * 0.26)}" fill="${SPRITE_CELL_JUNTA}"/>`;
         } else {
             const kc = m === "cell_semi" ? cel.D : cel.L;   // joelho verde por cima da canela preta
             s += `<ellipse cx="${_n2(k[0])}" cy="${_n2(k[1])}" rx="${_n2(w * 0.5)}" ry="${_n2(w * 0.42)}" fill="${kc}" stroke="${SPRITE_OUTLINE}" stroke-width="0.8"/>`;
-            s += spriteCellPintas(k[0] - w * 0.3, k[1], k[0] + w * 0.3, k[1], w * 0.5, w * 0.5, 2, 11 + side);
+            s += spriteCellPintas(k[0] - w * 0.3, k[1], k[0] + w * 0.3, k[1], w * 0.5, w * 0.5, 2, 11 + side, cel.pinta);
         }
     }
     if (color === SPRITE_ROSA_FREEZA) {
@@ -1502,7 +1501,7 @@ function spriteBack(R, a, B, pose, skin) {
         const pts = [[44, 74], [24, 84], [16, 104], [4, 92]];
         s += spriteTaper(pts, 7.4, 4.4, semi ? SPRITE_CELL_PRETO : cel.D, null, null);
         if (semi) s += spriteTaper(pts.map(([x, y]) => [x + 0.6, y - 1.6]), 3.8, 2.2, SPRITE_CELL_LARANJA, null, "#8a2f10");
-        else s += spriteCellPintas(44, 74, 18, 98, 6, 5, 6, 31);
+        else s += spriteCellPintas(44, 74, 18, 98, 6, 5, 6, 31, cel.pinta);
         // ferrão: base em anel bege e ponta fina
         s += `<ellipse cx="4" cy="92" rx="3.4" ry="2.6" fill="#e2c79a" stroke="${SPRITE_OUTLINE}" stroke-width="0.9"/><path d="M2.6 90.6 L-6 86 L2 93.6 Z" fill="#d8b884" stroke="${SPRITE_OUTLINE}" stroke-width="0.8" stroke-linejoin="round"/>`;
     }
@@ -1587,7 +1586,7 @@ function spriteShoulderPads(R, a, B) {
         [-1, 1].forEach(side => {
             const cx = 48 + side * (B.sw / 2 - 0.6), cy = 46.4;
             s += `<ellipse cx="${_n2(cx)}" cy="${cy}" rx="${_n2(5.6 + B.arm * 0.2)}" ry="4.6" fill="${R.lin(cx - 6, cy - 4, cx + 6, cy + 5, [[0, spriteShade(cor, 0.4)], [0.5, cor], [1, spriteShade(cor, -0.45)]])}" stroke="${SPRITE_OUTLINE}" stroke-width="1"/>`;
-            if (a.bodyMarks === "cell_semi") s += spriteCellPintas(cx - 4, cy, cx + 4, cy, 6, 6, 3, 40 + side);
+            if (a.bodyMarks === "cell_semi") s += spriteCellPintas(cx - 4, cy, cx + 4, cy, 6, 6, 3, 40 + side, celO.pinta);
             else s += `<ellipse cx="${_n2(cx - side * 1.2 - 1)}" cy="${cy - 1.6}" rx="2" ry="1" fill="#ffffff" opacity="0.3"/>`;
         });
     }
