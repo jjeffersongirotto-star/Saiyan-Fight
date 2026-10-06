@@ -10,12 +10,16 @@ const { run, check, summary } = h;
 const AMARELO = "ffe34d";
 const temAmarelo = (url) => decodeURIComponent(String(url)).includes(AMARELO);
 
-for (const k of ["goku_adult", "vegeta", "trunks", "gohan", "broly", "bardock"]) {
+for (const k of ["goku_adult", "vegeta", "trunks", "gohan", "gotenks", "bardock"]) {
     const normal = run(`getCharacterAnimationFrames("${k}", "idle", false)[0]`);
     const transformado = run(`getCharacterAnimationFrames("${k}", "flyRight", true)`);
     check(`${k}: cabelo normal fora da transformação`, !temAmarelo(normal));
     check(`${k}: transformado, voa com o cabelo amarelo`, transformado.length > 0 && transformado.every(temAmarelo));
 }
+// Broly Lendário: a transformação escolhe a própria cor (verde-limão) em vez do amarelo padrão
+const brolyT = run(`getCharacterAnimationFrames("broly", "flyRight", true)`);
+check("broly: Lendário voa com o cabelo verde-limão (não amarelo)", brolyT.length > 0 && brolyT.every(u => decodeURIComponent(u).includes("b6ff3c") && !temAmarelo(u)));
+check("broly: normal, cabelo preto", !decodeURIComponent(run(`getCharacterAnimationFrames("broly", "idle", false)[0]`)).includes("b6ff3c"));
 check("Piccolo transformado continua igual (não é Saiyajin)",
     run(`getCharacterAnimationFrames("piccolo", "idle", true)[0] === getCharacterAnimationFrames("piccolo", "idle", false)[0]`));
 

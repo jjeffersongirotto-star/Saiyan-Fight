@@ -298,7 +298,7 @@ function getTransformedFrames(char, state, t) {
     const app = hasDiff ? spriteTransformAppearance(a, t) : a;
     const ssj = !!t.ssj && SPRITE_SAIYAN_HAIR.includes(app.hairStyle);
     if (!hasDiff && !ssj) return null;
-    return getProceduralFrameUrls(app, state, { ssj, noGlow: true });
+    return getProceduralFrameUrls(app, state, { ssj, noGlow: true, ssjColor: spriteSsjColor(t) });
 }
 
 // Nível de transformação de um lutador (0 = normal). Antes só existia uma (isSSJ/isTransformed).
