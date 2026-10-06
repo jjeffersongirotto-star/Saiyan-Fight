@@ -2133,6 +2133,7 @@ function loadCharacterData() {
             if (validCount > 0) {
                 seedNewDefaultCharacters();
                 atualizarFreezaSalvo();
+                atualizarCellSalvo();
                 return;
             }
         }
@@ -2151,6 +2152,11 @@ const FREEZA_TRANSFORMACOES = [
     { name: "Terceira forma", diff: { build: "musculoso", headFeature: "cabeca_longa", bodyMarks: "carapaca_freeza", outerShirt: "none", mouthType: "risada" }, ssj: false, aura: "roxo" },
     { name: "Forma final", diff: { build: "normal", headFeature: "none", bodyMarks: "freeza", outerShirt: "armadura_freeza", gloves: "nenhuma", shoes: "pes_garras", skinColor: "" }, ssj: false, aura: "roxo" },
     { name: "Freeza ciborgue", diff: { build: "normal", headFeature: "meia_cabeca_metal", bodyMarks: "metal_freeza", outerShirt: "armadura_freeza", gloves: "nenhuma", shoes: "pes_garras", skinColor: "" }, ssj: false, aura: "roxo" }
+];
+
+const CELL_TRANSFORMACOES = [
+    { name: "Semi-perfeito", diff: { build: "gigante", headFeature: "capacete_cell2", bodyMarks: "cell_semi", skinColor: "#b5cf45", shoes: "sapato_cell" }, ssj: false, aura: "verde" },
+    { name: "Perfeito", diff: { build: "musculoso", headFeature: "capacete_cell3", bodyMarks: "cell_perfeito", skinColor: "#e6e4ee", shoes: "sapato_ponta", tail: "none", irisColor: "#7a3fa0" }, ssj: false, aura: "verde" }
 ];
 
 const DEFAULT_CHARACTERS = {
@@ -2175,7 +2181,8 @@ const DEFAULT_CHARACTERS = {
     majin_buu: { name: "MAJIN BUU", presetKey: "majin", align: "VILÃO", aura: "rosa", spec: "CHOCOLATE BEAM" },
     raditz: { name: "RADITZ", presetKey: "raditz", align: "VILÃO", aura: "roxo", spec: "DOUBLE SUNDAY" },
     broly: { name: "BROLY", presetKey: "broly", align: "VILÃO", aura: "verde", spec: "ERASER CANNON" },
-    cell: { name: "CELL", presetKey: "cell", align: "VILÃO", aura: "verde", spec: "KAMEHAMEHA PERFEITO" }
+    // Cell: começa na 1ª forma (imperfeito) e transforma em semi-perfeito e perfeito
+    cell: { name: "CELL", presetKey: "cell", align: "VILÃO", aura: "verde", spec: "KAMEHAMEHA PERFEITO", transformations: CELL_TRANSFORMACOES }
 };
 // Transformações do personagem, na ordem em que acontecem na luta (aba TRANSFORMAÇÃO do editor). Quem nunca
 // mexeu nisso tem a "Transformação 1" padrão (a de sempre: cabelo de Saiyajin amarelo, aura dourada e raios);
@@ -2244,6 +2251,19 @@ function atualizarFreezaSalvo() {
     if (!ap || ap.outerShirt !== "armadura_freeza" || ap.bodyMarks !== "freeza") return;
     if (Array.isArray(c.transformations) && c.transformations.some(t => t && t.diff && Object.keys(t.diff).length)) return;
     createDefaultCharacter("freeza_1");
+    saveCharacterData();
+}
+
+// Perfil com o Cell antigo (forma perfeita de armadura, sem transformações próprias): passa uma vez para o Cell
+// novo (1ª forma + semi-perfeito + perfeito). Um Cell que o jogador editou fica como está.
+function atualizarCellSalvo() {
+    if (readStorage("saiyan_cell_formas") === "1") return;
+    writeStorage("saiyan_cell_formas", "1");
+    const c = characterDB.cell;
+    const ap = c && c.builderAppearance;
+    if (!ap || ap.outerShirt !== "armadura_cell" || ap.hairStyle !== "cell_crista") return;
+    if (Array.isArray(c.transformations) && c.transformations.some(t => t && t.diff && Object.keys(t.diff).length)) return;
+    createDefaultCharacter("cell");
     saveCharacterData();
 }
 

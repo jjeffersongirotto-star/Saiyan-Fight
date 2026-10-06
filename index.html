@@ -1156,6 +1156,7 @@
                             <option value="majin_antena">Antena curva com ponta</option><option value="chifres">Chifres</option>
                             <option value="capacete_freeza">Capacete com chifres finos</option><option value="capacete_chifres">Capacete com chifres grandes</option>
                             <option value="cabeca_longa">Cabeça alongada com espinhos</option><option value="meia_cabeca_metal">Meia cabeça de metal com lente</option>
+                            <option value="capacete_cell1">Capacete de inseto com pontas cruzadas</option><option value="capacete_cell2">Chapa preta e pontas laterais</option><option value="capacete_cell3">Chapa preta e pontas altas</option>
                         </select>
                     </div>
                 </div>
@@ -1181,16 +1182,17 @@
                             <option value="none">Nenhuma</option><option value="namek">Placas rosadas e estrias</option>
                             <option value="cell">Marcas no rosto</option><option value="freeza">Domo e placas roxas</option>
                             <option value="listras_freeza">Pele rosada listrada</option><option value="carapaca_freeza">Placas brancas e pele listrada</option><option value="metal_freeza">Corpo de metal (ciborgue)</option>
+                            <option value="cell_imperfeito">Bio-androide (1ª forma)</option><option value="cell_semi">Bio-androide (semi-perfeito)</option><option value="cell_perfeito">Bio-androide (perfeito)</option>
                         </select>
                     </div>
                     <div class="form-group"><label for="build-scar">CICATRIZ</label>
                         <select id="build-scar" onchange="refreshBuilderPreview()"><option value="none">Nenhuma</option><option value="olho">No olho</option><option value="bochecha">Na bochecha</option><option value="peito">No peito (aparece sem camisa)</option></select>
                     </div>
                     <div class="form-group"><label for="build-tail">RABO</label>
-                        <select id="build-tail" onchange="refreshBuilderPreview()"><option value="none">Nenhum</option><option value="saiyajin">De macaco, solto</option><option value="cinto_saiyajin">De macaco, na cintura</option><option value="freeza">Longo e liso, de réptil</option></select>
+                        <select id="build-tail" onchange="refreshBuilderPreview()"><option value="none">Nenhum</option><option value="saiyajin">De macaco, solto</option><option value="cinto_saiyajin">De macaco, na cintura</option><option value="freeza">Longo e liso, de réptil</option><option value="cell">Grande com ferrão</option></select>
                     </div>
                     <div class="form-group"><label for="build-wings">ASAS</label>
-                        <select id="build-wings" onchange="refreshBuilderPreview()"><option value="none">Nenhuma</option><option value="cell">Asas de inseto</option><option value="morcego">Asas de morcego</option><option value="anjo">Asas de anjo</option></select>
+                        <select id="build-wings" onchange="refreshBuilderPreview()"><option value="none">Nenhuma</option><option value="cell">Asas de inseto</option><option value="cell_abertas">Asas de inseto abertas</option><option value="morcego">Asas de morcego</option><option value="anjo">Asas de anjo</option></select>
                     </div>
                 </div>
 
@@ -1243,7 +1245,7 @@
                             <option value="botas_artes">Botas de artes marciais</option><option value="botas_saiyajin">Botas brancas</option>
                             <option value="botas_trunks">Botas marrons altas</option><option value="botas_kaioshin">Sandálias</option>
                             <option value="botas_marrons">Botas simples</option><option value="botas_cell">Botas escuras</option><option value="descalco">Descalço</option>
-                            <option value="pes_garras">Pés com garras</option><option value="caneleiras_freeza">Caneleiras e pés com garras</option>
+                            <option value="pes_garras">Pés com garras</option><option value="sapato_cell">Sapato preto de pontas laranjas</option><option value="sapato_ponta">Sapato de ponta comprida</option><option value="caneleiras_freeza">Caneleiras e pés com garras</option>
                         </select>
                     </div>
                     <div class="form-group"><label for="build-gloves">LUVAS</label>
@@ -1317,7 +1319,10 @@
                 Novidades e correções do jogo.
             </p>
             <ul id="lista-updates" style="margin: 0 0 18px; color: #ddd; line-height: 1.5; padding: 0 4px 0 0; list-style: none; overflow-y: auto;">
-                <li class="upd-versao"><h3>Versão 0.70 (ATUAL)</h3><p>Freeza mais fiel e corpo sem emendas</p></li>
+                <li class="upd-versao"><h3>Versão 0.71 (ATUAL)</h3><p>Cell em 3 formas</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Cell com as 3 formas</strong><p>O Cell começa na 1ª forma (capacete de inseto com pontas cruzadas, boca laranja, placa laranja riscada, asas abertas, rabo com ferrão, juntas azuis e pintas pretas) e transforma em semi-perfeito (gigante, chapa preta na cabeça, antebraços e canelas pretos, rabo preto e laranja) e perfeito (verde claro com pintas verde-escuras, rosto claro com contorno amarelo e faixas roxas, peito preto, faixa roxa na cintura, sapatos de ponta).</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Peças do Cell no construtor</strong><p>Capacetes do Cell, corpo de bio-androide nas 3 formas, asas de inseto abertas, rabo com ferrão e dois sapatos novos.</p></li>
+                <li class="upd-versao"><h3>Versão 0.70</h3><p>Freeza mais fiel e corpo sem emendas</p></li>
                 <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>Capacetes do Freeza</strong><p>1ª e 2ª formas: chapa roxa no alto da cabeça e capacete branco em volta, descendo até o "fone" chato sobre a orelha. Na 2ª forma os chifres saem para o lado e sobem, e a chapa é menor.</p></li>
                 <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>2ª e 3ª formas</strong><p>Carapaça branca descendo até as laterais da barriga, com a faixa rosa acima do short, e ombreiras largas. A 3ª forma tem a cabeça subindo reta com espinhos dos dois lados e risada maligna.</p></li>
                 <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>Freeza ciborgue</strong><p>Rosto de frente com dois olhos: lente verde no olho da frente, topo da cabeça de metal. Braço direito, ombro direito roxo, gota roxa e metade do peito continuam do Freeza; o resto é metal.</p></li>
