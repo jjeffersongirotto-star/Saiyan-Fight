@@ -104,6 +104,14 @@ function conjuntoQuadros(charKey, st, nivel) {
     return conjQuadrosDaForma(conjFormaDoNivel(c, g, nivel | 0), st);
 }
 
+// Retrato do personagem (cartões do DATABASE/SELEÇÃO): o 1º quadro parado da base do conjunto em uso
+function conjRetratoUrl(c) {
+    const g = conjGrupoAtivo(c);
+    if (!g) return null;
+    const q = conjQuadrosDaForma(conjFormaDoNivel(c, g, 0), "idle");
+    return q && q[0] ? q[0] : null;
+}
+
 function conjuntoFps(charKey, st, nivel) {
     const c = typeof characterDB !== "undefined" ? characterDB[charKey] : null;
     const g = conjGrupoAtivo(c);
@@ -210,6 +218,28 @@ let conjTemp = null;      // { formas, grupos, ativo }
 let conjEdicao = null;    // forma em montagem: { formaId (null = nova), stash: { anim, fps, salvos } }
 const conjMarcadas = new Set();
 let conjIconeN = 0;
+let conjGrupoAberto = null;   // conjunto azul aberto pelo ✎: as formas dele aparecem na linha de baixo
+
+// Quadros do conjunto escolhido no editor (prévias quando não está montando uma forma): base do grupo em uso
+function conjPreviaAtiva(st) {
+    if (!conjTemp || conjEdicao || conjTemp.ativo === "original") return null;
+    const g = conjTemp.grupos.find(x => x.id === conjTemp.ativo);
+    return g ? conjQuadrosDaForma(conjFormaPorId(conjTemp.formas, g.base), st) : null;
+}
+
+// O que se faz nos conjuntos vale na hora para um personagem já salvo (luta, cartões, prévias); num personagem
+// novo, vale ao SALVAR PERSONAGEM.
+function conjPersistir() {
+    const k = typeof editingKey !== "undefined" ? editingKey : null;
+    if (k && characterDB[k] && conjTemp) {
+        conjAplicarNoPersonagem(characterDB[k], characterDB[k].spriteForms);
+        if (typeof saveCharacterData === "function") saveCharacterData();
+    }
+    if (typeof backgroundWork !== "undefined" && backgroundWork) backgroundWork.warmedFor = null;
+    if (typeof updateModalPreview === "function") updateModalPreview();
+    if (typeof renderSpriteMotionPreview === "function") renderSpriteMotionPreview();
+    return !!k;
+}
 
 function conjAbrirEditor(c) {
     conjTemp = {
@@ -320,7 +350,7 @@ function conjSalvarForma() {
     conjTemp.grupos = conjTemp.grupos.filter(g => conjGrupoValido(g));
     if (!conjTemp.grupos.some(g => g.id === conjTemp.ativo)) conjTemp.ativo = "original";
     conjTerminarEdicao();
-    conjStatus(conjNomeForma(forma) + " salva. Toque em SALVAR PERSONAGEM para guardar tudo.");
+    conjStatus(conjNomeForma(forma) + (conjPersistir() ? " salva." : " salva. Vale ao SALVAR PERSONAGEM."));
 }
 
 function conjGrupoValido(g) {
@@ -340,6 +370,7 @@ function conjApagarForma(id) {
         if (!conjTemp.grupos.some(g => g.id === conjTemp.ativo)) conjTemp.ativo = "original";
         conjMarcadas.delete(id);
         renderConjuntos();
+        conjPersistir();
     }, "APAGAR", "CANCELAR");
 }
 
@@ -349,7 +380,9 @@ function conjApagarGrupo(id) {
     showSystemConfirm("APAGAR CONJUNTO", `APAGAR O CONJUNTO ${g.nome}? AS FORMAS CONTINUAM SALVAS.`, () => {
         conjTemp.grupos = conjTemp.grupos.filter(x => x.id !== id);
         if (conjTemp.ativo === id) conjTemp.ativo = "original";
+        if (conjGrupoAberto === id) conjGrupoAberto = null;
         renderConjuntos();
+        conjPersistir();
     }, "APAGAR", "CANCELAR");
 }
 
@@ -366,7 +399,9 @@ function conjAgrupar() {
     conjTemp.grupos.push({ id: "g_" + Date.now(), nome, base: bases[0].id, transfs: transfs.map(f => f.id) });
     conjMarcadas.clear();
     if (campo) campo.value = "";
+    conjGrupoAberto = null;
     renderConjuntos();
+    conjPersistir();
     conjStatus(`Conjunto ${nome} criado. Toque nele para usar.`);
 }
 
@@ -374,11 +409,16 @@ function conjEscolher(id) {
     const g = conjTemp.grupos.find(x => x.id === id);
     const titulo = id === "original" ? "ANIMAÇÕES PADRÃO" : "USAR CONJUNTO";
     const msg = id === "original" ? "VOLTAR ÀS ANIMAÇÕES PADRÃO DO PERSONAGEM?" : `USAR O CONJUNTO ${g ? g.nome : ""}?`;
-    showSystemConfirm(titulo, msg + " (VALE AO TOCAR EM SALVAR PERSONAGEM.)", () => {
+    showSystemConfirm(titulo, msg, () => {
         conjTemp.ativo = id;
         renderConjuntos();
-        conjStatus("Escolhido. Toque em SALVAR PERSONAGEM para confirmar.");
+        conjStatus(conjPersistir() ? "Pronto: o personagem já usa este conjunto (editor, DATABASE, seleção e luta)." : "Escolhido. Vale ao SALVAR PERSONAGEM.");
     }, "SIM", "NÃO");
+}
+
+function conjAbrirGrupo(id) {
+    conjGrupoAberto = conjGrupoAberto === id ? null : id;
+    renderConjuntos();
 }
 
 function conjMarcar(id, ligado) { if (ligado) conjMarcadas.add(id); else conjMarcadas.delete(id); }
@@ -421,6 +461,7 @@ function renderConjuntos() {
         const usa = ativo === g.id;
         html += `<span class="conj-grupo"><button type="button" class="conj-btn conj-azul${usa ? " em-uso" : ""}" onclick="conjEscolher('${g.id}')" aria-pressed="${usa}">` +
             conjIcone("azul") + `<span class="conj-nome">${conjEsc(g.nome)}</span>${usa ? '<span class="conj-tag">EM USO</span>' : ""}</button>` +
+            `<button type="button" class="conj-x conj-lapis${conjGrupoAberto === g.id ? " aberto" : ""}" title="Ver e editar as formas deste conjunto" aria-label="Formas do conjunto ${conjEsc(g.nome)}" onclick="conjAbrirGrupo('${g.id}')">✎</button>` +
             `<button type="button" class="conj-x" title="Apagar conjunto" aria-label="Apagar conjunto ${conjEsc(g.nome)}" onclick="conjApagarGrupo('${g.id}')">✕</button></span>`;
     });
     linhaC.innerHTML = html;
@@ -440,8 +481,14 @@ function renderConjuntos() {
         if (sel && forma) sel.value = forma.tipo === "base" ? "base" : String(forma.nivel);
         return;
     }
-    const agrupa = conjTemp.formas.length >= 2;
-    conjTemp.formas.forEach(fm => {
+    const agrupadas = new Set();
+    conjTemp.grupos.forEach(g => { if (g.id !== conjGrupoAberto) [g.base].concat(g.transfs).forEach(id => agrupadas.add(id)); });
+    const aberto = conjTemp.grupos.find(g => g.id === conjGrupoAberto);
+    const aberta = new Set(aberto ? [aberto.base].concat(aberto.transfs) : []);
+    const soltas = conjTemp.formas.filter(fm => !agrupadas.has(fm.id) || aberta.has(fm.id));
+    const agrupa = soltas.length >= 2;
+    if (aberto) f += `<span class="conj-editando">FORMAS DE ${conjEsc(aberto.nome)}:</span>`;
+    soltas.forEach(fm => {
         const q = conjQuadrosDaForma(fm, "idle");
         f += `<span class="conj-forma">` + (q && q[0] ? `<img src="${q[0]}" alt="">` : `<span class="conj-forma-vazia">...</span>`) +
             `<span class="conj-forma-nome">${conjNomeForma(fm)}</span>` +

@@ -469,14 +469,14 @@ let databaseImageCache = {};
 // cria uma Image nova a cada quadro enquanto a imagem do personagem ainda está carregando.
 function getCharacterCardImage(cItem) {
     if (!cItem) return null;
-    if (cItem.imageObj) return cItem.imageObj;
-    if (!cItem.defaultUrl) return null;
-    if (!databaseImageCache[cItem.defaultUrl]) {
+    const url = conjRetratoUrl(cItem) || (cItem.imageObj ? null : cItem.defaultUrl);   // conjunto azul em uso: o retrato dele
+    if (!url) return cItem.imageObj || null;
+    if (!databaseImageCache[url]) {
         const img = new Image();
-        img.src = cItem.defaultUrl;
-        databaseImageCache[cItem.defaultUrl] = img;
+        img.src = url;
+        databaseImageCache[url] = img;
     }
-    return databaseImageCache[cItem.defaultUrl];
+    return databaseImageCache[url];
 }
 // Retrato dos cartões (SELEÇÃO DE PERSONAGEM e DATABASE): personagem grande, liso (sem serrilhado), sem distorção
 // e na resolução real da tela. Desenhos do jogo/construtor (SVG) são refeitos no tamanho exato e recortados nas
@@ -484,7 +484,7 @@ function getCharacterCardImage(cItem) {
 // Imagens enviadas (folhas de sprite) usam o 1º quadro, sem esticar. Fica guardado por personagem e tamanho.
 const cardPortraitCache = new Map();
 function getCardPortrait(cItem, w, h) {
-    const src = cItem && cItem.defaultUrl;
+    const src = cItem && (conjRetratoUrl(cItem) || cItem.defaultUrl);
     if (!src || !String(src).startsWith("data:image/svg") || typeof document === "undefined") return null;
     const pw = Math.max(1, Math.round(w * renderScale)), ph = Math.max(1, Math.round(h * renderScale));
     const chave = src.length + ":" + src.slice(-48) + "|" + pw + "x" + ph;

@@ -1620,6 +1620,8 @@ function reorderSelectedPreviewFrame(sourceIndex, targetIndex) {
 }
 
 function getSpriteMotionPreviewFrames() {
+    const doConjunto = conjPreviaAtiva(activeSpriteMovement);
+    if (doConjunto) return doConjunto;
     if (savedSpriteMotionPreviewFrames[activeSpriteMovement]) {
         return savedSpriteMotionPreviewFrames[activeSpriteMovement];
     }
@@ -1785,7 +1787,7 @@ function updateModalPreview() {
     prevCtx.clearRect(0, 0, prevCanvas.width, prevCanvas.height);
 
     const currentCharacter = editingKey && characterDB[editingKey] ? characterDB[editingKey] : null;
-    const idleFrames = tempAnimations.idle || [];
+    const idleFrames = conjPreviaAtiva("idle") || tempAnimations.idle || [];   // conjunto azul em uso: a prévia mostra ele
     const baseCharacterSource = idleFrames[0] || tempBase64 || (currentCharacter && currentCharacter.defaultUrl) || null;
 
     if (baseCharacterSource) {
