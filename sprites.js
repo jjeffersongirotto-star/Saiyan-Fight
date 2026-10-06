@@ -88,7 +88,7 @@ const SPRITE_DEFAULT_APPEARANCE = {
     innerShirt: "regata", outerShirt: "kimono", pants: "larga", shoes: "botas_artes", gloves: "pulseiras",
     primaryColor: "#f26a0f", secondaryColor: "#1f4fbf", accentColor: "#ffd23f", shirtColor: "#1f4fbf", pantsColor: "#f26a0f",
     cape: "none", capeColor: "#ffffff", tail: "none", wings: "none", backWeapon: "none",
-    symbol: "none", scar: "none", kiColor: "#5be3ff"
+    symbol: "none", scar: "none", kiColor: "#5be3ff", armPose: "guarda"
 };
 
 // Valores do jogo antigo (32x32) que mudaram de nome/uso.
@@ -612,6 +612,18 @@ function spriteHair(R, style, color, sway, lift, ssj, color2) {
             front = piece("M-9 -8 C-9.4 -13 -6.4 -14.6 -4.4 -13 L-4.6 -8 Z") + piece("M9 -8 C9.4 -13 6.4 -14.6 4.4 -13 L4.6 -8 Z");
             break;
         }
+        case "vegeta_sprite": {
+            // Chama do Vegeta como nos sprites de luta: espetos jogados para trás (lado oposto ao adversário), o mais
+            // alto no meio, reflexo azulado no preto e o "bico" (entradas) na testa
+            back = animeSilhouette([[-12.6, 0], { t: [-21, -13], v: [-14, -11] }, { t: [-26, -29], v: [-11, -19] }, { t: [-17, -40], v: [-6, -22] },
+                { t: [-5, -45], v: [0, -23] }, { t: [7, -42], v: [5, -20] }, { t: [14, -33], v: [10, -16] }, { t: [16.5, -20], v: [13.4, -8] }, { t: [14, -3], v: [12.8, 0] }]);
+            const azul = ssj ? spriteShade(color, 0.45) : spriteMix(color, "#6a8ad0", 0.4);
+            const brilho = (b, t, w) => spritePath(spriteSpike(b[0], b[1], animeTip(t[0], t[1])[0], animeTip(t[0], t[1])[1], w, 0), azul, `opacity="0.9"`, "");
+            back += brilho([-8, -18], [-23, -27], 2.2) + brilho([-3, -21], [-15, -37], 2.4) + brilho([1, -22], [-4, -42], 2.4) + brilho([5, -19], [6, -39], 2) + brilho([9, -15], [13, -30], 1.8);
+            front = spritePath("M-13 -2 C-14.4 -15 -6.4 -17.4 0 -17.4 C6.4 -17.4 14.4 -15 13 -2 L11.6 -6.6 L6.8 -9.4 L1.4 -3.4 L-5.6 -9.2 L-11.6 -6.6 Z", animeFill) +
+                spritePath("M-8 -13.6 Q-2 -16.8 4 -15.2 Q-2 -14 -6.6 -10.4 Z", azul, `opacity="0.8"`, "");
+            break;
+        }
         case "vegetto": {
             // Vegetto: espetos altos de Saiyajin (mistura do Goku com o Vegeta), reflexo vermelho-escuro nos espetos
             // e duas mechas caindo na testa
@@ -699,7 +711,7 @@ function spriteHair(R, style, color, sway, lift, ssj, color2) {
 }
 
 const SPRITE_SAIYAN_HAIR = ["goku", "vegeta", "gohan", "gohan_ssj2", "bardock", "raditz", "broly", "gotenks", "trunks_futuro", "trunks_kid", "ssj_longo",
-    "vegetto", "broly_lssj", "gotenks_bicolor", "ssj_solto", "ssj_volumoso", "ssj_vegeta", "blue_goku", "blue_vegeta"];
+    "vegetto", "vegeta_sprite", "broly_lssj", "gotenks_bicolor", "ssj_solto", "ssj_volumoso", "ssj_vegeta", "blue_goku", "blue_vegeta"];
 
 // ---------------------------------------------------------------------------
 // TRANSFORMAÇÕES: cada uma guarda só o que muda em relação ao personagem base (diff); a aparência de cada
@@ -1066,7 +1078,7 @@ function spriteHeadAccessory(R, a, ctx, skin, pose, rx, ry) {
 const SPRITE_OUTFITS = {
     kimono: { covers: true, chest: true }, gi_piccolo: { covers: true, chest: true }, gi_rasgado: { covers: true, chest: true }, roupa_kaioshin: { covers: true, chest: true },
     armadura_saiyajin: { chest: true }, jaqueta_trunks: { covers: true, chest: true, sleeves: "full" },
-    colete_fusao: {}, colete_buu: {}, colete_metamoran: {}, faixa_majin: {}, armadura_broly: { chest: true }, traje_android: { covers: true, chest: true, sleeves: "full" },
+    colete_fusao: {}, colete_buu: {}, colete_metamoran: {}, faixa_majin: {}, armadura_broly: { chest: true }, armadura_curta: { chest: true }, traje_android: { covers: true, chest: true, sleeves: "full" },
     armadura_cell: { covers: true, chest: true, sleeves: "cell" }, armadura_freeza: { chest: true }, armadura_exercito: { chest: true }
 };
 function spriteOutfitSpec(a, skin) {
@@ -1078,7 +1090,7 @@ function spriteOutfitSpec(a, skin) {
         leg: a.pantsColor, legSkin: cel ? cel.coxa : limb, legLower: cel ? cel.canela : null, legWide: a.pants === "larga", legPuff: a.pants === "bufante", legCover: a.pants !== "nenhuma", bare: !inner && !o.chest };
     // camisa por baixo: camiseta = manguinha curta; malha = manga comprida; regata = sem manga
     if (inner === "camiseta") spec.sleeve = { color: a.shirtColor, frac: 0.3 };
-    if (inner === "malha" || inner === "malha_gola") spec.armUpper = spec.armLower = a.shirtColor;
+    if (inner === "malha" || inner === "malha_gola" || inner === "macacao") spec.armUpper = spec.armLower = a.shirtColor;
     if (o.covers) spec.torso = a.primaryColor;
     if (o.sleeves === "full") { spec.armUpper = spec.armLower = a.primaryColor; spec.sleeve = null; }
     if (o.sleeves === "cell") { spec.armUpper = a.primaryColor; spec.armLower = a.secondaryColor; spec.sleeve = null; spec.spots = true; }
@@ -1093,6 +1105,7 @@ function spriteBootSpec(a) {
         case "botas_kaioshin": return { color: "#efd28a", trim: a.secondaryColor, h: 0.45 };
         case "botas_marrons": return { color: "#5a3d2b", trim: "#2f2015", h: 0.5 };
         case "botas_dobradas": return { color: "#b8502a", trim: "#d27040", h: 0.44, dobra: true };
+        case "botas_ponta_dourada": return { color: "#f4f4f6", trim: "#d3d8e2", h: 0.5, ponta: "#e2b23a", pontaLisa: true };
         case "botas_vegetto": return { color: "#f4f4f6", trim: "#e2b23a", h: 0.64, ponta: "#e2b23a" };
         case "botas_broly": return { color: "#f4f4f6", trim: "#f4f4f6", h: 0.62, ponta: "#3fae4a", cano: "#2a2530" };
         case "botas_majin": return { color: "#1d1a22", trim: "#e2b23a", h: 0.5, dobra: true, ponta: "#7d8a2e" };
@@ -1114,6 +1127,7 @@ function spriteGloveSpec(a) {
     if (a.gloves === "munhequeiras_borda") return { color: "#2a2530", trim: "#f4f4f6", full: false, bordas: true };
     if (a.gloves === "munhequeiras_escuras") return { color: "#1a181e", trim: null, full: false };
     if (a.gloves === "bracadeiras_majin") return { color: "#1d1a22", trim: "#e2b23a", full: false, longa: true, bordas: true, unhas: true };
+    if (a.gloves === "luvas_punho_largo") return { color: "#f4f4f6", trim: "#d3d8e2", full: true, punho: 3 };
     if (a.gloves === "luvas_douradas") return { color: "#e8b830", trim: "#b8861a", full: true };
     if (a.gloves === "bracadeiras_freeza") return { color: "#f4f4f2", trim: null, full: false, guard: "#8a4a1a" };
     return null;
@@ -1304,6 +1318,17 @@ function spriteTorso(R, a, B, spec, skin, pose) {
             d += `<ellipse cx="48" cy="${_n2(y0b + 10)}" rx="3.4" ry="3.8" fill="${gema}" stroke="#f4f4f6" stroke-width="1"/><ellipse cx="47" cy="${_n2(y0b + 8.6)}" rx="1.1" ry="1.3" fill="#ffffff" opacity="0.75"/>`;
             break;
         }
+        case "armadura_curta": {
+            // armadura curta (como nos sprites do Vegeta): peitoral branco liso até a cintura, sem abas, com a faixa
+            // dourada (cor de detalhe) na barriga; as ombreiras pequenas e arredondadas ficam em spriteShoulderPads
+            const placa = R.lin(x0, 46, x1, 66, [[0, "#ffffff"], [0.55, "#e9edf5"], [1, "#a3abc0"]]);
+            d += spritePath(`M${_n2(x0 + 1.4)} ${_n2(y0b + 1.6)} Q48 ${_n2(y0b - 2.2)} ${_n2(x1 - 1.4)} ${_n2(y0b + 1.6)} L${_n2(x1 - 2)} 58 Q${_n2(x1 - 3)} 63 ${_n2(48 + ww / 2 + 0.6)} 64.6 L${_n2(48 - ww / 2 - 0.6)} 64.6 Q${_n2(x0 + 3)} 63 ${_n2(x0 + 2)} 58 Z`, placa);
+            d += `<path d="M${_n2(48 - sw * 0.3)} ${_n2(y0b + 9)} Q${_n2(48 - sw * 0.14)} ${_n2(y0b + 11.6)} 48 ${_n2(y0b + 9.6)} Q${_n2(48 + sw * 0.14)} ${_n2(y0b + 11.6)} ${_n2(48 + sw * 0.3)} ${_n2(y0b + 9)} M48 ${_n2(y0b + 10)} L48 63" fill="none" stroke="#8d95ab" stroke-width="0.9" opacity="0.85"/>`;
+            const ouro = R.lin(0, 64, 0, 69, [[0, spriteShade(a.accentColor, 0.35)], [0.5, a.accentColor], [1, spriteShade(a.accentColor, -0.45)]]);
+            d += spritePath(`M${_n2(48 - ww / 2 - 1)} 64 L${_n2(48 + ww / 2 + 1)} 64 L${_n2(48 + ww / 2 + 1.4)} 68.6 L${_n2(48 - ww / 2 - 1.4)} 68.6 Z`, ouro);
+            d += `<path d="M${_n2(48 - ww / 2)} 66.3 L${_n2(48 + ww / 2)} 66.3" stroke="${spriteShade(a.accentColor, -0.45)}" stroke-width="0.6"/>`;
+            break;
+        }
         case "faixa_majin": {
             // só o cinto largo preto com a fivela dourada "M" (peito nu)
             d += spriteBareTorsoMuscles(B, base, ww, y0b);
@@ -1338,7 +1363,11 @@ function spriteTorso(R, a, B, spec, skin, pose) {
         }
         default: {
             if (spec.torso === skin || base === SPRITE_ROSA_FREEZA || (spriteCellCores(a) && spec.bare)) d += spriteBareTorsoMuscles(B, base, ww, y0b);
-            else if (a.innerShirt === "malha_gola" && !SPRITE_OUTFITS[a.outerShirt]) d += spriteBareTorsoMuscles(Object.assign({}, B, { mus: Math.max(B.mus, 0.6) }), base, ww, y0b);   // malha justa: músculos marcados por baixo
+            else if ((a.innerShirt === "malha_gola" || a.innerShirt === "macacao") && !SPRITE_OUTFITS[a.outerShirt]) {
+                d += spriteBareTorsoMuscles(Object.assign({}, B, { mus: Math.max(B.mus, 0.6) }), base, ww, y0b);   // malha justa: músculos marcados por baixo
+                // macacão: gola redonda baixa e costura dos lados
+                if (a.innerShirt === "macacao") d += `<path d="M${_n2(48 - 6)} ${_n2(y0b - 0.4)} Q48 ${_n2(y0b + 3.4)} ${_n2(48 + 6)} ${_n2(y0b - 0.4)} M${_n2(x0 + 2.6)} ${_n2(y0b + 6)} Q${_n2(x0 + 3.4)} 60 ${_n2(48 - ww / 2 + 0.6)} 68 M${_n2(x1 - 2.6)} ${_n2(y0b + 6)} Q${_n2(x1 - 3.4)} 60 ${_n2(48 + ww / 2 - 0.6)} 68" fill="none" stroke="${spriteShade(base, -0.5)}" stroke-width="0.8" opacity="0.85"/>`;
+            }
             else if (B.mus > 0.3 && base !== SPRITE_ROSA_FREEZA && !spriteCellCores(a)) {
                 // com camisa/malha: o tecido marca o peitoral e o abdômen por baixo
                 const dobra = spriteShade(base, -0.4), k = B.mus;
@@ -1585,7 +1614,7 @@ function spriteArm(R, a, B, spec, glove, skin, side, angles, handKind) {
             s += spriteHalfGuard(g1[0], g1[1], g2[0], g2[1], w * 1.14, w * 1.02, glove.guard, 0);
         } else {
             s += spriteMuscle(q1[0], q1[1], q2[0], q2[1], w * 0.98, w * 0.86, glove.color, { bulge: 0 });
-            if (glove.trim) s += spriteBand(q1[0], q1[1], q2[0], q2[1], w * 1.0, glove.trim, 1.5);
+            if (glove.trim) s += spriteBand(q1[0], q1[1], q2[0], q2[1], w * (glove.punho ? 1.12 : 1.0), glove.trim, glove.punho || 1.5);
             if (glove.bordas) s += spriteBand(q2[0], q2[1], q1[0], q1[1], w * 0.9, glove.trim, 1.5);   // borda também no punho
         }
     }
@@ -1757,7 +1786,7 @@ function spriteLeg(R, a, B, spec, boot, skin, side, angles) {
     if (boot && boot.sapato) return { svg: s + spriteCellShoe(f, side, angles[1] * 0.45 + side * 4, boot.sapato), foot: f, knee: k };
     // ponta da bota em outra cor com listras (botas do Trunks)
     const ponta = boot && boot.ponta ? `<path d="M${_n2(f[0] + side * 1.4)} ${_n2(f[1] - 1)} Q${_n2(f[0] + side * 7.6 + (side < 0 ? 2 : 0))} ${_n2(f[1] + 0.4)} ${_n2(f[0] + side * 6.4 + (side < 0 ? 1.4 : 0))} ${_n2(f[1] + 3.6)} L${_n2(f[0] + side * 1)} ${_n2(f[1] + 3.6)} Z" fill="${boot.ponta}"/>` +
-        `<path d="M${_n2(f[0] + side * 2.8)} ${_n2(f[1] - 0.6)} L${_n2(f[0] + side * 2.4)} ${_n2(f[1] + 3.4)} M${_n2(f[0] + side * 4.4)} ${_n2(f[1] - 0.2)} L${_n2(f[0] + side * 4.2)} ${_n2(f[1] + 3.4)}" stroke="${spriteShade(boot.ponta, -0.45)}" stroke-width="0.6"/>` : "";
+        (boot.pontaLisa ? "" : `<path d="M${_n2(f[0] + side * 2.8)} ${_n2(f[1] - 0.6)} L${_n2(f[0] + side * 2.4)} ${_n2(f[1] + 3.4)} M${_n2(f[0] + side * 4.4)} ${_n2(f[1] - 0.2)} L${_n2(f[0] + side * 4.2)} ${_n2(f[1] + 3.4)}" stroke="${spriteShade(boot.ponta, -0.45)}" stroke-width="0.6"/>`) : "";
     s += `<g transform="${peGiro}"><path d="${pePath}" fill="${fc}"/>${ponta}` +
         `<path d="M${_n2(f[0] - 3.6)} ${_n2(f[1] + 2.4)} L${_n2(f[0] + side * 6.2)} ${_n2(f[1] + 2.4)}" stroke="${spriteShade(fc, -0.45)}" stroke-width="1.3"/></g>`;
     return { svg: s, foot: f, knee: k };
@@ -1925,6 +1954,15 @@ function spriteShoulderPads(R, a, B) {
                 `<ellipse cx="${_n2(cx)}" cy="${cy}" rx="${_n2(rx)}" ry="${ry}" fill="${f}"/><ellipse cx="${_n2(cx - side * 1.6 - 1)}" cy="${_n2(cy - 2)}" rx="${_n2(rx * 0.36)}" ry="1.1" fill="#ffffff" opacity="0.6"/></g>`;
         });
     }
+    if (a.outerShirt === "armadura_curta") {
+        // ombreiras pequenas e arredondadas, brancas, presas por uma alça ao peitoral
+        [-1, 1].forEach(side => {
+            const cx = 48 + side * (B.sw / 2 - 0.2), cy = 45.8, rx = 4.6 + B.arm * 0.16, ry = 3.6;
+            const f = R.lin(cx - rx, cy - ry, cx + rx, cy + ry, [[0, "#ffffff"], [0.55, "#e6eaf3"], [1, "#9aa2b8"]]);
+            s += `<ellipse cx="${_n2(cx)}" cy="${cy}" rx="${_n2(rx)}" ry="${ry}" fill="${f}" stroke="${SPRITE_OUTLINE}" stroke-width="1"/>` +
+                `<path d="M${_n2(cx - rx * 0.7)} ${_n2(cy + 1.4)} Q${_n2(cx)} ${_n2(cy + 2.8)} ${_n2(cx + rx * 0.7)} ${_n2(cy + 1.4)}" fill="none" stroke="#8d95ab" stroke-width="0.7"/>`;
+        });
+    }
     if (a.outerShirt === "colete_metamoran") {
         // ombreiras acolchoadas do colete (cor de detalhe)
         [-1, 1].forEach(side => {
@@ -2033,7 +2071,10 @@ function spritePoseFor(state, i, n) {
         bob: 0, shiftX: 0, lean: 0, crouch: 0, breath: 0,
         armL: [-14, -8], armR: [14, 8], legL: [-7, -4], legR: [7, 4], handL: "fist", handR: "fist",
         hairSway: 0, hairLift: 0, capeSway: 0, tailSwing: sn, wing: sn, lookX: 0.32, lookY: 0,
-        eyes: "open", mouth: "auto", ki: null, shield: 0, flash: 0, sparks: 0, ssj: false
+        eyes: "open", mouth: "auto", ki: null, shield: 0, flash: 0, sparks: 0, ssj: false,
+        // POSIÇÃO DOS BRAÇOS "cruzados": vale parado e voando para frente/trás/cima (atacar, parry, carregar e
+        // voar para baixo continuam com os braços livres)
+        cruzavel: ["idle", "flyRight", "flyLeft", "flyUp", "flyUpRight", "flyUpLeft"].includes(state)
     };
     if (state === "idle") {
         // Postura de luta pronta, virada para o adversário (à direita): perna direita (frente) avançada e mais
@@ -2126,6 +2167,12 @@ function spriteRenderFigure(a, pose, opts) {
     const glove = spriteGloveSpec(a);
     const kiColor = (opts && opts.kiColor) || a.kiColor || "#5be3ff";
 
+    // braços cruzados no peito: antebraço de trás por baixo, o da frente por cima, punhos fechados
+    const cruzados = a.armPose === "cruzados" && pose.cruzavel;
+    if (cruzados) {
+        const respira = (pose.breath || 0) * 2;
+        pose = Object.assign({}, pose, { armL: [24, 80 + respira], armR: [-22, -100 - respira], handL: "fist", handR: "fist" });
+    }
     const armL = spriteArm(R, a, B, spec, glove, skin, -1, pose.armL, pose.handL);
     const armR = spriteArm(R, a, B, spec, glove, skin, 1, pose.armR, pose.handR);
     const legL = spriteLeg(R, a, B, spec, boot, skin, -1, pose.legL);
@@ -2143,7 +2190,7 @@ function spriteRenderFigure(a, pose, opts) {
     fig += headWrap(headParts.back);          // cabelo comprido fica ATRÁS do corpo
     fig += torsoWrap(spriteTorsoOutline(B, pose));
     fig += legL.svg + legR.svg;
-    fig += armL.svg;                          // braço de trás (esquerdo, lado oposto ao adversário) some atrás do tronco
+    if (!cruzados) fig += armL.svg;           // braço de trás (esquerdo, lado oposto ao adversário) some atrás do tronco
     let torso = spriteTorso(R, a, B, spec, skin, pose);
     if (a.tail === "cinto_saiyajin") {
         torso += spritePath(`M${_n2(48 - B.ww / 2 - 1)} 66.6 L${_n2(48 + B.ww / 2 + 1)} 66.6 L${_n2(48 + B.ww / 2 + 1.6)} 71.4 L${_n2(48 - B.ww / 2 - 1.6)} 71.4 Z`, R.lin(0, 66, 0, 72, [[0, "#b98a52"], [1, "#6d4522"]]));
@@ -2168,6 +2215,7 @@ function spriteRenderFigure(a, pose, opts) {
         torso += `<g transform="rotate(${_n2(Math.atan2(66 - 45.6, x2 - x1) * 180 / Math.PI)} ${_n2(mx)} ${_n2(my)})"><rect x="${_n2(mx - 2.2)}" y="${_n2(my - 2)}" width="4.4" height="4" fill="#f4f6f8" stroke="${SPRITE_OUTLINE}" stroke-width="0.6"/><rect x="${_n2(mx - 1)}" y="${_n2(my - 1)}" width="2" height="2" fill="#d8302a"/></g>`;
     }
     fig += torsoWrap(torso);
+    if (cruzados) fig += armL.svg;            // cruzados: o antebraço de trás passa na frente do peito
     fig += armR.svg;                          // braço da frente (direito, rumo ao adversário) fica por cima
     fig += torsoWrap(spriteShoulderPads(R, a, B));
 

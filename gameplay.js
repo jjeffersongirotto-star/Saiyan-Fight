@@ -311,6 +311,9 @@ function getCharacterAnimationFrames(charKey, actionState, transformed) {
     let char = characterDB[charKey];
     if (!char) return [];
     const level = transformed === true ? 1 : (transformed | 0);
+    // conjunto de sprites em uso (botão azul do editor): base e transformações do grupo
+    const doConjunto = conjuntoQuadros(charKey, SPRITE_FRAME_COUNTS[actionState || "idle"] ? (actionState || "idle") : "idle", level);
+    if (doConjunto && doConjunto.length) return doConjunto;
     if (level > 0) {
         const t = getCharacterTransformations(charKey)[level - 1];
         // pose sem desenho próprio (ex.: "hit" do vilão levando golpe): usa a parada transformada, senão o
@@ -356,7 +359,7 @@ function getCharacterAnimationFrame(charKey, actionState, animTimer, transformed
         return getOrCacheGameplayImage(animFrames[0], char.imageObj, char.bgRemoval);
     }
 
-    let fps = fpsSettings[state] || 12;
+    let fps = conjuntoFps(charKey, state, transformed === true ? 1 : (transformed | 0)) || fpsSettings[state] || 12;
     let frameIndex = Math.floor(animTimer * fps) % animFrames.length;
     let idleFallback = Array.isArray(anims.idle) ? anims.idle[0] : anims.idle;
     let frameSrc = animFrames[frameIndex] || animFrames[0] || idleFallback || char.defaultUrl;

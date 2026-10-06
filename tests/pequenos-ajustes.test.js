@@ -104,7 +104,7 @@ run("showSystemAlert = __alertaOriginal");
 const confirmacoes = [];
 context.__confirmacoes = confirmacoes;
 run("var __confirmOriginal = showSystemConfirm; showSystemConfirm = (t, m, ok) => __confirmacoes.push({ t, ok })");
-run("openModal(null); setActiveSpriteMovement('flyRight'); tempAnimations.flyRight = ['a', 'b']; savedSpriteMotionPreviewFrames.flyRight = ['a', 'b']; clearActiveSpriteFrames()");
+run("openModal(null); conjNovaForma(true); setActiveSpriteMovement('flyRight'); tempAnimations.flyRight = ['a', 'b']; savedSpriteMotionPreviewFrames.flyRight = ['a', 'b']; clearActiveSpriteFrames()");
 check("LIMPAR MOVIMENTO pede confirmação antes de apagar", confirmacoes.length === 1 && run("tempAnimations.flyRight.length") === 2);
 confirmacoes[0].ok();
 check("confirmando, o movimento é limpo", run("tempAnimations.flyRight.length") === 0);

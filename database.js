@@ -669,6 +669,8 @@ function switchEditorTab(tabName) {
     currentEditorTab = tabName;
     if (tabName === "construtor") refreshBuilderPreview();
     if (tabName === "transformacao") renderTransformationList();
+    const conjArea = document.getElementById("conj-area");
+    if (conjArea) conjArea.style.display = tabName === "animacoes" ? "" : "none";
 }
 
 // ==================== GERENCIAMENTO DE MINIATURAS E ANIMAÇÕES ====================
@@ -1287,6 +1289,7 @@ function mirrorImageSource(source) {
 }
 
 async function invertSelectedSpriteFrame() {
+    if (!conjExigirEdicao()) return;
     if (spriteMotionPreviewPlaying) {
         return showSystemAlert("PAUSE A PRÉVIA", "PAUSE A PRÉVIA ANTES DE INVERTER UM FRAME.");
     }
@@ -1330,6 +1333,7 @@ function updatePreviewFrameCount(count) {
 }
 
 function cloneSelectedPreviewFrame() {
+    if (!conjExigirEdicao()) return;
     if (spriteMotionPreviewPlaying) {
         return showSystemAlert("PAUSE A PRÉVIA", "PAUSE A PRÉVIA ANTES DE CLONAR UM FRAME.");
     }
@@ -1354,6 +1358,7 @@ function cloneSelectedPreviewFrame() {
 }
 
 function deleteSelectedPreviewFrame() {
+    if (!conjExigirEdicao()) return;
     if (spriteMotionPreviewPlaying) {
         return showSystemAlert("PAUSE A PRÉVIA", "PAUSE A PRÉVIA ANTES DE APAGAR UM FRAME.");
     }
@@ -1374,6 +1379,7 @@ function deleteSelectedPreviewFrame() {
 }
 
 function duplicateMovement() {
+    if (!conjExigirEdicao()) return;
     const targetMovement = getMirrorTargetMovement();
     const sourceFrames = getMovementCopyFrames();
     if (!sourceFrames.length) {
@@ -1387,6 +1393,7 @@ function duplicateMovement() {
 }
 
 async function duplicateMovementMirrored() {
+    if (!conjExigirEdicao()) return;
     const targetMovement = getMirrorTargetMovement();
     const sourceFrames = getMovementCopyFrames();
     if (!sourceFrames.length) {
@@ -1467,6 +1474,7 @@ function assignSelectedSpriteFrame() {
         return showSystemAlert("SELECIONE UM QUADRO", "CLIQUE EM UM OU MAIS QUADROS DA SPRITE SHEET ANTES DE ADICIONAR.");
     }
 
+    if (!conjEstaEditando()) conjNovaForma(true);   // adicionar quadros já começa uma forma nova (o ORIGINAL não muda)
     const sources = Array.from(selectedSpriteSheetFrames)
         .sort((first, second) => first - second)
         .map(frame => extractSpriteSheetFrame(frame))
@@ -1481,6 +1489,7 @@ function assignSelectedSpriteFrame() {
 }
 
 function clearActiveSpriteFrames() {
+    if (!conjExigirEdicao()) return;
     const frames = getSpriteMotionPreviewFrames();
     if (!frames.length) return;
     showSystemConfirm("LIMPAR MOVIMENTO", `APAGAR TODOS OS ${frames.length} QUADRO(S) DO MOVIMENTO ${getSpriteMovementDisplayName(activeSpriteMovement)}?`, () => {
@@ -1495,6 +1504,14 @@ function renderSpriteAssignedFrames() {
     const container = document.getElementById("sprite-assigned-frames");
     if (!container) return;
     container.innerHTML = "";
+    if (!conjEstaEditando()) {
+        // fora da montagem de uma forma a fileira fica vazia (os quadros do ORIGINAL não são mexidos aqui)
+        const empty = document.createElement("span");
+        empty.className = "sprite-assigned-empty";
+        empty.innerText = "Toque em + NOVA FORMA (ou EDITAR numa forma) para montar os quadros. Adicionar um quadro já começa uma forma nova.";
+        container.appendChild(empty);
+        return;
+    }
     const frames = savedSpriteMotionPreviewFrames[activeSpriteMovement]
         || (tempAnimations[activeSpriteMovement] || []);
     if (frames.length === 0) {
@@ -1589,6 +1606,7 @@ function getSelectedPreviewFrameIndices(frameCount) {
 }
 
 function reorderSelectedPreviewFrame(sourceIndex, targetIndex) {
+    if (!conjEstaEditando()) return;
     const frames = getSpriteMotionPreviewFrames();
     if (!Number.isInteger(sourceIndex) || !Number.isInteger(targetIndex) || sourceIndex === targetIndex || sourceIndex < 0 || targetIndex < 0 || sourceIndex >= frames.length || targetIndex >= frames.length) return;
     const updatedFrames = Array.from(frames);
@@ -1930,6 +1948,7 @@ function openModal(key = null) {
     transformEditStash = null;
     showTransformBanner(false);
     setBuilderFormFromAppearance(char.builderAppearance || SPRITE_PRESETS.goku.appearance);
+    conjAbrirEditor(key ? characterDB[key] : null);
     const buildPresetSel = document.getElementById("build-preset");
     if (buildPresetSel) buildPresetSel.value = "";
     switchEditorTab('basico');
@@ -1950,6 +1969,7 @@ function closeModal() {
     transformEditStash = null;
     showTransformBanner(false);
     stopSpriteMotionPreview();
+    conjFecharEditor();
     if (modal) modal.style.display = 'none';
     editingKey = null;
     tempBase64 = null;
@@ -1983,6 +2003,7 @@ document.addEventListener("input", (e) => {
 });
 
 function saveCharacterFromModal() {
+    if (conjEstaEditando()) return showSystemAlert("FORMA EM MONTAGEM", "TOQUE EM SALVAR FORMA OU CANCELAR FORMA ANTES DE SALVAR O PERSONAGEM.");
     if (editingTransformIndex !== null) finishTransformationEdit(null);
     if (builderMexido) applyBuilderToCharacter();
     const charName = document.getElementById('char-name');
@@ -2061,6 +2082,7 @@ function saveCharacterFromModal() {
                 bgRemoval: getBgRemovalFromForm(),
                 transformations: JSON.parse(JSON.stringify(tempTransformations.length ? tempTransformations : [SPRITE_DEFAULT_TRANSFORMATION]))
             };
+            conjAplicarNoPersonagem(characterDB[key], previousCharacter && previousCharacter.spriteForms);
             if (!saveCharacterData()) {
                 // Não coube no armazenamento do navegador: desfaz na memória também, para o jogo não mostrar
                 // um personagem que vai sumir ao reabrir. O editor continua aberto, sem perder o trabalho.
@@ -2136,6 +2158,7 @@ function loadCharacterData() {
                 atualizarCellSalvo();
                 atualizarHeroisSalvos();
                 atualizarPersonagens075();
+                conjuntosAoCarregar();
                 return;
             }
         }
@@ -2144,6 +2167,7 @@ function loadCharacterData() {
     }
 
     loadDefaultCharacters();
+    conjuntosAoCarregar();
 }
 
 // Personagens iniciais: um para cada modelo da lista "COMEÇAR A PARTIR DE..." do construtor (SPRITE_PRESETS em
@@ -2383,6 +2407,7 @@ function saveCharacterData() {
             // construtor geraria (ver saveCharacterFromModal) — nesse caso não precisa duplicar ~1MB de SVGs
             // no armazenamento; loadCharacterData recria tudo a partir da aparência ao carregar.
             if (rest.builderAppearance) delete rest.animations;
+            if (Array.isArray(rest.spriteForms)) rest.spriteForms = rest.spriteForms.map(conjFormaParaSalvar);   // imagens das formas vão para o IndexedDB
             exportData[k] = rest;
         }
         return writeStorage("saiyan_db_v8_8bit", JSON.stringify(exportData));
@@ -2419,7 +2444,7 @@ const BUILDER_FIELD_IDS = {
     pants: "build-pants", shoes: "build-shoes", gloves: "build-gloves", cape: "build-cape", capeColor: "build-cape-color",
     tail: "build-tail", wings: "build-wings", backWeapon: "build-back-weapon", primaryColor: "build-primary-color",
     secondaryColor: "build-secondary-color", accentColor: "build-accent-color", kiColor: "build-ki-color",
-    shirtColor: "build-shirt-color", pantsColor: "build-pants-color"
+    shirtColor: "build-shirt-color", pantsColor: "build-pants-color", armPose: "build-arm-pose"
 };
 
 function populateBuilderPresetOptions() {
@@ -2543,13 +2568,14 @@ function applyBuilderToCharacter() {
     if (editingTransformIndex !== null) return finishTransformationEdit("transformacao");   // no modo transformação, o botão conclui a edição
     const appearance = getBuilderAppearanceFromForm();
     const { animations, fpsSettings } = buildProceduralAnimations(appearance);
+    const alvo = conjEstaEditando() ? conjEdicao.stash : { anim: tempAnimations, fps: tempFps };   // montando uma forma: o construtor muda o ORIGINAL
     SUB_ANIM_KEYS.forEach(state => {
-        tempAnimations[state] = animations[state];
-        tempFps[state] = fpsSettings[state];
+        alvo.anim[state] = animations[state];
+        alvo.fps[state] = fpsSettings[state];
     });
     builderLastAppearance = appearance;
     builderMexido = false;
-    savedSpriteMotionPreviewFrames = {};
+    if (conjEstaEditando()) conjEdicao.stash.salvos = {}; else savedSpriteMotionPreviewFrames = {};
     spriteMotionPreviewImageCache = {};
     activeSpriteMovement = "idle";
     spriteMotionPreviewFrame = 0;
