@@ -143,6 +143,15 @@ function spriteLegacyClothes(a) {
     else if (o !== "traje_android" && o !== "armadura_cell" && inner === "malha") a.innerShirt = "regata";
 }
 
+// Personagem salvo quando o "Gi com faixa na cintura" já trazia a blusa roxa: a blusa passou a ser a camisa
+// (regata na cor da roupa), para que escolher "sem camisa" deixe o peito à mostra. Usado uma vez na leitura.
+function spriteGiVirouCamisa(a) {
+    if (!a || a.outerShirt !== "gi_piccolo" || (a.innerShirt && a.innerShirt !== "nenhuma")) return false;
+    a.innerShirt = "regata";
+    a.shirtColor = a.primaryColor;
+    return true;
+}
+
 function spriteSkin(a) {
     return a.skinColor && /^#[0-9a-f]{6}$/i.test(a.skinColor) ? a.skinColor : (SPRITE_RACE_SKIN[a.race] || SPRITE_RACE_SKIN.Saiyajin);
 }
@@ -206,10 +215,29 @@ function spriteCellPintas(x1, y1, x2, y2, w1, w2, n, semente, cor) {
     for (let i = 0; i < n; i++) {
         const r1 = Math.abs(Math.sin((i + 1) * 12.9898 + semente * 78.233)), r2 = Math.abs(Math.sin((i + 1) * 39.346 + semente * 11.135));
         const t = 0.12 + 0.76 * ((i + r1 * 0.8) / n), w = w1 + (w2 - w1) * t, off = (r2 - 0.5) * w * 0.62;
-        const rr = w * (0.08 + r1 * 0.06);
-        s += `<ellipse cx="${_n2(x1 + dx * t + nx * off)}" cy="${_n2(y1 + dy * t + ny * off)}" rx="${_n2(rr)}" ry="${_n2(rr * 0.8)}" fill="${cor || "#141414"}"/>`;
+        const rr = w * (0.07 + r1 * 0.1);
+        s += spriteCellMancha(x1 + dx * t + nx * off, y1 + dy * t + ny * off, rr, semente * 7 + i, cor);
     }
     return s;
+}
+// Uma mancha orgânica do Cell: contorno irregular (6 pontas de raio variado), às vezes alongada e girada,
+// sempre igual para a mesma semente — nada de bolinhas redondas todas iguais.
+function spriteCellMancha(x, y, r, semente, cor) {
+    const h = (k) => Math.abs(Math.sin(semente * 91.7 + k * 47.3)) % 1;
+    const ang = h(1) * Math.PI, alonga = 1 + h(2) * 0.7, ca = Math.cos(ang), sa = Math.sin(ang);
+    const pts = [];
+    for (let i = 0; i < 6; i++) {
+        const t = i / 6 * Math.PI * 2, rr = r * (0.7 + h(i + 3) * 0.55);
+        const px = Math.cos(t) * rr * alonga, py = Math.sin(t) * rr / Math.sqrt(alonga);
+        pts.push([x + px * ca - py * sa, y + px * sa + py * ca]);
+    }
+    let d = "";
+    for (let i = 0; i < 6; i++) {
+        const a0 = pts[i], a1 = pts[(i + 1) % 6], m = [(a0[0] + a1[0]) / 2, (a0[1] + a1[1]) / 2];
+        d += i === 0 ? `M${_n2((pts[5][0] + a0[0]) / 2)} ${_n2((pts[5][1] + a0[1]) / 2)} ` : "";
+        d += `Q${_n2(a0[0])} ${_n2(a0[1])} ${_n2(m[0])} ${_n2(m[1])} `;
+    }
+    return `<path d="${d}Z" fill="${cor || "#141414"}"/>`;
 }   // partes de metal do Freeza ciborgue
 const SPRITE_MARCAS_FREEZA = ["freeza", "listras_freeza", "carapaca_freeza", "metal_freeza"];   // lábios roxos
 function spriteLimbSkin(a, skin) { return SPRITE_MARCAS_ROSA.includes(a.bodyMarks) ? SPRITE_ROSA_FREEZA : skin; }
@@ -243,10 +271,12 @@ function spriteCellShoe(f, side, rot, tipo) {
     const o = SPRITE_OUTLINE, x = f[0], y = f[1], sd = side;
     let g;
     if (tipo === "semi") {
-        g = `<path d="M${_n2(x - sd * 3.8)} ${_n2(y - 2)} L${_n2(x + sd * 3)} ${_n2(y - 2)} Q${_n2(x + sd * 7)} ${_n2(y)} ${_n2(x + sd * 8)} ${_n2(y + 3.4)} L${_n2(x - sd * 4.2)} ${_n2(y + 3.8)} Z" fill="${SPRITE_CELL_PRETO}" stroke="${o}" stroke-width="1.1" stroke-linejoin="round"/>`;
-        g += `<path d="M${_n2(x + sd * 4.4)} ${_n2(y + 0.4)} L${_n2(x + sd * 9.4)} ${_n2(y + 3.6)} L${_n2(x + sd * 4)} ${_n2(y + 3.8)} Z M${_n2(x - sd * 2.4)} ${_n2(y + 1.6)} L${_n2(x - sd * 6)} ${_n2(y + 3.8)} L${_n2(x - sd * 2)} ${_n2(y + 3.8)} Z" fill="${SPRITE_CELL_LARANJA}" stroke="${o}" stroke-width="0.7" stroke-linejoin="round"/>`;
+        // bota fechada preta com a ponta laranja arredondada e listras laranja finas
+        g = `<path d="M${_n2(x - sd * 4)} ${_n2(y - 2.4)} L${_n2(x + sd * 3)} ${_n2(y - 2.4)} Q${_n2(x + sd * 6)} ${_n2(y - 1)} ${_n2(x + sd * 7)} ${_n2(y + 1)} L${_n2(x + sd * 6.4)} ${_n2(y + 3.8)} L${_n2(x - sd * 4.4)} ${_n2(y + 3.8)} Z" fill="${SPRITE_CELL_PRETO}" stroke="${o}" stroke-width="1.1" stroke-linejoin="round"/>`;
+        g += `<path d="M${_n2(x + sd * 3.6)} ${_n2(y - 1.6)} Q${_n2(x + sd * 9.6)} ${_n2(y - 0.6)} ${_n2(x + sd * 9.4)} ${_n2(y + 2.2)} Q${_n2(x + sd * 9)} ${_n2(y + 3.9)} ${_n2(x + sd * 5)} ${_n2(y + 3.9)} Q${_n2(x + sd * 3)} ${_n2(y + 1)} ${_n2(x + sd * 3.6)} ${_n2(y - 1.6)} Z" fill="${SPRITE_CELL_LARANJA}" stroke="${o}" stroke-width="0.8" stroke-linejoin="round"/>`;
+        g += `<path d="M${_n2(x - sd * 3)} ${_n2(y + 0.2)} L${_n2(x + sd * 2.6)} ${_n2(y + 0.2)} M${_n2(x - sd * 3.2)} ${_n2(y + 2)} L${_n2(x + sd * 2.6)} ${_n2(y + 2)}" stroke="${SPRITE_CELL_LARANJA}" stroke-width="0.6"/>`;
     } else {
-        const ouro = "#f2c24a";
+        const ouro = "#ecc848";
         g = `<path d="M${_n2(x - sd * 3.6)} ${_n2(y - 2.4)} L${_n2(x + sd * 2.6)} ${_n2(y - 2.4)} Q${_n2(x + sd * 6)} ${_n2(y - 0.6)} ${_n2(x + sd * 10.6)} ${_n2(y + 1.6)} Q${_n2(x + sd * 7)} ${_n2(y + 3.8)} ${_n2(x - sd * 4)} ${_n2(y + 3.8)} Z" fill="${ouro}" stroke="${o}" stroke-width="1.1" stroke-linejoin="round"/>`;
         g += `<path d="M${_n2(x - sd * 2.6)} ${_n2(y - 1.2)} Q${_n2(x + sd * 3)} ${_n2(y - 1.2)} ${_n2(x + sd * 8)} ${_n2(y + 1.2)}" fill="none" stroke="#fff3c2" stroke-width="0.9" opacity="0.8"/>`;
     }
@@ -807,7 +837,8 @@ function spriteCellHead(R, a, rx, ry) {
     const hf = a.headFeature, o = SPRITE_OUTLINE;
     const cel = spriteCellCores(a) || { L: "#86bf3e", D: "#3e8a2c" };
     const verde = (c) => R.lin(-14, -36, 12, 4, [[0, spriteShade(c, 0.35)], [0.5, c], [1, spriteShade(c, -0.4)]]);
-    const pinta = (x, y, r) => `<ellipse cx="${_n2(x)}" cy="${_n2(y)}" rx="${_n2(r)}" ry="${_n2(r * 0.8)}" fill="${cel.pinta || "#141414"}"/>`;
+    let semente = 60;
+    const pinta = (x, y, r) => spriteCellMancha(x, y, r * 1.15, semente++, cel.pinta || "#141414");
     const ponta = (b, c, t, w, cor) => {
         const L = Math.hypot(c[0] - b[0], c[1] - b[1]) || 1, nx = -(c[1] - b[1]) / L * w, ny = (c[0] - b[0]) / L * w;
         const P = (q) => `${_n2(q[0])} ${_n2(q[1])}`;
@@ -816,23 +847,30 @@ function spriteCellHead(R, a, rx, ry) {
     const borda = `L${_n2(-rx - 1.4)} 6 Q${_n2(-rx + 1.6)} 9.6 ${_n2(-rx + 5)} 8 L${_n2(-rx + 4)} 1 Q${_n2(-rx + 4)} -4.6 -1 -6.4 Q${_n2(rx - 3)} -7.4`;
     let s = "";
     if (hf === "capacete_cell1") {
-        // duas pontas grandes que sobem e se cruzam para trás
-        s += ponta([-7, -12], [-6, -32], [-24, -32], 6.4, cel.D);
+        // coroa orgânica: duas abas largas e achatadas que sobem abrindo em V (para cima e para fora)
+        s += ponta([-7, -11], [-15, -22], [-21, -38], 6.8, cel.D);
+        s += ponta([6, -12], [13, -24], [17, -40], 7.2, cel.D);
         s += spritePath(`M${_n2(rx + 0.8)} -3.6 C${_n2(rx + 2)} -19.6 ${_n2(-rx - 3.4)} -21.4 ${_n2(-rx - 2.4)} -4 ${borda} ${_n2(rx + 0.8)} -3.6 Z`, verde(cel.D));
-        s += ponta([6, -13], [4, -34], [-20, -38], 7, cel.D);
-        s += `<ellipse cx="1.4" cy="-11" rx="2.6" ry="5.6" fill="${SPRITE_CELL_PRETO}" stroke="${o}" stroke-width="0.8" transform="rotate(-8 1.4 -11)"/><ellipse cx="0.6" cy="-13" rx="0.9" ry="2" fill="#ffffff" opacity="0.5"/>`;
-        [[-9, -10, 1.2], [-4, -17, 1], [7, -12, 1], [-1, -25, 1.2], [-12, -29, 1], [-6, -30, 1.1], [-15, -33, 0.9], [-9, 2, 1]].forEach(([x, y, r]) => { s += pinta(x, y, r); });
+        // casco oval preto e liso no meio da testa, com reflexo
+        s += `<ellipse cx="0.8" cy="-12" rx="3.2" ry="6.4" fill="${SPRITE_CELL_PRETO}" stroke="${o}" stroke-width="0.8"/><ellipse cx="0" cy="-14" rx="1" ry="2.6" fill="#ffffff" opacity="0.55"/>`;
+        [[-9, -10, 1.3], [7.4, -9, 1.1], [-12, -20, 1.2], [-15, -27, 1], [-18, -33, 0.8], [10, -20, 1.2], [13, -28, 1], [15, -34, 0.8], [-9, 2, 1.1], [-6, -16, 0.9]].forEach(([x, y, r]) => { s += pinta(x, y, r); });
     }
     if (hf === "capacete_cell2" || hf === "capacete_cell3") {
-        const alto = hf === "capacete_cell3" ? -40 : -30;
-        const lados = hf === "capacete_cell3" ? cel.L : cel.D;   // perfeito: verde claro em volta da chapa
-        // duas pontas verde-escuras subindo pelas laterais
-        s += ponta([-rx + 2, -8], [-rx - 3, alto * 0.55], [-rx - 1, alto], 4, cel.D);
-        s += ponta([rx - 3, -8], [rx + 2, alto * 0.55], [rx + 0.4, alto], 3.6, cel.D);
+        const perf = hf === "capacete_cell3";
+        const alto = perf ? -44 : -40;
+        const lados = perf ? cel.L : cel.D;   // perfeito: verde claro em volta da chapa
+        // duas pontas altas e finas subindo retas pelas laterais, levemente abertas para fora
+        s += ponta([-rx + 2.4, -8], [-rx - 1.6, alto * 0.55], [-rx - 1.4, alto], 3.4, lados);
+        s += ponta([rx - 3, -8], [rx + 1.2, alto * 0.55], [rx + 1, alto], 3.1, lados);
         s += spritePath(`M${_n2(rx + 0.8)} -3.6 C${_n2(rx + 2)} -19.6 ${_n2(-rx - 3.4)} -21.4 ${_n2(-rx - 2.4)} -4 ${borda} ${_n2(rx + 0.8)} -3.6 Z`, verde(lados));
-        // chapa preta redonda no alto da cabeça
-        s += spritePath(`M${_n2(-rx + 3.2)} -7 C${_n2(-rx + 2.6)} -21 ${_n2(rx - 2.6)} -21 ${_n2(rx - 3)} -7 Q0 -10.4 ${_n2(-rx + 3.2)} -7 Z`, R.lin(-6, -20, 6, -6, [[0, "#4a4458"], [0.45, SPRITE_CELL_PRETO], [1, "#050407"]]));
-        s += `<ellipse cx="-2.6" cy="-15" rx="2.6" ry="1.4" fill="#ffffff" opacity="0.35"/>`;
+        if (perf) {
+            // perfeito: casco preto-azulado liso cobrindo o alto da cabeça, só entre as pontas
+            s += spritePath(`M${_n2(-rx + 4.4)} -7 C${_n2(-rx + 4)} -20 ${_n2(rx - 4)} -20 ${_n2(rx - 4.2)} -7 Q0 -9.6 ${_n2(-rx + 4.4)} -7 Z`, R.lin(-6, -20, 6, -6, [[0, "#5a5482"], [0.45, "#1e1a3a"], [1, "#07060f"]]));
+            s += `<ellipse cx="-2" cy="-15" rx="2.2" ry="1.2" fill="#ffffff" opacity="0.4"/>`;
+        } else {
+            // semi-perfeito: placa oval roxo-azulada pequena no meio da testa
+            s += `<ellipse cx="0.6" cy="-11.6" rx="3" ry="5.4" fill="${R.lin(-3, -17, 3, -6, [[0, "#8a7ad8"], [0.5, "#3a2f8a"], [1, "#150f3a"]])}" stroke="${o}" stroke-width="0.8"/><ellipse cx="-0.2" cy="-13.6" rx="0.9" ry="2" fill="#ffffff" opacity="0.55"/>`;
+        }
         [[-rx + 0.6, -10, 1], [rx - 1, -11, 1], [-rx - 1.4, alto * 0.5, 1.1], [rx + 1, alto * 0.5, 1], [-rx - 1, alto * 0.75, 0.9], [rx + 0.6, alto * 0.78, 0.9], [-rx + 1, 2, 1]].forEach(([x, y, r], i) => {
             s += pinta(x, y, r);
         });
@@ -888,7 +926,7 @@ function spriteHeadAccessory(R, a, ctx, skin, pose, rx, ry) {
 // Roupa de cima: covers = cobre o tronco com a cor principal; chest = cobre o peito; sleeves = mangas da própria
 // roupa. Cada escolha mexe só na sua parte: a calça (pernas) e a camisa (por baixo) têm opção e cor próprias.
 const SPRITE_OUTFITS = {
-    kimono: { covers: true, chest: true }, gi_piccolo: { covers: true, chest: true }, roupa_kaioshin: { covers: true, chest: true },
+    kimono: { covers: true, chest: true }, gi_piccolo: {}, roupa_kaioshin: { covers: true, chest: true },
     armadura_saiyajin: { chest: true }, jaqueta_trunks: { covers: true, chest: true, sleeves: "full" },
     colete_fusao: {}, colete_buu: {}, traje_android: { covers: true, chest: true, sleeves: "full" },
     armadura_cell: { covers: true, chest: true, sleeves: "cell" }, armadura_freeza: { chest: true }, armadura_exercito: { chest: true }
@@ -1021,7 +1059,8 @@ function spriteTorso(R, a, B, spec, skin, pose) {
             break;
         }
         case "gi_piccolo": {
-            d += `<path d="M${_n2(48 - 6)} ${_n2(y0b)} L${_n2(48 + 4)} ${yw - 2} M${_n2(48 + 6)} ${_n2(y0b)} L${_n2(48 - 4)} ${yw - 2}" stroke="${lapel}" stroke-width="1.3" fill="none"/>`;
+            // a blusa roxa do gi é a CAMISA (regata, cor da camisa): sem camisa fica só a faixa na cintura
+            if (a.innerShirt !== "nenhuma") d += `<path d="M${_n2(48 - 6)} ${_n2(y0b)} L${_n2(48 + 4)} ${yw - 2} M${_n2(48 + 6)} ${_n2(y0b)} L${_n2(48 - 4)} ${yw - 2}" stroke="${lapel}" stroke-width="1.3" fill="none"/>`;
             const sash = R.lin(0, 65, 0, 73, [[0, spriteShade(a.secondaryColor, 0.3)], [1, spriteShade(a.secondaryColor, -0.4)]]);
             d += spritePath(`M${_n2(48 - ww / 2 - 1.4)} 65.4 L${_n2(48 + ww / 2 + 1.4)} 65.4 L${_n2(48 + ww / 2 + 2.2)} 72.6 L${_n2(48 - ww / 2 - 2.2)} 72.6 Z`, sash);
             d += spritePath("M44 72 L42 79.6 L46.4 78.4 L47 72.4 Z", spriteShade(a.secondaryColor, -0.15));
@@ -1154,17 +1193,20 @@ function spriteTorsoMarks(R, a, B, skin, x0, x1, ww, y0b) {
             d += spritePath(`M${P(x0 - 1, y0b + 1)} Q48 ${_n2(y0b - 4.4)} ${P(x1 + 1, y0b + 1)} L${P(x1 - 1.4, y0b + 8)} Q48 ${_n2(y0b + 10.6)} ${P(x0 + 1.4, y0b + 8)} Z`, cel.D);
             d += laranja(`M${P(48 - ww * 0.46, y0b + 9)} Q48 ${_n2(y0b + 11.4)} ${P(48 + ww * 0.46, y0b + 9)} L${P(48 + ww * 0.42, 69)} L${P(48 - ww * 0.42, 69)} Z`);
             d += listras(48 - ww * 0.44, 48 + ww * 0.44, y0b + 10, 69, 2.2);
-            d += preto(`M${P(48 - 4.6, y0b + 4)} L${P(48 + 4.6, y0b + 4)} L${P(48 + 3.6, y0b + 13)} L${P(48, y0b + 17)} L${P(48 - 3.6, y0b + 13)} Z`);
-            d += `<ellipse cx="${_n2(48 - 1.4)}" cy="${_n2(y0b + 6.6)}" rx="1.6" ry="2.4" fill="#ffffff" opacity="0.5"/>`;
+            // placa oval preta vertical no meio do peito (do pescoço até a barriga), com reflexo azul-arroxeado
+            d += spritePath(`M48 ${_n2(y0b + 3)} C${P(48 + 5.4, y0b + 3.4)} ${P(48 + 4.6, y0b + 15)} 48 ${_n2(y0b + 18)} C${P(48 - 4.6, y0b + 15)} ${P(48 - 5.4, y0b + 3.4)} 48 ${_n2(y0b + 3)} Z`, R.lin(44, y0b + 3, 52, y0b + 18, [[0, "#5a5482"], [0.4, SPRITE_CELL_PRETO], [1, "#050407"]]));
+            d += `<ellipse cx="${_n2(48 - 1.6)}" cy="${_n2(y0b + 8)}" rx="1.3" ry="3.4" fill="#b8b0f0" opacity="0.55"/>`;
             d += laranja(`M${P(48 - hw * 0.34, 69.4)} L${P(48 + hw * 0.34, 69.4)} L${P(48 + hw * 0.2, yh + 2.4)} Q48 ${_n2(yh + 4)} ${P(48 - hw * 0.2, yh + 2.4)} Z`) + listras(48 - hw * 0.3, 48 + hw * 0.3, 69.6, yh + 2.6, 1.9);
             d += spriteCellPintas(x0 + 1, 52, 48 - ww * 0.46, 66, 3.2, 3.2, 3, 21, cel.pinta) + spriteCellPintas(x1 - 1, 52, 48 + ww * 0.46, 66, 3.2, 3.2, 3, 22, cel.pinta);
             d += spriteCellPintas(x0 + 3, y0b + 2.4, x1 - 3, y0b + 2.4, 4, 4, 5, 23, cel.pinta);
         }
         if (m === "cell_semi") {
             // verde escuro no peito/costas; barriga com chapa preta no meio e laterais laranja riscadas até a virilha
-            d += preto(`M${P(48 - 3.6, y0b + 10)} L${P(48 + 3.6, y0b + 10)} L${P(48 + 3, 67)} Q48 69 ${P(48 - 3, 67)} Z`);
-            d += laranja(`M${P(48 - 3.8, y0b + 12)} L${P(48 - ww * 0.48, y0b + 14)} L${P(48 - ww * 0.42, 69.6)} L${P(48 - 3.4, 69.6)} Z`) + laranja(`M${P(48 + 3.8, y0b + 12)} L${P(48 + ww * 0.48, y0b + 14)} L${P(48 + ww * 0.42, 69.6)} L${P(48 + 3.4, 69.6)} Z`);
-            d += listras(48 - ww * 0.46, 48 - 3.6, y0b + 13, 69.6, 2.1) + listras(48 + 3.6, 48 + ww * 0.46, y0b + 13, 69.6, 2.1);
+            // abdômen laranja em segmentos horizontais e, por cima, a placa preta em V do peito com a gema azul-roxa
+            d += laranja(`M${P(48 - ww * 0.5, y0b + 11)} Q48 ${_n2(y0b + 13)} ${P(48 + ww * 0.5, y0b + 11)} L${P(48 + ww * 0.42, 69.6)} L${P(48 - ww * 0.42, 69.6)} Z`);
+            d += listras(48 - ww * 0.47, 48 + ww * 0.47, y0b + 12, 69.6, 2.2);
+            d += preto(`M${P(48 - sw * 0.3, y0b + 5)} Q48 ${_n2(y0b + 7.6)} ${P(48 + sw * 0.3, y0b + 5)} L${P(48 + 2.6, y0b + 17)} L${P(48, y0b + 20)} L${P(48 - 2.6, y0b + 17)} Z`);
+            d += `<ellipse cx="48" cy="${_n2(y0b + 11.6)}" rx="2.2" ry="2.8" fill="${R.lin(46, y0b + 9, 50, y0b + 14, [[0, "#b0a8ff"], [0.5, "#4a3fc0"], [1, "#1a1450"]])}" stroke="${SPRITE_OUTLINE}" stroke-width="0.6"/><ellipse cx="47.3" cy="${_n2(y0b + 10.6)}" rx="0.7" ry="1" fill="#ffffff" opacity="0.7"/>`;
             d += spritePath(`M${P(48 - hw * 0.46, 69.2)} L${P(48 + hw * 0.46, 69.2)} L${P(48 + hw * 0.3, yh + 3)} Q48 ${_n2(yh + 5)} ${P(48 - hw * 0.3, yh + 3)} Z`, cel.D);
             d += laranja(`M${P(48 - hw * 0.26, 70.4)} L${P(48 + hw * 0.26, 70.4)} L${P(48 + hw * 0.16, yh + 2.2)} Q48 ${_n2(yh + 3.4)} ${P(48 - hw * 0.16, yh + 2.2)} Z`) + listras(48 - hw * 0.24, 48 + hw * 0.24, 70.6, yh + 2.4, 1.8);
             d += spriteCellPintas(x0 + 2, y0b + 3, x1 - 2, y0b + 3, 5, 5, 6, 24, cel.pinta) + spriteCellPintas(x0 + 3, y0b + 8, 48 - 5, y0b + 8, 4, 4, 2, 25, cel.pinta) + spriteCellPintas(48 + 5, y0b + 8, x1 - 3, y0b + 8, 4, 4, 2, 26, cel.pinta);
@@ -1279,7 +1321,8 @@ function spriteArm(R, a, B, spec, glove, skin, side, angles, handKind) {
     if (a.bodyMarks === "metal_freeza" && side < 0) spec = Object.assign({}, spec, { armUpper: SPRITE_METAL, armLower: SPRITE_METAL });
     const up = spriteMuscle(sx, sy, e[0], e[1], w * 1.35, w * 0.9, spec.armUpper, { bulge: 0.16 + 0.08 * mus, parts: true });
     const lo = spriteMuscle(e[0], e[1], h[0], h[1], w * (1.0 + 0.06 * mus), w * 0.72, spec.armLower, { bulge: 0.14 + 0.06 * mus, parts: true });
-    const handColor = glove && glove.full ? glove.color : (spec.armLower === SPRITE_METAL ? SPRITE_METAL : skin);
+    const celM = spriteCellCores(a);   // Cell: mãos no verde claro da forma (no perfeito o rosto é cinza, as mãos não)
+    const handColor = glove && glove.full ? glove.color : (spec.armLower === SPRITE_METAL ? SPRITE_METAL : (celM ? celM.L : skin));
     const dirA = Math.atan2(h[0] - e[0], -(h[1] - e[1])) * 180 / Math.PI;
     const mao = spriteHand(R, h[0], h[1], w * 0.52, handColor, handKind === "open", dirA + 180, true);
     s += up.base + lo.base + mao.base + up.fill + lo.fill + up.shade + lo.shade;   // braço + mão sem risco no pulso
@@ -1336,7 +1379,6 @@ function spriteArmMarks(R, a, B, spec, skin, sx, sy, e, h, w, side) {
             s += `<ellipse cx="${_n2(e[0])}" cy="${_n2(e[1])}" rx="${_n2(w * 0.46)}" ry="${_n2(w * 0.36)}" fill="${SPRITE_CELL_JUNTA}" stroke="${SPRITE_OUTLINE}" stroke-width="0.7"/>`;
             s += `<ellipse cx="${_n2(sx)}" cy="${_n2(sy + 1.6)}" rx="${_n2(w * 0.5)}" ry="${_n2(w * 0.3)}" fill="${SPRITE_CELL_JUNTA}"/>`;
         }
-        if (m === "cell_perfeito") s += `<ellipse cx="${_n2(e[0])}" cy="${_n2(e[1])}" rx="${_n2(w * 0.5)}" ry="${_n2(w * 0.42)}" fill="${cel.L}" stroke="${SPRITE_OUTLINE}" stroke-width="0.7"/>`;   // cotovelo verde
     }
     // forma final: faixa roxa perto do punho (no ciborgue, só no braço direito, que continua do Freeza)
     if ((m === "freeza" || m === "metal_freeza") && spec.armLower === skin) s += spritePlate(R, e[0], e[1], h[0], h[1], 0.72, B.l2 * 0.46, w * 0.86, a.primaryColor);
@@ -1489,21 +1531,39 @@ function spriteBack(R, a, B, pose, skin) {
     if (a.wings === "cell_abertas") {
         // asas de inseto pretas abertas nas costas, longas, apontando para baixo e para fora
         const up = flap * 3;
-        const wf = R.lin(40, 40, 80, 110, [[0, "#3c3848"], [0.6, "#16131c"], [1, "#0b0a0f"]]);
-        const asa = (m) => spritePath(`M${48 + m * 3} 46 C${48 + m * 20} ${44 + up} ${48 + m * 32} ${56 + up} ${48 + m * 33} ${76 + up} C${48 + m * 32} ${92 + up} ${48 + m * 26} ${104 + up} ${48 + m * 22} ${108 + up} C${48 + m * 20} ${92} ${48 + m * 12} ${70} ${48 + m * 4} 58 Z`, wf);
-        s += asa(-1) + asa(1);
+        // moldura verde (com manchas) por fora e membrana preta-arroxeada por dentro, bem visíveis dos dois lados
+        const wf = R.lin(40, 40, 80, 110, [[0, "#4a3f62"], [0.6, "#211a2e"], [1, "#0e0b14"]]);
+        const moldura = a.primaryColor;
+        const asa = (m) => spritePath(`M${48 + m * 3} 46 C${48 + m * 22} ${42 + up} ${48 + m * 35} ${54 + up} ${48 + m * 36} ${76 + up} C${48 + m * 35} ${92 + up} ${48 + m * 28} ${104 + up} ${48 + m * 23} ${109 + up} C${48 + m * 20} ${92} ${48 + m * 12} ${70} ${48 + m * 4} 58 Z`, wf);
+        const borda = (m) => `<path d="M${48 + m * 4} 46.4 C${48 + m * 22} ${42.6 + up} ${48 + m * 34.4} ${54.4 + up} ${48 + m * 35.4} ${76 + up} C${48 + m * 34.4} ${92 + up} ${48 + m * 27.6} ${103.6 + up} ${48 + m * 23} ${108.4 + up}" fill="none" stroke="${moldura}" stroke-width="3.2" stroke-linecap="round"/>`;
+        s += asa(-1) + asa(1) + borda(-1) + borda(1);
+        s += spriteCellPintas(48 - 20, 46 + up, 48 - 34, 82 + up, 3, 3, 4, 51, "#141414") + spriteCellPintas(48 + 20, 46 + up, 48 + 34, 82 + up, 3, 3, 4, 52, "#141414");
         s += `<path d="M${48 - 6} 50 C${48 - 22} ${54 + up} ${48 - 28} ${70 + up} ${48 - 24} ${100 + up} M${48 + 6} 50 C${48 + 22} ${54 + up} ${48 + 28} ${70 + up} ${48 + 24} ${100 + up}" stroke="#5b5070" stroke-width="0.8" fill="none" opacity="0.7"/>`;
     }
     if (a.tail === "cell") {
-        // rabo grande do Cell: verde com pintas (1ª forma) ou meio preto/meio laranja riscado (2ª), ponta bege de ferrão
+        // rabo grande do Cell: verde manchado subindo por cima do ombro (1ª forma) ou grosso, meio preto embaixo e
+        // laranja com anéis em cima, curvando para o lado (2ª); ponta com base anelada bege e ferrão cônico
         const semi = a.bodyMarks === "cell_semi";
-        const cel = spriteCellCores(a) || { D: "#3e8a2c" };
-        const pts = [[44, 74], [24, 84], [16, 104], [4, 92]];
-        s += spriteTaper(pts, 7.4, 4.4, semi ? SPRITE_CELL_PRETO : cel.D, null, null);
-        if (semi) s += spriteTaper(pts.map(([x, y]) => [x + 0.6, y - 1.6]), 3.8, 2.2, SPRITE_CELL_LARANJA, null, "#8a2f10");
-        else s += spriteCellPintas(44, 74, 18, 98, 6, 5, 6, 31, cel.pinta);
-        // ferrão: base em anel bege e ponta fina
-        s += `<ellipse cx="4" cy="92" rx="3.4" ry="2.6" fill="#e2c79a" stroke="${SPRITE_OUTLINE}" stroke-width="0.9"/><path d="M2.6 90.6 L-6 86 L2 93.6 Z" fill="#d8b884" stroke="${SPRITE_OUTLINE}" stroke-width="0.8" stroke-linejoin="round"/>`;
+        const cel = spriteCellCores(a) || { D: "#3e8a2c", pinta: "#141414" };
+        const pts = semi ? [[44, 74], [20, 86], [12, 106], [0, 98]] : [[44, 72], [12, 76], [6, 40], [26, 22]];
+        const bz = (t) => { const u = 1 - t; return [0, 1].map(k => u * u * u * pts[0][k] + 3 * u * u * t * pts[1][k] + 3 * u * t * t * pts[2][k] + t * t * t * pts[3][k]); };
+        s += spriteTaper(pts, semi ? 9.4 : 7.4, semi ? 5.6 : 4.6, semi ? SPRITE_CELL_PRETO : cel.D, null, null);
+        if (semi) s += spriteTaper(pts.map(([x, y]) => [x + 0.8, y - 2]), 4.8, 2.8, SPRITE_CELL_LARANJA, null, "#8a2f10");
+        else for (let i = 0; i < 9; i++) { const q = bz(0.08 + i * 0.1), r1 = Math.abs(Math.sin(i * 12.9 + 3.1)); s += spriteCellMancha(q[0] + (r1 - 0.5) * 3, q[1] + (r1 - 0.5) * 2, 0.9 + r1 * 0.8, 31 + i, cel.pinta); }
+        // ferrão: base em anéis bege na direção da ponta e o cone fino
+        const E = pts[3], Pq = bz(0.94), L = Math.hypot(E[0] - Pq[0], E[1] - Pq[1]) || 1, ux = (E[0] - Pq[0]) / L, uy = (E[1] - Pq[1]) / L, nx = -uy, ny = ux;
+        const Q = (x, y) => `${_n2(x)} ${_n2(y)}`, w = semi ? 3.4 : 3;
+        s += `<path d="M${Q(E[0] - ux * 1.5 + nx * w, E[1] - uy * 1.5 + ny * w)} L${Q(E[0] + ux * 3.6 + nx * w * 0.9, E[1] + uy * 3.6 + ny * w * 0.9)} L${Q(E[0] + ux * 3.6 - nx * w * 0.9, E[1] + uy * 3.6 - ny * w * 0.9)} L${Q(E[0] - ux * 1.5 - nx * w, E[1] - uy * 1.5 - ny * w)} Z" fill="#e2c79a" stroke="${SPRITE_OUTLINE}" stroke-width="0.9" stroke-linejoin="round"/>`;
+        s += `<path d="M${Q(E[0] + ux * 0.4 + nx * w, E[1] + uy * 0.4 + ny * w)} L${Q(E[0] + ux * 0.4 - nx * w, E[1] + uy * 0.4 - ny * w)} M${Q(E[0] + ux * 2 + nx * w * 0.95, E[1] + uy * 2 + ny * w * 0.95)} L${Q(E[0] + ux * 2 - nx * w * 0.95, E[1] + uy * 2 - ny * w * 0.95)}" stroke="#9a7a4a" stroke-width="0.6"/>`;
+        s += `<path d="M${Q(E[0] + ux * 3.6 + nx * w * 0.7, E[1] + uy * 3.6 + ny * w * 0.7)} L${Q(E[0] + ux * 12, E[1] + uy * 12)} L${Q(E[0] + ux * 3.6 - nx * w * 0.7, E[1] + uy * 3.6 - ny * w * 0.7)} Z" fill="#d8b884" stroke="${SPRITE_OUTLINE}" stroke-width="0.8" stroke-linejoin="round"/>`;
+    }
+    if (a.wings === "cell_capa") {
+        // asas de inseto fechadas, longas e estreitas, caindo dos ombros até abaixo dos joelhos como uma capa
+        const up = flap * 2;
+        const wf = R.lin(40, 40, 70, 120, [[0, "#3e3858"], [0.5, "#16131f"], [1, "#07060b"]]);
+        const asa = (m) => spritePath(`M${48 + m * 5} 46 C${48 + m * 17} ${46 + up} ${48 + m * 22} ${70 + up} ${48 + m * 21} ${114 + up} L${48 + m * 15} ${110 + up} C${48 + m * 13} ${84} ${48 + m * 9} ${62} ${48 + m * 4} 56 Z`, wf);
+        s += asa(-1) + asa(1);
+        s += `<path d="M${48 - 16} ${50 + up} C${48 - 20.6} ${66 + up} ${48 - 21} ${92 + up} ${48 - 20.4} ${112 + up} M${48 + 16} ${50 + up} C${48 + 20.6} ${66 + up} ${48 + 21} ${92 + up} ${48 + 20.4} ${112 + up}" stroke="#6a4fa8" stroke-width="1.3" fill="none" opacity="0.9"/>`;
     }
     if (a.wings === "cell") {
         // asas de inseto do Cell: pretas, fechadas nas costas, apontando para baixo, com borda verde
@@ -1580,14 +1640,16 @@ function spriteShoulderPads(R, a, B) {
         s += dome(-1, 6.2, 4.4, a.primaryColor, "#f2f1f6") + dome(1, 6.2, 4.4, a.primaryColor, "#f2f1f6");   // placas largas e proeminentes
     }
     const celO = spriteCellCores(a);
-    if (celO && bracoNu && (a.bodyMarks === "cell_semi" || a.bodyMarks === "cell_perfeito")) {
-        // ombros do Cell: grandes, verde escuro com pintas (semi-perfeito) ou pretos (perfeito)
-        const cor = a.bodyMarks === "cell_semi" ? celO.D : SPRITE_CELL_PRETO;
+    if (celO && bracoNu) {
+        // ombros do Cell em cúpula: verde escuro com manchas (1ª forma, semi-perfeito — enormes) ou pretos (perfeito)
+        const perf = a.bodyMarks === "cell_perfeito", semi = a.bodyMarks === "cell_semi";
+        const cor = perf ? "#1e1a3a" : celO.D;
+        const rx = (semi ? 7.6 : perf ? 6 : 6.4) + B.arm * 0.2, ry = semi ? 6 : perf ? 4.8 : 5.2;
         [-1, 1].forEach(side => {
-            const cx = 48 + side * (B.sw / 2 - 0.6), cy = 46.4;
-            s += `<ellipse cx="${_n2(cx)}" cy="${cy}" rx="${_n2(5.6 + B.arm * 0.2)}" ry="4.6" fill="${R.lin(cx - 6, cy - 4, cx + 6, cy + 5, [[0, spriteShade(cor, 0.4)], [0.5, cor], [1, spriteShade(cor, -0.45)]])}" stroke="${SPRITE_OUTLINE}" stroke-width="1"/>`;
-            if (a.bodyMarks === "cell_semi") s += spriteCellPintas(cx - 4, cy, cx + 4, cy, 6, 6, 3, 40 + side, celO.pinta);
-            else s += `<ellipse cx="${_n2(cx - side * 1.2 - 1)}" cy="${cy - 1.6}" rx="2" ry="1" fill="#ffffff" opacity="0.3"/>`;
+            const cx = 48 + side * (B.sw / 2 - 0.2), cy = semi ? 45.6 : 46.2;
+            s += `<ellipse cx="${_n2(cx)}" cy="${cy}" rx="${_n2(rx)}" ry="${ry}" fill="${R.lin(cx - 6, cy - 4, cx + 6, cy + 5, [[0, spriteShade(cor, 0.4)], [0.5, cor], [1, spriteShade(cor, -0.45)]])}" stroke="${SPRITE_OUTLINE}" stroke-width="1"/>`;
+            if (!perf) s += spriteCellPintas(cx - rx * 0.7, cy - 0.6, cx + rx * 0.7, cy + 0.6, ry * 1.6, ry * 1.6, semi ? 5 : 4, 40 + side, celO.pinta);
+            s += `<ellipse cx="${_n2(cx - side * 1.2 - 1)}" cy="${_n2(cy - ry * 0.4)}" rx="${_n2(rx * 0.34)}" ry="${_n2(ry * 0.2)}" fill="#ffffff" opacity="${perf ? 0.35 : 0.25}"/>`;
         });
     }
     if (a.outerShirt === "armadura_exercito") {
@@ -1848,10 +1910,10 @@ function getProceduralFrameUrls(appearance, state, opts) {
 const SPRITE_PRESETS = {
     goku: { label: "Goku", appearance: { gender: "masculino", race: "Saiyajin", build: "musculoso", hairStyle: "goku", hairColor: "#16110f", eyeType: "normal", irisColor: "#1a1210", mouthType: "smile", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "none", outerShirt: "kimono", innerShirt: "camiseta", pants: "larga", shoes: "botas_artes", gloves: "pulseiras", primaryColor: "#f2680d", secondaryColor: "#1c45b0", accentColor: "#f7d23c", shirtColor: "#1c45b0", pantsColor: "#f2680d", symbol: "kai", kiColor: "#5be3ff" } },
     vegeta: { label: "Vegeta", appearance: { gender: "masculino", race: "Saiyajin", build: "normal", hairStyle: "vegeta", hairColor: "#100e18", eyeType: "serio", irisColor: "#161a24", mouthType: "serio", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "none", outerShirt: "armadura_saiyajin", innerShirt: "malha", pants: "justa", shoes: "botas_saiyajin", gloves: "luvas_saiyajin", primaryColor: "#1b3fa0", secondaryColor: "#f4f4f8", accentColor: "#e8b93a", shirtColor: "#1b3fa0", pantsColor: "#1b3fa0", kiColor: "#ffe45a" } },
-    piccolo: { label: "Piccolo", appearance: { gender: "masculino", race: "Namekuseijin", build: "musculoso", hairStyle: "careca", eyeType: "bravo", irisColor: "#151515", mouthType: "serio", earType: "pontuda", headFeature: "antenas", bodyMarks: "namek", accessory: "none", hat: "turbante", outerShirt: "gi_piccolo", innerShirt: "nenhuma", pants: "larga", shoes: "botas_marrons", gloves: "nenhuma", primaryColor: "#5b2e91", secondaryColor: "#20336f", accentColor: "#f5f5f7", shirtColor: "#20336f", pantsColor: "#5b2e91", cape: "capa_ombreiras", capeColor: "#f6f6f8", kiColor: "#e9ff7a" } },
+    piccolo: { label: "Piccolo", appearance: { gender: "masculino", race: "Namekuseijin", build: "musculoso", hairStyle: "careca", eyeType: "bravo", irisColor: "#151515", mouthType: "serio", earType: "pontuda", headFeature: "antenas", bodyMarks: "namek", accessory: "none", hat: "turbante", outerShirt: "gi_piccolo", innerShirt: "regata", pants: "larga", shoes: "botas_marrons", gloves: "nenhuma", primaryColor: "#5b2e91", secondaryColor: "#20336f", accentColor: "#f5f5f7", shirtColor: "#5b2e91", pantsColor: "#5b2e91", cape: "capa_ombreiras", capeColor: "#f6f6f8", kiColor: "#e9ff7a" } },
     freeza: { label: "Freeza", appearance: { gender: "masculino", race: "Raça Freeza", build: "magro", skinColor: "#cdb8ea", hairStyle: "careca", eyeType: "freeza", irisColor: "#d81f3f", mouthType: "maligno", earType: "nenhuma", headFeature: "capacete_freeza", bodyMarks: "listras_freeza", accessory: "none", outerShirt: "armadura_exercito", innerShirt: "nenhuma", pants: "nenhuma", shoes: "caneleiras_freeza", gloves: "bracadeiras_freeza", primaryColor: "#8a3fc0", secondaryColor: "#17141c", accentColor: "#d0962e", shirtColor: "#17141c", pantsColor: "#17141c", tail: "freeza", kiColor: "#ff5be0" } },
     trunks: { label: "Trunks do Futuro", appearance: { gender: "masculino", race: "Saiyajin", build: "normal", hairStyle: "trunks_futuro", hairColor: "#8c7ee0", eyeType: "serio", irisColor: "#2a4a86", mouthType: "serio", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "none", outerShirt: "jaqueta_trunks", innerShirt: "malha", pants: "justa", shoes: "botas_trunks", gloves: "nenhuma", primaryColor: "#3f66c8", secondaryColor: "#20263a", accentColor: "#d7b25a", shirtColor: "#20263a", pantsColor: "#1e2437", symbol: "cc", backWeapon: "espada_trunks", kiColor: "#9fd0ff" } },
-    gohan: { label: "Gohan (jovem)", appearance: { gender: "masculino", race: "Saiyajin", build: "normal", hairStyle: "gohan", hairColor: "#16110f", eyeType: "gentil", irisColor: "#1a1210", mouthType: "smile", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "none", outerShirt: "gi_piccolo", innerShirt: "nenhuma", pants: "larga", shoes: "botas_marrons", gloves: "nenhuma", primaryColor: "#5b2e91", secondaryColor: "#20336f", accentColor: "#f5f5f7", shirtColor: "#20336f", pantsColor: "#5b2e91", cape: "capa_ombreiras", capeColor: "#f6f6f8", kiColor: "#ffd45b" } },
+    gohan: { label: "Gohan (jovem)", appearance: { gender: "masculino", race: "Saiyajin", build: "normal", hairStyle: "gohan", hairColor: "#16110f", eyeType: "gentil", irisColor: "#1a1210", mouthType: "smile", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "none", outerShirt: "gi_piccolo", innerShirt: "regata", pants: "larga", shoes: "botas_marrons", gloves: "nenhuma", primaryColor: "#5b2e91", secondaryColor: "#20336f", accentColor: "#f5f5f7", shirtColor: "#5b2e91", pantsColor: "#5b2e91", cape: "capa_ombreiras", capeColor: "#f6f6f8", kiColor: "#ffd45b" } },
     kaioshin: { label: "Supremo Sr. Kaio", appearance: { gender: "masculino", race: "Kaioshin", build: "magro", hairStyle: "kaioshin_moicano", hairColor: "#f4f4f4", eyeType: "gentil", irisColor: "#2a2a44", mouthType: "smile", earType: "pontuda", headFeature: "none", bodyMarks: "none", accessory: "potara", outerShirt: "roupa_kaioshin", innerShirt: "nenhuma", pants: "larga", shoes: "botas_kaioshin", gloves: "nenhuma", primaryColor: "#5648b8", secondaryColor: "#f3eedd", accentColor: "#f2c94c", shirtColor: "#f3eedd", pantsColor: "#f3eedd", kiColor: "#c9a0ff" } },
     fusao: { label: "Fusão (Gogeta)", appearance: { gender: "masculino", race: "Saiyajin", build: "musculoso", hairStyle: "goku", hairColor: "#111018", eyeType: "serio", irisColor: "#161a24", mouthType: "maligno", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "potara", outerShirt: "colete_fusao", innerShirt: "regata", pants: "larga", shoes: "botas_saiyajin", gloves: "pulseiras", primaryColor: "#1c3fb0", secondaryColor: "#2a2f45", accentColor: "#f5c518", shirtColor: "#262a3e", pantsColor: "#f4f1e8", kiColor: "#7fd8ff" } },
     bardock: { label: "Bardock", appearance: { gender: "masculino", race: "Saiyajin", build: "musculoso", hairStyle: "bardock", hairColor: "#0e0c10", eyeType: "bravo", irisColor: "#141014", mouthType: "maligno", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "scouter", hat: "faixa", outerShirt: "armadura_saiyajin", innerShirt: "malha", pants: "justa", shoes: "botas_saiyajin", gloves: "luvas_pretas", primaryColor: "#2b2430", secondaryColor: "#5a4636", accentColor: "#b88a3a", shirtColor: "#2b2430", pantsColor: "#2b2430", tail: "cinto_saiyajin", scar: "bochecha", kiColor: "#ff9a5b" } },
@@ -1867,7 +1929,7 @@ const SPRITE_PRESETS = {
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
         SPRITE_VIEW, SPRITE_STATES, SPRITE_FRAME_COUNTS, SPRITE_PRESETS, SPRITE_DEFAULT_APPEARANCE,
-        normalizeAppearance, spriteTransformAppearance, spriteAppearanceDiff, SPRITE_DEFAULT_TRANSFORMATION, SPRITE_SAIYAN_HAIR, spritePoseFor, generateSpriteFrameSvg, generateSpriteFrameUrl, getProceduralFrameUrls, spriteSvgToUrl,
+        normalizeAppearance, spriteGiVirouCamisa, spriteTransformAppearance, spriteAppearanceDiff, SPRITE_DEFAULT_TRANSFORMATION, SPRITE_SAIYAN_HAIR, spritePoseFor, generateSpriteFrameSvg, generateSpriteFrameUrl, getProceduralFrameUrls, spriteSvgToUrl,
         spriteMix, spriteShade
     };
 }
