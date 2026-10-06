@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git push -f origin claude/repository-verification-pacq7h)",
+      "Bash(git push -qf origin claude/repository-verification-pacq7h)"
+    ]
+  }
+}
