@@ -2134,6 +2134,7 @@ function loadCharacterData() {
                 seedNewDefaultCharacters();
                 atualizarFreezaSalvo();
                 atualizarCellSalvo();
+                atualizarHeroisSalvos();
                 return;
             }
         }
@@ -2157,6 +2158,12 @@ const FREEZA_TRANSFORMACOES = [
     { name: "Black Freeza", diff: { build: "normal", headFeature: "none", bodyMarks: "freeza", outerShirt: "armadura_freeza", gloves: "nenhuma", shoes: "pes_garras", skinColor: "#25212c", primaryColor: "#b04ad8" }, ssj: false, aura: "roxo" }
 ];
 
+// Gohan (saga Cell): base com capa; 1 = Super Saiyajin sem capa; 2 = Super Saiyajin 2 sem capa (mechas finas, gi rasgado)
+const GOHAN_TRANSFORMACOES = [
+    { name: "Super Saiyajin", diff: { cape: "none", irisColor: "#2ab8b0" }, ssj: true, aura: "amarelo" },
+    { name: "Super Saiyajin 2", diff: { cape: "none", irisColor: "#2ab8b0", hairStyle: "gohan_ssj2", outerShirt: "gi_rasgado", build: "musculoso", primaryColor: "#7a3fc8", pantsColor: "#7a3fc8", secondaryColor: "#2a7ad8", shoes: "botas_dobradas" }, ssj: true, aura: "amarelo" }
+];
+
 const CELL_TRANSFORMACOES = [
     { name: "Semi-perfeito", diff: { build: "gigante", headFeature: "capacete_cell2", bodyMarks: "cell_semi", skinColor: "#b5cf45", shoes: "sapato_cell", mouthType: "risada", wings: "cell" }, ssj: false, aura: "verde" },
     { name: "Perfeito", diff: { build: "musculoso", headFeature: "capacete_cell3", bodyMarks: "cell_perfeito", skinColor: "#e6e4ee", shoes: "sapato_ponta", tail: "none", irisColor: "#7a3fa0", wings: "cell_capa" }, ssj: false, aura: "verde" }
@@ -2175,7 +2182,7 @@ const DEFAULT_CHARACTERS = {
     freeza_1: { name: "FREEZA", presetKey: "freeza", align: "VILÃO", aura: "roxo", spec: "DEATH BEAM",
         transformations: FREEZA_TRANSFORMACOES },
     trunks: { name: "TRUNKS", presetKey: "trunks", align: "HERÓI", aura: "azul", spec: "BURNING ATTACK" },
-    gohan: { name: "GOHAN", presetKey: "gohan", align: "HERÓI", aura: "gelo", spec: "MASENKO" },
+    gohan: { name: "GOHAN", presetKey: "gohan", align: "HERÓI", aura: "gelo", spec: "MASENKO", transformations: GOHAN_TRANSFORMACOES },
     kaioshin: { name: "SUPREMO SR. KAIO", presetKey: "kaioshin", align: "HERÓI", aura: "rosa", spec: "KIAI SAGRADO" },
     gogeta: { name: "GOGETA", presetKey: "fusao", align: "HERÓI", aura: "amarelo", spec: "BIG BANG KAMEHAMEHA" },
     bardock: { name: "BARDOCK", presetKey: "bardock", align: "ANTI-HERÓI", aura: "azul", spec: "RIOT JAVELIN" },
@@ -2277,6 +2284,36 @@ function atualizarCellSalvo() {
     if (Array.isArray(c.transformations) && c.transformations.some(t => t && t.diff && Object.keys(t.diff).length)) return;
     createDefaultCharacter("cell");
     saveCharacterData();
+}
+
+// Uma vez (versão 0.74): Goku, Vegeta, Trunks e Gohan salvos com a aparência antiga (sem edição do jogador)
+// passam para o visual novo, fiel às referências; o Gohan com a transformação padrão ganha as 2 novas (SSJ e SSJ2).
+const HEROIS_ANTIGOS = {
+    goku_adult: { preset: "goku", era: (ap) => ap.symbol === "kai" && ap.shirtColor === "#1c45b0" && ap.hairStyle === "goku" },
+    vegeta: { preset: "vegeta", era: (ap) => ap.outerShirt === "armadura_saiyajin" && ap.accessory === "none" && ap.tail === "none" && ap.hairStyle === "vegeta" },
+    trunks: { preset: "trunks", era: (ap) => ap.primaryColor === "#3f66c8" && ap.hairStyle === "trunks_futuro" },
+    gohan: { preset: "gohan", era: (ap) => ap.secondaryColor === "#20336f" && ap.shoes === "botas_marrons" && ap.hairStyle === "gohan" }
+};
+function atualizarHeroisSalvos() {
+    if (readStorage("saiyan_herois_074") === "1") return;
+    writeStorage("saiyan_herois_074", "1");
+    let mudou = false;
+    for (const k in HEROIS_ANTIGOS) {
+        const c = characterDB[k], info = HEROIS_ANTIGOS[k];
+        if (!c || !c.builderAppearance || !info.era(c.builderAppearance)) continue;
+        c.builderAppearance = normalizeAppearance(SPRITE_PRESETS[info.preset].appearance);
+        Object.assign(c, buildProceduralAnimations(c.builderAppearance));
+        c.defaultUrl = generateSpriteFrameUrl(c.builderAppearance, "idle", 0);
+        c.imageObj = null;
+        loadImageSecure(c.defaultUrl, (img) => { if (characterDB[k]) characterDB[k].imageObj = img; });
+        mudou = true;
+    }
+    const g = characterDB.gohan;
+    if (g && Array.isArray(g.transformations) && g.transformations.length === 1 && !Object.keys(g.transformations[0].diff || {}).length) {
+        delete g.transformations;   // volta a usar as transformações padrão do Gohan (DEFAULT_CHARACTERS)
+        mudou = true;
+    }
+    if (mudou) saveCharacterData();
 }
 
 function seedNewDefaultCharacters() {

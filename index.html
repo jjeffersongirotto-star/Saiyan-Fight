@@ -1135,10 +1135,10 @@
                         <select id="build-hair-style" onchange="refreshBuilderPreview()">
                             <option value="careca">Careca / sem cabelo</option>
                             <option value="goku">Espetado</option><option value="vegeta">Em chamas, para cima</option>
-                            <option value="gohan">Repicado com mecha</option><option value="cell_crista">Crista com pintas</option><option value="bardock">Espetado para trás</option>
+                            <option value="gohan">Repicado com mecha</option><option value="gohan_ssj2">Super Saiyajin 2 (mechas finas)</option><option value="cell_crista">Crista com pintas</option><option value="bardock">Espetado para trás</option>
                             <option value="raditz">Longo solto</option><option value="broly">Selvagem</option>
                             <option value="gotenks">3 picos</option>
-                            <option value="trunks_futuro">Liso com franja</option><option value="trunks_kid">Liso curto</option>
+                            <option value="trunks_futuro">Curto repartido ao meio</option><option value="trunks_kid">Liso curto</option>
                             <option value="android17">Liso até o ombro</option><option value="android18">Curto com franja lateral</option>
                             <option value="kaioshin_moicano">Moicano</option><option value="ssj_longo">Longo espetado até a cintura</option>
                         </select>
@@ -1207,7 +1207,7 @@
                             <option value="none">Nenhuma</option>
                             <optgroup label="Uniformes de luta">
                                 <option value="kimono">Gi tradicional</option>
-                                <option value="gi_piccolo">Gi com faixa na cintura</option>
+                                <option value="gi_piccolo">Gi com faixa na cintura</option><option value="gi_rasgado">Gi rasgado (sem mangas)</option>
                                 <option value="roupa_kaioshin">Túnica com gola e faixa</option>
                             </optgroup>
                             <optgroup label="Armaduras">
@@ -1234,7 +1234,7 @@
                     <div class="form-group"><label for="build-pants-color">COR DA CALÇA</label><input type="color" id="build-pants-color" value="#f26a0f" oninput="refreshBuilderPreview()"></div>
                     <div class="form-group"><label for="build-symbol">SÍMBOLO NO PEITO</label>
                         <select id="build-symbol" onchange="refreshBuilderPreview()">
-                            <option value="none">Nenhum</option><option value="kame">Kame (tartaruga)</option><option value="kai">Kai</option>
+                            <option value="none">Nenhum</option><option value="kame">Kame (tartaruga)</option><option value="kai">Kai</option><option value="go">Go (悟)</option>
                             <option value="cc">Corporação Cápsula</option><option value="redribbon">Exército Red Ribbon</option><option value="saiyajin">Símbolo Saiyajin</option>
                         </select>
                     </div>
@@ -1243,7 +1243,7 @@
                     <div class="form-group"><label for="build-shoes">CALÇADO</label>
                         <select id="build-shoes" onchange="refreshBuilderPreview()">
                             <option value="botas_artes">Botas de artes marciais</option><option value="botas_saiyajin">Botas brancas</option>
-                            <option value="botas_trunks">Botas marrons altas</option><option value="botas_kaioshin">Sandálias</option>
+                            <option value="botas_trunks">Botas amarelas altas</option><option value="botas_dobradas">Botas de pano dobradas</option><option value="botas_kaioshin">Sandálias</option>
                             <option value="botas_marrons">Botas simples</option><option value="botas_cell">Botas escuras</option><option value="descalco">Descalço</option>
                             <option value="pes_garras">Pés com garras</option><option value="sapato_cell">Sapato preto de pontas laranjas</option><option value="sapato_ponta">Sapato de ponta comprida</option><option value="caneleiras_freeza">Caneleiras e pés com garras</option>
                         </select>
@@ -1260,7 +1260,7 @@
                 <div class="sprite-control-row">
                     <div class="form-group"><label for="build-accessory">NO ROSTO / ORELHA</label>
                         <select id="build-accessory" onchange="refreshBuilderPreview()">
-                            <option value="none">Nenhum</option><option value="potara">Brincos Potara</option><option value="scouter">Scouter</option>
+                            <option value="none">Nenhum</option><option value="potara">Brincos Potara</option><option value="scouter">Scouter</option><option value="scouter_vermelho">Scouter vermelho</option>
                         </select>
                     </div>
                     <div class="form-group"><label for="build-cape">NAS COSTAS: CAPA / OMBREIRAS</label>
@@ -1321,9 +1321,17 @@
                 Novidades e correções do jogo.
             </p>
             <ul id="lista-updates" style="margin: 0 0 18px; color: #ddd; line-height: 1.5; padding: 0 4px 0 0; list-style: none; overflow-y: auto;">
-                <li class="upd-versao"><h3>Versão 0.73 (ATUAL)</h3><p>Golden e Black Freeza, editor de transformações</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Golden Freeza e Black Freeza</strong><p>O Freeza ganha a 5ª transformação (Golden: corpo dourado com placas roxas) e a 6ª (Black: corpo preto com placas roxas brilhantes), com o corpo da forma final e as cores do mangá. Quem já tinha o Freeza salvo recebe as duas no fim da lista.</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Copiar o corpo de outra transformação</strong><p>Na aba TRANSFORMAÇÃO, "COPIAR O CORPO DE" escolhe de onde a transformação nova começa: a forma original ou qualquer transformação da lista.</p></li>
+                <li class="upd-versao"><h3>Versão 0.74 (ATUAL)</h3><p>Goku, Vegeta, Trunks e Gohan fiéis às referências</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Gohan com Super Saiyajin e Super Saiyajin 2</strong><p>Transformação 1: cabelo amarelo, sem capa e ombreiras. Transformação 2: Super Saiyajin 2 com mechas finas, gi rasgado sem mangas, mais musculoso e raios azulados em volta do cabelo.</p></li>
+                <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>Goku</strong><p>Kanji 悟 no peito, camiseta azul-marinho com faixa e munhequeiras azul-royal, botas azul-marinho com costura vermelha e cordão amarelo.</p></li>
+                <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>Vegeta</strong><p>Armadura Saiyajin com ombreiras grandes douradas arqueadas, barriga e abas sobre as coxas, cauda enrolada na cintura e scouter de lente vermelha.</p></li>
+                <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>Trunks do Futuro</strong><p>Cabelo curto repartido ao meio, jaqueta curta azul-violeta, regata preta, cinto amarelo com fivela, calça preta folgada, botas amarelas e alça turquesa da espada no peito.</p></li>
+                <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>Gohan</strong><p>Gi roxo sem mangas, faixa e munhequeiras azul-royal, capa com sombra azul-clara e botas de pano dobradas.</p></li>
+                <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>Cabeça e tronco do Cell</strong><p>Carapaça da cabeça com o mesmo volume dos dois lados, cobrindo as orelhas; no perfeito a placa preta cobre todo o alto da cabeça. Contornos mais suaves no peito e na barriga da 1ª forma e do semi-perfeito.</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Peças novas no construtor</strong><p>Símbolo Go (悟), scouter vermelho, cabelo Super Saiyajin 2, gi rasgado e botas de pano dobradas. Personagens salvos sem edição passam para o visual novo.</p></li>
+                <li class="upd-versao"><h3>Versão 0.73</h3><p>Golden e Black Freeza, editor de transformações</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Golden Freeza e Black Freeza</strong><p>O Freeza ganha a 5ª transformação (Golden: corpo dourado com placas roxas) e a 6ª (Black: corpo preto com placas roxas brilhantes), com o corpo da forma final e as cores do mangá. Quem já tinha o Freeza salvo recebe as duas no fim da lista.</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Copiar o corpo de outra transformação</strong><p>Na aba TRANSFORMAÇÃO, "COPIAR O CORPO DE" escolhe de onde a transformação nova começa: a forma original ou qualquer transformação da lista.</p></li>
                 <li class="upd-item upd-corrigido"><span class="upd-tag">CORRIGIDO</span><strong>Trocar a raça no construtor</strong><p>Trocar a RAÇA agora muda a prévia na hora (volta para a cor de pele da raça). Tirar peças (Nenhum/Nenhuma) numa transformação fica salvo.</p></li>
                 <li class="upd-item upd-corrigido"><span class="upd-tag">CORRIGIDO</span><strong>Gerenciador de personagens</strong><p>Ao rolar, os cartões ficam dentro do quadro e não passam mais por cima do título, do CRIAR NOVO e da seta.</p></li>
                 <li class="upd-item upd-corrigido"><span class="upd-tag">CORRIGIDO</span><strong>Gi do Piccolo como era</strong><p>O "Gi com faixa na cintura" volta a ter a blusa roxa. Para o Piccolo sem camisa, com o peito musculoso, use ROUPA DE CIMA "Nenhuma".</p></li>
