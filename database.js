@@ -2089,6 +2089,9 @@ function saveCharacterFromModal() {
 
 // ==================== DATABASE DE PERSONAGENS ====================
 function loadCharacterData() {
+    // uma vez: a blusa do "Gi com faixa" virou a camisa (ver spriteGiVirouCamisa)
+    const migrarGi = readStorage("saiyan_gi_camisa") !== "1";
+    let giMigrado = false;
     try {
         let saved = readStorage("saiyan_db_v8_8bit");
         if (saved) {
@@ -2121,6 +2124,7 @@ function loadCharacterData() {
                 // por versões antigas, no estilo antigo, passa a usar o desenho atual).
                 if (character.builderAppearance) {
                     character.builderAppearance = normalizeAppearance(character.builderAppearance);
+                    if (migrarGi && spriteGiVirouCamisa(character.builderAppearance)) giMigrado = true;
                     Object.assign(character, buildProceduralAnimations(character.builderAppearance));
                     character.defaultUrl = generateSpriteFrameUrl(character.builderAppearance, "idle", 0);
                 }
@@ -2131,6 +2135,8 @@ function loadCharacterData() {
             }
 
             if (validCount > 0) {
+                if (giMigrado) saveCharacterData();
+                writeStorage("saiyan_gi_camisa", "1");
                 seedNewDefaultCharacters();
                 atualizarFreezaSalvo();
                 atualizarCellSalvo();
@@ -2141,6 +2147,7 @@ function loadCharacterData() {
         console.warn("Erro ao carregar database:", e);
     }
 
+    writeStorage("saiyan_gi_camisa", "1");   // os personagens novos já nascem com a blusa do gi como camisa
     loadDefaultCharacters();
 }
 
@@ -2155,8 +2162,8 @@ const FREEZA_TRANSFORMACOES = [
 ];
 
 const CELL_TRANSFORMACOES = [
-    { name: "Semi-perfeito", diff: { build: "gigante", headFeature: "capacete_cell2", bodyMarks: "cell_semi", skinColor: "#b5cf45", shoes: "sapato_cell" }, ssj: false, aura: "verde" },
-    { name: "Perfeito", diff: { build: "musculoso", headFeature: "capacete_cell3", bodyMarks: "cell_perfeito", skinColor: "#e6e4ee", shoes: "sapato_ponta", tail: "none", irisColor: "#7a3fa0" }, ssj: false, aura: "verde" }
+    { name: "Semi-perfeito", diff: { build: "gigante", headFeature: "capacete_cell2", bodyMarks: "cell_semi", skinColor: "#b5cf45", shoes: "sapato_cell", mouthType: "risada", wings: "cell" }, ssj: false, aura: "verde" },
+    { name: "Perfeito", diff: { build: "musculoso", headFeature: "capacete_cell3", bodyMarks: "cell_perfeito", skinColor: "#e6e4ee", shoes: "sapato_ponta", tail: "none", irisColor: "#7a3fa0", wings: "cell_capa" }, ssj: false, aura: "verde" }
 ];
 
 const DEFAULT_CHARACTERS = {
