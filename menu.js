@@ -546,11 +546,18 @@ function getCardPortrait(cItem, w, h) {
 function getPortraitFromSrc(src, w, h) {
     if (!src || !String(src).startsWith("data:image/svg") || typeof document === "undefined") return null;
     const pw = Math.max(1, Math.round(w * renderScale)), ph = Math.max(1, Math.round(h * renderScale));
-    const meio = src.length >> 1;   // quadros recortados terminam todos igual (fim do PNG): o meio diferencia
-    const chave = src.length + ":" + src.slice(meio, meio + 40) + src.slice(-48) + "|" + pw + "x" + ph;
-    if (cardPortraitCache.has(chave)) return cardPortraitCache.get(chave);
-    cardPortraitCache.set(chave, null);
-    if (cardPortraitCache.size > 160) cardPortraitCache.delete(cardPortraitCache.keys().next().value);
+    // guardado pelo desenho INTEIRO (e depois pelo tamanho): formas que só trocam de cor (Golden/Black Freeza x
+    // forma final) têm o mesmo tamanho de texto e quase tudo igual — uma chave com só um pedaço do texto
+    // confundia as três e mostrava a forma final no lugar das outras. O Map acha a string sem copiá-la.
+    let porTamanho = cardPortraitCache.get(src);
+    if (!porTamanho) {
+        porTamanho = new Map();
+        cardPortraitCache.set(src, porTamanho);
+        if (cardPortraitCache.size > 160) cardPortraitCache.delete(cardPortraitCache.keys().next().value);
+    }
+    const chave = pw + "x" + ph;
+    if (porTamanho.has(chave)) return porTamanho.get(chave);
+    porTamanho.set(chave, null);
     // desenha 2x maior que o espaço (para ainda caber depois de cortar as bordas vazias) e com bordas suaves
     const escalaDesenho = 2.2;
     const larguraSvg = Math.round(ph * escalaDesenho * (96 / 112)), alturaSvg = Math.round(ph * escalaDesenho);
@@ -569,7 +576,7 @@ function getPortraitFromSrc(src, w, h) {
             for (let y = 0; y < alturaSvg; y++) for (let x = 0; x < larguraSvg; x++) {
                 if (d[(y * larguraSvg + x) * 4 + 3] > 24) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
             }
-            if (x1 < 0) { cardPortraitCache.set(chave, c); return; }
+            if (x1 < 0) { porTamanho.set(chave, c); return; }
             const cw = x1 - x0 + 1, ch = y1 - y0 + 1, k = Math.min(pw / cw, ph / ch);
             const out = document.createElement("canvas");
             out.width = pw; out.height = ph;
@@ -578,8 +585,8 @@ function getPortraitFromSrc(src, w, h) {
             if ("imageSmoothingQuality" in o) o.imageSmoothingQuality = "high";
             const dw = cw * k, dh = ch * k;
             o.drawImage(c, x0, y0, cw, ch, (pw - dw) / 2, ph - dh, dw, dh);   // pés embaixo, centralizado
-            cardPortraitCache.set(chave, out);
-        } catch (e) { cardPortraitCache.delete(chave); }
+            porTamanho.set(chave, out);
+        } catch (e) { porTamanho.delete(chave); }
     };
     img.src = liso;
     return null;
