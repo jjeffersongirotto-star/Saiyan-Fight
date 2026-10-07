@@ -13,8 +13,8 @@ const html = fs.readFileSync(__dirname + "/../index.html", "utf8");
 // ---------- pacote do Vegeta ----------
 const pacote = JSON.parse(fs.readFileSync(__dirname + "/../conjuntos/vegeta.json", "utf8"));
 const estados = run("CONJ_ESTADOS");
-check("pacote do Vegeta tem os 13 movimentos, normal e Super Saiyajin, com 6 quadros cada",
-    ["normal", "ssj"].every(v => estados.every(st => Array.isArray(pacote[v][st]) && pacote[v][st].length === 6)));
+check("pacote do Vegeta tem os 14 movimentos, normal e Super Saiyajin (6 quadros; o especial Galick Ho, 5)",
+    ["normal", "ssj"].every(v => estados.every(st => Array.isArray(pacote[v][st]) && pacote[v][st].length === (st === "special" ? 5 : 6))));
 check("Vegeta já vem com o conjunto azul (base + Super Saiyajin), disponível e não ativo",
     run("characterDB.vegeta.spriteGroups.some(g => g.id === 'g_vegeta' && g.transfs.length === 1)") && run("characterDB.vegeta.spriteActive") === "original");
 check("o conjunto do Vegeta entra uma vez só (apagado, não volta)", run("readStorage('saiyan_conjunto_vegeta')") === "1");
