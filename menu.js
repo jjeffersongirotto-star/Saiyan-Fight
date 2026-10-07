@@ -4271,7 +4271,11 @@ function drawPlayerEntity(p, charData, isBoss = false) {
 
     const fallbackKey = isBoss ? selectedBoss : selectedCharacter;
     const animationState = p.actionState || "idle";
-    const animationFrame = getCharacterAnimationFrame(fallbackKey, animationState, p.animTimer, getTransformLevel(p));
+    const nivelAnim = getTransformLevel(p);
+    if (p.movimentoAnim !== animationState || p.nivelAnim !== nivelAnim || !(p.animTimer >= p.movimentoDesde)) {
+        p.movimentoAnim = animationState; p.nivelAnim = nivelAnim; p.movimentoDesde = p.animTimer;   // movimento novo: animação do começo
+    }
+    const animationFrame = getCharacterAnimationFrame(fallbackKey, animationState, p.animTimer, nivelAnim, p.animTimer - p.movimentoDesde);
 
     const actionShift = {
         idle: { dx: 0, dy: 0 },

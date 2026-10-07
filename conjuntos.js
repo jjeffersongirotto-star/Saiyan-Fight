@@ -30,11 +30,17 @@ const conjPacoteCarregando = {};
 
 // Cada quadro vira um SVG com a imagem recortada na posição/escala certas e "crispEdges": a luta trata como os
 // outros lutadores em pixel art (mesmo tamanho na tela e pés no chão).
-function conjEmbrulharQuadro(d, q) {
-    const [x, y, w, h, b64] = q, k = d.k || 1;
+// d.escala[movimento] = [fator, linha de apoio]: movimentos recortados maiores que os outros (voo na diagonal, fim
+// da transformação) são reduzidos em volta dessa linha (pés para quem está no chão, meio do corpo no voo), para o
+// Vegeta ter sempre o mesmo tamanho.
+function conjEmbrulharQuadro(d, q, st) {
+    const [x, y, w, h, b64] = q;
+    const [s, apoioY] = (d.escala && d.escala[st]) || [1, d.pesY];
+    const k = (d.k || 1) / s;
+    const yBase = 103 + (apoioY - d.pesY) / (d.k || 1);   // a linha de apoio fica onde estava
     const n = (v) => Math.round(v * 100) / 100;
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="144" height="168" viewBox="0 0 96 112" shape-rendering="crispEdges">` +
-        `<image x="${n(48 + (x - d.centroX) / k)}" y="${n(103 + (y - d.pesY) / k)}" width="${n(w / k)}" height="${n(h / k)}" preserveAspectRatio="none" ` +
+        `<image x="${n(48 + (x - d.centroX) / k)}" y="${n(yBase + (y - apoioY) / k)}" width="${n(w / k)}" height="${n(h / k)}" preserveAspectRatio="none" ` +
         `style="image-rendering:pixelated" href="data:image/png;base64,${b64}"/></svg>`;
     return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
@@ -44,7 +50,7 @@ function conjRegistrarPacote(nome, d) {
     ["normal", "ssj"].forEach(v => {
         if (!d[v]) return;
         pronto[v] = {};
-        CONJ_ESTADOS.forEach(st => { pronto[v][st] = (d[v][st] || []).map(q => conjEmbrulharQuadro(d, q)); });
+        CONJ_ESTADOS.forEach(st => { pronto[v][st] = (d[v][st] || []).map(q => conjEmbrulharQuadro(d, q, st)); });
     });
     conjPacoteDados[nome] = pronto;
     conjPacoteCarregando[nome] = false;
@@ -63,7 +69,11 @@ function conjCarregarPacote(nome) {
 // Algo mudou (pacote carregou, formas lidas do IndexedDB): refaz a área do editor e deixa os lutadores serem
 // preparados de novo com os quadros certos.
 function conjAoMudar() {
-    if (conjTemp && typeof document !== "undefined") renderConjuntos();
+    if (conjTemp && typeof document !== "undefined") {
+        renderConjuntos();
+        if (typeof updateModalPreview === "function") updateModalPreview();   // o pacote chegou: a aba DADOS mostra o conjunto
+        if (typeof renderSpriteMotionPreview === "function") renderSpriteMotionPreview();
+    }
     if (typeof backgroundWork !== "undefined" && backgroundWork) backgroundWork.warmedFor = null;
 }
 
@@ -110,6 +120,22 @@ function conjRetratoUrl(c) {
     if (!g) return null;
     const q = conjQuadrosDaForma(conjFormaDoNivel(c, g, 0), "idle");
     return q && q[0] ? q[0] : null;
+}
+
+// Cadeado de um movimento da forma (quadro onde a repetição recomeça depois da 1ª volta); -1 = sem cadeado
+function conjTravaDaForma(f, st) {
+    if (!f || !f.loop || f.pacote) return -1;
+    const a = f.animations || {};
+    const mov = Array.isArray(a[st]) && a[st].length ? st : "idle";
+    const i = f.loop[mov];
+    return Number.isInteger(i) && i > 0 ? i : -1;
+}
+
+function conjuntoTrava(charKey, st, nivel) {
+    const c = typeof characterDB !== "undefined" ? characterDB[charKey] : null;
+    const g = conjGrupoAtivo(c);
+    if (!g) return -1;
+    return conjTravaDaForma(conjFormaDoNivel(c, g, nivel | 0), st);
 }
 
 function conjuntoFps(charKey, st, nivel) {
@@ -248,11 +274,13 @@ function conjAbrirEditor(c) {
         ativo: (c && c.spriteActive) || "original"
     };
     conjEdicao = null;
+    conjGrupoAberto = null;
     conjMarcadas.clear();
     renderConjuntos();
 }
 
-function conjFecharEditor() { conjTemp = null; conjEdicao = null; conjMarcadas.clear(); }
+// sair do editor sem SALVAR FORMA descarta a forma em montagem (o conjunto continua como estava)
+function conjFecharEditor() { conjTemp = null; conjEdicao = null; conjGrupoAberto = null; conjMarcadas.clear(); }
 
 function conjEstaEditando() { return !!conjEdicao; }
 
@@ -297,14 +325,15 @@ function conjEditarForma(id) {
     CONJ_ESTADOS.forEach(st => { anim[st] = Array.from(fonte[st] || []); });
     const fps = {};
     CONJ_ESTADOS.forEach(st => { fps[st] = f.pacote ? ((conjPacoteDados[f.pacote] && conjPacoteDados[f.pacote].fps) || 10) : ((f.fps && f.fps[st]) || CONJ_FPS_PADRAO); });
-    conjIniciarEdicao(f.id, { anim, fps });
+    conjIniciarEdicao(f.id, { anim, fps, loop: f.pacote ? {} : Object.assign({}, f.loop || {}) });
     conjStatus("Editando " + conjNomeForma(f) + ". Toque em SALVAR FORMA para guardar.");
 }
 
 function conjIniciarEdicao(formaId, conteudo) {
-    conjEdicao = { formaId, stash: { anim: tempAnimations, fps: tempFps, salvos: savedSpriteMotionPreviewFrames } };
+    conjEdicao = { formaId, stash: { anim: tempAnimations, fps: tempFps, salvos: savedSpriteMotionPreviewFrames, loop: tempLoop } };
     tempAnimations = {};
     tempFps = {};
+    tempLoop = conteudo && conteudo.loop ? Object.assign({}, conteudo.loop) : {};
     CONJ_ESTADOS.forEach(st => {
         tempAnimations[st] = conteudo ? Array.from(conteudo.anim[st] || []) : [];
         tempFps[st] = conteudo ? conteudo.fps[st] : CONJ_FPS_PADRAO;
@@ -320,7 +349,13 @@ function conjTerminarEdicao() {
     const s = conjEdicao.stash;
     tempAnimations = s.anim;
     tempFps = s.fps;
+    tempLoop = s.loop || {};
     savedSpriteMotionPreviewFrames = s.salvos;
+    // a forma era de um conjunto (aberta pelo ✎): salvando ou não, volta para o conjunto fechado
+    if (conjGrupoAberto && conjTemp && conjEdicao.formaId) {
+        const id = conjEdicao.formaId;
+        if (conjTemp.grupos.some(g => g.base === id || g.transfs.includes(id))) conjGrupoAberto = null;
+    }
     conjEdicao = null;
     spriteMotionPreviewFrame = 0;
     if (typeof selectedPreviewFrameIndices !== "undefined") selectedPreviewFrameIndices.clear();
@@ -343,7 +378,9 @@ function conjSalvarForma() {
     CONJ_ESTADOS.forEach(st => { fps[st] = tempFps[st] || CONJ_FPS_PADRAO; });
     const nivel = escolha === "base" ? 0 : Number(escolha);
     if (nivel > conjMaiorNivel(conjEdicao.formaId) + 1) return showSystemAlert("TRANSFORMAÇÃO", "CRIE AS TRANSFORMAÇÕES EM ORDEM: SÓ A PRÓXIMA DEPOIS DA ÚLTIMA.");
-    const forma = { id: conjEdicao.formaId || ("f_" + Date.now() + "_" + Math.floor(Math.random() * 1e4)), tipo: nivel ? "transf" : "base", nivel, fps, animations: anim };
+    const loop = {};
+    CONJ_ESTADOS.forEach(st => { const i = tempLoop[st]; if (Number.isInteger(i) && i > 0 && i < anim[st].length) loop[st] = i; });
+    const forma = { id: conjEdicao.formaId || ("f_" + Date.now() + "_" + Math.floor(Math.random() * 1e4)), tipo: nivel ? "transf" : "base", nivel, fps, animations: anim, loop };
     const i = conjTemp.formas.findIndex(f => f.id === forma.id);
     if (i >= 0) conjTemp.formas[i] = forma; else conjTemp.formas.push(forma);
     // a forma editada mudou de nível: grupos que a usavam como transformação/base deixam de ser válidos

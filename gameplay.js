@@ -342,7 +342,9 @@ function getCharacterAnimationFrames(charKey, actionState, transformed) {
     return [];
 }
 
-function getCharacterAnimationFrame(charKey, actionState, animTimer, transformed) {
+// tempoNoMovimento: segundos desde que o lutador entrou neste movimento (para o cadeado dos conjuntos: a 1ª volta
+// é inteira, as seguintes recomeçam no quadro travado; mudando de movimento e voltando, começa do 1º de novo)
+function getCharacterAnimationFrame(charKey, actionState, animTimer, transformed, tempoNoMovimento) {
     let char = characterDB[charKey];
     if (!char) return null;
 
@@ -360,7 +362,10 @@ function getCharacterAnimationFrame(charKey, actionState, animTimer, transformed
     }
 
     let fps = conjuntoFps(charKey, state, transformed === true ? 1 : (transformed | 0)) || fpsSettings[state] || 12;
-    let frameIndex = Math.floor(animTimer * fps) % animFrames.length;
+    const nivel = transformed === true ? 1 : (transformed | 0);
+    const trava = typeof tempoNoMovimento === "number" ? conjuntoTrava(charKey, SPRITE_FRAME_COUNTS[state] ? state : "idle", nivel) : -1;
+    let frameIndex = trava > 0 ? getLoopFrameIndex(tempoNoMovimento * fps, animFrames.length, trava)
+        : Math.floor(animTimer * fps) % animFrames.length;
     let idleFallback = Array.isArray(anims.idle) ? anims.idle[0] : anims.idle;
     let frameSrc = animFrames[frameIndex] || animFrames[0] || idleFallback || char.defaultUrl;
     return getOrCacheGameplayImage(frameSrc, char.imageObj, char.bgRemoval);

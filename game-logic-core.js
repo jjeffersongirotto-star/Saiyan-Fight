@@ -649,6 +649,16 @@ function getStageMusicEra(stageId) {
     return STAGE_MUSIC_ERA[stageId] || "classico";
 }
 
+// Quadro de uma animação com "cadeado" (editor de quadros): a 1ª volta toca todos os quadros; depois recomeça no
+// quadro travado (lockFrom) em vez do 1º. Sem cadeado (ou no 1º quadro), é a repetição normal.
+function getLoopFrameIndex(tick, length, lockFrom) {
+    if (!(length > 0)) return 0;
+    const t = Math.max(0, Math.floor(tick) || 0);
+    if (!(lockFrom > 0 && lockFrom < length)) return t % length;
+    if (t < length) return t;
+    return lockFrom + (t - length) % (length - lockFrom);
+}
+
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
         getPadStickThreshold,
@@ -733,6 +743,7 @@ if (typeof module !== "undefined" && module.exports) {
         TERRA_ARENA_LAP_SCROLL,
         KAIOSHIN_LAP_SCROLL,
         NAMEK_FORWARD_SPEED,
-        getForwardTravel
+        getForwardTravel,
+        getLoopFrameIndex
     };
 }
