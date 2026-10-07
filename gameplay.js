@@ -404,28 +404,38 @@ function preloadOneState(charKey, state, transformed, comArte) {
     const char = characterDB[charKey];
     if (!char) return;
     const frames = getCharacterAnimationFrames(charKey, state, transformed);
-    if (comArte) frames.forEach(src => backgroundWork.images.push(() => warmFrameArt(charKey, state, src, 0)));
+    const nivel = transformed === true ? 1 : (transformed | 0);
+    if (comArte) frames.forEach(src => backgroundWork.images.push(() => warmFrameArt(charKey, state, src, 0, nivel)));
 }
 
-// Caixa do lutador na luta (52x56 × escala do personagem). Usada pela luta e pela preparação da pixel art.
-function getFighterBoxSize(charKey) {
-    const c = characterDB[charKey];
-    const k = c && c.scale ? c.scale : 1;
+// Caixa do lutador na luta (52x56 × escala da ALTURA do personagem naquele nível de transformação; ver
+// getAlturaPersonagem/escalaDaAltura). Usada pela luta e pela preparação da pixel art.
+function getFighterBoxSize(charKey, nivel) {
+    if (!characterDB[charKey]) return [52, 56];
+    const k = escalaDaAltura(getAlturaPersonagem(charKey, nivel | 0));
     return [52 * k, 56 * k];
 }
 
 // Carrega o quadro e, quando ele estiver pronto, já pede a pixel art no tamanho exato em que aparece na luta
 // (o mesmo cálculo de drawPlayerEntity: caixa do lutador × crescimento do movimento × PIXEL_SPRITE_SCALE).
-function warmFrameArt(charKey, state, src, tries) {
+// Tamanho novo da caixa (transformou e a altura mudou): cresce/encolhe em volta do meio, com os pés no mesmo lugar
+function ajustarCaixaDoLutador(p, tamanho) {
+    const [w, h] = tamanho;
+    if (p.w === w && p.h === h) return;
+    if (p.w && p.h) { p.x += (p.w - w) / 2; p.y += p.h - h; }
+    p.w = w; p.h = h;
+}
+
+function warmFrameArt(charKey, state, src, tries, nivel) {
     const char = characterDB[charKey];
     if (!char) return;
     const img = getOrCacheGameplayImage(src, char.imageObj, char.bgRemoval);
     if (!isDrawableSource(img)) {   // imagem comum (sprite sheet): espera carregar
-        if (tries < 120) backgroundWork.images.push(() => warmFrameArt(charKey, state, src, tries + 1));
+        if (tries < 120) backgroundWork.images.push(() => warmFrameArt(charKey, state, src, tries + 1, nivel));
         return;
     }
     if (!img.__svgImage || typeof ACTION_SPRITE_SCALE === "undefined") return;   // só desenhos em pixel art
-    const k = ACTION_SPRITE_SCALE[state] || 1, [bw, bh] = getFighterBoxSize(charKey);
+    const k = ACTION_SPRITE_SCALE[state] || 1, [bw, bh] = getFighterBoxSize(charKey, nivel);
     getPixelArtSource(img, bw * k * PIXEL_SPRITE_SCALE * renderScale, bh * k * PIXEL_SPRITE_SCALE * renderScale);
 }
 
@@ -827,12 +837,14 @@ function startGame() {
     player.actionTimer = 0;
     player.parryHighlightTimer = 0;
     player.parryCooldown = 0;
+    [player.w, player.h] = getFighterBoxSize(selectedCharacter, 0);   // tamanho da forma normal (altura)
 
     player2.x = 680;
     player2.y = 150;
     player2.vx = 0;
     player2.vy = 2;
     player2.alvoX = null;   // patrulha do vilão recomeça (stepVilaoPatrulha)
+    [player2.w, player2.h] = getFighterBoxSize(selectedBoss, 0);   // tamanho da forma normal (altura)
     player2.shootTimer = 0;
     player2.hp = player2.maxHp = waveParams.bossHp;
     player2.hitTimer = 0;
@@ -940,6 +952,7 @@ function respawnBoss() {
     player2.dyingspeedX = 0;
     player2.vy = 2;
     player2.alvoX = null;   // patrulha do vilão recomeça (stepVilaoPatrulha)
+    [player2.w, player2.h] = getFighterBoxSize(selectedBoss, 0);   // tamanho da forma normal (altura)
     player2.isTransformed = false;
     player2.ki = 0;
 
@@ -1960,10 +1973,10 @@ function update(dt) {
     }
 
     let pChar = characterDB[selectedCharacter];
-    [player.w, player.h] = getFighterBoxSize(selectedCharacter);
+    ajustarCaixaDoLutador(player, getFighterBoxSize(selectedCharacter, getTransformLevel(player)));
 
     let bChar = characterDB[selectedBoss];
-    [player2.w, player2.h] = getFighterBoxSize(selectedBoss);
+    ajustarCaixaDoLutador(player2, getFighterBoxSize(selectedBoss, getTransformLevel(player2)));
 
 
     if (player.isCharging) {
@@ -2048,7 +2061,10 @@ function update(dt) {
         player2.x -= 3 * dt * 60;
     } else if (gameMode !== "coop") {
         let waveParams = getWaveParams(waveNumber);
-        stepVilaoPatrulha(player2, dt * 60, waveParams.speedMult * 0.8);
+        // vilão alto (altura): o limite de baixo sobe para os pés não passarem do chão
+        world.limitesVilao = world.limitesVilao || Object.assign({}, VILAO_PATRULHA);
+        world.limitesVilao.maxY = Math.min(VILAO_PATRULHA.maxY, BOUNDS.PLAYER_MAX_Y_BASE - (player2.h - 56));
+        stepVilaoPatrulha(player2, dt * 60, waveParams.speedMult * 0.8, null, world.limitesVilao);
 
         player2.shootTimer += dt * 60;
         if (player2.shootTimer >= waveParams.shootFreq) {

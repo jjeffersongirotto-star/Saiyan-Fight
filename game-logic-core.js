@@ -666,6 +666,26 @@ function getLoopFrameIndex(tick, length, lockFrom) {
     return lockFrom + (t - length) % (length - lockFrom);
 }
 
+// Altura do personagem (cm, campo ALTURA do editor) -> escala do lutador na luta. 175 cm (Goku) = tamanho de
+// sempre; limitado para ninguém ocupar a arena demais nem ficar minúsculo (proporções sempre iguais: a escala
+// vale para largura e altura).
+const ALTURA_PADRAO_CM = 175;
+const ESCALA_ALTURA_MIN = 0.75;
+const ESCALA_ALTURA_MAX = 1.4;
+const ALTURA_CM_MIN = 50;
+const ALTURA_CM_MAX = 500;
+function escalaDaAltura(cm) {
+    const h = Number(cm);
+    if (!Number.isFinite(h) || h <= 0) return 1;
+    return Math.max(ESCALA_ALTURA_MIN, Math.min(ESCALA_ALTURA_MAX, h / ALTURA_PADRAO_CM));
+}
+// Valor digitado no editor -> altura válida (cm inteiro entre os limites) ou null
+function normalizarAltura(v) {
+    const h = Math.round(Number(v));
+    if (!Number.isFinite(h) || h <= 0) return null;
+    return Math.max(ALTURA_CM_MIN, Math.min(ALTURA_CM_MAX, h));
+}
+
 // Vilão fora do versus: sobe e desce entre minY e maxY e, de tempos em tempos, escolhe outro ponto na sua
 // metade da arena (alvoX) para onde vai devagar — antes só quicava em cima/baixo e, se passava do limite (um
 // quadro mais longo), invertia a direção a cada quadro e ficava parado no canto só atirando.
@@ -776,6 +796,11 @@ if (typeof module !== "undefined" && module.exports) {
         getForwardTravel,
         getLoopFrameIndex,
         stepVilaoPatrulha,
-        VILAO_PATRULHA
+        VILAO_PATRULHA,
+        escalaDaAltura,
+        normalizarAltura,
+        ALTURA_PADRAO_CM,
+        ESCALA_ALTURA_MIN,
+        ESCALA_ALTURA_MAX
     };
 }
