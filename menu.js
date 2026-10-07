@@ -71,6 +71,7 @@ function getCharacterCardRect(i) {
 }
 // botão "i" no canto de cima à direita de cada cartão: abre o quadro com a forma base e as transformações
 let infoPersonagemKey = null;
+let faseEscolhendoVilao = null;   // tela ARENAS: fase cujo vilão está sendo escolhido (selecaoLuta = "fase")
 function getCharacterInfoRect(card) {
     return rect(card.x + card.w - 22, card.y + 4, 18, 18);
 }
@@ -78,7 +79,9 @@ function abrirTelaPersonagens(modo) {
     selecaoLuta = modo;
     infoPersonagemKey = null;
     charactersScrollY = 0;
-    currentTab = modo === "p2" ? "VILÕES" : "HERÓIS";   // no VERSUS a "aba" diz qual jogador está escolhendo
+    currentTab = modo === "p2" || modo === "fase" ? "VILÕES" : "HERÓIS";   // no VERSUS a "aba" diz qual jogador está escolhendo
+    // antes da luta da história: a fase com vilão escolhido na tela ARENAS já vem com ele
+    if (modo === "solo" && gameMode !== "coop") { const v = getVilaoDaFase(selectedStage); if (v) selectedBoss = v.key; }
     padNav.focus = null;
     setGameState("characters");
 }
@@ -87,7 +90,7 @@ function voltarDaTelaPersonagens() {
     if (modo === "p2") { abrirTelaPersonagens("p1"); return; }
     selecaoLuta = null;
     infoPersonagemKey = null;
-    setGameState(modo === "solo" ? "stage_map" : modo === "p1" ? "mode_select" : "menu");
+    setGameState(modo === "solo" ? "stage_map" : modo === "p1" ? "mode_select" : modo === "fase" ? "stages" : "menu");
 }
 // LUTAR (ou PRÓXIMO no JOGADOR 1 do VERSUS): segue com quem está escolhido
 function avancarSelecaoLuta() {
@@ -120,9 +123,34 @@ function escolherPersonagemNaSelecao(key) {
     const opcoes = [];
     if (c.alignment === "VILÃO") opcoes.push({ label: "ANTI-HERÓI", acao: salvar(() => { selectedCharacter = key; }) });
     else if (selectedBoss === key) return;
-    opcoes.push({ label: "VILÃO", acao: salvar(() => { selectedBoss = key; }) });
+    opcoes.push({ label: "VILÃO", acao: salvar(() => {
+        selectedBoss = key;
+        // é o vilão desta fase agora (mantém a forma se for o mesmo personagem)
+        const v = getVilaoDaFase(selectedStage);
+        setVilaoDaFase(selectedStage, key, v && v.key === key ? v.nivel : 0);
+    }) });
     opcoes.push({ label: "CANCELAR", cancelar: true });
     showSystemChoice("SELECIONAR PERSONAGEM", `Deseja selecionar ${nome} para:`, opcoes);
+}
+
+// Tela ARENAS: escolheu o vilão da fase -> pergunta em qual forma ele aparece
+function escolherVilaoDaFase(key) {
+    const c = characterDB[key];
+    if (!c || !faseEscolhendoVilao) return;
+    const fase = faseEscolhendoVilao;
+    const opcoes = getCharacterFormsList(key).map(f => ({
+        label: f.nome,
+        acao: () => {
+            setVilaoDaFase(fase, key, f.nivel);
+            if (selectedStage === fase) selectedBoss = key;
+            saveSelectedCharacters();
+            selecaoLuta = null;
+            faseEscolhendoVilao = null;
+            setGameState("stages");
+        }
+    }));
+    opcoes.push({ label: "CANCELAR", cancelar: true });
+    showSystemChoice("VILÃO DA FASE", `Em qual forma ${c.name || key} aparece nesta fase?`, opcoes);
 }
 
 function getCharactersMaxScroll() {
@@ -3159,12 +3187,12 @@ function handleMenuClick(x, y) {
     else if (gameState === "characters") {
         // quadro "i" aberto: qualquer toque fecha (o X também)
         if (infoPersonagemKey) { infoPersonagemKey = null; padNav.focus = null; return; }
-        const versus = gameMode === "coop" && !!selecaoLuta;
-        if (!versus) {
+        const versus = gameMode === "coop" && !!selecaoLuta && selecaoLuta !== "fase";
+        if (!versus && selecaoLuta !== "fase") {
             if (hitRect(x, y, MENU_LAYOUT.characters.tabHeroes)) { currentTab = "HERÓIS"; charactersScrollY = 0; }
             else if (hitRect(x, y, MENU_LAYOUT.characters.tabVillains)) { currentTab = "VILÕES"; charactersScrollY = 0; }
         }
-        if (selecaoLuta && hitRect(x, y, MENU_LAYOUT.characters.fight)) { avancarSelecaoLuta(); return; }
+        if (selecaoLuta && selecaoLuta !== "fase" && hitRect(x, y, MENU_LAYOUT.characters.fight)) { avancarSelecaoLuta(); return; }
         if (hitRect(x, y, MENU_LAYOUT.back)) { voltarDaTelaPersonagens(); return; }
 
         getFilteredCharacters().forEach((key, i) => {
@@ -3172,7 +3200,8 @@ function handleMenuClick(x, y) {
             if (y < CHARACTERS_GRID_TOP - 4 || !hitRect(x, y, card)) return;
             // PERSONAGENS (menu): só ver — o cartão ou o "i" abrem as formas do personagem
             if (!selecaoLuta || hitRect(x, y, getCharacterInfoRect(card))) { infoPersonagemKey = key; padNav.focus = null; return; }
-            escolherPersonagemNaSelecao(key);
+            if (selecaoLuta === "fase") escolherVilaoDaFase(key);
+            else escolherPersonagemNaSelecao(key);
         });
     }
     else if (gameState === "stages") {
@@ -3181,6 +3210,8 @@ function handleMenuClick(x, y) {
                 if (isStageUnlockedByProgress(stg.id, stageProgress)) {
                     selectedStage = stg.id;
                     saveSettings();
+                    faseEscolhendoVilao = stg.id;
+                    abrirTelaPersonagens("fase");   // escolhe o vilão desta fase (só vilões e anti-heróis)
                 } else {
                     const prevName = (STAGE_PROGRESSION[i - 1] || {}).name || "";
                     stageLockedHintText = `COMPLETE O MODO NORMAL DE "${prevName}" PRA LIBERAR`;
@@ -6048,12 +6079,19 @@ function render() {
         ctx.font = "bold 18px 'Trebuchet MS', sans-serif";
         ctx.textAlign = "center";
         // menu: PERSONAGENS (só ver, com o "i"); antes da luta: SELEÇÃO DE PERSONAGEM (no VERSUS, um jogador por vez)
-        const versus = gameMode === "coop" && !!selecaoLuta;
+        const versus = gameMode === "coop" && !!selecaoLuta && selecaoLuta !== "fase";
+        const modoFase = selecaoLuta === "fase";
+        const vilaoFase = modoFase ? getVilaoDaFase(faseEscolhendoVilao) : null;
         const info = !!infoPersonagemKey;
         const alvo = info ? () => {} : registerMenuTarget;   // com o quadro "i" aberto só ele recebe o controle
-        ctx.fillText(!selecaoLuta ? "PERSONAGENS" : versus ? `SELEÇÃO DE PERSONAGEM — ${selecaoLuta === "p1" ? "JOGADOR 1" : "JOGADOR 2"}` : "SELEÇÃO DE PERSONAGEM", canvas.width / 2, 25);
+        ctx.fillText(modoFase ? "VILÃO DA FASE" : !selecaoLuta ? "PERSONAGENS" : versus ? `SELEÇÃO DE PERSONAGEM — ${selecaoLuta === "p1" ? "JOGADOR 1" : "JOGADOR 2"}` : "SELEÇÃO DE PERSONAGEM", canvas.width / 2, 25);
 
-        if (versus) {
+        if (modoFase) {
+            const stg = STAGE_PROGRESSION.find(f => f.id === faseEscolhendoVilao);
+            ctx.fillStyle = "#fca5a5";
+            ctx.font = "bold 12px monospace";
+            ctx.fillText(stg ? stg.name : "", canvas.width / 2, 62);
+        } else if (versus) {
             ctx.fillStyle = selecaoLuta === "p1" ? "#7dd3fc" : "#fca5a5";
             ctx.font = "bold 12px monospace";
             ctx.fillText(selecaoLuta === "p1" ? "JOGADOR 1: ESCOLHA SEU LUTADOR" : "JOGADOR 2: ESCOLHA SEU LUTADOR", canvas.width / 2, 62);
@@ -6061,7 +6099,7 @@ function render() {
             if (!info) { drawBtnAt(MENU_LAYOUT.characters.tabHeroes, "HERÓIS", currentTab === "HERÓIS" ? "#ffff00" : "#00ffff");
                 drawBtnAt(MENU_LAYOUT.characters.tabVillains, "VILÕES", currentTab === "VILÕES" ? "#ffff00" : "#00ffff"); }
         }
-        if (selecaoLuta && !info) drawBtnAt(MENU_LAYOUT.characters.fight, selecaoLuta === "p1" ? "PRÓXIMO ▶" : "LUTAR!", "#ffd23f");
+        if (selecaoLuta && !modoFase && !info) drawBtnAt(MENU_LAYOUT.characters.fight, selecaoLuta === "p1" ? "PRÓXIMO ▶" : "LUTAR!", "#ffd23f");
 
         let chars = getFilteredCharacters();
         setCharactersScroll(charactersScrollY);   // mantém dentro do limite (ex.: depois de apagar personagens)
@@ -6074,7 +6112,8 @@ function render() {
             // fora da área visível: só registra o alvo (o controle consegue ir até ele e a lista rola sozinha)
             if (cy + card.h < CHARACTERS_GRID_TOP - 6 || cy > canvas.height) { alvo(cx, cy, card.w, card.h); return; }
 
-            let isSel = !!selecaoLuta && ((currentTab === "HERÓIS" && selectedCharacter === key) || (currentTab === "VILÕES" && selectedBoss === key));
+            let isSel = modoFase ? !!vilaoFase && vilaoFase.key === key
+                : !!selecaoLuta && ((currentTab === "HERÓIS" && selectedCharacter === key) || (currentTab === "VILÕES" && selectedBoss === key));
 
             alvo(cx, cy, UI.GRID_CARD_WIDTH, UI.GRID_CARD_HEIGHT);
             const pressed = beginButtonPress(cx, cy, UI.GRID_CARD_WIDTH, UI.GRID_CARD_HEIGHT);
@@ -6178,6 +6217,17 @@ function render() {
                 ctx.fillStyle = "#ffffff";
                 ctx.fillText(stg.name, sx + cw / 2, sy + ch - 10, cw - 10);
                 ctx.shadowBlur = 0;
+                // vilão escolhido para a fase: retrato no canto de cima à direita
+                const vf = getVilaoDaFase(stg.id);
+                if (vf) {
+                    ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+                    roundRectPath(sx + cw - 40, sy + 5, 35, 46, 6);
+                    ctx.fill();
+                    ctx.strokeStyle = "#fca5a5";
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    drawCharacterPortrait(characterDB[vf.key], sx + cw - 38, sy + 7, 31, 42);
+                }
             } else {
                 ctx.fillStyle = "#aab2c4";
                 ctx.fillText(stg.name, sx + cw / 2, sy + ch - 10, cw - 10);

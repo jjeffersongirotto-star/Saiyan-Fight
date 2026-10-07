@@ -442,7 +442,7 @@ function warmFrameArt(charKey, state, src, tries, nivel) {
 // Nos menus, já prepara os lutadores escolhidos (quadros + pixel art): o primeiro segundo da luta não precisa
 // mais montar desenho nenhum. Refaz quando a escolha muda; não mexe em nada com uma janela (editor) aberta.
 function warmSelectedFighters() {
-    const key = selectedCharacter + "|" + selectedBoss;
+    const key = selectedCharacter + "|" + selectedBoss + "|" + selectedStage;   // a fase muda a forma inicial do vilão
     if (backgroundWork.warmedFor === key || !characterDB[selectedCharacter]) return;
     backgroundWork.warmedFor = key;
     backgroundWork.frames.length = 0;
@@ -454,6 +454,8 @@ function warmSelectedFighters() {
     // calculadas. O rival: só a primeira (é a única que ele faz sozinho).
     getCharacterTransformations(selectedCharacter).forEach((t, i) => preloadCharacterFrames(selectedCharacter, i + 1, i < 2));
     preloadCharacterFrames(selectedBoss, 1);
+    const vilaoFase = typeof getVilaoDaFase === "function" ? getVilaoDaFase(selectedStage) : null;
+    if (vilaoFase && vilaoFase.key === selectedBoss && vilaoFase.nivel > 1) preloadCharacterFrames(selectedBoss, vilaoFase.nivel, true);
     // desenhos do Saibaman (andando, saltando, abraçando): prontos antes do primeiro aparecer
     if (typeof getSaibamanSprite === "function") {
         for (let f = 0; f < 4; f++) backgroundWork.light.push(() => getSaibamanSprite("voar", f));
@@ -850,12 +852,14 @@ function startGame() {
     player2.hitTimer = 0;
     player2.ki = 0;
     player2.isTransformed = false;
+    player2.transformLevel = 0;
     player2.isCharging = false;
     player2.aggressiveness = waveParams.aggressiveness;
     player2.animTimer = 0;
     player2.actionState = "idle";
     player2.actionTimer = 0;
     player2.parryCooldown = 0;
+    aplicarFormaInicialDoVilao();   // vilão escolhido na tela ARENAS já começa na forma dele
     player2.isDying = false;
 
     initScenario();
@@ -955,6 +959,7 @@ function respawnBoss() {
     [player2.w, player2.h] = getFighterBoxSize(selectedBoss, 0);   // tamanho da forma normal (altura)
     player2.isTransformed = false;
     player2.ki = 0;
+    aplicarFormaInicialDoVilao();
 
 
     playSound("powerup");
@@ -1046,6 +1051,33 @@ const TRANSFORM_POWER_DURATION = 15 * 60;
 
 // Só transforma com o ki cheio, e gasta a barra toda. O jogador transforma apenas quando aperta TRANSFORMAR
 // (não existe mais transformação automática por pontos); o rival controlado pelo jogo transforma sozinho ao encher.
+// ---------- VILÃO DE CADA FASE (tela ARENAS) ----------
+// 1 vilão por fase, escolhido na tela ARENAS: personagem + forma inicial (0 = normal). Salvo em saiyan_viloes_fase.
+function getViloesDasFases() {
+    const v = readJsonStorage("saiyan_viloes_fase", {});
+    return v && typeof v === "object" ? v : {};
+}
+function getVilaoDaFase(faseId) {
+    const v = getViloesDasFases()[faseId];
+    if (!v || !characterDB[v.key]) return null;
+    const n = getCharacterTransformations(v.key).length;
+    return { key: v.key, nivel: Math.max(0, Math.min(n, v.nivel | 0)) };
+}
+function setVilaoDaFase(faseId, key, nivel) {
+    const todos = getViloesDasFases();
+    todos[faseId] = { key, nivel: Math.max(0, nivel | 0) };
+    writeStorage("saiyan_viloes_fase", JSON.stringify(todos));
+}
+// No modo história, o vilão escolhido para a fase já começa (e volta a cada onda) na forma escolhida
+function aplicarFormaInicialDoVilao() {
+    if (gameMode === "coop") return;
+    const v = getVilaoDaFase(selectedStage);
+    if (!v || v.key !== selectedBoss || !(v.nivel > 0)) return;
+    player2.isTransformed = true;
+    player2.transformLevel = v.nivel;
+    [player2.w, player2.h] = getFighterBoxSize(selectedBoss, v.nivel);
+}
+
 function transformPlayer(p, isP2 = false, force = false) {
     const charKey = isP2 ? selectedBoss : selectedCharacter;
     const lista = getCharacterTransformations(charKey);

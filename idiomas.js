@@ -779,6 +779,7 @@ agrupar § group § agrupar
 Nome do conjunto § Set name § Nombre del conjunto
 SIM, SALVAR § YES, SAVE § SÍ, GUARDAR
 Altura (cm) § Height (cm) § Altura (cm)
+VILÃO DA FASE § STAGE VILLAIN § VILLANO DE LA FASE
 Altura da transformação (cm) § Transformation height (cm) § Altura de la transformación (cm)
 Tamanho na luta: 175 cm = tamanho normal. Muito alto ou muito baixo tem limite, para o lutador caber na arena. § Size in battle: 175 cm = normal size. Very tall or very short is capped so the fighter fits the arena. § Tamaño en la pelea: 175 cm = tamaño normal. Muy alto o muy bajo tiene límite para que el luchador quepa en la arena.
 `;
@@ -787,6 +788,7 @@ Tamanho na luta: 175 cm = tamanho normal. Muito alto ou muito baixo tem limite, 
 // "{1}" = trecho traduzido também. Função recebe (m, T) e devolve o texto.
 const IDIOMA_REGRAS = [
     [/^Deseja selecionar (.+) para o (JOGADOR \d)\?$/, (m, T) => `Select ${m[1]} for ${T(m[2])}?`, (m, T) => `¿Seleccionar a ${m[1]} para el ${T(m[2])}?`],
+    [/^Em qual forma (.+) aparece nesta fase\?$/, "Which form does $1 appear in on this stage?", "¿En qué forma aparece $1 en esta fase?"],
     [/^Deseja selecionar (.+) para o herói\?$/, "Select $1 as the hero?", "¿Seleccionar a $1 como héroe?"],
     [/^Deseja selecionar (.+) para:$/, "Select $1 as:", "¿Seleccionar a $1 como:"],
     [/^JOGADOR (\d)$/, "PLAYER $1", "JUGADOR $1"],
