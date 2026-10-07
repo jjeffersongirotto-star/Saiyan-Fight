@@ -6,6 +6,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
     getPadStickThreshold,
+    getLoopFrameIndex,
     PAD_SENSITIVITY_DEFAULT,
     removeBackgroundColor,
     colorHexToRgb,
@@ -655,4 +656,13 @@ test("sensibilidade do analógico: mais sensível precisa inclinar menos", () =>
     assert.ok(getPadStickThreshold(5) < getPadStickThreshold(3) && getPadStickThreshold(3) < getPadStickThreshold(1));
     assert.equal(getPadStickThreshold(99), getPadStickThreshold(5), "acima do máximo fica no máximo");
     assert.equal(getPadStickThreshold("x"), 0.4, "valor inválido usa o padrão");
+});
+
+test("getLoopFrameIndex: cadeado faz a repetição recomeçar no quadro travado", () => {
+    assert.deepEqual([0, 1, 2, 3, 4, 5, 6].map(t => getLoopFrameIndex(t, 4)), [0, 1, 2, 3, 0, 1, 2], "sem cadeado: normal");
+    assert.deepEqual([0, 1, 2, 3, 4, 5, 6, 7, 8].map(t => getLoopFrameIndex(t, 4, 2)), [0, 1, 2, 3, 2, 3, 2, 3, 2], "1ª volta inteira, depois do 3º");
+    assert.deepEqual([4, 5, 6].map(t => getLoopFrameIndex(t, 4, 3)), [3, 3, 3], "travado no último: fica nele");
+    assert.equal(getLoopFrameIndex(5, 4, 0), 1, "cadeado no 1º = normal");
+    assert.equal(getLoopFrameIndex(5, 4, 9), 1, "cadeado inválido = normal");
+    assert.equal(getLoopFrameIndex(3, 0, 1), 0);
 });

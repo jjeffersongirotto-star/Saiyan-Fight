@@ -231,6 +231,7 @@ let currentTab = "HERÓIS";
 let tempBase64 = null;
 let tempAnimations = {};
 let tempFps = {};
+let tempLoop = {};   // cadeado de cada movimento da forma em montagem: quadro onde a repetição recomeça
 let spriteSheetImage = null;
 let selectedSpriteSheetFrame = null;
 let selectedSpriteSheetFrames = new Set();
@@ -248,6 +249,7 @@ let spriteMotionPreviewImageCache = {};
 let selectedPreviewFrameIndices = new Set();
 let previewSelectionPointerDown = false;
 let previewSelectionWasDragged = false;
+let quadroArraste = null;   // segurar e arrastar um quadro da fileira para mudar a posição dele
 let selectedStage = "terra";
 let gameMode = "singleplayer";
 
@@ -1315,10 +1317,32 @@ function getMirrorTargetMovement() {
     return document.getElementById("sprite-mirror-target")?.value || "flyLeft";
 }
 
+// DUPLICAR: os quadros vão para o FIM do movimento de destino (os que já estavam lá ficam)
 function saveMovementCopy(targetMovement, frames) {
-    tempAnimations[targetMovement] = Array.from(frames);
-    savedSpriteMotionPreviewFrames[targetMovement] = Array.from(frames);
-    tempFps[targetMovement] = tempFps[activeSpriteMovement] || 12;
+    const existentes = (savedSpriteMotionPreviewFrames[targetMovement] || tempAnimations[targetMovement] || []).filter(Boolean);
+    const juntos = existentes.concat(frames).slice(0, 30);
+    tempAnimations[targetMovement] = juntos;
+    savedSpriteMotionPreviewFrames[targetMovement] = Array.from(juntos);
+    if (!existentes.length) tempFps[targetMovement] = tempFps[activeSpriteMovement] || 12;
+}
+
+// Cadeado depois de mexer na ordem dos quadros: origem[novo índice] = índice antigo (-1 = quadro novo)
+function travaRemapear(movimento, origem) {
+    const atual = tempLoop[movimento];
+    if (!Number.isInteger(atual)) return;
+    const novo = origem.indexOf(atual);
+    if (novo > 0) tempLoop[movimento] = novo; else delete tempLoop[movimento];
+}
+
+function alternarTravaQuadro(index) {
+    if (!conjExigirEdicao()) return;
+    if (tempLoop[activeSpriteMovement] === index || index <= 0) {
+        delete tempLoop[activeSpriteMovement];
+        if (index === 0) showSystemAlert("CADEADO", "NO 1º QUADRO O CADEADO NÃO MUDA NADA: A ANIMAÇÃO JÁ RECOMEÇA DELE.");
+    } else {
+        tempLoop[activeSpriteMovement] = index;
+    }
+    renderSpriteAssignedFrames();
 }
 
 function getMovementCopyFrames() {
@@ -1341,17 +1365,13 @@ function cloneSelectedPreviewFrame() {
     if (!frames.length) return showSystemAlert("PRÉVIA VAZIA", "NÃO HÁ FRAMES PARA CLONAR.");
     if (frames.length >= 30) return showSystemAlert("LIMITE DE FRAMES", "O MOVIMENTO JÁ POSSUI O LIMITE DE 30 FRAMES.");
 
+    // a cópia vai para o fim da fila
     const selectedIndices = getSelectedPreviewFrameIndices(frames.length);
-    const selectedSet = new Set(selectedIndices);
-    const updatedFrames = [];
-    frames.forEach((frame, index) => {
-        updatedFrames.push(frame);
-        if (selectedSet.has(index) && updatedFrames.length < 30) updatedFrames.push(frame);
-    });
+    const updatedFrames = Array.from(frames).concat(selectedIndices.map(index => frames[index])).slice(0, 30);
     tempAnimations[activeSpriteMovement] = updatedFrames;
     savedSpriteMotionPreviewFrames[activeSpriteMovement] = Array.from(updatedFrames);
     selectedPreviewFrameIndices.clear();
-    spriteMotionPreviewFrame = Math.min(updatedFrames.length - 1, selectedIndices[0] + 1);
+    spriteMotionPreviewFrame = Math.min(updatedFrames.length - 1, frames.length);
     updatePreviewFrameCount(updatedFrames.length);
     renderSpriteAssignedFrames();
     renderSpriteMotionPreview();
@@ -1368,6 +1388,7 @@ function deleteSelectedPreviewFrame() {
     const selectedSet = new Set(selectedIndices);
     showSystemConfirm("APAGAR FRAME", `DESEJA APAGAR ${selectedIndices.length} FRAME(S) SELECIONADO(S)?`, () => {
         const updatedFrames = frames.filter((frame, index) => !selectedSet.has(index));
+        travaRemapear(activeSpriteMovement, frames.map((frame, index) => index).filter(index => !selectedSet.has(index)));
         tempAnimations[activeSpriteMovement] = updatedFrames;
         savedSpriteMotionPreviewFrames[activeSpriteMovement] = Array.from(updatedFrames);
         selectedPreviewFrameIndices.clear();
@@ -1495,6 +1516,7 @@ function clearActiveSpriteFrames() {
     showSystemConfirm("LIMPAR MOVIMENTO", `APAGAR TODOS OS ${frames.length} QUADRO(S) DO MOVIMENTO ${getSpriteMovementDisplayName(activeSpriteMovement)}?`, () => {
         tempAnimations[activeSpriteMovement] = [];
         delete savedSpriteMotionPreviewFrames[activeSpriteMovement];
+        delete tempLoop[activeSpriteMovement];
         renderSpriteAssignedFrames();
         renderSpriteMotionPreview();
     }, "SIM", "NÃO");
@@ -1521,80 +1543,126 @@ function renderSpriteAssignedFrames() {
         container.appendChild(empty);
         return;
     }
+    const nenhumSelecionado = selectedPreviewFrameIndices.size === 0;
     frames.forEach((src, index) => {
         const frameBox = document.createElement("div");
         frameBox.className = "sprite-assigned-frame";
-        frameBox.draggable = !spriteMotionPreviewPlaying;
         frameBox.dataset.frameIndex = String(index);
-        frameBox.classList.toggle("preview-selected", selectedPreviewFrameIndices.has(index));
+        // um contorno só: o do quadro selecionado (sem seleção, o quadro da prévia)
+        frameBox.classList.toggle("preview-selected", selectedPreviewFrameIndices.has(index) ||
+            (nenhumSelecionado && !spriteMotionPreviewPlaying && index === spriteMotionPreviewFrame));
         frameBox.addEventListener("pointerdown", event => {
             if (spriteMotionPreviewPlaying) return;
-            event.preventDefault();
+            if (event.pointerType === "mouse") event.preventDefault();
             previewSelectionPointerDown = true;
             previewSelectionWasDragged = false;
             if (!event.shiftKey) selectedPreviewFrameIndices.clear();
             selectedPreviewFrameIndices.add(index);
             spriteMotionPreviewFrame = index;
+            container.querySelectorAll && container.querySelectorAll(".sprite-assigned-frame").forEach(el => el.classList.remove("preview-selected"));
             frameBox.classList.add("preview-selected");
             renderSpriteMotionPreview();
+            if (!event.shiftKey) quadroArrasteComecar(index, event, frameBox);
         });
-        frameBox.addEventListener("pointerenter", () => {
-            if (!previewSelectionPointerDown || spriteMotionPreviewPlaying) return;
-            previewSelectionWasDragged = true;
-            selectedPreviewFrameIndices.add(index);
-            frameBox.classList.add("preview-selected");
-        });
-        frameBox.addEventListener("pointerup", () => {
-            previewSelectionPointerDown = false;
-        });
-        frameBox.addEventListener("dragstart", event => {
-            if (spriteMotionPreviewPlaying) {
-                event.preventDefault();
-                return;
-            }
-            event.dataTransfer.setData("text/plain", String(index));
-            event.dataTransfer.effectAllowed = "move";
-        });
-        frameBox.addEventListener("dragover", event => {
-            if (spriteMotionPreviewPlaying) return;
-            event.preventDefault();
-            frameBox.classList.add("drag-over");
-        });
-        frameBox.addEventListener("dragleave", () => frameBox.classList.remove("drag-over"));
-        frameBox.addEventListener("drop", event => {
-            event.preventDefault();
-            frameBox.classList.remove("drag-over");
-            if (spriteMotionPreviewPlaying) return;
-            const sourceIndex = Number.parseInt(event.dataTransfer.getData("text/plain"), 10);
-            reorderSelectedPreviewFrame(sourceIndex, index);
-        });
+
+        frameBox.addEventListener("contextmenu", event => event.preventDefault());   // segurar no celular não abre o menu da imagem
 
         const number = document.createElement("span");
         number.className = "sprite-assigned-frame-number";
         number.innerText = String(index + 1);
 
+        // cadeado: a animação recomeça neste quadro depois da 1ª volta
+        const travado = tempLoop[activeSpriteMovement] === index && index > 0;
+        const trava = document.createElement("button");
+        trava.type = "button";
+        trava.className = "sprite-trava" + (travado ? " ligada" : "");
+        trava.title = travado ? "Repetição recomeça neste quadro (toque para tirar)" : "Travar: depois da 1ª volta, a animação recomeça neste quadro";
+        trava.setAttribute("aria-label", trava.title);
+        trava.setAttribute("aria-pressed", String(travado));
+        trava.innerHTML = travado
+            ? '<svg viewBox="0 0 12 14" aria-hidden="true"><path d="M3 6V4a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="1.5" y="6" width="9" height="7" rx="1.2" fill="currentColor"/></svg>'
+            : '<svg viewBox="0 0 12 14" aria-hidden="true"><path d="M3 6V4a3 3 0 0 1 6 0" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="1.5" y="6" width="9" height="7" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
+        trava.addEventListener("pointerdown", event => event.stopPropagation());
+        trava.addEventListener("click", event => { event.stopPropagation(); alternarTravaQuadro(index); });
+
         const image = document.createElement("img");
         image.src = src;
         image.title = `F${index + 1}`;
+        image.draggable = false;
         image.dataset.previewFrame = String(index);
         image.style.cursor = spriteMotionPreviewPlaying ? "default" : "pointer";
-        image.style.outline = !spriteMotionPreviewPlaying && index === spriteMotionPreviewFrame ? "2px solid #22d3ee" : "none";
         image.addEventListener("click", () => {
-            if (spriteMotionPreviewPlaying) return;
-            if (!previewSelectionWasDragged) {
-                selectedPreviewFrameIndices.clear();
-                selectedPreviewFrameIndices.add(index);
-                renderSpriteAssignedFrames();
-            }
+            if (spriteMotionPreviewPlaying || previewSelectionWasDragged) { previewSelectionWasDragged = false; return; }
             spriteMotionPreviewFrame = index;
+            renderSpriteAssignedFrames();
             renderSpriteMotionPreview();
-            previewSelectionWasDragged = false;
         });
         frameBox.appendChild(image);
         frameBox.appendChild(number);
+        frameBox.appendChild(trava);
         container.appendChild(frameBox);
     });
 }
+
+// Segurar um quadro e arrastar: o quadro vai para onde o dedo/mouse soltar. No mouse começa ao mover; no toque,
+// depois de segurar um instante (antes disso, arrastar rola a fileira como sempre).
+function quadroArrasteComecar(index, event, frameBox) {
+    if (!conjEstaEditando()) return;
+    quadroArrasteParar();
+    const toque = event.pointerType !== "mouse";
+    quadroArraste = { origem: index, alvo: null, ativo: false, toque, x: event.clientX, y: event.clientY, box: frameBox, timer: null };
+    if (toque) quadroArraste.timer = setTimeout(() => quadroArrasteAtivar(), 260);
+}
+
+function quadroArrasteAtivar() {
+    if (!quadroArraste || quadroArraste.ativo) return;
+    quadroArraste.ativo = true;
+    previewSelectionWasDragged = true;
+    if (quadroArraste.box) quadroArraste.box.classList.add("arrastando");
+}
+
+function quadroArrasteMover(x, y) {
+    const q = quadroArraste;
+    if (!q) return;
+    if (!q.ativo) {
+        const longe = Math.hypot(x - q.x, y - q.y);
+        if (q.toque) { if (longe > 10) quadroArrasteParar(); return; }   // mexeu antes de segurar: é rolagem
+        if (longe < 5) return;
+        quadroArrasteAtivar();
+    }
+    const el = typeof document.elementFromPoint === "function" ? document.elementFromPoint(x, y) : null;
+    const box = el && el.closest ? el.closest(".sprite-assigned-frame") : null;
+    const alvo = box && box.dataset ? Number.parseInt(box.dataset.frameIndex, 10) : NaN;
+    document.querySelectorAll(".sprite-assigned-frame.drag-over").forEach(b => { if (b !== box) b.classList.remove("drag-over"); });
+    if (Number.isInteger(alvo)) {
+        q.alvo = alvo;
+        if (alvo !== q.origem) box.classList.add("drag-over");
+    }
+}
+
+function quadroArrasteSoltar() {
+    const q = quadroArraste;
+    quadroArrasteParar();
+    previewSelectionPointerDown = false;
+    if (!q || !q.ativo || !Number.isInteger(q.alvo) || q.alvo === q.origem) return;
+    selectedPreviewFrameIndices.clear();
+    selectedPreviewFrameIndices.add(q.alvo);
+    reorderSelectedPreviewFrame(q.origem, q.alvo);
+}
+
+function quadroArrasteParar() {
+    if (!quadroArraste) return;
+    clearTimeout(quadroArraste.timer);
+    if (quadroArraste.box) quadroArraste.box.classList.remove("arrastando");
+    document.querySelectorAll(".sprite-assigned-frame.drag-over").forEach(b => b.classList.remove("drag-over"));
+    quadroArraste = null;
+}
+
+document.addEventListener("pointermove", event => { if (quadroArraste) quadroArrasteMover(event.clientX, event.clientY); });
+document.addEventListener("pointerup", () => { if (quadroArraste) quadroArrasteSoltar(); else previewSelectionPointerDown = false; });
+document.addEventListener("pointercancel", () => quadroArrasteParar());
+// arrastando um quadro no toque, a fileira não rola
+document.addEventListener("touchmove", event => { if (quadroArraste && quadroArraste.ativo) event.preventDefault(); }, { passive: false });
 
 function getSelectedPreviewFrameIndices(frameCount) {
     const valid = Array.from(selectedPreviewFrameIndices)
@@ -1612,6 +1680,9 @@ function reorderSelectedPreviewFrame(sourceIndex, targetIndex) {
     const updatedFrames = Array.from(frames);
     const [movedFrame] = updatedFrames.splice(sourceIndex, 1);
     updatedFrames.splice(targetIndex, 0, movedFrame);
+    const origem = frames.map((frame, index) => index);
+    origem.splice(targetIndex, 0, origem.splice(sourceIndex, 1)[0]);
+    travaRemapear(activeSpriteMovement, origem);
     tempAnimations[activeSpriteMovement] = updatedFrames;
     savedSpriteMotionPreviewFrames[activeSpriteMovement] = Array.from(updatedFrames);
     spriteMotionPreviewFrame = targetIndex;
@@ -1678,7 +1749,10 @@ function startSpriteMotionPreview() {
     spriteMotionPreviewTimer = setInterval(() => {
         const frames = getSpriteMotionPreviewFrames();
         if (!frames.length) return;
-        spriteMotionPreviewFrame = (spriteMotionPreviewFrame + 1) % frames.length;
+        // com cadeado, depois do último quadro volta para o quadro travado
+        const trava = tempLoop[activeSpriteMovement];
+        spriteMotionPreviewFrame = spriteMotionPreviewFrame + 1 < frames.length ? spriteMotionPreviewFrame + 1
+            : (conjEstaEditando() && trava > 0 && trava < frames.length ? trava : 0);
         renderSpriteMotionPreview();
     }, 1000 / fps);
 }
@@ -1782,6 +1856,7 @@ function pickBgColorFromCorner() {
     loadImageSecure(src, (img) => useImage(img));
 }
 
+let modalPreviewPedido = 0;
 function updateModalPreview() {
     if (!prevCtx || !prevCanvas) return;
     prevCtx.clearRect(0, 0, prevCanvas.width, prevCanvas.height);
@@ -1789,10 +1864,11 @@ function updateModalPreview() {
     const currentCharacter = editingKey && characterDB[editingKey] ? characterDB[editingKey] : null;
     const idleFrames = conjPreviaAtiva("idle") || tempAnimations.idle || [];   // conjunto azul em uso: a prévia mostra ele
     const baseCharacterSource = idleFrames[0] || tempBase64 || (currentCharacter && currentCharacter.defaultUrl) || null;
+    const pedido = ++modalPreviewPedido;   // só a imagem do último pedido é desenhada (trocar de conjunto rápido)
 
     if (baseCharacterSource) {
         loadImageSecure(baseCharacterSource, (img) => {
-            if (img) renderImageToPreview(img);
+            if (img && pedido === modalPreviewPedido) renderImageToPreview(img);
         });
         return;
     }
@@ -1867,6 +1943,8 @@ function openModal(key = null) {
     spriteMotionPreviewImageCache = {};
     selectedPreviewFrameIndices.clear();
     previewSelectionPointerDown = false;
+    quadroArraste = null;
+    tempLoop = {};
     loadedUrlImageObj = null;
     loadedFileImageObj = null;
     tempAnimations = {
