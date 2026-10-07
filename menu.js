@@ -4244,7 +4244,15 @@ function drawPlayerEntity(p, charData, isBoss = false) {
         const bubbleX = forma ? p.x + forma.offX : renderX + p.w / 2;
         const bubbleY = forma ? p.y + forma.offY : renderY + p.h / 2;
 
+        // escudo animado (esfera azul com raios); sem a imagem, a bolha desenhada de sempre
+        const escudo = EFEITOS.escudo_azul, rEsc = bubbleRadius * 1.12;
         ctx.save();
+        if (efeitoPronto("escudo_azul")) {
+            ctx.globalAlpha = 0.95;
+            const ew = rEsc * 2 * escudo.w / escudo.h;
+            desenharEfeito("escudo_azul", gameplayClock, bubbleX - ew / 2, bubbleY - rEsc, ew, rEsc * 2);
+            ctx.restore();
+        } else {
         ctx.globalAlpha = 0.22;
         ctx.fillStyle = auraColor;
         ctx.beginPath();
@@ -4267,6 +4275,7 @@ function drawPlayerEntity(p, charData, isBoss = false) {
         ctx.arc(bubbleX, bubbleY, bubbleRadius - 4, 0, Math.PI * 2);
         ctx.stroke();
         ctx.restore();
+        }
     }
 
     const fallbackKey = isBoss ? selectedBoss : selectedCharacter;
@@ -4376,6 +4385,62 @@ const KI_AURA_PALETTES = {
     roxo: ["#6a1fb0", "#b878ff", "#f2e4ff"]
 };
 
+// ==================== EFEITOS ANIMADOS (imagens enviadas pelo jogador) ====================
+// efeitos/<nome>.png: os quadros da animação lado a lado (n quadros de w x h, ms por quadro). Carregadas uma vez
+// só, no começo; enquanto não chegam (ou se faltarem), o jogo continua com os desenhos de sempre.
+const EFEITOS = {
+    escudo_azul: { n: 25, w: 125, h: 128, ms: 160 },
+    aura_verde: { n: 7, w: 133, h: 192, ms: 40 }, aura_verde_forte: { n: 13, w: 189, h: 192, ms: 50 },
+    aura_azul: { n: 3, w: 166, h: 192, ms: 50 },
+    aura_amarela: { n: 7, w: 174, h: 192, ms: 40 }, aura_amarela_forte: { n: 3, w: 155, h: 192, ms: 50 },
+    aura_vermelha: { n: 4, w: 184, h: 192, ms: 50 }, aura_vermelha_forte: { n: 4, w: 181, h: 192, ms: 50 },
+    aura_roxa: { n: 14, w: 135, h: 192, ms: 80 },
+    tiro_laranja: { n: 4, w: 74, h: 48, ms: 50 }, tiro_amarelo: { n: 4, w: 72, h: 48, ms: 80 }, tiro_vermelho: { n: 1, w: 90, h: 48, ms: 80 }
+};
+const efeitoImagens = {};
+if (typeof Image !== "undefined") {
+    Object.keys(EFEITOS).forEach(nome => { const im = new Image(); im.src = "efeitos/" + nome + ".png"; efeitoImagens[nome] = im; });
+}
+function efeitoPronto(nome) {
+    const im = efeitoImagens[nome];
+    return im && im.complete && im.naturalWidth ? im : null;
+}
+// Quadro da animação no tempo t (segundos)
+function efeitoQuadro(nome, t) {
+    const e = EFEITOS[nome];
+    return e ? Math.floor(Math.max(0, t) * 1000 / e.ms) % e.n : 0;
+}
+function desenharEfeito(nome, t, dx, dy, dw, dh) {
+    const e = EFEITOS[nome], im = efeitoPronto(nome);
+    if (!e || !im) return false;
+    ctx.drawImage(im, efeitoQuadro(nome, t) * e.w, 0, e.w, e.h, dx, dy, dw, dh);
+    return true;
+}
+// Cor da aura -> animação (normal e forte: carregando ki ou com o poder da transformação)
+const AURA_EFEITOS = {
+    verde: ["aura_verde", "aura_verde_forte"], azul: ["aura_azul", "aura_azul"], amarelo: ["aura_amarela", "aura_amarela_forte"],
+    vermelho: ["aura_vermelha", "aura_vermelha_forte"], roxo: ["aura_roxa", "aura_roxa"]
+};
+// Cor do tiro -> animação (pelo matiz: vermelho/rosa, laranja, amarelo); outras cores ficam com a bola desenhada
+const tiroEfeitoCache = {};
+function getTiroEfeito(cor) {
+    if (cor in tiroEfeitoCache) return tiroEfeitoCache[cor];
+    let nome = null;
+    const rgb = typeof colorHexToRgb === "function" ? colorHexToRgb(cor) : null;
+    if (rgb) {
+        const [r, g, b] = rgb.map(v => v / 255), mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+        if (d > 0.25 && mx > 0.45) {
+            let h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+            h = (h * 60 + 360) % 360;
+            if (h >= 300 || h < 18) nome = "tiro_vermelho";
+            else if (h < 42) nome = "tiro_laranja";
+            else if (h < 72) nome = "tiro_amarelo";
+        }
+    }
+    tiroEfeitoCache[cor] = nome;
+    return nome;
+}
+
 // Silhueta da labareda: lados que sobem do pé até uma ponta no alto, com "dentes" (pontas) que correm para cima.
 // `phase` (0..1) é a posição no ciclo da animação — tudo se repete a cada ciclo, então os quadros podem ser guardados.
 function traceKiAuraFlame(g, cx, bottomY, w, h, phase, seed) {
@@ -4455,13 +4520,24 @@ function drawKiAura(entity, charData, cx, bottomY, bodyW, bodyH) {
     const seed = entity === player2 ? 0.37 : 0;
     // a energia sobe mais rápido quando carregando/transformado
     entity.kiAuraPhase = ((entity.kiAuraPhase || 0) + deltaTime * (0.55 + 0.35 * k)) % 1;
-    const img = getKiAuraFrame(pal, Math.floor(entity.kiAuraPhase * KI_AURA_FRAMES) % KI_AURA_FRAMES, seed);
-    if (!img || !img.width) return;
-    ctx.save();
-    ctx.globalAlpha *= 0.62 + 0.25 * k;
-    const sx = w / KI_AURA_BASE_W, sy = h / KI_AURA_BASE_H, dw = img.width * sx, dh = img.height * sy;
-    ctx.drawImage(img, Math.round(cx - dw / 2), Math.round(bottomY + img.bottomOffset * sy - dh), Math.round(dw), Math.round(dh));
-    ctx.restore();
+    // cores com animação enviada pelo jogador: usa a imagem (a forte carregando/transformado)
+    const anim = AURA_EFEITOS[auraType];
+    const nomeAnim = anim ? anim[k > 0.5 ? 1 : 0] : null;
+    if (nomeAnim && efeitoPronto(nomeAnim)) {
+        const e = EFEITOS[nomeAnim], dh = h * 1.22, dw = dh * e.w / e.h;
+        ctx.save();
+        ctx.globalAlpha *= 0.72 + 0.25 * k;
+        desenharEfeito(nomeAnim, gameplayClock + seed, Math.round(cx - dw / 2), Math.round(bottomY + h * 0.08 - dh), Math.round(dw), Math.round(dh));
+        ctx.restore();
+    } else {
+        const img = getKiAuraFrame(pal, Math.floor(entity.kiAuraPhase * KI_AURA_FRAMES) % KI_AURA_FRAMES, seed);
+        if (!img || !img.width) return;
+        ctx.save();
+        ctx.globalAlpha *= 0.62 + 0.25 * k;
+        const sx = w / KI_AURA_BASE_W, sy = h / KI_AURA_BASE_H, dw = img.width * sx, dh = img.height * sy;
+        ctx.drawImage(img, Math.round(cx - dw / 2), Math.round(bottomY + img.bottomOffset * sy - dh), Math.round(dw), Math.round(dh));
+        ctx.restore();
+    }
     // forma visível da aura (relativa à caixa do lutador): o escudo da cápsula e o alcance do parry ficam em volta dela
     entity.auraForma = { offX: cx - entity.x, offY: bottomY - h * 0.52 - entity.y, rx: w * 0.95, ry: h * 0.58 };
     if (nivel > 0) drawKiLightning(entity, cx, bottomY, w, h, transformed);
@@ -5026,6 +5102,19 @@ function drawPickups() {
 
 function drawObstacles() {
     world.obstacles.forEach(o => {
+        // tiros vermelho/laranja/amarelo: animação enviada pelo jogador, apontada na direção do voo (a cabeça do
+        // tiro fica no lugar da bola; o rastro vai para trás)
+        const nomeTiro = getTiroEfeito(o.color || "#00ffff");
+        if (nomeTiro && efeitoPronto(nomeTiro)) {
+            const verm = nomeTiro === "tiro_vermelho";
+            const e = EFEITOS[nomeTiro], dh = o.radius * (verm ? 1.9 : 2.0), dw = dh * e.w / e.h;
+            ctx.save();
+            ctx.translate(o.x, o.y);
+            ctx.rotate(Math.atan2(o.vy || 0, o.vx || 1));
+            desenharEfeito(nomeTiro, gameplayClock + (o.x * 0.013), -dw * (verm ? 0.6 : 0.82), -dh / 2, dw, dh);
+            ctx.restore();
+            return;
+        }
         ctx.save();
         ctx.fillStyle = o.color || "#00ffff";
         ctx.beginPath();
