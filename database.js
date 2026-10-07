@@ -2038,7 +2038,8 @@ function openModal(key = null) {
     if (charSpec) charSpec.value = char.special || "KAMEHAMEHA";
     if (charProjColor) charProjColor.value = char.projColor || "#00ffff";
     if (charProjSize) charProjSize.value = char.projSize || "normal";
-    if (charScale) charScale.value = char.scale || 1;
+    // ALTURA (cm): a salva, a do personagem inicial (ALTURAS_PADRAO) ou a da escala antiga
+    if (charScale) charScale.value = key && characterDB[key] ? getAlturaPersonagem(key, 0) : ALTURA_PADRAO_CM;
     if (charFw) charFw.value = char.frameWidth || 32;
     if (charFh) charFh.value = char.frameHeight || 32;
     if (charFrames) charFrames.value = char.totalFrames || 1;
@@ -2188,7 +2189,8 @@ function saveCharacterFromModal() {
                 special: charSpec ? charSpec.value : "KAMEHAMEHA",
                 projColor: charProjColor ? charProjColor.value : "#00ffff",
                 projSize: charProjSize ? charProjSize.value : "normal",
-                scale: charScale ? parseFloat(charScale.value) || 1 : 1,
+                scale: 1,   // o tamanho agora vem da ALTURA
+                altura: (charScale && normalizarAltura(charScale.value)) || ALTURA_PADRAO_CM,
                 frameWidth: charFw ? parseInt(charFw.value, 10) || img.naturalWidth || 32 : 32,
                 frameHeight: charFh ? parseInt(charFh.value, 10) || img.naturalHeight || 32 : 32,
                 totalFrames: charFrames ? parseInt(charFrames.value, 10) || 1 : 1,
@@ -2345,6 +2347,32 @@ const DEFAULT_CHARACTERS = {
     // Cell: começa na 1ª forma (imperfeito) e transforma em semi-perfeito e perfeito
     cell: { name: "CELL", presetKey: "cell", align: "VILÃO", aura: "verde", spec: "KAMEHAMEHA PERFEITO", transformations: CELL_TRANSFORMACOES }
 };
+// Alturas (cm) dos personagens iniciais, de guias e listas oficiais (Gohan é o criança da saga Cell; Gotenks não
+// tem valor oficial). "base" = forma normal; as transformações pelo nome, para valer também em saves antigos
+// (que guardam a lista de transformações sem altura). O que o jogador digitar no editor (c.altura / t.altura)
+// vale mais que isto. Na luta a altura vira escala (escalaDaAltura, com limites).
+const ALTURAS_PADRAO = {
+    goku_adult: { base: 175 }, vegeta: { base: 164 }, piccolo: { base: 226 }, trunks: { base: 170 },
+    gohan: { base: 155 }, kaioshin: { base: 157 }, gogeta: { base: 175 }, bardock: { base: 175 },
+    android17: { base: 172 }, android18: { base: 172 }, raditz: { base: 198 }, gotenks: { base: 125 },
+    freeza_1: { base: 132, "Segunda forma": 221, "Terceira forma": 214, "Forma final": 158, "Freeza ciborgue": 158, "Golden Freeza": 158, "Black Freeza": 158 },
+    cell: { base: 228, "Semi-perfeito": 259, "Perfeito": 213 },
+    majin_buu: { base: 149, "Buu gordo": 244 },
+    broly: { base: 230, "Super Saiyajin Lendário": 300 }
+};
+
+// Altura (cm) do personagem no nível de transformação (0 = forma normal)
+function getAlturaPersonagem(charKey, nivel) {
+    const c = characterDB[charKey], padrao = ALTURAS_PADRAO[charKey] || {};
+    let base = c && normalizarAltura(c.altura);
+    if (!base) base = padrao.base || (c && c.scale && c.scale !== 1 ? normalizarAltura(c.scale * ALTURA_PADRAO_CM) : null) || ALTURA_PADRAO_CM;
+    if (!(nivel > 0)) return base;
+    const lista = getCharacterTransformations(charKey);
+    const t = lista[Math.min(nivel, lista.length) - 1];
+    if (!t) return base;
+    return normalizarAltura(t.altura) || padrao[t.name] || base;
+}
+
 // Transformações do personagem, na ordem em que acontecem na luta (aba TRANSFORMAÇÃO do editor). Quem nunca
 // mexeu nisso tem a "Transformação 1" padrão (a de sempre: cabelo de Saiyajin amarelo, aura dourada e raios);
 // personagens iniciais podem trazer mais (DEFAULT_CHARACTERS[k].transformations).
@@ -2774,6 +2802,15 @@ function renderTransformationList() {
         if (auraSel) Array.from(auraSel.options).forEach(o => aura.add(new Option(o.textContent, o.value)));
         aura.value = t.aura || "amarelo";
         aura.onchange = () => { t.aura = aura.value; };
+        // ALTURA (cm) desta forma: a salva, a do personagem inicial (ALTURAS_PADRAO, pelo nome) ou a da forma normal
+        const altura = document.createElement("input");
+        altura.type = "number"; altura.min = "50"; altura.max = "500"; altura.step = "1";
+        altura.className = "transform-altura";
+        altura.setAttribute("aria-label", "Altura da transformação (cm)");
+        altura.title = "Altura (cm)";
+        const alturaBase = normalizarAltura((document.getElementById("char-scale") || {}).value) || ALTURA_PADRAO_CM;
+        altura.value = normalizarAltura(t.altura) || (ALTURAS_PADRAO[editingKey] || {})[t.name] || alturaBase;
+        altura.oninput = () => { const v = normalizarAltura(altura.value); if (v) t.altura = v; };
         const botao = (texto, titulo, acao, desligado) => {
             const b = document.createElement("button");
             b.type = "button"; b.className = "btn"; b.textContent = texto; b.title = titulo;
@@ -2782,7 +2819,7 @@ function renderTransformationList() {
             b.onclick = acao;
             return b;
         };
-        card.append(ordem, img, nome, aura,
+        card.append(ordem, img, nome, aura, altura,
             botao("▲", "Subir na ordem", () => moveTransformation(i, -1), i === 0),
             botao("▼", "Descer na ordem", () => moveTransformation(i, 1), i === tempTransformations.length - 1),
             botao("EDITAR", base ? "Editar no construtor" : "Gere o personagem no CONSTRUTOR primeiro", () => editTransformation(i), !base),

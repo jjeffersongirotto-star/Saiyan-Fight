@@ -659,6 +659,9 @@ function drawCharacterFormsPanel(key) {
     // uma coluna por forma (encolhe quando são muitas)
     const n = formas.length, gap = 8, colW = Math.min(130, (pw - 24 - gap * (n - 1)) / n);
     const x0 = canvas.width / 2 - (colW * n + gap * (n - 1)) / 2, topo = py + 56, altura = ph - 66;
+    // cada forma do tamanho da sua ALTURA na luta (a maior ocupa a coluna inteira; as outras ficam proporcionais)
+    const escalas = formas.map(f => escalaDaAltura(getAlturaPersonagem(key, f.nivel)));
+    const maiorEscala = Math.max(...escalas);
     formas.forEach((f, i) => {
         const x = x0 + i * (colW + gap);
         ctx.fillStyle = "rgba(23, 79, 120, 0.35)";
@@ -673,8 +676,12 @@ function drawCharacterFormsPanel(key) {
         ctx.fillText(f.nome, x + colW / 2, topo + 14);
         const frames = getCharacterAnimationFrames(key, "idle", f.nivel);
         const src = frames && frames[0];
-        const ih = altura - 26, iw = Math.min(colW - 8, ih * 96 / 112);
-        drawFormPortrait(src, c, x + (colW - iw) / 2, topo + 20, iw, ih);
+        const k = escalas[i] / maiorEscala;
+        const ih = (altura - 26) * k, iw = Math.min(colW - 8, (altura - 26) * 96 / 112) * k;
+        drawFormPortrait(src, c, x + (colW - iw) / 2, topo + altura - 6 - ih, iw, ih);   // pés na mesma linha
+        ctx.fillStyle = "#9fb3d8";
+        ctx.font = "9px monospace";
+        ctx.fillText(getAlturaPersonagem(key, f.nivel) + " cm", x + colW / 2, topo + altura - 1);
     });
     ctx.restore();
     drawBtnAt(MENU_LAYOUT.characters.infoClose, "✕", "#fca5a5", "bold 14px monospace");

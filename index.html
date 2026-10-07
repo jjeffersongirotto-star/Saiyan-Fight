@@ -318,6 +318,7 @@
         .transform-card .transform-order { font-weight: bold; color: var(--cyan); min-width: 22px; text-align: center; }
         .transform-card input[type="text"] { flex: 1 1 140px; min-width: 120px; }
         .transform-card .btn { padding: 6px 10px; min-height: 32px; }
+        .transform-card .transform-altura { width: 76px; flex: 0 0 76px; }
         .build-transform-banner {
             display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
             background: #3a2a05; border: 1px solid #ffd23f; color: #ffe9a6; border-radius: 6px;
@@ -968,8 +969,9 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label for="char-scale">Escala do Personagem</label>
-                                <input type="number" id="char-scale" step="0.1" value="1.0">
+                                <label for="char-scale">Altura (cm)</label>
+                                <input type="number" id="char-scale" step="1" min="50" max="500" value="175" title="Tamanho na luta: 175 cm = tamanho normal. Muito alto ou muito baixo tem limite, para o lutador caber na arena.">
+
                             </div>
                         </div>
 
@@ -1419,8 +1421,13 @@
                 Novidades e correções do jogo.
             </p>
             <ul id="lista-updates" style="margin: 0 0 18px; color: #ddd; line-height: 1.5; padding: 0 4px 0 0; list-style: none; overflow-y: auto;">
-                <li class="upd-versao"><h3>Versão 0.82 (ATUAL)</h3><p>Idiomas, minion agarrado e cores do Freeza</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Idiomas</strong><p>Em OPÇÕES > IDIOMAS dá para jogar em português, inglês ou espanhol: menus, botões, telas, conquistas, avisos, tutorial e editor. Nomes de personagens e de golpes continuam iguais, e a tradução é adaptada a cada idioma.</p></li>
+                <li class="upd-versao"><h3>Versão 0.83 (ATUAL)</h3><p>Altura dos personagens</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Altura dos personagens</strong><p>No editor, a ESCALA virou ALTURA (cm), e cada transformação tem a sua. Na luta o lutador fica do tamanho da sua altura (175 cm = normal), sem esticar e com limite para não ficar grande ou pequeno demais. Vale também para personagens de sprites.</p></li>
+                <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>Alturas oficiais</strong><p>Os personagens do jogo vêm com a altura de cada um: Piccolo, Broly e Raditz são maiores; Freeza começa pequeno, fica enorme na 2ª forma e menor na 3ª; Cell e Majin Buu mudam de tamanho ao se transformar.</p></li>
+                <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>Quadro "i" em escala</strong><p>No quadro de formas do personagem, cada forma aparece do seu tamanho, com a altura embaixo.</p></li>
+                <li class="upd-item upd-corrigido"><span class="upd-tag">CORRIGIDO</span><strong>Vegeta voando para trás na diagonal</strong><p>Nas diagonais para trás, o Vegeta de sprites agora recua de frente para o inimigo, em vez de ficar de cabeça para baixo.</p></li>
+                <li class="upd-versao"><h3>Versão 0.82</h3><p>Idiomas, minion agarrado e cores do Freeza</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Idiomas</strong><p>Em OPÇÕES > IDIOMAS dá para jogar em português, inglês ou espanhol: menus, botões, telas, conquistas, avisos, tutorial e editor. Nomes de personagens e de golpes continuam iguais, e a tradução é adaptada a cada idioma.</p></li>
                 <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>Minion agarrado</strong><p>Soltar o especial com um Saibaman/Cell Jr. agarrado nas pernas destrói o minion. Com PARRY ele é lançado com força para a frente e, se acertar o vilão, explode e tira 1 de vida dele.</p></li>
                 <li class="upd-item upd-corrigido"><span class="upd-tag">CORRIGIDO</span><strong>Cores do Golden e do Black Freeza</strong><p>No quadro "i" dos personagens, o Golden Freeza e o Black Freeza apareciam com as cores da forma final. Agora cada forma mostra suas próprias cores.</p></li>
                 <li class="upd-versao"><h3>Versão 0.81</h3><p>Seleção antes da luta, vilão de frente e escudo maior</p></li>

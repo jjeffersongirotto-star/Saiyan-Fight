@@ -23,7 +23,10 @@ const CONJ_FPS_PADRAO = 12;
 // (pés na linha 103 do quadro 96x112 e o centro em x=48, como os desenhos de sprites.js).
 // ---------------------------------------------------------------------------------------------------------------
 const CONJ_PACOTES = {
-    vegeta: { arquivo: "conjuntos/vegeta.json", personagem: "vegeta", nome: "VEGETA SPRITES", marca: "saiyan_conjunto_vegeta" }
+    // usar: movimento que reaproveita os quadros de outro. As diagonais para trás do Vegeta usam o voo para trás
+    // (de frente para o inimigo, tronco para trás) — nas recortadas ele ficava de cabeça para baixo.
+    vegeta: { arquivo: "conjuntos/vegeta.json", personagem: "vegeta", nome: "VEGETA SPRITES", marca: "saiyan_conjunto_vegeta",
+        usar: { flyUpLeft: "flyLeft", flyDownLeft: "flyLeft" } }
 };
 const conjPacoteDados = {};        // nome -> { normal: { estado: [urls] }, ssj: {...}, fps }
 const conjPacoteCarregando = {};
@@ -50,7 +53,11 @@ function conjRegistrarPacote(nome, d) {
     ["normal", "ssj"].forEach(v => {
         if (!d[v]) return;
         pronto[v] = {};
-        CONJ_ESTADOS.forEach(st => { pronto[v][st] = (d[v][st] || []).map(q => conjEmbrulharQuadro(d, q, st)); });
+        const usar = (CONJ_PACOTES[nome] && CONJ_PACOTES[nome].usar) || {};
+        CONJ_ESTADOS.forEach(st => {
+            const origem = usar[st] && d[v][usar[st]] ? usar[st] : st;
+            pronto[v][st] = (d[v][origem] || []).map(q => conjEmbrulharQuadro(d, q, origem));
+        });
     });
     conjPacoteDados[nome] = pronto;
     conjPacoteCarregando[nome] = false;
