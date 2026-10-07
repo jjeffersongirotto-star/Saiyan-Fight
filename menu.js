@@ -678,10 +678,7 @@ function drawCharacterFormsPanel(key) {
         const src = frames && frames[0];
         const k = escalas[i] / maiorEscala;
         const ih = (altura - 26) * k, iw = Math.min(colW - 8, (altura - 26) * 96 / 112) * k;
-        drawFormPortrait(src, c, x + (colW - iw) / 2, topo + altura - 6 - ih, iw, ih);   // pés na mesma linha
-        ctx.fillStyle = "#9fb3d8";
-        ctx.font = "9px monospace";
-        ctx.fillText(getAlturaPersonagem(key, f.nivel) + " cm", x + colW / 2, topo + altura - 1);
+        drawFormPortrait(src, c, x + (colW - iw) / 2, topo + altura - 6 - ih, iw, ih);   // pés na mesma linha (a altura em cm fica só no editor)
     });
     ctx.restore();
     drawBtnAt(MENU_LAYOUT.characters.infoClose, "✕", "#fca5a5", "bold 14px monospace");
