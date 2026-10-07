@@ -11,7 +11,7 @@ const { run, check, summary } = h;
 run("deltaTime = 1/60");
 
 // ---------- seleção com confirmação ----------
-run("gameMode = 'singleplayer'; currentTab = 'HERÓIS'; charactersScrollY = 0; setGameState('characters')");
+run("gameMode = 'singleplayer'; currentTab = 'HERÓIS'; charactersScrollY = 0; setGameState('characters'); selecaoLuta = 'solo'");
 const chars = run("getFilteredCharacters()");
 const antes = run("selectedCharacter");
 const idx = chars.findIndex(k => k !== antes);
@@ -31,14 +31,14 @@ const vi = viloes.findIndex(k => k !== bossAntes);
 const vcard = run(`getCharacterCardRect(${vi})`);
 run(`handleMenuClick(${vcard.x + vcard.w / 2}, ${vcard.y + vcard.h / 2})`);
 check("vilão também pergunta antes", run("selectedBoss") === bossAntes && run("document.getElementById('modal-alert').style.display") === "flex");
-run("executeSystemConfirm(true)");
+run("executeSystemChoice(systemChoiceOptions.findIndex(o => o.label === 'VILÃO'))");
 check("vilão trocado depois de confirmar", run("selectedBoss") === viloes[vi]);
 
-run("gameMode = 'coop'");
+run("gameMode = 'coop'; selecaoLuta = 'p1'");
 const todos = run("Object.keys(characterDB).length");
 check("VERSUS: jogador 1 vê todos os personagens", run("currentTab = 'HERÓIS'; getFilteredCharacters().length") === todos);
 check("VERSUS: jogador 2 vê todos os personagens", run("currentTab = 'VILÕES'; getFilteredCharacters().length") === todos);
-run("gameMode = 'singleplayer'; currentTab = 'HERÓIS'; setGameState('menu')");
+run("gameMode = 'singleplayer'; currentTab = 'HERÓIS'; selecaoLuta = null; setGameState('menu')");
 
 // ---------- parry ----------
 run("gameMode = 'singleplayer'; stageMode = 'normal'; startGame(); world.obstacles = []; player.parryCooldown = 0");

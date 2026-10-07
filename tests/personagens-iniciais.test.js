@@ -41,7 +41,7 @@ h2.check("apagar um dos novos (BROLY) também é respeitado: não volta ao reabr
 
 // ---------- tela PERSONAGENS rola quando passa de 2 fileiras ----------
 h2.run("characterDB.extra_1 = Object.assign({}, characterDB.goku_adult, { name: 'EXTRA 1' }); characterDB.extra_2 = Object.assign({}, characterDB.goku_adult, { name: 'EXTRA 2' });");
-h2.run("currentTab = 'HERÓIS'; charactersScrollY = 0; setGameState('characters'); render()");
+h2.run("currentTab = 'HERÓIS'; charactersScrollY = 0; setGameState('characters'); selecaoLuta = 'solo'; render()");
 const total = h2.run("getFilteredCharacters().length");
 h2.check(`com ${total} heróis a lista passa de 2 fileiras e pode rolar`, total > 10 && h2.run("getCharactersMaxScroll()") > 0);
 h2.run("canvas.onwheel({ deltaY: 500, preventDefault() {} })");

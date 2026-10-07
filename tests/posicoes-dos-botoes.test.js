@@ -31,7 +31,7 @@ run("activeControlProfile = 'p1'; remappingKey = null; startRemapping = (k) => {
 clickOn("options_pc", "getPcKeyRect(4)");
 check("controles PC: a 5ª tecla da lista é a de ATAQUE", run("remappingKey") === "p1.attack");
 
-run("currentTab = 'HERÓIS'");
+run("currentTab = 'HERÓIS'; selecaoLuta = 'solo'");
 const heroi = run("getFilteredCharacters()[1]");
 clickOn("characters", "getCharacterCardRect(1)");
 run("executeSystemConfirm(true)");   // a seleção pergunta antes de trocar

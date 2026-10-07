@@ -228,6 +228,9 @@ let editingTransformIndex = null;   // índice da transformação aberta no cons
 let transformEditStash = null;
 let transformEditMexido = false;   // builderMexido de antes de abrir a transformação      // como estava o construtor (personagem normal) antes de abrir a transformação
 let currentTab = "HERÓIS";
+// Tela de personagens: null = PERSONAGENS do menu (só ver); "solo" = SELEÇÃO DE PERSONAGEM antes da luta;
+// "p1"/"p2" = VERSUS, primeiro o JOGADOR 1 escolhe e depois o JOGADOR 2
+let selecaoLuta = null;
 let tempBase64 = null;
 let tempAnimations = {};
 let tempFps = {};
@@ -568,6 +571,33 @@ function showSystemConfirm(title, message, callback, confirmLabel = "CONFIRMAR",
     }
     if (sysAlertModal) sysAlertModal.style.display = "flex";
     focusModal(sysAlertModal);
+}
+
+// Pergunta com vários botões (ex.: ANTI-HERÓI / VILÃO / CANCELAR). opcoes: [{ label, acao, cancelar }]
+let systemChoiceOptions = null;
+function showSystemChoice(title, message, opcoes) {
+    systemChoiceOptions = opcoes;
+    onConfirmCallback = null;
+    const alertTitle = document.getElementById("modal-alert-title");
+    const alertMsg = document.getElementById("modal-alert-msg");
+    const alertBtns = document.getElementById("modal-alert-btns");
+    if (alertTitle) alertTitle.innerText = title.toUpperCase();
+    if (alertMsg) alertMsg.innerText = message;
+    if (alertBtns) {
+        alertBtns.innerHTML = opcoes.map((o, i) => o.cancelar
+            ? `<button class="btn" style="border-color:#ff0055; color:#ff0055;" onclick="executeSystemChoice(${i})">${o.label}</button>`
+            : `<button class="btn" onclick="executeSystemChoice(${i})">${o.label}</button>`).join("");
+    }
+    if (sysAlertModal) sysAlertModal.style.display = "flex";
+    focusModal(sysAlertModal);
+}
+
+function executeSystemChoice(i) {
+    const o = systemChoiceOptions && systemChoiceOptions[i];
+    systemChoiceOptions = null;
+    if (sysAlertModal) sysAlertModal.style.display = "none";
+    restoreFocusAfterModal();
+    if (o && typeof o.acao === "function") o.acao();
 }
 
 function closeSystemAlert() {
@@ -2240,6 +2270,7 @@ function loadCharacterData() {
                 atualizarCellSalvo();
                 atualizarHeroisSalvos();
                 atualizarPersonagens075();
+                apagarTrunksDeTeste081();
                 conjuntosAoCarregar();
                 return;
             }
@@ -2465,6 +2496,26 @@ function atualizarPersonagens075() {
     if (mudou) saveCharacterData();
 }
 
+// 0.81: o "TRUNKS DO FUTURO" com o visual do Goku foi um teste do jogador — sai do jogo uma vez. Se o teste era
+// o próprio Trunks padrão renomeado, ele volta a ser o Trunks de sempre.
+function apagarTrunksDeTeste081() {
+    if (readStorage("saiyan_trunks_teste_081") === "1") return;
+    writeStorage("saiyan_trunks_teste_081", "1");
+    let mudou = false;
+    for (const k of Object.keys(characterDB)) {
+        const c = characterDB[k];
+        const nome = String((c && c.name) || "").trim().toUpperCase();
+        if (nome !== "TRUNKS DO FUTURO") continue;
+        if (c.builderAppearance && c.builderAppearance.hairStyle === "trunks_futuro") continue;   // é o Trunks de verdade
+        delete characterDB[k];
+        if (DEFAULT_CHARACTERS[k]) createDefaultCharacter(k);
+        if (selectedCharacter === k && !characterDB[k]) selectedCharacter = "goku_adult";
+        if (selectedBoss === k && !characterDB[k]) selectedBoss = "freeza_1";
+        mudou = true;
+    }
+    if (mudou) { saveCharacterData(); if (typeof saveSelectedCharacters === "function") saveSelectedCharacters(); }
+}
+
 function seedNewDefaultCharacters() {
     let seeded = readJsonStorage("saiyan_defaults_seeded", null);
     if (!Array.isArray(seeded)) seeded = ORIGINAL_DEFAULT_CHARACTER_KEYS.slice();
@@ -2502,7 +2553,7 @@ function saveCharacterData() {
 
 function getFilteredCharacters() {
     // VERSUS: os dois jogadores podem escolher qualquer personagem, herói ou vilão
-    if (gameMode === "coop") return Object.keys(characterDB);
+    if (gameMode === "coop" && selecaoLuta) return Object.keys(characterDB);
     return Object.keys(characterDB).filter(k => {
         let a = characterDB[k].alignment;
         return currentTab === "HERÓIS" ? (a === "HERÓI" || a === "ANTI-HERÓI") : (a === "VILÃO" || a === "ANTI-HERÓI");

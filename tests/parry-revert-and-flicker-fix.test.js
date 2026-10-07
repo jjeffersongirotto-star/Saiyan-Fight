@@ -55,7 +55,7 @@ run(`handleMenuClick(${singleRect.x + 50}, ${singleRect.y + 30})`);
 check("botão SINGLEPLAYER, na posição nova (mais abaixo), ainda funciona", run("gameMode") === "singleplayer" && run("gameState") === "stage_map");
 run("setGameState('mode_select')");
 run(`handleMenuClick(${coopRect.x + 50}, ${coopRect.y + 30})`);
-check("botão CO-OP LOCAL, na posição nova, ainda funciona", run("gameMode") === "coop" && run("gameState") === "playing");
+check("botão CO-OP LOCAL, na posição nova, ainda funciona", run("gameMode") === "coop" && run("gameState") === "characters" && run("selecaoLuta") === "p1");
 
 // ---------- aura de ki: não pode mais piscar/animar com o jogo pausado (bug real encontrado e corrigido) ----------
 // A aura usava o relógio real do computador pra animar — continuava se mexendo mesmo com o jogo pausado.

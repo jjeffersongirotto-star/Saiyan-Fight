@@ -13,8 +13,9 @@ const tam = (nome) => { const b = fs.readFileSync(__dirname + "/../efeitos/" + n
 check("cada efeito tem a imagem com os quadros lado a lado do tamanho anotado", Object.keys(ef).every(n => { const [w, hh] = tam(n); return w === ef[n].w * ef[n].n && hh === ef[n].h; }));
 const total = Object.keys(ef).reduce((s, n) => s + fs.statSync(__dirname + "/../efeitos/" + n + ".png").size, 0);
 check("as imagens dos efeitos são leves (menos de 1,2 MB juntas)", total < 1.2 * 1024 * 1024);
-check("cores de aura com animação: verde, azul, amarela, vermelha e roxa (normal e forte)",
-    ["verde", "azul", "amarelo", "vermelho", "roxo"].every(c => run(`AURA_EFEITOS['${c}'].every(n => !!EFEITOS[n])`)));
+check("cores de aura com animação: verde, azul, amarela e vermelha (normal e forte)",
+    ["verde", "azul", "amarelo", "vermelho"].every(c => run(`AURA_EFEITOS['${c}'].every(n => !!EFEITOS[n])`)));
+check("0.81: a aura roxa (Freeza) voltou à labareda desenhada", run("!AURA_EFEITOS.roxo && !EFEITOS.aura_roxa") === true);
 check("tiro vermelho/rosa, laranja e amarelo usam a animação; ciano continua desenhado",
     run("getTiroEfeito('#ff0055')") === "tiro_vermelho" && run("getTiroEfeito('#ff8800')") === "tiro_laranja" &&
     run("getTiroEfeito('#ffd000')") === "tiro_amarelo" && run("getTiroEfeito('#00ffff')") === null);

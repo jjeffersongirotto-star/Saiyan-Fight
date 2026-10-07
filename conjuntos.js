@@ -46,7 +46,7 @@ function conjEmbrulharQuadro(d, q, st) {
 }
 
 function conjRegistrarPacote(nome, d) {
-    const pronto = { fps: d.fps || 10 };
+    const pronto = { fps: d.fps || 10, loop: d.loop || {} };   // loop: { variante: { movimento: quadro do cadeado } }
     ["normal", "ssj"].forEach(v => {
         if (!d[v]) return;
         pronto[v] = {};
@@ -125,7 +125,13 @@ function conjRetratoUrl(c) {
 
 // Cadeado de um movimento da forma (quadro onde a repetição recomeça depois da 1ª volta); -1 = sem cadeado
 function conjTravaDaForma(f, st) {
-    if (!f || !f.loop || f.pacote) return -1;
+    if (f && f.pacote) {
+        // pacote embutido: cadeados anotados no JSON (ex.: Vegeta — transformar recomeça já transformado,
+        // carregar fica nos quadros de força)
+        const p = conjPacoteDados[f.pacote], i = p && p.loop && p.loop[f.variante] ? p.loop[f.variante][st] : -1;
+        return Number.isInteger(i) && i > 0 ? i : -1;
+    }
+    if (!f || !f.loop) return -1;
     const a = f.animations || {};
     const mov = Array.isArray(a[st]) && a[st].length ? st : (st === "special" && Array.isArray(a.attackKi) && a.attackKi.length ? "attackKi" : "idle");
     const i = f.loop[mov];

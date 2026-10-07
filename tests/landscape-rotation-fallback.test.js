@@ -53,7 +53,7 @@ check("o subtítulo também subiu, logo abaixo do título", subtitleCall && subt
 
 // os botões continuam funcionando nas posições novas
 run("handleMenuClick(400 - 270 + 85, 140 + 30)"); // NORMAL
-check("botão NORMAL, na posição nova (mais acima), ainda funciona", run("stageMode") === "normal" && run("gameState") === "playing");
+check("botão NORMAL, na posição nova (mais acima), ainda funciona", run("stageMode") === "normal" && run("gameState") === "characters" && run("selecaoLuta") === "solo");
 
 run("setGameState('menu')");
 process.exit(summary());

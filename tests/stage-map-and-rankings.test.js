@@ -58,7 +58,7 @@ const unlockedNode = run("getStageMapNodes()[0]"); // terra, sempre liberada
 run(`handleMenuClick(${unlockedNode.x}, ${unlockedNode.y})`);
 check("clicar numa fase liberada abre a escolha de modo (não começa direto)", run("stageChoicePendingId") === "terra" && run("gameState") === "stage_map");
 run("handleMenuClick(400 - 270 + 85, 140 + 30)"); // botão NORMAL
-check("escolher NORMAL seleciona a fase e começa a partida nesse modo", run("selectedStage") === "terra" && run("stageMode") === "normal" && run("gameState") === "playing");
+check("escolher NORMAL seleciona a fase e abre a seleção de personagem (0.81) nesse modo", run("selectedStage") === "terra" && run("stageMode") === "normal" && run("gameState") === "characters" && run("selecaoLuta") === "solo");
 
 // ---------- depois de liberar uma fase nova, dá pra escolher ela OU repetir uma anterior já com normal completo ----------
 const upToFour = { terra: { normalDone: true }, kaio: { normalDone: true }, namek: { normalDone: true }, freeza_ship: { normalDone: true } }; // completou o normal das 4 primeiras -> libera até a 5ª (índice 4)
@@ -70,13 +70,13 @@ check("com progresso parcial, tanto a fase nova quanto as anteriores aparecem li
 run(`handleMenuClick(${nodes[1].x}, ${nodes[1].y})`); // kaio, normal já completo
 check("clicar numa fase com o normal completo também abre a escolha de modo", run("stageChoicePendingId") === nodes[1].id && run("gameState") === "stage_map");
 run("handleMenuClick(400 - 85 + 85, 140 + 30)"); // botão DIFÍCIL, agora liberado
-check("escolher DIFÍCIL funciona quando já liberado", run("selectedStage") === nodes[1].id && run("stageMode") === "hard" && run("gameState") === "playing");
+check("escolher DIFÍCIL funciona quando já liberado", run("selectedStage") === nodes[1].id && run("stageMode") === "hard" && run("gameState") === "characters");
 
 // a fase nova (normal ainda não completo) também abre a escolha — só que só o NORMAL funciona nela
 run(`setGameState('stage_map'); handleMenuClick(${nodes[4].x}, ${nodes[4].y})`);
 check("fase liberada mas com normal ainda não completo também mostra a escolha", run("stageChoicePendingId") === nodes[4].id);
 run("handleMenuClick(400 - 270 + 85, 140 + 30)"); // botão NORMAL
-check("e o NORMAL sempre funciona nela", run("selectedStage") === nodes[4].id && run("stageMode") === "normal" && run("gameState") === "playing");
+check("e o NORMAL sempre funciona nela", run("selectedStage") === nodes[4].id && run("stageMode") === "normal" && run("gameState") === "characters" && run("selecaoLuta") === "solo");
 
 // ---------- conectores pontilhados: acendem só até onde está liberado ----------
 run(`stageProgress = ${JSON.stringify({ terra: { normalDone: true }, kaio: { normalDone: true } })}; setGameState('stage_map')`); // libera até namek (índice 2)
