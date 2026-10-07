@@ -61,7 +61,7 @@ const sysAlertModal = document.getElementById("modal-alert");
 const prevCanvas = document.getElementById("preview-canvas");
 const prevCtx = prevCanvas ? prevCanvas.getContext("2d") : null;
 
-const SUB_ANIM_KEYS = ["idle", "flyRight", "flyLeft", "flyDown", "flyUp", "flyUpRight", "flyUpLeft", "flyDownRight", "flyDownLeft", "parry", "attackKi", "chargeKi", "transform"];
+const SUB_ANIM_KEYS = ["idle", "flyRight", "flyLeft", "flyDown", "flyUp", "flyUpRight", "flyUpLeft", "flyDownRight", "flyDownLeft", "parry", "attackKi", "chargeKi", "transform", "special"];
 
 // ==================== ACESSIBILIDADE: FOCO EM MODAIS ====================
 // Guarda o elemento que tinha foco antes de abrir um modal, para devolver o
@@ -274,7 +274,7 @@ let vibrationEnabled = true;
 // loadDefaultCharacters, o construtor e a regeneração ao carregar do armazenamento usam o mesmo mapa.
 const PROCEDURAL_ANIM_FPS = {
     idle: 8, flyRight: 10, flyLeft: 10, flyUp: 10, flyDown: 10, flyUpRight: 10, flyUpLeft: 10, flyDownRight: 10, flyDownLeft: 10,
-    parry: 11, attackKi: 13, chargeKi: 10, transform: 11
+    parry: 11, attackKi: 13, chargeKi: 10, transform: 11, special: 10
 };
 
 // Regenera as animações completas de um personagem procedural a partir da aparência salva.
@@ -1450,7 +1450,8 @@ function getSpriteMovementDisplayName(action) {
         parry: "PARRY",
         attackKi: "ATAQUE",
         chargeKi: "CARREGAR",
-        transform: "TRANSFORMAR"
+        transform: "TRANSFORMAR",
+        special: "ESPECIAL"
     };
     return labels[action] || action.toUpperCase();
 }
@@ -1951,13 +1952,13 @@ function openModal(key = null) {
         idle: [],
         flyUp: [], flyDown: [], flyRight: [], flyLeft: [],
         flyUpRight: [], flyUpLeft: [], flyDownRight: [], flyDownLeft: [],
-        parry: [], attackKi: [], chargeKi: [], transform: []
+        parry: [], attackKi: [], chargeKi: [], transform: [], special: []
     };
 
     tempFps = {
         idle: 12, flyUp: 12, flyDown: 12, flyRight: 12, flyLeft: 12,
         flyUpRight: 12, flyUpLeft: 12, flyDownRight: 12, flyDownLeft: 12,
-        parry: 12, attackKi: 12, chargeKi: 12, transform: 12
+        parry: 12, attackKi: 12, chargeKi: 12, transform: 12, special: 10
     };
     const char = (key && characterDB[key]) ? characterDB[key] : {
         name: "", aura: "gelo", alignment: "HERÓI", special: "KAMEHAMEHA",
@@ -1971,7 +1972,7 @@ function openModal(key = null) {
         if (char.animations.idle) {
             tempAnimations.idle = Array.isArray(char.animations.idle) ? Array.from(char.animations.idle) : [char.animations.idle];
         }
-        const animKeys = ["flyUp", "flyDown", "flyRight", "flyLeft", "flyUpRight", "flyUpLeft", "flyDownRight", "flyDownLeft", "parry", "attackKi", "chargeKi", "transform"];
+        const animKeys = ["flyUp", "flyDown", "flyRight", "flyLeft", "flyUpRight", "flyUpLeft", "flyDownRight", "flyDownLeft", "parry", "attackKi", "chargeKi", "transform", "special"];
         animKeys.forEach(k => {
             if (char.animations[k]) {
                 tempAnimations[k] = Array.isArray(char.animations[k])
@@ -2118,7 +2119,8 @@ function saveCharacterFromModal() {
                 parry: Array.from(tempAnimations.parry),
                 attackKi: Array.from(tempAnimations.attackKi),
                 chargeKi: Array.from(tempAnimations.chargeKi),
-                transform: Array.from(tempAnimations.transform)
+                transform: Array.from(tempAnimations.transform),
+                special: Array.from(tempAnimations.special || [])
             };
 
             let fpsData = {};
