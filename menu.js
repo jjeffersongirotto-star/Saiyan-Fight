@@ -55,7 +55,8 @@ const MENU_LAYOUT = {
     stageVictory: { continue: rect(canvas.width / 2 - 90, 300, 180, 34) },
     stageMap: {
         normal: rect(canvas.width / 2 - 270, 140, 170, 60), hard: rect(canvas.width / 2 - 85, 140, 170, 60),
-        unlimited: rect(canvas.width / 2 + 100, 140, 170, 60), cancel: rect(canvas.width / 2 - 70, 224, 140, 30)
+        unlimited: rect(canvas.width / 2 + 100, 140, 170, 60), cancel: rect(canvas.width / 2 - 70, 224, 140, 30),
+        left: rect(6, 165, 30, 44), right: rect(canvas.width - 36, 165, 30, 44)   // rolam o mapa de progresso
     }
 };
 // Botões que se repetem em grade/lista: a posição de cada um vem de uma função, também usada nos dois lados.
@@ -250,12 +251,7 @@ let stageChoicePendingId = null;    // id da fase clicada no mapa quando ela já
 const TIER_COLORS = { diamond: "#7fe8ff", gold: "#ffd23f", silver: "#cbd2da", bronze: "#c2793a" };
 
 // ==================== MAPA DE FASES (hub do singleplayer) ====================
-// Posições em serpentina (linha de baixo pra cima, esquerda-direita depois direita-esquerda), na MESMA ordem
-// de STAGE_PROGRESSION — a fase N sempre se conecta só com a N-1 e a N+1, mantendo a sequência visível.
-const STAGE_MAP_POSITIONS = [
-    { x: 145, y: 248 }, { x: 315, y: 248 }, { x: 485, y: 248 }, { x: 655, y: 248 },
-    { x: 655, y: 98 }, { x: 485, y: 98 }, { x: 315, y: 98 }, { x: 145, y: 98 }
-];
+// Raio dos círculos das fases no mapa de progresso (posições em getMapaPosicaoFase, game-logic-core.js).
 const STAGE_MAP_NODE_R = 26;
 
 // Cor "tema" de cada arena, usada no anel do nó e no traço pontilhado até ela.
@@ -439,11 +435,59 @@ function drawModeButton(x, y, w, h, label, unlocked, color) {
     endButtonPress(pressed);
 }
 
+// Mapa de progresso: um caminho longo rolando na horizontal (geometria em game-logic-core.js, cenário em mapa.js).
+// As fases reais são STAGE_PROGRESSION; as seguintes, até MAPA_TOTAL_FASES, aparecem escuras com cadeado (fases
+// futuras) — para acrescentar fases basta pôr em STAGE_PROGRESSION (e subir MAPA_TOTAL_FASES se precisar).
+let mapaRolagem = null;        // rolagem atual (x do mapa na borda esquerda da tela); null = centralizar ao abrir
+let mapaRolagemAlvo = null;    // as setas ‹ › deslizam até aqui
+const mapaTouchScroll = { active: false, touchId: null, startX: 0, startScroll: 0, dragged: false };
+const MAPA_PLACA_TEXTO = "ADVERSÁRIOS MAIS FORTES VIRÃO! PREPARE-SE";
+function getMapaTotalFases() {
+    return Math.max(MAPA_TOTAL_FASES, STAGE_PROGRESSION.length + 1);
+}
+function getMapaUltimaLiberada() {
+    let ultima = 0;
+    STAGE_PROGRESSION.forEach((stg, i) => { if (isStageUnlockedByProgress(stg.id, stageProgress)) ultima = i; });
+    return ultima;
+}
+function getMapaRolagem() {
+    if (mapaRolagem === null) {
+        mapaRolagem = rolagemParaFase(getMapaUltimaLiberada(), getMapaTotalFases());
+        mapaRolagemAlvo = null;
+    }
+    return mapaRolagem;
+}
+function setMapaRolagem(v) {
+    mapaRolagem = limitarRolagemMapa(v, getMapaTotalFases());
+    mapaRolagemAlvo = null;
+}
 function getStageMapNodes() {
-    return STAGE_PROGRESSION.map((stg, i) => Object.assign({}, stg, STAGE_MAP_POSITIONS[i], {
-        unlocked: isStageUnlockedByProgress(stg.id, stageProgress),
-        record: getStageWaveRecordFor(stg.id)
-    }));
+    const rol = getMapaRolagem();
+    return STAGE_PROGRESSION.map((stg, i) => {
+        const p = getMapaPosicaoFase(i);
+        return Object.assign({}, stg, { x: p.x - rol, y: p.y }, {
+            unlocked: isStageUnlockedByProgress(stg.id, stageProgress),
+            record: getStageWaveRecordFor(stg.id)
+        });
+    });
+}
+// Fases futuras (depois da última que existe): só cadeado; a primeira leva a placa MAPA_PLACA_TEXTO.
+function getMapaFasesFuturas() {
+    const rol = getMapaRolagem(), lista = [];
+    for (let i = STAGE_PROGRESSION.length; i < getMapaTotalFases(); i++) {
+        const p = getMapaPosicaoFase(i);
+        lista.push({ indice: i, x: p.x - rol, y: p.y, placa: i === STAGE_PROGRESSION.length });
+    }
+    return lista;
+}
+// Controle: ao focar uma fase perto da borda, o mapa rola para trazê-la ao meio (o foco acompanha)
+function revealPadFocusInMapa() {
+    if (gameState !== "stage_map" || stageChoicePendingId || !padNav.focus) return;
+    if (padNav.focus.y < 60 || padNav.focus.x < 44 || padNav.focus.x > canvas.width - 44) return;   // ← e setas
+    if (padNav.focus.x > 140 && padNav.focus.x < canvas.width - 140) return;
+    const antes = getMapaRolagem();
+    setMapaRolagem(antes + padNav.focus.x - canvas.width / 2);
+    padNav.focus.x -= mapaRolagem - antes;
 }
 
 // Medalha simples (círculo com uma fitinha) desenhada com formas básicas, sem depender de emoji/fonte especial.
@@ -2031,6 +2075,7 @@ function movePadFocus(dx, dy) {
         padNav.focus = { x: best.x + best.w / 2, y: best.y + best.h / 2 };
         revealPadFocusInDatabase();
         revealPadFocusInCharacters();
+        revealPadFocusInMapa();
     }
 }
 
@@ -2560,6 +2605,11 @@ canvas.onclick = (e) => {
 window.addEventListener("mouseup", () => { if (menuPointerPress && menuPointerPress.id === "mouse") menuPointerPress = null; });
 
 canvas.onwheel = (e) => {
+    if (gameState === "stage_map" && !stageChoicePendingId) {
+        e.preventDefault();
+        setMapaRolagem(getMapaRolagem() + (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY) * 0.8);
+        return;
+    }
     if (gameState === "characters") {
         e.preventDefault();
         setCharactersScroll(charactersScrollY + e.deltaY * 0.8);
@@ -2671,6 +2721,9 @@ canvas.addEventListener("touchstart", (e) => {
     if (gameState !== "playing" && gameState !== "tutorial") {
         if (gameState === "characters") {
             Object.assign(charactersTouchScroll, { active: true, touchId: firstTouch.identifier, startY: firstPoint.y, startScrollY: charactersScrollY, dragged: false });
+        }
+        if (gameState === "stage_map" && !stageChoicePendingId) {
+            Object.assign(mapaTouchScroll, { active: true, touchId: firstTouch.identifier, startX: firstPoint.x, startScroll: getMapaRolagem(), dragged: false });
         }
         startPointerPress(firstPoint.x, firstPoint.y, firstTouch.identifier, () => handleMenuClick(firstPoint.x, firstPoint.y));
         return;
@@ -2784,6 +2837,20 @@ canvas.addEventListener("touchmove", (e) => {
         return;
     }
 
+    if (gameState === "stage_map" && mapaTouchScroll.active) {
+        const touch = Array.from(e.touches).find(t => t.identifier === mapaTouchScroll.touchId);
+        if (touch) {
+            const c = getCanvasCoords(touch.clientX, touch.clientY);
+            const dx = c.x - mapaTouchScroll.startX;
+            if (!mapaTouchScroll.dragged && Math.abs(dx) > DATABASE_DRAG_THRESHOLD) {
+                mapaTouchScroll.dragged = true;
+                menuPointerPress = null;   // virou arraste: não é mais um toque na fase
+            }
+            if (mapaTouchScroll.dragged) setMapaRolagem(mapaTouchScroll.startScroll - dx);
+        }
+        return;
+    }
+
     if (gameState === "achievements" && achievementsTouchScroll.active) {
         const touch = Array.from(e.touches).find(t => t.identifier === achievementsTouchScroll.touchId);
         if (touch) {
@@ -2844,6 +2911,7 @@ canvas.addEventListener("touchend", (e) => {
     controlsTestTouches = Array.from(e.touches).map(t => getCanvasCoords(t.clientX, t.clientY));
     releaseTouchPress(e);
     if (charactersTouchScroll.active && !Array.from(e.touches).some(t => t.identifier === charactersTouchScroll.touchId)) charactersTouchScroll.active = false;
+    if (mapaTouchScroll.active && !Array.from(e.touches).some(t => t.identifier === mapaTouchScroll.touchId)) mapaTouchScroll.active = false;
     const stillDown = Array.from(e.touches).map(t => t.identifier);
     Object.keys(hudPressHeld).forEach(id => {
         if (stillDown.includes(Number(id))) return;
@@ -3404,6 +3472,14 @@ function handleMenuClick(x, y) {
             }
             return;
         }
+        if (hitRect(x, y, MENU_LAYOUT.stageMap.left)) { mapaRolagemAlvo = limitarRolagemMapa(getMapaRolagem() - 520, getMapaTotalFases()); return; }
+        if (hitRect(x, y, MENU_LAYOUT.stageMap.right)) { mapaRolagemAlvo = limitarRolagemMapa(getMapaRolagem() + 520, getMapaTotalFases()); return; }
+        getMapaFasesFuturas().forEach(f => {
+            if (inRect(x, y, f.x - STAGE_MAP_NODE_R, f.y - STAGE_MAP_NODE_R, STAGE_MAP_NODE_R * 2, STAGE_MAP_NODE_R * 2)) {
+                stageLockedHintText = MAPA_PLACA_TEXTO;
+                stageLockedHintTimer = 120;
+            }
+        });
         getStageMapNodes().forEach(node => {
             if (inRect(x, y, node.x - STAGE_MAP_NODE_R, node.y - STAGE_MAP_NODE_R, STAGE_MAP_NODE_R * 2, STAGE_MAP_NODE_R * 2)) {
                 if (!node.unlocked) {
@@ -6693,24 +6769,45 @@ function render() {
     }
     else if (gameState === "stage_map") {
         prepareNextStageCardThumb();   // fotos das fases para os círculos (uma por quadro, antes de pintar a tela)
-        ctx.fillStyle = "#0a1024";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        // um "céu estrelado" simples de fundo, só pra não ficar um bloco de cor sólida
-        for (let i = 0; i < 40; i++) {
-            const sx = (i * 137) % canvas.width, sy = (i * 71) % canvas.height;
-            ctx.fillStyle = `rgba(255,255,255,${0.15 + (i % 4) * 0.08})`;
-            ctx.fillRect(sx, sy, 1.5, 1.5);
+        if (mapaRolagemAlvo !== null) {   // setas ‹ ›: desliza suave até o alvo
+            const d = mapaRolagemAlvo - getMapaRolagem();
+            if (Math.abs(d) < 1) { mapaRolagem = mapaRolagemAlvo; mapaRolagemAlvo = null; }
+            else mapaRolagem += d * Math.min(1, deltaTime * 9);
+        }
+        const rolagem = getMapaRolagem();
+        drawMapaFundo(rolagem);
+
+        const nodes = getStageMapNodes();
+        const futuras = getMapaFasesFuturas();
+
+        // estrada: só o pedaço visível (a parte já liberada fica dourada)
+        {
+            const total = getMapaTotalFases();
+            const de = Math.max(0, Math.floor((rolagem - MAPA_MARGEM_X) / MAPA_PASSO_X) - 1);
+            const ate = Math.min(total - 1, Math.ceil((rolagem + canvas.width - MAPA_MARGEM_X) / MAPA_PASSO_X) + 1);
+            const pontos = [];
+            for (let i = de; i <= ate; i++) {
+                const p = getMapaPosicaoFase(i);
+                pontos.push({ x: p.x - rolagem, y: p.y });
+            }
+            drawMapaEstrada(pontos, getMapaUltimaLiberada() - de);
         }
 
+        // faixa escura atrás do título (o cenário pode ser claro)
+        {
+            const gr = ctx.createLinearGradient(0, 0, 0, 52);
+            gr.addColorStop(0, "rgba(6, 10, 26, 0.85)");
+            gr.addColorStop(1, "rgba(6, 10, 26, 0)");
+            ctx.fillStyle = gr;
+            ctx.fillRect(0, 0, canvas.width, 52);
+        }
         ctx.fillStyle = "#ffff00";
         ctx.font = "bold 15px monospace";
         ctx.textAlign = "center";
         ctx.fillText("ESCOLHA A FASE", canvas.width / 2, 24);
-        ctx.fillStyle = "#9fb3d8";
+        ctx.fillStyle = "#cfe0ff";
         ctx.font = "9px monospace";
         ctx.fillText("COMPLETE O MODO NORMAL (5 ONDAS) PRA LIBERAR A PRÓXIMA FASE", canvas.width / 2, 38);
-
-        const nodes = getStageMapNodes();
 
         // Acabou de vencer o NORMAL e liberar a próxima fase: toca a animação do cadeado abrindo, uma vez só.
         if (stageVictoryStats && stageVictoryStats.justUnlockedNext && !stageVictoryStats.unlockAnimShown) {
@@ -6727,25 +6824,39 @@ function render() {
             if (stageUnlockAnim.t > 1.5) stageUnlockAnim = null;
         }
 
-        // conectores pontilhados: acende quando a fase de DESTINO (a mais avançada das duas) já está liberada.
-        for (let i = 0; i < nodes.length - 1; i++) {
-            const a = nodes[i], b = nodes[i + 1];
-            const lit = b.unlocked;
-            ctx.save();
-            ctx.setLineDash([7, 7]);
-            ctx.strokeStyle = lit ? STAGE_THEME_COLOR[b.id] : "#2a2a38";
-            ctx.lineWidth = lit ? 3 : 2;
-            ctx.globalAlpha = lit ? 0.9 : 0.45;
+        const naTela = n => n.x > -STAGE_MAP_NODE_R - 70 && n.x < canvas.width + STAGE_MAP_NODE_R + 70;
+        const alvoNaTela = n => n.x - STAGE_MAP_NODE_R >= 0 && n.x + STAGE_MAP_NODE_R <= canvas.width;
+
+        // fases futuras: círculo escuro com cadeado; a primeira tem a placa de aviso
+        futuras.forEach(f => {
+            if (!naTela(f)) return;
+            const r = STAGE_MAP_NODE_R;
+            if (!stageChoicePendingId && alvoNaTela(f)) registerMenuTarget(f.x - r, f.y - r, r * 2, r * 2);
+            const pressed = !stageChoicePendingId && beginButtonPress(f.x - r, f.y - r, r * 2, r * 2);
+            ctx.fillStyle = "#11131c";
             ctx.beginPath();
-            ctx.moveTo(a.x, a.y);
-            ctx.lineTo(b.x, b.y);
+            ctx.arc(f.x, f.y, r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = "#2c2f3c";
+            ctx.lineWidth = 2;
             ctx.stroke();
-            ctx.restore();
-        }
+            drawPadlock(f.x, f.y - 2, r * 0.42);
+            ctx.fillStyle = "#0a1024";
+            ctx.beginPath();
+            ctx.arc(f.x - r + 3, f.y - r + 3, 9, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = "#55586a";
+            ctx.font = "bold 9px monospace";
+            ctx.textAlign = "center";
+            ctx.fillText(String(f.indice + 1), f.x - r + 3, f.y - r + 6);
+            endButtonPress(pressed);
+            if (f.placa) drawMapaPlaca(f.x, f.y - r - 8);
+        });
 
         nodes.forEach((node, i) => {
+            if (!naTela(node)) return;
             // com o quadro de modo aberto, os círculos ficam escondidos atrás: não entram na navegação do controle
-            if (!stageChoicePendingId) registerMenuTarget(node.x - STAGE_MAP_NODE_R, node.y - STAGE_MAP_NODE_R, STAGE_MAP_NODE_R * 2, STAGE_MAP_NODE_R * 2);
+            if (!stageChoicePendingId && alvoNaTela(node)) registerMenuTarget(node.x - STAGE_MAP_NODE_R, node.y - STAGE_MAP_NODE_R, STAGE_MAP_NODE_R * 2, STAGE_MAP_NODE_R * 2);
             const pressed = !stageChoicePendingId && beginButtonPress(node.x - STAGE_MAP_NODE_R, node.y - STAGE_MAP_NODE_R, STAGE_MAP_NODE_R * 2, STAGE_MAP_NODE_R * 2);
             const isSel = selectedStage === node.id;
             const theme = STAGE_THEME_COLOR[node.id] || "#8899aa";
@@ -6835,12 +6946,26 @@ function render() {
 
         if (stageLockedHintTimer > 0) {
             stageLockedHintTimer -= deltaTime * 60;
-            ctx.fillStyle = "#ff5555";
             ctx.font = "bold 11px monospace";
             ctx.textAlign = "center";
+            ctx.fillStyle = "rgba(6, 10, 26, 0.85)";
+            const larg = ctx.measureText(stageLockedHintText).width + 20;
+            ctx.fillRect(Math.round(canvas.width / 2 - larg / 2), canvas.height - 23, Math.round(larg), 18);
+            ctx.fillStyle = "#ff5555";
             ctx.fillText(stageLockedHintText, canvas.width / 2, canvas.height - 10);
         }
 
+        if (!stageChoicePendingId) {
+            const total = getMapaTotalFases();
+            if (rolagem > 0) {
+                registerMenuTarget(MENU_LAYOUT.stageMap.left.x, MENU_LAYOUT.stageMap.left.y, MENU_LAYOUT.stageMap.left.w, MENU_LAYOUT.stageMap.left.h);
+                drawBtnAt(MENU_LAYOUT.stageMap.left, "‹", "#ffd23f", "bold 22px monospace");
+            }
+            if (rolagem < limitarRolagemMapa(Infinity, total)) {
+                registerMenuTarget(MENU_LAYOUT.stageMap.right.x, MENU_LAYOUT.stageMap.right.y, MENU_LAYOUT.stageMap.right.w, MENU_LAYOUT.stageMap.right.h);
+                drawBtnAt(MENU_LAYOUT.stageMap.right, "›", "#ffd23f", "bold 22px monospace");
+            }
+        }
         drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
     }
     else if (gameState === "database") {

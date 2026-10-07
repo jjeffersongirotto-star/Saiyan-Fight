@@ -780,6 +780,9 @@ Nome do conjunto § Set name § Nombre del conjunto
 SIM, SALVAR § YES, SAVE § SÍ, GUARDAR
 Altura (cm) § Height (cm) § Altura (cm)
 VILÃO DA FASE § STAGE VILLAIN § VILLANO DE LA FASE
+ADVERSÁRIOS MAIS FORTES VIRÃO! § STRONGER OPPONENTS ARE COMING! § ¡VIENEN RIVALES MÁS FUERTES!
+PREPARE-SE § GET READY § PREPÁRATE
+ADVERSÁRIOS MAIS FORTES VIRÃO! PREPARE-SE § STRONGER OPPONENTS ARE COMING! GET READY § ¡VIENEN RIVALES MÁS FUERTES! PREPÁRATE
 Altura da transformação (cm) § Transformation height (cm) § Altura de la transformación (cm)
 Tamanho na luta: 175 cm = tamanho normal. Muito alto ou muito baixo tem limite, para o lutador caber na arena. § Size in battle: 175 cm = normal size. Very tall or very short is capped so the fighter fits the arena. § Tamaño en la pelea: 175 cm = tamaño normal. Muy alto o muy bajo tiene límite para que el luchador quepa en la arena.
 `;
