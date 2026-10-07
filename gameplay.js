@@ -278,8 +278,8 @@ function updateTutorial(dt) {
 // ainda em andamento, carregando, voando ou parado.
 function setTutorialActionState(dx, dy) {
     if (player.parryHighlightTimer > 0) player.actionState = "parry";
-    else if (world.beamActive > 0) player.actionState = "attackKi";
-    else if (player.actionTimer > 0 && ["attackKi", "transform", "parry"].includes(player.actionState)) { /* mantém */ }
+    else if (world.beamActive > 0) player.actionState = "special";
+    else if (player.actionTimer > 0 && ["attackKi", "transform", "parry", "special"].includes(player.actionState)) { /* mantém */ }
     else if (player.isCharging) player.actionState = "chargeKi";
     else player.actionState = getDominantMoveAction(dx, dy) || "idle";
 }
@@ -330,6 +330,10 @@ function getCharacterAnimationFrames(charKey, actionState, transformed) {
     if (Array.isArray(selectedFrames) && selectedFrames.length > 0) {
         return selectedFrames;
     }
+    // ESPECIAL sem quadros próprios (personagens antigos, sprite sheets): usa os do ATAQUE
+    if (state === "special" && Array.isArray(anims.attackKi) && anims.attackKi.length > 0) {
+        return anims.attackKi;
+    }
 
     if (Array.isArray(anims.idle) && anims.idle.length > 0) {
         return anims.idle;
@@ -366,6 +370,8 @@ function getCharacterAnimationFrame(charKey, actionState, animTimer, transformed
     const trava = typeof tempoNoMovimento === "number" ? conjuntoTrava(charKey, SPRITE_FRAME_COUNTS[state] ? state : "idle", nivel) : -1;
     let frameIndex = trava > 0 ? getLoopFrameIndex(tempoNoMovimento * fps, animFrames.length, trava)
         : Math.floor(animTimer * fps) % animFrames.length;
+    // o ESPECIAL toca do começo ao fim uma vez e fica no último quadro (o disparo) até o raio acabar
+    if (state === "special" && trava <= 0 && typeof tempoNoMovimento === "number") frameIndex = Math.min(animFrames.length - 1, Math.floor(tempoNoMovimento * fps));
     let idleFallback = Array.isArray(anims.idle) ? anims.idle[0] : anims.idle;
     let frameSrc = animFrames[frameIndex] || animFrames[0] || idleFallback || char.defaultUrl;
     return getOrCacheGameplayImage(frameSrc, char.imageObj, char.bgRemoval);
@@ -1296,7 +1302,7 @@ function triggerSpecialAttack(isP2 = false) {
     world.beamActive = 40;
     world.beamOwner = requestedOwner;
     world.beamIsSuper = hasPowerBuff;
-    setActionState(caster, "attackKi", 40);
+    setActionState(caster, "special", 40);
     if (hasPowerBuff) {
         triggerScreenFlash("#fff3b0", 26);
         bumpStat("superAttacksTotal", 1);
@@ -1878,11 +1884,11 @@ function update(dt) {
     }
     if (player.parryHighlightTimer > 0) {
         player.actionState = "parry";
-    } else if (world.beamActive > 0) {
-        player.actionState = "attackKi";
+    } else if (world.beamActive > 0 && world.beamOwner !== "p2") {
+        player.actionState = "special";
     } else if (player.isCharging) {
         player.actionState = "chargeKi";
-    } else if (player.actionTimer > 0 && ["attackKi", "transform"].includes(player.actionState)) {
+    } else if (player.actionTimer > 0 && ["attackKi", "transform", "special"].includes(player.actionState)) {
         // Keep action animations visible while their gameplay effect is active.
     } else {
         player.actionState = getDominantMoveAction(pointerDx, pointerDy, actionDeadzone) || "idle";
@@ -1892,7 +1898,7 @@ function update(dt) {
         player2.actionState = "hit";
     } else if (player2.isCharging) {
         player2.actionState = "chargeKi";
-    } else if (player2.actionTimer <= 0 && ["attackKi", "transform", "parry"].includes(player2.actionState)) {
+    } else if (player2.actionTimer <= 0 && ["attackKi", "transform", "parry", "special"].includes(player2.actionState)) {
         player2.actionState = "idle";
     }
 
@@ -1954,7 +1960,7 @@ function update(dt) {
 
         if (player2.hitTimer <= 0 && player2.actionTimer <= 0 && !player2.isCharging) {
             player2.actionState = getDominantMoveAction(player2MoveX, player2MoveY) || "idle";
-            if (player2MoveX === 0 && player2MoveY === 0 && ["attackKi", "transform", "parry"].includes(player2.actionState)) {
+            if (player2MoveX === 0 && player2MoveY === 0 && ["attackKi", "transform", "parry", "special"].includes(player2.actionState)) {
                 player2.actionState = "idle";
             }
         }

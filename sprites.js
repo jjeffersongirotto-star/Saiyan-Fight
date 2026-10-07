@@ -14,10 +14,10 @@ const SPRITE_OUTLINE = "#15110f";
 const SPRITE_LIGHT = { x: -0.62, y: -0.78 };       // direção da luz (cima/esquerda)
 SPRITE_TURN = 3.4;                                 // viés de "virado para a direita" (ombro/quadril/olhar) — postura de luta, não de frente pra câmera
 
-const SPRITE_STATES = ["idle", "flyRight", "flyLeft", "flyUp", "flyDown", "flyUpRight", "flyUpLeft", "flyDownRight", "flyDownLeft", "parry", "attackKi", "chargeKi", "transform"];
+const SPRITE_STATES = ["idle", "flyRight", "flyLeft", "flyUp", "flyDown", "flyUpRight", "flyUpLeft", "flyDownRight", "flyDownLeft", "parry", "attackKi", "chargeKi", "transform", "special"];
 const SPRITE_FRAME_COUNTS = {
     idle: 4, flyRight: 4, flyLeft: 4, flyUp: 4, flyDown: 4, flyUpRight: 4, flyUpLeft: 4, flyDownRight: 4, flyDownLeft: 4,
-    parry: 4, attackKi: 5, chargeKi: 4, transform: 5
+    parry: 4, attackKi: 5, chargeKi: 4, transform: 5, special: 5
 };
 
 // Funções de cor vêm do game-logic-core.js (navegador: globais; Node: require).
@@ -2119,6 +2119,22 @@ function spritePoseFor(state, i, n) {
             lean: F.lean, armR: F.armR, armL: F.armL, shiftX: F.shiftX, eyes: F.eyes, mouth: F.mouth, crouch: 1.5,
             legL: [-17, -10], legR: [15, 22], hairSway: -0.5, hairLift: 0.3, capeSway: -0.7, tailSwing: -0.5, lookX: 1.2,
             ki: { r: F.ki, follow: "R", ox: 9, flick: i, alpha: i === 4 ? 0.7 : 1 }
+        });
+    } else if (state === "special") {
+        // ESPECIAL (do começo ao fim): mãos juntas recolhidas atrás, bola de ki crescendo, braços indo para a
+        // frente e o disparo com os dois braços esticados
+        const F = [
+            { lean: -10, armR: [-34, -128], armL: [-52, -122], ki: 3, eyes: "angry", mouth: "set", shiftX: -1.2, crouch: 3 },
+            { lean: -8, armR: [-30, -124], armL: [-48, -120], ki: 6, eyes: "angry", mouth: "set", shiftX: -1, crouch: 3 },
+            { lean: 2, armR: [40, 52], armL: [26, 44], ki: 9, eyes: "angry", mouth: "shout", shiftX: 0, crouch: 2 },
+            { lean: 10, armR: [86, 90], armL: [76, 88], ki: 16, eyes: "angry", mouth: "shout", shiftX: 0.8, crouch: 1.5 },
+            { lean: 9, armR: [88, 92], armL: [78, 90], ki: 19, eyes: "angry", mouth: "shout", shiftX: 0.4, crouch: 1.5 }
+        ][i % 5];
+        Object.assign(P, {
+            lean: F.lean, armR: F.armR, armL: F.armL, shiftX: F.shiftX, eyes: F.eyes, mouth: F.mouth, crouch: F.crouch,
+            handL: i >= 2 ? "open" : "fist", handR: i >= 2 ? "open" : "fist",
+            legL: [-19, -10], legR: [17, 24], hairSway: -0.6, hairLift: 0.4, capeSway: -0.8, tailSwing: -0.6, lookX: 1.2,
+            ki: { r: F.ki, follow: "R", ox: i >= 2 ? 9 : 4, flick: i, alpha: 1 }
         });
     } else if (state === "chargeKi") {
         Object.assign(P, {

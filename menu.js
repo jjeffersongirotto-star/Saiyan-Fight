@@ -366,7 +366,7 @@ function getStageMapNodes() {
 // Quanto o lutador cresce em cada movimento (o mesmo número é usado para preparar a pixel art antes da luta).
 const ACTION_SPRITE_SCALE = {
     idle: 1, flyRight: 1.05, flyLeft: 1.05, flyUp: 1.08, flyDown: 1.08, flyUpRight: 1.08, flyUpLeft: 1.08,
-    flyDownRight: 1.08, flyDownLeft: 1.08, parry: 1.12, attackKi: 1.1, chargeKi: 1.06, transform: 1.15, hit: 1.04
+    flyDownRight: 1.08, flyDownLeft: 1.08, parry: 1.12, attackKi: 1.1, chargeKi: 1.06, transform: 1.15, special: 1.1, hit: 1.04
 };
 const PIXEL_SPRITE_SCALE = 1.54;   // tamanho do desenho em pixel art em relação à caixa de colisão do lutador
 let stageUnlockAnim = null;   // { id, t }: cadeado abrindo no mapa de fases (ver render de "stage_map")
@@ -1559,7 +1559,7 @@ function updateTesteGoku(dt, pads) {
         g.actionState = "attackKi"; g.actionTimer = 12;
     }
     if (apertou("parry")) { g.actionState = "parry"; g.actionTimer = 14; g.parryHighlightTimer = 10; }
-    if (apertou("special")) { g.feixe = 40; g.actionState = "attackKi"; g.actionTimer = 40; }
+    if (apertou("special")) { g.feixe = 40; g.actionState = "special"; g.actionTimer = 40; }
     if (apertou("transform")) {
         // sobe um nível; depois da última volta ao normal (é só para ver as animações)
         const lista = getCharacterTransformations("goku_adult");
@@ -4289,6 +4289,7 @@ function drawPlayerEntity(p, charData, isBoss = false) {
         flyDownLeft: { dx: -Math.sin(p.animTimer * 2) * 3, dy: Math.sin(p.animTimer * 2) * 3 },
         parry: { dx: 0, dy: 0 },
         attackKi: { dx: Math.sin(p.animTimer * 3) * 6, dy: 0 },
+        special: { dx: 0, dy: 0 },
         chargeKi: { dx: 0, dy: Math.sin(p.animTimer * 4) * 2 },
         transform: { dx: 0, dy: -Math.sin(p.animTimer * 2) * 5 },
         hit: { dx: 0, dy: 0 }

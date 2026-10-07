@@ -15,7 +15,7 @@
 // Carrega ANTES do database.js (que chama estas funções ao salvar/carregar). Nada aqui roda no carregamento.
 // ============================================================================
 
-const CONJ_ESTADOS = ["idle", "flyRight", "flyLeft", "flyDown", "flyUp", "flyUpRight", "flyUpLeft", "flyDownRight", "flyDownLeft", "parry", "attackKi", "chargeKi", "transform"];
+const CONJ_ESTADOS = ["idle", "flyRight", "flyLeft", "flyDown", "flyUp", "flyUpRight", "flyUpLeft", "flyDownRight", "flyDownLeft", "parry", "attackKi", "chargeKi", "transform", "special"];
 const CONJ_FPS_PADRAO = 12;
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -90,6 +90,7 @@ function conjQuadrosDaForma(f, st) {
     }
     if (!a) return null;
     if (Array.isArray(a[st]) && a[st].length) return a[st];
+    if (st === "special" && Array.isArray(a.attackKi) && a.attackKi.length) return a.attackKi;   // sem especial próprio: o ataque
     return Array.isArray(a.idle) && a.idle.length ? a.idle : null;
 }
 
@@ -126,7 +127,7 @@ function conjRetratoUrl(c) {
 function conjTravaDaForma(f, st) {
     if (!f || !f.loop || f.pacote) return -1;
     const a = f.animations || {};
-    const mov = Array.isArray(a[st]) && a[st].length ? st : "idle";
+    const mov = Array.isArray(a[st]) && a[st].length ? st : (st === "special" && Array.isArray(a.attackKi) && a.attackKi.length ? "attackKi" : "idle");
     const i = f.loop[mov];
     return Number.isInteger(i) && i > 0 ? i : -1;
 }
