@@ -659,6 +659,29 @@ function getLoopFrameIndex(tick, length, lockFrom) {
     return lockFrom + (t - length) % (length - lockFrom);
 }
 
+// Vilão fora do versus: sobe e desce entre minY e maxY e, de tempos em tempos, escolhe outro ponto na sua
+// metade da arena (alvoX) para onde vai devagar — antes só quicava em cima/baixo e, se passava do limite (um
+// quadro mais longo), invertia a direção a cada quadro e ficava parado no canto só atirando.
+// b: { x, y, vy, alvoX, alvoTempo }; passo = velocidade do quadro (1 = 60fps); rnd = Math.random (testes injetam).
+const VILAO_PATRULHA = { minX: 470, maxX: 680, minY: 30, maxY: 220, velX: 1.6, tempoMin: 70, tempoMax: 200 };
+function stepVilaoPatrulha(b, passo, velY, rnd, lim) {
+    const L = lim || VILAO_PATRULHA, r = rnd || Math.random;
+    const vel = Math.abs(b.vy) || 2;
+    if (!(b.vy)) b.vy = vel;
+    b.y += b.vy * velY * passo;
+    if (b.y <= L.minY) { b.y = L.minY; b.vy = vel; }            // sempre de volta para dentro (nunca fica preso)
+    else if (b.y >= L.maxY) { b.y = L.maxY; b.vy = -vel; }
+    b.alvoTempo = (b.alvoTempo || 0) - passo;
+    if (!(b.alvoTempo > 0) || typeof b.alvoX !== "number") {
+        b.alvoX = L.minX + r() * (L.maxX - L.minX);
+        b.alvoTempo = L.tempoMin + r() * (L.tempoMax - L.tempoMin);
+        if (r() < 0.35) b.vy = -b.vy;                              // às vezes também troca de sentido na vertical
+    }
+    const dx = b.alvoX - b.x, mx = L.velX * passo;
+    b.x += Math.abs(dx) <= mx ? dx : Math.sign(dx) * mx;
+    return b;
+}
+
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
         getPadStickThreshold,
@@ -744,6 +767,8 @@ if (typeof module !== "undefined" && module.exports) {
         KAIOSHIN_LAP_SCROLL,
         NAMEK_FORWARD_SPEED,
         getForwardTravel,
-        getLoopFrameIndex
+        getLoopFrameIndex,
+        stepVilaoPatrulha,
+        VILAO_PATRULHA
     };
 }

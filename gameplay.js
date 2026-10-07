@@ -20,6 +20,14 @@ const BOUNDS = {
     PLAYER2_RIGHT_MARGIN: 10
 };
 
+// VERSUS: cada jogador fica na sua metade da tela (P1 da esquerda até o meio, P2 do meio até a direita)
+function getPlayer1MaxX() {
+    return gameMode === "coop" ? Math.min(BOUNDS.PLAYER_MAX_X, canvas.width / 2 - player.w) : BOUNDS.PLAYER_MAX_X;
+}
+function getPlayer2MinX() {
+    return gameMode === "coop" ? canvas.width / 2 : BOUNDS.PLAYER2_MIN_X;
+}
+
 const SPAWN_TIMERS = {
     SAIBAMAN_FRAMES: 300,
     PICKUP_FRAMES: 420
@@ -229,7 +237,7 @@ function updateTutorial(dt) {
         if (Math.abs(touchMoveY) < 0.3) touchMoveY = 0;
         dx += touchMoveX; dy += touchMoveY;
     }
-    player.x = Math.max(BOUNDS.PLAYER_MIN_X, Math.min(BOUNDS.PLAYER_MAX_X, player.x + dx));
+    player.x = Math.max(BOUNDS.PLAYER_MIN_X, Math.min(getPlayer1MaxX(), player.x + dx));
     player.y = Math.max(BOUNDS.PLAYER_MIN_Y, Math.min(BOUNDS.PLAYER_MAX_Y_BASE - (player.h - 56), player.y + dy));
 
     player.isCharging = !!keysPressed[keyBindings.p1.charge] || (keyBindings.p1.charge.startsWith("Mouse") && mouseButtonsPressed[keyBindings.p1.charge]) || touchChargeId !== null;
@@ -465,10 +473,15 @@ function runBackgroundWork(budgetMs = 4) {
         warmSelectedFighters();
     }
     const start = performance.now();
-    let feito = 0;
+    let feito = 0, imagens = 0;
     while (feito === 0 || performance.now() - start < budgetMs) {
         if (backgroundWork.pixelArt.length) backgroundWork.pixelArt.shift()();
-        else if (backgroundWork.images.length) { backgroundWork.images.shift()(); break; }   // 1 imagem por quadro: o navegador decodifica depois
+        else if (backgroundWork.images.length) {
+            // até 4 imagens por quadro (o navegador decodifica depois): 1 só por quadro deixava ~260 imagens (Vegeta
+            // de sprites + rival) levando muitos segundos para ficarem prontas e o começo da luta pesado no celular
+            backgroundWork.images.shift()();
+            if (++imagens >= 4) break;
+        }
         else if (backgroundWork.light.length) backgroundWork.light.shift()();                // tarefas leves (aura): várias por quadro
         else if (backgroundWork.frames.length) preloadOneState(...backgroundWork.frames.shift());
         else break;
@@ -819,6 +832,7 @@ function startGame() {
     player2.y = 150;
     player2.vx = 0;
     player2.vy = 2;
+    player2.alvoX = null;   // patrulha do vilão recomeça (stepVilaoPatrulha)
     player2.shootTimer = 0;
     player2.hp = player2.maxHp = waveParams.bossHp;
     player2.hitTimer = 0;
@@ -925,6 +939,7 @@ function respawnBoss() {
     player2.isDying = false;
     player2.dyingspeedX = 0;
     player2.vy = 2;
+    player2.alvoX = null;   // patrulha do vilão recomeça (stepVilaoPatrulha)
     player2.isTransformed = false;
     player2.ki = 0;
 
@@ -1935,7 +1950,7 @@ function update(dt) {
             player.y += moveY;
         }
 
-        player.x = Math.max(BOUNDS.PLAYER_MIN_X, Math.min(BOUNDS.PLAYER_MAX_X, player.x));
+        player.x = Math.max(BOUNDS.PLAYER_MIN_X, Math.min(getPlayer1MaxX(), player.x));
         player.y = Math.max(BOUNDS.PLAYER_MIN_Y, Math.min(BOUNDS.PLAYER_MAX_Y_BASE - (player.h - 56), player.y));
     }
 
@@ -1965,7 +1980,7 @@ function update(dt) {
             }
         }
 
-        player2.x = Math.max(BOUNDS.PLAYER2_MIN_X, Math.min(canvas.width - player2.w - BOUNDS.PLAYER2_RIGHT_MARGIN, player2.x));
+        player2.x = Math.max(getPlayer2MinX(), Math.min(canvas.width - player2.w - BOUNDS.PLAYER2_RIGHT_MARGIN, player2.x));
         player2.y = Math.max(BOUNDS.PLAYER_MIN_Y, Math.min(BOUNDS.PLAYER_MAX_Y_BASE - (player2.h - 56), player2.y));
     }
 
@@ -1995,11 +2010,7 @@ function update(dt) {
         player2.x -= 3 * dt * 60;
     } else if (gameMode !== "coop") {
         let waveParams = getWaveParams(waveNumber);
-        player2.y += player2.vy * (waveParams.speedMult * 0.8) * dt * 60;
-
-        if (player2.y < 30 || player2.y > 220) {
-            player2.vy *= -1;
-        }
+        stepVilaoPatrulha(player2, dt * 60, waveParams.speedMult * 0.8);
 
         player2.shootTimer += dt * 60;
         if (player2.shootTimer >= waveParams.shootFreq) {

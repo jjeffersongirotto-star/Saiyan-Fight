@@ -20,7 +20,8 @@ const MENU_LAYOUT = {
     },
     modeSelect: { single: rect(175, 176, 200, 58), coop: rect(425, 176, 200, 58) },
     paused: { resume: rect(300, 110, 200, 35), options: rect(300, 160, 200, 35), exit: rect(300, 210, 200, 35) },
-    characters: { tabHeroes: rect(250, 45, 140, 25), tabVillains: rect(410, 45, 140, 25) },
+    characters: { tabHeroes: rect(250, 45, 140, 25), tabVillains: rect(410, 45, 140, 25), fight: rect(620, 45, 140, 25),
+        infoClose: rect(706, 58, 30, 26) },
     optionsMain: { controls: rect(220, 125, 360, 42), audio: rect(220, 180, 360, 42), cast: rect(220, 235, 360, 42) },
     optionsControls: {
         pc: rect(180, 120, 220, 42), touch: rect(420, 120, 220, 42), gamepad: rect(180, 172, 220, 42), test: rect(420, 172, 220, 42),
@@ -67,6 +68,62 @@ function getCharacterCardRect(i) {
     const esquerda = Math.round((canvas.width - (UI.GRID_CARD_WIDTH * 5 + 12 * 4)) / 2);
     return rect(esquerda + (i % 5) * (UI.GRID_CARD_WIDTH + 12), CHARACTERS_GRID_TOP + Math.floor(i / 5) * (UI.GRID_CARD_HEIGHT + 10) - charactersScrollY, UI.GRID_CARD_WIDTH, UI.GRID_CARD_HEIGHT);
 }
+// botão "i" no canto de cima à direita de cada cartão: abre o quadro com a forma base e as transformações
+let infoPersonagemKey = null;
+function getCharacterInfoRect(card) {
+    return rect(card.x + card.w - 22, card.y + 4, 18, 18);
+}
+function abrirTelaPersonagens(modo) {
+    selecaoLuta = modo;
+    infoPersonagemKey = null;
+    charactersScrollY = 0;
+    currentTab = modo === "p2" ? "VILÕES" : "HERÓIS";   // no VERSUS a "aba" diz qual jogador está escolhendo
+    padNav.focus = null;
+    setGameState("characters");
+}
+function voltarDaTelaPersonagens() {
+    const modo = selecaoLuta;
+    if (modo === "p2") { abrirTelaPersonagens("p1"); return; }
+    selecaoLuta = null;
+    infoPersonagemKey = null;
+    setGameState(modo === "solo" ? "stage_map" : modo === "p1" ? "mode_select" : "menu");
+}
+// LUTAR (ou PRÓXIMO no JOGADOR 1 do VERSUS): segue com quem está escolhido
+function avancarSelecaoLuta() {
+    if (selecaoLuta === "p1") { abrirTelaPersonagens("p2"); return; }
+    selecaoLuta = null;
+    infoPersonagemKey = null;
+    startGame();
+}
+function escolherPersonagemNaSelecao(key) {
+    const c = characterDB[key];
+    if (!c) return;
+    const nome = c.name || key;
+    const salvar = (fn) => () => { fn(); saveSelectedCharacters(); };
+    if (gameMode === "coop") {
+        const p1 = selecaoLuta === "p1";
+        showSystemConfirm("SELECIONAR PERSONAGEM", `Deseja selecionar ${nome} para o ${p1 ? "JOGADOR 1" : "JOGADOR 2"}?`, () => {
+            if (p1) selectedCharacter = key; else selectedBoss = key;
+            saveSelectedCharacters();
+            avancarSelecaoLuta();   // escolheu: passa para o JOGADOR 2 / começa a luta
+        }, "SELECIONAR", "CANCELAR");
+        return;
+    }
+    if (currentTab === "HERÓIS") {
+        if (selectedCharacter === key) return;   // já é o escolhido
+        showSystemConfirm("SELECIONAR PERSONAGEM", `Deseja selecionar ${nome} para o herói?`, salvar(() => { selectedCharacter = key; }), "SELECIONAR", "CANCELAR");
+        return;
+    }
+    // aba VILÕES: vilão de verdade pode ser jogado como ANTI-HERÓI ou ser o VILÃO; quem é anti-herói no cadastro só
+    // vira herói pela aba HERÓIS, então aqui só tem VILÃO
+    const opcoes = [];
+    if (c.alignment === "VILÃO") opcoes.push({ label: "ANTI-HERÓI", acao: salvar(() => { selectedCharacter = key; }) });
+    else if (selectedBoss === key) return;
+    opcoes.push({ label: "VILÃO", acao: salvar(() => { selectedBoss = key; }) });
+    opcoes.push({ label: "CANCELAR", cancelar: true });
+    showSystemChoice("SELECIONAR PERSONAGEM", `Deseja selecionar ${nome} para:`, opcoes);
+}
+
 function getCharactersMaxScroll() {
     const rows = Math.ceil(getFilteredCharacters().length / 5);
     const contentBottom = CHARACTERS_GRID_TOP + rows * (UI.GRID_CARD_HEIGHT + 10) - 10;
@@ -484,10 +541,13 @@ function getCharacterCardImage(cItem) {
 // Imagens enviadas (folhas de sprite) usam o 1º quadro, sem esticar. Fica guardado por personagem e tamanho.
 const cardPortraitCache = new Map();
 function getCardPortrait(cItem, w, h) {
-    const src = cItem && (conjRetratoUrl(cItem) || cItem.defaultUrl);
+    return getPortraitFromSrc(cItem && (conjRetratoUrl(cItem) || cItem.defaultUrl), w, h);
+}
+function getPortraitFromSrc(src, w, h) {
     if (!src || !String(src).startsWith("data:image/svg") || typeof document === "undefined") return null;
     const pw = Math.max(1, Math.round(w * renderScale)), ph = Math.max(1, Math.round(h * renderScale));
-    const chave = src.length + ":" + src.slice(-48) + "|" + pw + "x" + ph;
+    const meio = src.length >> 1;   // quadros recortados terminam todos igual (fim do PNG): o meio diferencia
+    const chave = src.length + ":" + src.slice(meio, meio + 40) + src.slice(-48) + "|" + pw + "x" + ph;
     if (cardPortraitCache.has(chave)) return cardPortraitCache.get(chave);
     cardPortraitCache.set(chave, null);
     if (cardPortraitCache.size > 160) cardPortraitCache.delete(cardPortraitCache.keys().next().value);
@@ -542,6 +602,88 @@ function drawCharacterPortrait(cItem, x, y, w, h) {
     } catch (e) { return false; }
     return true;
 }
+// Botão "i" do cartão de personagem
+function drawCharacterInfoButton(r, alvo) {
+    if (alvo) alvo(r.x, r.y, r.w, r.h);
+    const cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+    ctx.save();
+    ctx.fillStyle = "rgba(10, 30, 70, 0.92)";
+    ctx.strokeStyle = "#7dd3fc";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r.w / 2 - 1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#e0f2fe";
+    ctx.font = "bold 12px Georgia, serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("i", cx, cy + 1);
+    ctx.restore();
+}
+
+// Quadro do "i": forma base e todas as transformações lado a lado, cada uma com o nome em cima
+function getCharacterFormsList(key) {
+    const lista = [{ nome: "FORMA BASE", nivel: 0 }];
+    getCharacterTransformations(key).forEach((t, i) => lista.push({ nome: String((t && t.name) || ("TRANSFORMAÇÃO " + (i + 1))).toUpperCase(), nivel: i + 1 }));
+    return lista;
+}
+function drawCharacterFormsPanel(key) {
+    const c = characterDB[key];
+    if (!c) { infoPersonagemKey = null; return; }
+    const formas = getCharacterFormsList(key);
+    const px = 50, py = 52, pw = canvas.width - 100, ph = canvas.height - 72;
+    ctx.save();
+    ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "rgba(6, 18, 44, 0.97)";
+    ctx.fillRect(px, py, pw, ph);
+    ctx.strokeStyle = "#ffd23f";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(px, py, pw, ph);
+    ctx.fillStyle = "#fff0a6";
+    ctx.font = "bold 16px 'Trebuchet MS', sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(c.name || key, canvas.width / 2, py + 24);
+    ctx.fillStyle = "#9fb3d8";
+    ctx.font = "10px monospace";
+    ctx.fillText(`${c.alignment || ""}  ·  ESPECIAL: ${c.special || "-"}`, canvas.width / 2, py + 40);
+    // uma coluna por forma (encolhe quando são muitas)
+    const n = formas.length, gap = 8, colW = Math.min(130, (pw - 24 - gap * (n - 1)) / n);
+    const x0 = canvas.width / 2 - (colW * n + gap * (n - 1)) / 2, topo = py + 56, altura = ph - 66;
+    formas.forEach((f, i) => {
+        const x = x0 + i * (colW + gap);
+        ctx.fillStyle = "rgba(23, 79, 120, 0.35)";
+        ctx.fillRect(x, topo, colW, altura);
+        ctx.strokeStyle = "rgba(125, 211, 252, 0.5)";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x, topo, colW, altura);
+        ctx.fillStyle = f.nivel ? "#ffd23f" : "#e0f2fe";
+        let fonte = 10;
+        ctx.font = `bold ${fonte}px monospace`;
+        while (fonte > 6 && ctx.measureText(f.nome).width > colW - 6) { fonte--; ctx.font = `bold ${fonte}px monospace`; }
+        ctx.fillText(f.nome, x + colW / 2, topo + 14);
+        const frames = getCharacterAnimationFrames(key, "idle", f.nivel);
+        const src = frames && frames[0];
+        const ih = altura - 26, iw = Math.min(colW - 8, ih * 96 / 112);
+        drawFormPortrait(src, c, x + (colW - iw) / 2, topo + 20, iw, ih);
+    });
+    ctx.restore();
+    drawBtnAt(MENU_LAYOUT.characters.infoClose, "✕", "#fca5a5", "bold 14px monospace");
+}
+function drawFormPortrait(src, cItem, x, y, w, h) {
+    if (typeof src !== "string") { if (isDrawableSource(src)) ctx.drawImage(src, x, y, w, h); return; }
+    const retrato = getPortraitFromSrc(src, w, h);
+    if (retrato) { ctx.drawImage(retrato, x, y, w, h); return; }
+    if (src.startsWith("data:image/svg")) return;   // ainda montando o retrato
+    if (!databaseImageCache[src]) { const img = new Image(); img.src = src; databaseImageCache[src] = img; }
+    const img = getCutoutSource(databaseImageCache[src], cItem && cItem.bgRemoval);
+    if (!isDrawableSource(img)) return;
+    const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
+    const k = Math.min(w / iw, h / ih);
+    ctx.drawImage(img, x + (w - iw * k) / 2, y + h - ih * k, iw * k, ih * k);
+}
+
 const DATABASE_COLUMNS = 5;
 const FULLSCREEN_BUTTON = { w: 44, h: 28, margin: 8 };
 
@@ -983,7 +1125,26 @@ function drawBtn(x, y, w, h, text, color = "#00ffff", font = "bold 12px 'Courier
     ctx.textBaseline = "alphabetic";
 }
 
+// O fundo dos menus é parado: desenhado uma vez numa imagem (na resolução real da tela) e só copiado a cada
+// quadro — as ~65 linhas diagonais e os degradês redesenhados todo quadro deixavam os menus lentos no celular.
+const menuBackdropCache = {};
 function drawDragonBallMenuBackdrop(isMenu = false) {
+    const chave = (isMenu ? "m" : "s") + renderScale;
+    let c = menuBackdropCache[chave];
+    if (c === undefined && typeof document !== "undefined" && document.createElement) {
+        c = null;
+        try {
+            const tela = document.createElement("canvas");
+            tela.width = Math.round(canvas.width * renderScale); tela.height = Math.round(canvas.height * renderScale);
+            const g = tela.getContext("2d");
+            if (g && typeof g.scale === "function") { g.scale(renderScale, renderScale); traceMenuBackdrop(g, isMenu); c = tela; }
+        } catch (e) { c = null; }
+        menuBackdropCache[chave] = c;
+    }
+    if (c) { ctx.drawImage(c, 0, 0, canvas.width, canvas.height); return; }
+    traceMenuBackdrop(ctx, isMenu);
+}
+function traceMenuBackdrop(ctx, isMenu) {
     ctx.save();
 
     const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
@@ -2620,7 +2781,7 @@ canvas.addEventListener("touchmove", (e) => {
             if (!player.isCharging) {
                 player.x += dx;
                 player.y += dy;
-                player.x = Math.max(BOUNDS.PLAYER_MIN_X, Math.min(BOUNDS.PLAYER_MAX_X, player.x));
+                player.x = Math.max(BOUNDS.PLAYER_MIN_X, Math.min(getPlayer1MaxX(), player.x));
                 player.y = Math.max(BOUNDS.PLAYER_MIN_Y, Math.min(BOUNDS.PLAYER_MAX_Y_BASE - (player.h - 56), player.y));
             }
             touchMoveX = dx;
@@ -2939,7 +3100,7 @@ function handleMenuClick(x, y) {
 
     if (gameState === "menu") {
         if (hitRect(x, y, MENU_LAYOUT.main.play)) setGameState("mode_select");
-        else if (hitRect(x, y, MENU_LAYOUT.main.characters)) { charactersScrollY = 0; setGameState("characters"); }
+        else if (hitRect(x, y, MENU_LAYOUT.main.characters)) abrirTelaPersonagens(null);
         else if (hitRect(x, y, MENU_LAYOUT.main.stages)) setGameState("stages");
         else if (hitRect(x, y, MENU_LAYOUT.main.options)) {
             optionsReturnState = "menu";
@@ -2960,7 +3121,7 @@ function handleMenuClick(x, y) {
         else if (hitRect(x, y, MENU_LAYOUT.modeSelect.coop)) {
             gameMode = "coop";
             saveSettings();
-            startGame();
+            abrirTelaPersonagens("p1");   // VERSUS: escolha do JOGADOR 1 e depois do JOGADOR 2
         }
         else if (hitRect(x, y, MENU_LAYOUT.back)) setGameState("menu");
     }
@@ -2978,25 +3139,23 @@ function handleMenuClick(x, y) {
         setGameState(gameMode === "singleplayer" ? "stage_map" : "menu");
     }
     else if (gameState === "characters") {
-        let chars = getFilteredCharacters();
-        
-        if (hitRect(x, y, MENU_LAYOUT.characters.tabHeroes)) { currentTab = "HERÓIS"; charactersScrollY = 0; }
-        else if (hitRect(x, y, MENU_LAYOUT.characters.tabVillains)) { currentTab = "VILÕES"; charactersScrollY = 0; }
+        // quadro "i" aberto: qualquer toque fecha (o X também)
+        if (infoPersonagemKey) { infoPersonagemKey = null; padNav.focus = null; return; }
+        const versus = gameMode === "coop" && !!selecaoLuta;
+        if (!versus) {
+            if (hitRect(x, y, MENU_LAYOUT.characters.tabHeroes)) { currentTab = "HERÓIS"; charactersScrollY = 0; }
+            else if (hitRect(x, y, MENU_LAYOUT.characters.tabVillains)) { currentTab = "VILÕES"; charactersScrollY = 0; }
+        }
+        if (selecaoLuta && hitRect(x, y, MENU_LAYOUT.characters.fight)) { avancarSelecaoLuta(); return; }
+        if (hitRect(x, y, MENU_LAYOUT.back)) { voltarDaTelaPersonagens(); return; }
 
-        chars.forEach((key, i) => {
-            if (y >= CHARACTERS_GRID_TOP - 4 && hitRect(x, y, getCharacterCardRect(i))) {
-                const heroi = currentTab === "HERÓIS";
-                if ((heroi ? selectedCharacter : selectedBoss) === key) return;   // já é o escolhido
-                const nome = characterDB[key] && characterDB[key].name ? characterDB[key].name : key;
-                const quem = gameMode === "coop" ? (heroi ? "o JOGADOR 1" : "o JOGADOR 2") : (heroi ? "o herói" : "o vilão");
-                showSystemConfirm("SELECIONAR PERSONAGEM", `Deseja selecionar ${nome} para ${quem}?`, () => {
-                    if (heroi) selectedCharacter = key; else selectedBoss = key;
-                    saveSelectedCharacters();
-                }, "SELECIONAR", "CANCELAR");
-            }
+        getFilteredCharacters().forEach((key, i) => {
+            const card = getCharacterCardRect(i);
+            if (y < CHARACTERS_GRID_TOP - 4 || !hitRect(x, y, card)) return;
+            // PERSONAGENS (menu): só ver — o cartão ou o "i" abrem as formas do personagem
+            if (!selecaoLuta || hitRect(x, y, getCharacterInfoRect(card))) { infoPersonagemKey = key; padNav.focus = null; return; }
+            escolherPersonagemNaSelecao(key);
         });
-
-        if (hitRect(x, y, MENU_LAYOUT.back)) setGameState("menu");
     }
     else if (gameState === "stages") {
         STAGE_PROGRESSION.forEach((stg, i) => {
@@ -3170,19 +3329,19 @@ function handleMenuClick(x, y) {
                 stageMode = "normal";
                 stageChoicePendingId = null;
                 saveSettings();
-                startGame();
+                abrirTelaPersonagens("solo");   // escolhe herói e vilão antes da luta
             } else if (canHard && hitRect(x, y, MENU_LAYOUT.stageMap.hard)) {
                 selectedStage = stageChoicePendingId;
                 stageMode = "hard";
                 stageChoicePendingId = null;
                 saveSettings();
-                startGame();
+                abrirTelaPersonagens("solo");   // escolhe herói e vilão antes da luta
             } else if (canUnlimited && hitRect(x, y, MENU_LAYOUT.stageMap.unlimited)) {
                 selectedStage = stageChoicePendingId;
                 stageMode = "unlimited";
                 stageChoicePendingId = null;
                 saveSettings();
-                startGame();
+                abrirTelaPersonagens("solo");   // escolhe herói e vilão antes da luta
             } else if (hitRect(x, y, MENU_LAYOUT.back)) {
                 stageChoicePendingId = null;   // a seta ← fecha a escolha do modo (como nas outras telas)
                 padNav.focus = null;
@@ -4224,6 +4383,16 @@ function drawStageBackground() {
 }
 
 // ==================== RENDERIZAÇÃO DE ENTIDADES & ITENS ====================
+// Personagem desenhado com sprites recortados (conjunto em uso ou sprite sheet enviado), e não pelo construtor
+function lutadorDeSprites(key) {
+    const c = characterDB[key];
+    if (!c) return false;
+    if (typeof conjGrupoAtivo === "function" && conjGrupoAtivo(c)) return true;
+    return !c.builderAppearance;
+}
+const LADO_TROCADO = { flyRight: "flyLeft", flyLeft: "flyRight", flyUpRight: "flyUpLeft", flyUpLeft: "flyUpRight", flyDownRight: "flyDownLeft", flyDownLeft: "flyDownRight" };
+function trocarLadoDoMovimento(st) { return LADO_TROCADO[st] || st; }
+
 function drawPlayerEntity(p, charData, isBoss = false) {
     ctx.save();
 
@@ -4239,13 +4408,16 @@ function drawPlayerEntity(p, charData, isBoss = false) {
         const auraPalette = AURA_COLORS[auraType] || AURA_COLORS.gelo;
         const auraColor = auraPalette[0] || "#62eaff";
         // sempre um pouco maior que a aura de ki (que cresce ao carregar/transformar: o escudo cresce junto)
-        const forma = p.auraForma;
+        // mede a aura DESENHADA de verdade (normal, forte, da transformação ou qualquer outra maior): o círculo
+        // cobre a aura inteira e passa um pouco dela
+        const forma = p.auraCaixa || p.auraForma;
         const bubbleRadius = forma ? Math.max(forma.rx, forma.ry) + 8 : Math.max(p.w, p.h) * 0.78;
         const bubbleX = forma ? p.x + forma.offX : renderX + p.w / 2;
         const bubbleY = forma ? p.y + forma.offY : renderY + p.h / 2;
 
-        // escudo animado (esfera azul com raios); sem a imagem, a bolha desenhada de sempre
-        const escudo = EFEITOS.escudo_azul, rEsc = bubbleRadius * 1.12;
+        // escudo animado (esfera azul com raios); sem a imagem, a bolha desenhada de sempre.
+        // A esfera ocupa ~91% do quadro da imagem: o quadro é aumentado para a esfera visível ter o raio certo.
+        const escudo = EFEITOS.escudo_azul, rEsc = bubbleRadius / ESCUDO_FRACAO_VISIVEL;
         ctx.save();
         if (efeitoPronto("escudo_azul")) {
             ctx.globalAlpha = 0.95;
@@ -4284,7 +4456,11 @@ function drawPlayerEntity(p, charData, isBoss = false) {
     if (p.movimentoAnim !== animationState || p.nivelAnim !== nivelAnim || !(p.animTimer >= p.movimentoDesde)) {
         p.movimentoAnim = animationState; p.nivelAnim = nivelAnim; p.movimentoDesde = p.animTimer;   // movimento novo: animação do começo
     }
-    const animationFrame = getCharacterAnimationFrame(fallbackKey, animationState, p.animTimer, nivelAnim, p.animTimer - p.movimentoDesde);
+    // vilão feito de sprites (recortados virados para a direita): espelhado para olhar para o herói. Os quadros
+    // de voo trocam de lado junto (andar para a esquerda = voo "para a frente" espelhado).
+    const espelhar = isBoss && lutadorDeSprites(fallbackKey);
+    const estadoQuadro = espelhar ? trocarLadoDoMovimento(animationState) : animationState;
+    const animationFrame = getCharacterAnimationFrame(fallbackKey, estadoQuadro, p.animTimer, nivelAnim, p.animTimer - p.movimentoDesde);
 
     const actionShift = {
         idle: { dx: 0, dy: 0 },
@@ -4322,6 +4498,11 @@ function drawPlayerEntity(p, charData, isBoss = false) {
         artY = feetY - artH * (103 / 112);
     }
     drawKiAura(p, charData, artX + artW / 2, artY + artH * (103 / 112), artW, artH * 0.9);
+    if (espelhar) {
+        const eixo = Math.round((artX + artW / 2) * renderScale) / renderScale;
+        ctx.translate(eixo * 2, 0);
+        ctx.scale(-1, 1);
+    }
     // pixel art feita na resolução REAL da tela (renderScale): bem mais nítida em telas grandes e na TV
     const pixelArt = isDrawableSource(animationFrame) ? getPixelArtSource(animationFrame, artW * renderScale, artH * renderScale) : null;
     // Último desenho deste personagem: se o quadro novo ainda não ficou pronto (1ª vez daquele movimento/tamanho),
@@ -4394,10 +4575,10 @@ const EFEITOS = {
     aura_azul: { n: 3, w: 166, h: 192, ms: 50 },
     aura_amarela: { n: 7, w: 174, h: 192, ms: 40 }, aura_amarela_forte: { n: 3, w: 155, h: 192, ms: 50 },
     aura_vermelha: { n: 4, w: 184, h: 192, ms: 50 }, aura_vermelha_forte: { n: 4, w: 181, h: 192, ms: 50 },
-    aura_roxa: { n: 14, w: 135, h: 192, ms: 80 },
     tiro_laranja: { n: 4, w: 74, h: 48, ms: 50 }, tiro_amarelo: { n: 4, w: 72, h: 48, ms: 80 }, tiro_vermelho: { n: 1, w: 90, h: 48, ms: 80 }
 };
 const efeitoImagens = {};
+const ESCUDO_FRACAO_VISIVEL = 0.91;   // a esfera de escudo_azul.png ocupa 91% do quadro
 if (typeof Image !== "undefined") {
     Object.keys(EFEITOS).forEach(nome => { const im = new Image(); im.src = "efeitos/" + nome + ".png"; efeitoImagens[nome] = im; });
 }
@@ -4419,8 +4600,8 @@ function desenharEfeito(nome, t, dx, dy, dw, dh) {
 // Cor da aura -> animação (normal e forte: carregando ki ou com o poder da transformação)
 const AURA_EFEITOS = {
     verde: ["aura_verde", "aura_verde_forte"], azul: ["aura_azul", "aura_azul"], amarelo: ["aura_amarela", "aura_amarela_forte"],
-    vermelho: ["aura_vermelha", "aura_vermelha_forte"], roxo: ["aura_roxa", "aura_roxa"]
-};
+    vermelho: ["aura_vermelha", "aura_vermelha_forte"]
+};   // roxo (Freeza, Raditz) voltou à labareda desenhada: a animação roxa não ficou boa
 // Cor do tiro -> animação (pelo matiz: vermelho/rosa, laranja, amarelo); outras cores ficam com a bola desenhada
 const tiroEfeitoCache = {};
 function getTiroEfeito(cor) {
@@ -4529,6 +4710,8 @@ function drawKiAura(entity, charData, cx, bottomY, bodyW, bodyH) {
         ctx.globalAlpha *= 0.72 + 0.25 * k;
         desenharEfeito(nomeAnim, gameplayClock + seed, Math.round(cx - dw / 2), Math.round(bottomY + h * 0.08 - dh), Math.round(dw), Math.round(dh));
         ctx.restore();
+        // área que a imagem da aura ocupa na tela (o escudo fica em volta dela)
+        entity.auraCaixa = { offX: cx - entity.x, offY: bottomY + h * 0.08 - dh / 2 - entity.y, rx: dw / 2, ry: dh / 2 };
     } else {
         const img = getKiAuraFrame(pal, Math.floor(entity.kiAuraPhase * KI_AURA_FRAMES) % KI_AURA_FRAMES, seed);
         if (!img || !img.width) return;
@@ -4540,6 +4723,7 @@ function drawKiAura(entity, charData, cx, bottomY, bodyW, bodyH) {
     }
     // forma visível da aura (relativa à caixa do lutador): o escudo da cápsula e o alcance do parry ficam em volta dela
     entity.auraForma = { offX: cx - entity.x, offY: bottomY - h * 0.52 - entity.y, rx: w * 0.95, ry: h * 0.58 };
+    if (!(nomeAnim && efeitoPronto(nomeAnim))) entity.auraCaixa = entity.auraForma;
     if (nivel > 0) drawKiLightning(entity, cx, bottomY, w, h, transformed);
 }
 
@@ -5838,12 +6022,21 @@ function render() {
         ctx.fillStyle = "#fff0a6";
         ctx.font = "bold 18px 'Trebuchet MS', sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText("SELEÇÃO DE PERSONAGEM", canvas.width / 2, 25);
+        // menu: PERSONAGENS (só ver, com o "i"); antes da luta: SELEÇÃO DE PERSONAGEM (no VERSUS, um jogador por vez)
+        const versus = gameMode === "coop" && !!selecaoLuta;
+        const info = !!infoPersonagemKey;
+        const alvo = info ? () => {} : registerMenuTarget;   // com o quadro "i" aberto só ele recebe o controle
+        ctx.fillText(!selecaoLuta ? "PERSONAGENS" : versus ? `SELEÇÃO DE PERSONAGEM — ${selecaoLuta === "p1" ? "JOGADOR 1" : "JOGADOR 2"}` : "SELEÇÃO DE PERSONAGEM", canvas.width / 2, 25);
 
-        // VERSUS: cada jogador escolhe qualquer personagem (as abas viram JOGADOR 1 / JOGADOR 2, com a lista inteira)
-        const versus = gameMode === "coop";
-        drawBtnAt(MENU_LAYOUT.characters.tabHeroes, versus ? "JOGADOR 1" : "HERÓIS", currentTab === "HERÓIS" ? "#ffff00" : "#00ffff");
-        drawBtnAt(MENU_LAYOUT.characters.tabVillains, versus ? "JOGADOR 2" : "VILÕES", currentTab === "VILÕES" ? "#ffff00" : "#00ffff");
+        if (versus) {
+            ctx.fillStyle = selecaoLuta === "p1" ? "#7dd3fc" : "#fca5a5";
+            ctx.font = "bold 12px monospace";
+            ctx.fillText(selecaoLuta === "p1" ? "JOGADOR 1: ESCOLHA SEU LUTADOR" : "JOGADOR 2: ESCOLHA SEU LUTADOR", canvas.width / 2, 62);
+        } else {
+            if (!info) { drawBtnAt(MENU_LAYOUT.characters.tabHeroes, "HERÓIS", currentTab === "HERÓIS" ? "#ffff00" : "#00ffff");
+                drawBtnAt(MENU_LAYOUT.characters.tabVillains, "VILÕES", currentTab === "VILÕES" ? "#ffff00" : "#00ffff"); }
+        }
+        if (selecaoLuta && !info) drawBtnAt(MENU_LAYOUT.characters.fight, selecaoLuta === "p1" ? "PRÓXIMO ▶" : "LUTAR!", "#ffd23f");
 
         let chars = getFilteredCharacters();
         setCharactersScroll(charactersScrollY);   // mantém dentro do limite (ex.: depois de apagar personagens)
@@ -5854,11 +6047,11 @@ function render() {
         chars.forEach((key, i) => {
             const card = getCharacterCardRect(i), cx = card.x, cy = card.y;
             // fora da área visível: só registra o alvo (o controle consegue ir até ele e a lista rola sozinha)
-            if (cy + card.h < CHARACTERS_GRID_TOP - 6 || cy > canvas.height) { registerMenuTarget(cx, cy, card.w, card.h); return; }
+            if (cy + card.h < CHARACTERS_GRID_TOP - 6 || cy > canvas.height) { alvo(cx, cy, card.w, card.h); return; }
 
-            let isSel = (currentTab === "HERÓIS" && selectedCharacter === key) || (currentTab === "VILÕES" && selectedBoss === key);
+            let isSel = !!selecaoLuta && ((currentTab === "HERÓIS" && selectedCharacter === key) || (currentTab === "VILÕES" && selectedBoss === key));
 
-            registerMenuTarget(cx, cy, UI.GRID_CARD_WIDTH, UI.GRID_CARD_HEIGHT);
+            alvo(cx, cy, UI.GRID_CARD_WIDTH, UI.GRID_CARD_HEIGHT);
             const pressed = beginButtonPress(cx, cy, UI.GRID_CARD_WIDTH, UI.GRID_CARD_HEIGHT);
             ctx.fillStyle = isSel ? "#174f78" : "rgba(6, 23, 52, 0.9)";
             ctx.fillRect(cx, cy, UI.GRID_CARD_WIDTH, UI.GRID_CARD_HEIGHT);
@@ -5879,6 +6072,7 @@ function render() {
             ctx.textAlign = "center";
             ctx.fillText(cItem ? cItem.name : key, cx + UI.GRID_CARD_WIDTH / 2, cy + 82);
             endButtonPress(pressed);
+            drawCharacterInfoButton(getCharacterInfoRect(card), alvo);
         });
         ctx.restore();
 
@@ -5894,7 +6088,8 @@ function render() {
             ctx.fillRect(canvas.width - 14, thumbY, 5, thumbH);
         }
 
-        drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
+        if (info) drawCharacterFormsPanel(infoPersonagemKey);
+        else drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
     }
     else if (gameState === "stages") {
         prepareNextStageCardThumb();   // antes do fundo: a foto da fase é tirada desenhando o cenário dela

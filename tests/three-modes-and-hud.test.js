@@ -102,7 +102,7 @@ check("DIFÍCIL e SEM LIMITE aparecem marcados como bloqueados quando ainda não
 
 // clicar no NORMAL sempre funciona
 run("handleMenuClick(400 - 270 + 85, 140 + 30)");
-check("clicar em NORMAL funciona e começa a partida nesse modo", run("stageMode") === "normal" && run("gameState") === "playing");
+check("clicar em NORMAL funciona e abre a seleção de personagem (0.81) nesse modo", run("stageMode") === "normal" && run("gameState") === "characters" && run("selecaoLuta") === "solo");
 
 // clicar onde o DIFÍCIL estaria, enquanto bloqueado, não faz nada (continua no overlay)
 run("stageProgress = {}; setGameState('stage_map'); handleMenuClick(getStageMapNodes()[0].x, getStageMapNodes()[0].y)");
