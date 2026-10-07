@@ -561,10 +561,12 @@ function stepSaibamanMotion(s, dt) {
     } else if (s.phase === "arremessado") {
         // jogado para trás girando; depois volta a voar (e a investir de novo se passar perto do herói)
         s.x += s.vx * f;
-        s.vx *= Math.pow(0.9, f);
+        s.vx *= Math.pow(s.lancadoParry ? 0.985 : 0.9, f);
         s.y += s.vy * f;
-        s.vy += SAIBAMAN_GRAVITY * 0.6 * f;
-        if (s.phaseTime >= SAIBAMAN_THROWN_FRAMES) { s.phase = "voar"; s.phaseTime = 0; s.vy = 0; }
+        s.vy += SAIBAMAN_GRAVITY * (s.lancadoParry ? 0.08 : 0.6) * f;
+        if (s.phaseTime >= (s.lancadoParry ? SAIBAMAN_PARRY_THROWN_FRAMES : SAIBAMAN_THROWN_FRAMES)) {
+            s.phase = "voar"; s.phaseTime = 0; s.vy = 0; s.lancadoParry = false;
+        }
     } else if (s.phase === "voar") {
         s.x -= s.speed * f;
         s.hoverTime += 0.05 * f;
@@ -574,11 +576,16 @@ function stepSaibamanMotion(s, dt) {
 }
 
 // Herói deu parry ou carregou o ki com o Saibaman agarrado: ele é arremessado para trás e solta.
-function throwSaibaman(s) {
+// forte (parry): lançado com força e quase reto para a frente, voando por mais tempo — atravessa a arena até o
+// vilão (gameplay.js faz ele explodir lá).
+const SAIBAMAN_PARRY_THROW_SPEED = 15;
+const SAIBAMAN_PARRY_THROWN_FRAMES = 70;
+function throwSaibaman(s, forte) {
     s.phase = "arremessado";
     s.phaseTime = 0;
-    s.vx = SAIBAMAN_THROW_SPEED;
-    s.vy = -4;
+    s.lancadoParry = !!forte;
+    s.vx = forte ? SAIBAMAN_PARRY_THROW_SPEED : SAIBAMAN_THROW_SPEED;
+    s.vy = forte ? -0.6 : -4;
     return s;
 }
 

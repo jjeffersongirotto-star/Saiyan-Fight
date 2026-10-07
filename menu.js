@@ -22,7 +22,8 @@ const MENU_LAYOUT = {
     paused: { resume: rect(300, 110, 200, 35), options: rect(300, 160, 200, 35), exit: rect(300, 210, 200, 35) },
     characters: { tabHeroes: rect(250, 45, 140, 25), tabVillains: rect(410, 45, 140, 25), fight: rect(620, 45, 140, 25),
         infoClose: rect(706, 58, 30, 26) },
-    optionsMain: { controls: rect(220, 125, 360, 42), audio: rect(220, 180, 360, 42), cast: rect(220, 235, 360, 42) },
+    optionsMain: { controls: rect(220, 110, 360, 42), audio: rect(220, 162, 360, 42), cast: rect(220, 214, 360, 42), language: rect(220, 266, 360, 42) },
+    optionsLanguage: [rect(250, 112, 300, 42), rect(250, 164, 300, 42), rect(250, 216, 300, 42)],   // PORTUGUÊS / ENGLISH / ESPAÑOL
     optionsControls: {
         pc: rect(180, 120, 220, 42), touch: rect(420, 120, 220, 42), gamepad: rect(180, 172, 220, 42), test: rect(420, 172, 220, 42),
         // chaves de modo de entrada (só uma ligada): área de toque em volta de cada chave, centro em cx
@@ -546,11 +547,18 @@ function getCardPortrait(cItem, w, h) {
 function getPortraitFromSrc(src, w, h) {
     if (!src || !String(src).startsWith("data:image/svg") || typeof document === "undefined") return null;
     const pw = Math.max(1, Math.round(w * renderScale)), ph = Math.max(1, Math.round(h * renderScale));
-    const meio = src.length >> 1;   // quadros recortados terminam todos igual (fim do PNG): o meio diferencia
-    const chave = src.length + ":" + src.slice(meio, meio + 40) + src.slice(-48) + "|" + pw + "x" + ph;
-    if (cardPortraitCache.has(chave)) return cardPortraitCache.get(chave);
-    cardPortraitCache.set(chave, null);
-    if (cardPortraitCache.size > 160) cardPortraitCache.delete(cardPortraitCache.keys().next().value);
+    // guardado pelo desenho INTEIRO (e depois pelo tamanho): formas que só trocam de cor (Golden/Black Freeza x
+    // forma final) têm o mesmo tamanho de texto e quase tudo igual — uma chave com só um pedaço do texto
+    // confundia as três e mostrava a forma final no lugar das outras. O Map acha a string sem copiá-la.
+    let porTamanho = cardPortraitCache.get(src);
+    if (!porTamanho) {
+        porTamanho = new Map();
+        cardPortraitCache.set(src, porTamanho);
+        if (cardPortraitCache.size > 160) cardPortraitCache.delete(cardPortraitCache.keys().next().value);
+    }
+    const chave = pw + "x" + ph;
+    if (porTamanho.has(chave)) return porTamanho.get(chave);
+    porTamanho.set(chave, null);
     // desenha 2x maior que o espaço (para ainda caber depois de cortar as bordas vazias) e com bordas suaves
     const escalaDesenho = 2.2;
     const larguraSvg = Math.round(ph * escalaDesenho * (96 / 112)), alturaSvg = Math.round(ph * escalaDesenho);
@@ -569,7 +577,7 @@ function getPortraitFromSrc(src, w, h) {
             for (let y = 0; y < alturaSvg; y++) for (let x = 0; x < larguraSvg; x++) {
                 if (d[(y * larguraSvg + x) * 4 + 3] > 24) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
             }
-            if (x1 < 0) { cardPortraitCache.set(chave, c); return; }
+            if (x1 < 0) { porTamanho.set(chave, c); return; }
             const cw = x1 - x0 + 1, ch = y1 - y0 + 1, k = Math.min(pw / cw, ph / ch);
             const out = document.createElement("canvas");
             out.width = pw; out.height = ph;
@@ -578,8 +586,8 @@ function getPortraitFromSrc(src, w, h) {
             if ("imageSmoothingQuality" in o) o.imageSmoothingQuality = "high";
             const dw = cw * k, dh = ch * k;
             o.drawImage(c, x0, y0, cw, ch, (pw - dw) / 2, ph - dh, dw, dh);   // pés embaixo, centralizado
-            cardPortraitCache.set(chave, out);
-        } catch (e) { cardPortraitCache.delete(chave); }
+            porTamanho.set(chave, out);
+        } catch (e) { porTamanho.delete(chave); }
     };
     img.src = liso;
     return null;
@@ -1115,6 +1123,12 @@ function drawBtn(x, y, w, h, text, color = "#00ffff", font = "bold 12px 'Courier
 
     ctx.fillStyle = color;
     ctx.font = font;
+    // texto maior que o botão (inglês/espanhol costumam ser mais longos): a letra diminui até caber
+    const tamFonte = /(\d+(?:\.\d+)?)px/.exec(font);
+    if (tamFonte) {
+        let px = +tamFonte[1];
+        while (px > 7 && ctx.measureText(text).width > w - 10) { px -= 0.5; ctx.font = font.replace(tamFonte[0], px + "px"); }
+    }
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(text, x + w / 2, y + h / 2 + 1);
@@ -2272,15 +2286,15 @@ function pollGamepads(dt) {
 
 // TRANSMITIR PARA A TV — ajuda: como espelhar a tela do jogo numa TV pelo próprio aparelho.
 function ajudaTransmitirTV(motivo) {
-    showSystemAlert("TRANSMITIR PARA A TV",
-        (motivo ? "MOTIVO: " + motivo + "\n\n" : "") +
-        "Espelhe a tela pelo aparelho (coloque o jogo em TELA CHEIA antes):\n" +
-        "• Android: o menu do Chrome não tem 'Transmitir' no celular. Puxe as configurações rápidas (deslize do topo duas vezes) " +
-        "e toque em 'Transmitir' (Xiaomi), 'Smart View' (Samsung) ou 'Transmitir tela' / 'Espelhamento de tela' (outros). " +
-        "Se não aparecer, toque no lápis e adicione esse atalho.\n" +
-        "• iPhone/iPad: Central de Controle > 'Espelhamento de Tela' (Apple TV/AirPlay).\n" +
-        "• PC (Chrome/Edge): menu ⋮ > 'Transmitir...' e escolha a TV.\n" +
-        "O jogo continua no seu aparelho e a TV mostra a mesma tela.");
+    // cada parágrafo passa pela tradução (idiomas.js) separado
+    const ajuda = [
+        "Espelhe a tela pelo aparelho (coloque o jogo em TELA CHEIA antes):",
+        "• Android: o menu do Chrome não tem 'Transmitir' no celular. Puxe as configurações rápidas (deslize do topo duas vezes) e toque em 'Transmitir' (Xiaomi), 'Smart View' (Samsung) ou 'Transmitir tela' / 'Espelhamento de tela' (outros). Se não aparecer, toque no lápis e adicione esse atalho.",
+        "• iPhone/iPad: Central de Controle > 'Espelhamento de Tela' (Apple TV/AirPlay).",
+        "• PC (Chrome/Edge): menu ⋮ > 'Transmitir...' e escolha a TV.",
+        "O jogo continua no seu aparelho e a TV mostra a mesma tela."
+    ].map(t => T(t)).join("\n");
+    showSystemAlert("TRANSMITIR PARA A TV", (motivo ? T("MOTIVO: " + motivo) + "\n\n" : "") + ajuda);
 }
 // Onde o navegador permite (Chrome com Chromecast/Google TV), o botão abre a lista de TVs do próprio navegador
 // e a TV abre tv.html, que recebe AO VIVO a imagem deste canvas (vídeo por WebRTC; a combinação da conexão vai
@@ -3177,6 +3191,7 @@ function handleMenuClick(x, y) {
         if (hitRect(x, y, MENU_LAYOUT.optionsMain.controls)) setGameState("options_controls");
         else if (hitRect(x, y, MENU_LAYOUT.optionsMain.audio)) setGameState("options_audio");
         else if (hitRect(x, y, MENU_LAYOUT.optionsMain.cast)) transmitirParaTV();
+        else if (hitRect(x, y, MENU_LAYOUT.optionsMain.language)) setGameState("options_language");
         else if (hitRect(x, y, MENU_LAYOUT.back)) setGameState(optionsReturnState);
     }
     else if (gameState === "options_controls") {
@@ -3278,6 +3293,12 @@ function handleMenuClick(x, y) {
             saveControls();
         }
         else handleHudEditorBarClick(x, y);
+    }
+    else if (gameState === "options_language") {
+        IDIOMAS_DISPONIVEIS.forEach((idi, i) => {
+            if (hitRect(x, y, MENU_LAYOUT.optionsLanguage[i])) trocarIdioma(idi.id);
+        });
+        if (hitRect(x, y, MENU_LAYOUT.back)) setGameState("options_main");
     }
     else if (gameState === "options_audio") {
         if (hitRect(x, y, MENU_LAYOUT.optionsAudio.sfxMinus)) { sfxVolume = Math.max(0, sfxVolume - 0.1); saveAudioSettings(); }
@@ -6184,7 +6205,18 @@ function render() {
         drawBtnAt(MENU_LAYOUT.optionsMain.controls, "CONTROLES", "#7dd3fc");
         drawBtnAt(MENU_LAYOUT.optionsMain.audio, "CONFIGURAÇÃO DE ÁUDIO", "#c4b5fd");
         drawBtnAt(MENU_LAYOUT.optionsMain.cast, transmissaoTV ? "PARAR TRANSMISSÃO PARA A TV" : "TRANSMITIR PARA A TV", transmissaoTV ? "#fca5a5" : "#86efac");
+        drawBtnAt(MENU_LAYOUT.optionsMain.language, "IDIOMAS", "#fde68a");
 
+        drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
+    }
+    else if (gameState === "options_language") {
+        drawDragonBallMenuBackdrop(false);
+        drawDragonBallPanel(200, 30, 400, 250, "IDIOMAS", "ESCOLHA O IDIOMA DO JOGO");
+        // nomes de cada idioma escritos nele mesmo (não passam pela tradução)
+        IDIOMAS_DISPONIVEIS.forEach((idi, i) => {
+            const atual = idiomaAtual === idi.id;
+            drawBtnAt(MENU_LAYOUT.optionsLanguage[i], (atual ? "✓ " : "") + idi.nome, atual ? "#ffd23f" : "#7dd3fc");
+        });
         drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
     }
     else if (gameState === "options_controls") {
@@ -6387,7 +6419,7 @@ function render() {
                 ctx.fillStyle = isSel ? "#ffff00" : "#cbd5e1";
                 ctx.font = "bold 8px monospace";
                 ctx.textAlign = "left";
-                ctx.fillText(stg.name.slice(0, 12), px + 30, py + 18, 50);
+                ctx.fillText(T(stg.name).slice(0, 12), px + 30, py + 18, 50);
                 endButtonPress(pressed);
             });
 

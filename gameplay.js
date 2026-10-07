@@ -1114,6 +1114,27 @@ function explodeSaibaman(s) {
     }
 }
 
+// Explosão do Saibaman sem machucar o herói (morto pelo especial ou ao bater no vilão)
+function explosaoDeSaibaman(s) {
+    const cx = s.x + s.w / 2, cy = s.y + s.h / 2;
+    world.blasts.push({ x: cx, y: cy, r: 6, maxR: 46, life: 1 });
+    createImpactParticles(cx, cy, "#ffd34d", 14);
+    createImpactParticles(cx, cy, "#7dff5a", 6);
+    triggerScreenShake(5, 10);
+    playSound("hit");
+    score += 1;
+    bumpStat("saibamansDefeated", 1);
+}
+
+function destruirSaibamansAgarrados() {
+    for (let i = world.saibamans.length - 1; i >= 0; i--) {
+        const s = world.saibamans[i];
+        if (s.phase !== "agarrar") continue;
+        world.saibamans.splice(i, 1);
+        explosaoDeSaibaman(s);
+    }
+}
+
 function spawnPickup() {
     if (world.pickups.length >= 2) return;
 
@@ -1325,6 +1346,8 @@ function triggerSpecialAttack(isP2 = false) {
 
     const casterChar = characterDB[isP2 ? selectedBoss : selectedCharacter];
     world.currentBeamType = casterChar ? (casterChar.special || "KAMEHAMEHA") : "KAMEHAMEHA";
+    // o poder do especial destrói o Saibaman/Cell Jr. agarrado nas pernas (sem tirar vida do herói)
+    if (!isP2) destruirSaibamansAgarrados();
 
     playSound("super");
     triggerScreenShake(12, 30);
@@ -1786,8 +1809,9 @@ function update(dt) {
             s.x = player.x + s.grabOffsetX;
             s.y = player.y + s.grabOffsetY;
             if (player.isCharging || player.parryHighlightTimer > 0) {
-                // parry ou carregar o ki joga o Saibaman para trás; ele solta e pode ser destruído antes de voltar
-                throwSaibaman(s);
+                // carregar o ki joga o Saibaman para trás; ele solta e pode ser destruído antes de voltar.
+                // PARRY joga com força para a frente: se acertar o vilão, explode nele (ver abaixo)
+                throwSaibaman(s, player.parryHighlightTimer > 0);
                 continue;
             }
             s.grabTimer -= dt * 60;
@@ -1808,6 +1832,20 @@ function update(dt) {
             s.phaseTime = 0;
         } else {
             stepSaibamanMotion(s, dt);
+        }
+
+        // lançado pelo parry: bateu no vilão, explode nele e tira 1 de vida
+        if (s.phase === "arremessado" && s.lancadoParry && !player2.isDying && player2.x < canvas.width &&
+            rectsOverlap(getHitboxRect(s), getHitboxRect(player2))) {
+            world.saibamans.splice(i, 1);
+            explosaoDeSaibaman(s);
+            player2.hp -= 1;
+            player2.hitTimer = 15;
+            if (player2.hp <= 0) {
+                score += 5;
+                handleStageModeProgression();
+            }
+            continue;
         }
 
         if (isSaibamanActive(s) && s.phase !== "arremessado" && podeAgarrar &&

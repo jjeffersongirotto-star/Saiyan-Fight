@@ -36,6 +36,7 @@ const canvas = new Proxy(canvasEl, {
     }
 });
 const ctx = canvasEl.getContext("2d");
+instalarTraducaoNoCanvas(ctx);   // textos do canvas no idioma escolhido (idiomas.js)
 let renderScale = 1;   // pixels reais por pixel do jogo
 const RENDER_SCALE_MAX = 2;
 let renderScaleTeto = RENDER_SCALE_MAX;   // baixa sozinho se o aparelho não aguentar 60 FPS (vigiarDesempenho, menu.js)
