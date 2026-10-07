@@ -666,6 +666,35 @@ function getLoopFrameIndex(tick, length, lockFrom) {
     return lockFrom + (t - length) % (length - lockFrom);
 }
 
+// ==================== MAPA DE PROGRESSO (fases em linha) ====================
+// Caminho único e longo, rolando na horizontal: fase i (0 = primeira) fica em getMapaPosicaoFase(i), em
+// coordenadas do mapa (x cresce para a direita; a tela mostra MAPA_TELA_W de largura). Cada trecho de
+// MAPA_FASES_POR_TRECHO fases tem um ambiente. MAPA_TOTAL_FASES = fases existentes + futuras (com cadeado):
+// para ter mais, é só aumentar o número.
+const MAPA_TOTAL_FASES = 60;
+const MAPA_FASES_POR_TRECHO = 10;
+const MAPA_PASSO_X = 130;
+const MAPA_MARGEM_X = 90;
+const MAPA_TELA_W = 800;
+function getMapaPosicaoFase(i) {
+    // sobe e desce em ondas irregulares (duas senoides), nunca colando em cima do título nem embaixo
+    const y = 196 + Math.sin(i * 1.15) * 46 + Math.sin(i * 0.43 + 1) * 18;
+    return { x: MAPA_MARGEM_X + i * MAPA_PASSO_X, y: Math.round(y) };
+}
+function getMapaTrecho(i) {
+    return Math.floor(Math.max(0, i) / MAPA_FASES_POR_TRECHO);
+}
+function getMapaLargura(total) {
+    return MAPA_MARGEM_X * 2 + (Math.max(1, total || MAPA_TOTAL_FASES) - 1) * MAPA_PASSO_X;
+}
+function limitarRolagemMapa(rolagem, total) {
+    return Math.max(0, Math.min(getMapaLargura(total) - MAPA_TELA_W, rolagem || 0));
+}
+// rolagem que deixa a fase i no meio da tela
+function rolagemParaFase(i, total) {
+    return limitarRolagemMapa(getMapaPosicaoFase(i).x - MAPA_TELA_W / 2, total);
+}
+
 // Altura do personagem (cm, campo ALTURA do editor) -> escala do lutador na luta. 175 cm (Goku) = tamanho de
 // sempre; limitado para ninguém ocupar a arena demais nem ficar minúsculo (proporções sempre iguais: a escala
 // vale para largura e altura).
@@ -799,6 +828,13 @@ if (typeof module !== "undefined" && module.exports) {
         VILAO_PATRULHA,
         escalaDaAltura,
         normalizarAltura,
+        MAPA_TOTAL_FASES,
+        MAPA_FASES_POR_TRECHO,
+        getMapaPosicaoFase,
+        getMapaTrecho,
+        getMapaLargura,
+        limitarRolagemMapa,
+        rolagemParaFase,
         ALTURA_PADRAO_CM,
         ESCALA_ALTURA_MIN,
         ESCALA_ALTURA_MAX

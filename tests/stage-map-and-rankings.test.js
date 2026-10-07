@@ -78,12 +78,11 @@ check("fase liberada mas com normal ainda não completo também mostra a escolha
 run("handleMenuClick(400 - 270 + 85, 140 + 30)"); // botão NORMAL
 check("e o NORMAL sempre funciona nela", run("selectedStage") === nodes[4].id && run("stageMode") === "normal" && run("gameState") === "characters" && run("selecaoLuta") === "solo");
 
-// ---------- conectores pontilhados: acendem só até onde está liberado ----------
+// ---------- estrada entre as fases (0.84: mapa de progresso; acende só até onde está liberado) ----------
 run(`stageProgress = ${JSON.stringify({ terra: { normalDone: true }, kaio: { normalDone: true } })}; setGameState('stage_map')`); // libera até namek (índice 2)
 h.calls.length = 0;
 run("render()");
-const dashedCalls = h.calls.filter(c => c[0] === "setLineDash");
-check("existem traços pontilhados desenhados entre as fases", dashedCalls.length >= 7);
+check("a estrada liga as fases (curvas)", h.calls.filter(c => c[0] === "bezierCurveTo").length >= 7);
 
 // ---------- tela de Ranking: geral x por fase ----------
 run("setGameState('ranking'); rankingViewMode = 'geral'");

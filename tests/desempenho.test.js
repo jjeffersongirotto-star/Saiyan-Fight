@@ -46,14 +46,14 @@ check("a luta segue sem erro", run("gameState") === "playing");
 
 // ---------- primeiro segundo da luta: tudo é preparado ainda nos menus ----------
 run(`gameState = "characters"; selectedCharacter = "gohan"; selectedBoss = "piccolo"; runBackgroundWork(0);`);
-check("nos menus, o jogo já começa a preparar os lutadores escolhidos", run("backgroundWork.warmedFor") === "gohan|piccolo" && run("backgroundWork.frames.length + backgroundWork.images.length") > 0);
+check("nos menus, o jogo já começa a preparar os lutadores escolhidos", String(run("backgroundWork.warmedFor")).startsWith("gohan|piccolo|") && run("backgroundWork.frames.length + backgroundWork.images.length") > 0);
 check("a preparação inclui os quadros da aura", run("backgroundWork.light.length") > 0 || run("kiAuraCache.size") > 0);
 run("terminarFila();");
 run("startGame();");
 check("com tudo pronto, começar a luta não prepara nada de novo", run("backgroundWork.frames.length + backgroundWork.images.length + backgroundWork.light.length") === 0);
 check("tamanho usado na preparação é o mesmo da luta", (() => { h.step(2); const s = run("getFighterBoxSize(selectedCharacter)"); return s[0] === run("player.w") && s[1] === run("player.h"); })());
 run(`gameState = "characters"; selectedCharacter = "vegeta"; runBackgroundWork(0);`);
-check("trocar de personagem no menu prepara o novo", run("backgroundWork.warmedFor") === "vegeta|piccolo");
+check("trocar de personagem no menu prepara o novo", String(run("backgroundWork.warmedFor")).startsWith("vegeta|piccolo|"));
 const audio = require("fs").readFileSync(__dirname + "/../audio.js", "utf8");
 check("o som é ligado no primeiro toque (não no começo da luta)", audio.includes("AUDIO_UNLOCK_EVENTS") && audio.includes("ligarAudio"));
 

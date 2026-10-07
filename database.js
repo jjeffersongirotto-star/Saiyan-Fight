@@ -540,6 +540,7 @@ function saveSelectedCharacters() {
 
 // ==================== GERENCIAMENTO DE ESTADO ====================
 function setGameState(newState) {
+    if (newState === "stage_map" && gameState !== "stage_map" && typeof mapaRolagem !== "undefined") mapaRolagem = null;   // reabre centralizado na fase atual
     gameState = newState;
     if (newState === "playing") startBGM();
     else stopBGM();
