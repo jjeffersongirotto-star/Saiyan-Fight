@@ -238,7 +238,9 @@ function revealPadFocusInCharacters() {
     padNav.focus.y -= charactersScrollY - before;
 }
 function getStageCardRect(i) {
-    return rect(30 + (i % 6) * 124, 70 + Math.floor(i / 6) * 106, STAGE_CARD_W, STAGE_CARD_H);   // 6 por fileira
+    // 6 por fileira; com arenas criadas (3 fileiras) os cards ficam mais baixos para caber
+    if (STAGE_PROGRESSION.length > 12) return rect(30 + (i % 6) * 124, 62 + Math.floor(i / 6) * 94, STAGE_CARD_W, 86);
+    return rect(30 + (i % 6) * 124, 70 + Math.floor(i / 6) * 106, STAGE_CARD_W, STAGE_CARD_H);
 }
 function getPcKeyRect(idx) {
     return rect(idx % 2 === 0 ? 280 : 560, PC_KEY_ROW_Y0 + Math.floor(idx / 2) * PC_KEY_ROW_STEP, 110, 24);
@@ -253,8 +255,11 @@ function textoLinhaRanking(idx, rk) {
     return `${idx + 1}. SCORE: ${rk.score}  -  TEMPO: ${tempo}  -  GOLPES: ${golpes}  -  ${rk.date}`;
 }
 function getRankingStageTabRect(i) {
+    if (STAGE_PROGRESSION.length > 12) return rect(40 + (i % 6) * 122, 80 + Math.floor(i / 6) * 25, 116, 22);   // 3 fileiras (arenas criadas)
     return rect(40 + (i % 6) * 122, 84 + Math.floor(i / 6) * 30, 116, 26);   // 6 por fileira (cabem 12 fases em 2 fileiras)
 }
+// com 3 fileiras de abas, o nome da fase e a lista descem um pouco
+function getRankingFaseDesvio() { return STAGE_PROGRESSION.length > 12 ? 12 : 0; }
 // TRILHAS SONORAS: uma linha por fase (duas colunas de 4), com o botão TOCAR/PAUSAR à direita.
 function getTrackRowRect(i) {
     return rect(86 + Math.floor(i / 6) * 322, 90 + (i % 6) * 38, 306, 35);   // 2 colunas de 6 (uma por fase)
@@ -1642,7 +1647,7 @@ function drawMenuEsfera(alvosAntes) {
         drawBtnAt(it.apelido, "APELIDO", "#fff0a6", "bold 10px 'Segoe UI', sans-serif");
     }
     drawBtnAt(it.editorPersonagens, "EDITOR DE PERSONAGENS", "#fff0a6", "bold 11px 'Segoe UI', sans-serif");
-    drawBtnDesabilitado(it.editorArenas, "EDITOR DE ARENAS (EM BREVE)");
+    drawBtnAt(it.editorArenas, "EDITOR DE ARENAS", "#fff0a6", "bold 11px 'Segoe UI', sans-serif");
     drawBtnAt(it.updates, "UPDATES", "#fbbf24", "bold 11px 'Segoe UI', sans-serif");
 }
 // APELIDO: pergunta numa janela (o canvas não tem campo de texto)
@@ -1806,7 +1811,8 @@ function editorPadReset() {
 }
 
 function getEditorFocusables() {
-    const root = document.getElementById("modal-editor");
+    // editor de personagem ou EDITOR DE ARENAS (o que estiver aberto)
+    const root = document.getElementById(isDomModalOpen("modal-arena") ? "modal-arena" : "modal-editor");
     if (!root || !root.querySelectorAll) return [];
     return Array.from(root.querySelectorAll(EDITOR_FOCUS_SELECTOR)).filter(el => {
         const r = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
@@ -1922,9 +1928,19 @@ function pollEditorGamepad(dt, intents, padConnected) {
         else if (editorPad.adjusting && el) {
             editorPad.adjusting = false;
             if (el.classList) el.classList.remove("pad-adjust");
+        } else if (isDomModalOpen("modal-arena")) {
+            fecharEditorArenas();
         } else {
             closeModal();
         }
+    }
+    if (isDomModalOpen("modal-arena")) {   // EDITOR DE ARENAS: L1/R1 trocam a aba de peças, OPTIONS salva
+        const abas = ARENA_ABAS.map(a => a[0]), i = Math.max(0, abas.indexOf(arenaEd ? arenaEd.aba : abas[0]));
+        if (edge("l1")) { arenaMostrarAba(abas[(i + abas.length - 1) % abas.length]); setEditorPadFocus(null); }
+        if (edge("r1")) { arenaMostrarAba(abas[(i + 1) % abas.length]); setEditorPadFocus(null); }
+        if (edge("pause") && !typing) salvarArenaDoEditor();
+        editorPad.prev = now;
+        return;
     }
     if (edge("l1")) {
         const i = EDITOR_TAB_ORDER.indexOf(currentEditorTab);
@@ -2536,7 +2552,7 @@ function pollGamepadMenu(dt) {
     // Janelas HTML (avisos, confirmações, UPDATES, editor) ficam por cima do canvas: o foco do canvas fica parado.
     // Aviso/confirmação: CRUZ = 1º botão (OK/CONFIRMAR), BOLA = último (CANCELAR, ou OK se só houver um).
     // UPDATES: CRUZ ou BOLA fecham. Editor de personagem: ver pollEditorGamepad.
-    const alertOpen = isDomModalOpen("modal-alert"), updatesOpen = isDomModalOpen("modal-updates"), editorOpen = isDomModalOpen("modal-editor");
+    const alertOpen = isDomModalOpen("modal-alert"), updatesOpen = isDomModalOpen("modal-updates"), editorOpen = isDomModalOpen("modal-editor") || isDomModalOpen("modal-arena");
     if (alertOpen || updatesOpen || editorOpen) {
         const confirm = any("confirm"), back = any("back");
         if (alertOpen || updatesOpen) {
@@ -2616,7 +2632,7 @@ function pollGamepadMenu(dt) {
 
 function drawPadFocus() {
     if (!padNav.visible || !padNavIsActiveState() || padNav.state !== gameState) return;
-    if (isDomModalOpen("modal-alert") || isDomModalOpen("modal-updates") || isDomModalOpen("modal-editor")) return;
+    if (isDomModalOpen("modal-alert") || isDomModalOpen("modal-updates") || isDomModalOpen("modal-editor") || isDomModalOpen("modal-arena")) return;
     const t = resolvePadFocus();
     if (!t) return;
     ctx.save();
@@ -3614,7 +3630,7 @@ function handleMenuClick(x, y) {
         else if (it.apelido && hitRect(x, y, it.apelido)) pedirApelido();
         else if (it.foto && hitRect(x, y, it.foto)) { /* TROCAR FOTO: desabilitado por enquanto */ }
         else if (hitRect(x, y, it.editorPersonagens)) { esferaAberta = false; setGameState("database"); }
-        else if (hitRect(x, y, it.editorArenas)) { /* EDITOR DE ARENAS: em breve */ }
+        else if (hitRect(x, y, it.editorArenas)) { esferaAberta = false; abrirEditorArenas(); }
         else if (hitRect(x, y, it.updates)) { esferaAberta = false; openUpdatesModal(); }
         else if (!hitRect(x, y, it.painel)) { esferaAberta = false; esferaPerfilAberto = false; }
         return;
@@ -4934,6 +4950,9 @@ function drawStageBackground() {
     }
     else if (selectedStage === "capital_oeste") {
         drawCapitalStage(getStageLapAngle(scroll, CAPITAL_LAP_SCROLL));
+    }
+    else if (typeof drawArenaCriadaStage === "function") {
+        drawArenaCriadaStage(selectedStage, scroll);   // arena criada no EDITOR DE ARENAS (arenas.js)
     }
 
     ctx.restore();
@@ -6262,7 +6281,7 @@ function drawTouchHUD() {
 // ==================== LOOP PRINCIPAL DE RENDERIZAÇÃO E JOGO ====================
 let coveringModals = null;
 function isModalCoveringScreen() {
-    if (!coveringModals) coveringModals = ["modal-editor", "modal-updates", "modal-alert"].map(id => document.getElementById(id)).filter(Boolean);
+    if (!coveringModals) coveringModals = ["modal-editor", "modal-arena", "modal-updates", "modal-alert"].map(id => document.getElementById(id)).filter(Boolean);
     return coveringModals.some(m => m.style.display === "flex");
 }
 
@@ -6278,6 +6297,7 @@ function render() {
     // dela — no celular isso deixava a rolagem e os toques do editor travados.
     if (gameState !== "playing" && isModalCoveringScreen()) {
         pollGamepadMenu(deltaTime);   // o controle continua funcionando nas janelas (avisos, UPDATES, editor)
+        if (typeof arenaEditorAberto === "function" && arenaEditorAberto() && !isDomModalOpen("modal-alert")) desenharPreviaArena(deltaTime);   // prévia 3D do EDITOR DE ARENAS
         requestAnimationFrame(render);
         return;
     }
@@ -6536,7 +6556,7 @@ function render() {
         ctx.fillText("COMPLETE O MODO NORMAL (5 ONDAS) PRA LIBERAR A PRÓXIMA FASE", canvas.width / 2, 42);
 
         STAGE_PROGRESSION.forEach((stg, i) => {
-            const card = getStageCardRect(i), sx = card.x, sy = card.y, cw = STAGE_CARD_W, ch = STAGE_CARD_H;
+            const card = getStageCardRect(i), sx = card.x, sy = card.y, cw = card.w, ch = card.h;
             const unlocked = isStageUnlockedByProgress(stg.id, stageProgress);
             const tema = STAGE_THEME_COLOR[stg.id] || "#00ffff";
 
@@ -6848,18 +6868,18 @@ function render() {
             ctx.textAlign = "center";
             ctx.fillStyle = "#93c5fd";
             ctx.font = "bold 13px monospace";
-            ctx.fillText(stageInfo ? stageInfo.name : "", canvas.width / 2, 160);
+            ctx.fillText(stageInfo ? stageInfo.name : "", canvas.width / 2, 160 + getRankingFaseDesvio());
 
             const list = getStageRankingList(rankingSelectedStage);
             if (list.length === 0) {
                 ctx.fillStyle = "#ffffff";
                 ctx.font = "13px monospace";
-                ctx.fillText("NENHUMA PONTUAÇÃO NESSA ARENA AINDA!", canvas.width / 2, 190);
+                ctx.fillText("NENHUMA PONTUAÇÃO NESSA ARENA AINDA!", canvas.width / 2, 190 + getRankingFaseDesvio());
             } else {
                 list.forEach((rk, idx) => {
                     ctx.fillStyle = idx === 0 ? "#ffff00" : "#ffffff";
                     ctx.font = "13px monospace";
-                    ctx.fillText(textoLinhaRanking(idx, rk), canvas.width / 2, 186 + idx * 26);
+                    ctx.fillText(textoLinhaRanking(idx, rk), canvas.width / 2, 186 + getRankingFaseDesvio() + idx * 26);
                 });
             }
         }

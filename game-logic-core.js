@@ -459,6 +459,8 @@ function getRealWaveForModeStep(mode, stepIndex) {
 // Uma fase libera quando a fase ANTERIOR já teve o modo NORMAL completado ao menos uma vez. A primeira sempre libera.
 // Fase com o NORMAL já completo continua liberada mesmo que a ordem das fases mude (v0.86).
 function isStageUnlockedByProgress(stageId, progressMap) {
+    const def = getFaseDef(stageId);
+    if (def && def.criada) return true;   // arena criada no EDITOR DE ARENAS: sempre liberada
     const idx = STAGE_PROGRESSION.findIndex(s => s.id === stageId);
     if (idx <= 0) return idx === 0;
     if (progressMap && progressMap[stageId] && progressMap[stageId].normalDone) return true;

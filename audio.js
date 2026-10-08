@@ -348,7 +348,7 @@ function startBGM() {
 // anterior. Sair da tela (setGameState → stopBGM) para tudo.
 // Uma trilha por fase, na ordem das fases (montada na hora: audio.js carrega antes de game-logic-core.js).
 function getBgmTrackList() {
-    return STAGE_PROGRESSION.map(stg => {
+    return STAGE_PROGRESSION.filter(stg => { const f = getFaseDef(stg.id); return !(f && f.criada); }).map(stg => {   // arenas criadas usam as trilhas das fases
         const tema = getStageMusicEra(stg.id);
         return { era: tema, nome: BGM_THEMES[tema].nome, fases: stg.name };
     });
