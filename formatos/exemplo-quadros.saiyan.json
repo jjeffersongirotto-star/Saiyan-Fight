@@ -1,0 +1,20 @@
+{
+  "formato": "saiyan-fight-personagem",
+  "versao": 1,
+  "personagem": {
+    "name": "MEU LUTADOR",
+    "alignment": "HERÓI",
+    "aura": "azul",
+    "special": "RAJADA FINAL",
+    "projColor": "#5be3ff",
+    "altura": 175,
+    "animations": {
+      "idle": ["parado1.png", "parado2.png", "parado3.png"],
+      "flyRight": ["frente1.png", "frente2.png"],
+      "flyLeft": ["tras1.png"],
+      "attackKi": ["tiro1.png", "tiro2.png"],
+      "chargeKi": ["carregar1.png", "carregar2.png"]
+    },
+    "fpsSettings": { "idle": 6, "flyRight": 10 }
+  }
+}

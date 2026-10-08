@@ -927,6 +927,19 @@
                             </div>
                         </div>
 
+                        <!-- ARQUIVO DO PERSONAGEM (arquivos.js): exportar .saiyan.json / anexar um feito no jogo ou fora dele -->
+                        <div class="form-row">
+                            <div class="form-group" style="flex: 1 1 100%;">
+                                <label>ARQUIVO DO PERSONAGEM</label>
+                                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                    <button type="button" class="btn" onclick="exportarPersonagemEditado()">EXPORTAR ARQUIVO</button>
+                                    <button type="button" class="btn" onclick="document.getElementById('arquivo-personagem').click()">ANEXAR ARQUIVO</button>
+                                    <input type="file" id="arquivo-personagem" accept=".json,image/png,image/jpeg,image/gif,image/webp,image/svg+xml" multiple style="display: none;" onchange="anexarArquivoPersonagem(this)">
+                                </div>
+                                <p style="margin: 6px 0 0; font-size: 12px; opacity: 0.85;">Anexe o arquivo .saiyan.json (junto com as imagens dele, se tiver). Se estiver tudo certo, o personagem entra no jogo como os outros.</p>
+                            </div>
+                        </div>
+
                         <!-- MINION CLÁSSICO (minions.js): desenho e movimentos originais, só as cores mudam -->
                         <div id="minion-classico-area" class="form-row" style="display: none;">
                             <div class="form-group" style="flex: 1 1 100%;">
@@ -1440,10 +1453,15 @@
                 Novidades e correções do jogo.
             </p>
             <ul id="lista-updates" style="margin: 0 0 18px; color: #ddd; line-height: 1.5; padding: 0 4px 0 0; list-style: none; overflow-y: auto;">
-                <li class="upd-versao"><h3>Versão 0.90 (ATUAL)</h3><p>Minions clássicos de volta</p></li>
+                <li class="upd-versao"><h3>Versão 0.91 (ATUAL)</h3><p>Esfera de 4 estrelas, perfil e arquivos de personagem</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Esfera de 4 estrelas</strong><p>No canto superior esquerdo do menu principal, a esfera do dragão de 4 estrelas abre o menu de ajustes: perfil, EDITOR DE PERSONAGENS, EDITOR DE ARENAS (em breve) e UPDATES.</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Perfil</strong><p>A foto redonda do perfil (por enquanto um lutador carregando ki) e o seu apelido. Tocando na foto aparecem TROCAR FOTO (em breve) e APELIDO.</p></li>
+                <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>EDITOR DE PERSONAGENS</strong><p>O DATABASE agora se chama EDITOR DE PERSONAGENS e fica no menu da esfera, junto com o UPDATES.</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Arquivos de personagem</strong><p>No editor, EXPORTAR ARQUIVO baixa o personagem num arquivo .saiyan.json e ANEXAR ARQUIVO coloca no jogo um personagem feito no jogo ou fora dele (do construtor, Minion clássico, quadros soltos ou folha de sprites). Se o arquivo tiver erro, o jogo diz qual. O formato está explicado em formatos/LEIA-ME.md, com exemplos.</p></li>
+                <li class="upd-versao"><h3>Versão 0.90</h3><p>Minions clássicos de volta</p></li>
                 <li class="upd-item upd-corrigido"><span class="upd-tag">CORRIGIDO</span><strong>Saibaman e Cell Jr. originais</strong><p>Os Minions voltaram a ser os desenhos originais do jogo, com a aparência e os movimentos de antes (brotar da terra, saltar, voar, investir, agarrar e ser arremessado), na luta, no gerenciador e no editor. Quem tinha as versões do construtor recebe os originais de volta, com o mesmo nome.</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Editar os Minions clássicos</strong><p>No editor, a aba DADOS de um Minion clássico mostra as cores dele (pele, olhos, garras, armadura...) e o botão VOLTAR ÀS CORES ORIGINAIS. Sem trocar nada ele fica exatamente o original.</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Novos Minions a partir dos clássicos</strong><p>Em "COMEÇAR A PARTIR DE..." aparecem Saibaman (clássico) e Cell Jr. (clássico): o Minion novo copia o desenho e os movimentos originais, e você escolhe nome, cores, aura e especial. As peças de minion do construtor continuam disponíveis para outros personagens.</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Editar os Minions clássicos</strong><p>No editor, a aba DADOS de um Minion clássico mostra as cores dele (pele, olhos, garras, armadura...) e o botão VOLTAR ÀS CORES ORIGINAIS. Sem trocar nada ele fica exatamente o original.</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Novos Minions a partir dos clássicos</strong><p>Em "COMEÇAR A PARTIR DE..." aparecem Saibaman (clássico) e Cell Jr. (clássico): o Minion novo copia o desenho e os movimentos originais, e você escolhe nome, cores, aura e especial. As peças de minion do construtor continuam disponíveis para outros personagens.</p></li>
                 <li class="upd-versao"><h3>Versão 0.89</h3><p>Capital do Oeste refeita</p></li>
                 <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>Capital do Oeste</strong><p>A arena agora é só o quarteirão da Corporação Cápsula: o prédio-domo amarelo alongado com luz e sombra, topo branco com a cúpula pequena, duas fileiras de janelas azuis, porta e letreiro CAPSULE na frente, torrinhas e domos brancos anexos. Em volta, gramado com trilhas e árvores, casinhas redondas, o prédio de teto azul e prédios brancos com janelas, e a rua cercando o quarteirão. Saíram os prédios altos, as torres com esfera e o monotrilho.</p></li>
                 <li class="upd-versao"><h3>Versão 0.88</h3><p>Plataforma Celestial, Capital do Oeste e ranking completo</p></li>
@@ -1757,6 +1775,7 @@
     <script src="conjuntos.js"></script>
     <script src="minions.js"></script>
     <script src="database.js"></script>
+    <script src="arquivos.js"></script>
     <script src="gameplay.js"></script>
     <script src="menu.js"></script>
     <script src="cenarios3d.js"></script>

@@ -14,10 +14,11 @@ const MENU_LAYOUT = {
     main: {
         play: rect(190, 95, 180, 36), characters: rect(430, 95, 180, 36),
         stages: rect(190, 150, 180, 36), options: rect(430, 150, 180, 36),
-        ranking: rect(190, 205, 180, 36), database: rect(430, 205, 180, 36),
-        achievements: rect(190, 260, 180, 36), tutorial: rect(430, 260, 180, 36),
-        updates: rect(20, 305, 120, 26)
+        ranking: rect(190, 205, 180, 36), achievements: rect(430, 205, 180, 36),
+        tutorial: rect(310, 260, 180, 36)
     },
+    // esfera do dragão de 4 estrelas (canto superior esquerdo do menu): abre o menu de ajustes para baixo
+    esfera: { botao: rect(12, 12, 40, 40), x: 12, y: 58, w: 216 },
     modeSelect: { single: rect(175, 176, 200, 58), coop: rect(425, 176, 200, 58) },
     paused: { resume: rect(300, 110, 200, 35), options: rect(300, 160, 200, 35), exit: rect(300, 210, 200, 35) },
     characters: { tabHeroes: rect(250, 45, 140, 25), tabVillains: rect(410, 45, 140, 25), fight: rect(620, 45, 140, 25),
@@ -262,6 +263,23 @@ function getTrackPlayRect(i) {
     const r = getTrackRowRect(i);
     return rect(r.x + r.w - 92, r.y + 4, 84, 27);
 }
+// Itens do menu da esfera (desenho e clique leem daqui). Com o perfil aberto aparecem TROCAR FOTO e APELIDO.
+function getEsferaItens() {
+    const E = MENU_LAYOUT.esfera;
+    const itens = { perfil: rect(E.x + 8, E.y + 8, E.w - 16, 60) };
+    let y = E.y + 74;
+    if (esferaPerfilAberto) {
+        itens.foto = rect(E.x + 14, y, 92, 26);
+        itens.apelido = rect(E.x + 110, y, 92, 26);
+        y += 34;
+    }
+    itens.editorPersonagens = rect(E.x + 12, y, E.w - 24, 30);
+    itens.editorArenas = rect(E.x + 12, y + 36, E.w - 24, 30);
+    itens.updates = rect(E.x + 12, y + 72, E.w - 24, 30);
+    itens.painel = rect(E.x, E.y, E.w, y + 112 - E.y);
+    return itens;
+}
+let esferaAberta = false, esferaPerfilAberto = false;
 function hitRect(x, y, r) {
     return inRect(x, y, r.x, r.y, r.w, r.h);
 }
@@ -1514,6 +1532,122 @@ function traceMenuBackdrop(ctx, isMenu) {
     ctx.fill();
 
     ctx.restore();
+}
+
+// ==================== ESFERA DE 4 ESTRELAS (menu de ajustes) ====================
+// Canto superior esquerdo do menu principal. Abre para baixo: perfil (foto redonda + apelido), EDITOR DE
+// PERSONAGENS, EDITOR DE ARENAS (em breve) e UPDATES. Posições em getEsferaItens.
+function drawEsferaDragao(cx, cy, r, estrelas) {
+    ctx.save();
+    ctx.shadowColor = "rgba(255, 160, 40, 0.55)"; ctx.shadowBlur = 10;
+    const g = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.4, r * 0.1, cx, cy, r);
+    g.addColorStop(0, "#fff3c4"); g.addColorStop(0.35, "#ffb52e"); g.addColorStop(1, "#d86a06");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = "rgba(140, 60, 0, 0.8)"; ctx.lineWidth = 1.2; ctx.stroke();
+    // estrelas vermelhas (4: em losango, como na esfera de 4 estrelas)
+    const pos = estrelas === 4 ? [[0, -0.36], [-0.36, 0.02], [0.36, 0.02], [0, 0.4]] : [[0, 0]];
+    ctx.fillStyle = "#e11d2e";
+    pos.forEach(([dx, dy]) => {
+        const sx = cx + dx * r, sy = cy + dy * r, ro = r * 0.2, ri = ro * 0.42;
+        ctx.beginPath();
+        for (let i = 0; i < 10; i++) {
+            const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? ri : ro;
+            ctx.lineTo(sx + Math.cos(a) * rr, sy + Math.sin(a) * rr);
+        }
+        ctx.closePath(); ctx.fill();
+    });
+    // brilho
+    ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
+    ctx.beginPath(); ctx.ellipse(cx - r * 0.38, cy - r * 0.45, r * 0.22, r * 0.12, -0.6, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+}
+// Foto do perfil (por enquanto um desenho fixo): silhueta de um lutador carregando ki, num círculo
+let perfilSilhuetaCache = null;
+function getPerfilSilhueta() {
+    const k = typeof renderScale === "number" ? renderScale : 1;
+    if (perfilSilhuetaCache && perfilSilhuetaCache.k === k) return perfilSilhuetaCache.c;
+    const c = document.createElement("canvas");
+    c.width = c.height = Math.round(60 * k);
+    const g = c.getContext && c.getContext("2d");
+    if (g) {
+        g.scale(k, k);
+        g.save();
+        g.beginPath(); g.arc(30, 30, 29, 0, Math.PI * 2); g.clip();
+        const fundo = g.createRadialGradient(30, 34, 4, 30, 30, 32);
+        fundo.addColorStop(0, "#1e3a8a"); fundo.addColorStop(1, "#0b1226");
+        g.fillStyle = fundo; g.fillRect(0, 0, 60, 60);
+        // aura de ki (chamas douradas subindo)
+        g.fillStyle = "rgba(255, 210, 63, 0.75)";
+        g.beginPath(); g.moveTo(10, 60);
+        [[13, 34], [18, 42], [20, 20], [25, 32], [30, 8], [35, 32], [40, 20], [42, 42], [47, 34], [50, 60]].forEach(p => g.lineTo(p[0], p[1]));
+        g.closePath(); g.fill();
+        g.fillStyle = "rgba(255, 248, 200, 0.6)";
+        g.beginPath(); g.moveTo(16, 60);
+        [[20, 40], [25, 46], [30, 22], [35, 46], [40, 40], [44, 60]].forEach(p => g.lineTo(p[0], p[1]));
+        g.closePath(); g.fill();
+        // silhueta: cabelo espetado, ombros largos, braços abertos para baixo com os punhos fechados, pernas afastadas
+        g.fillStyle = "#05070f";
+        g.beginPath();
+        g.moveTo(22, 21); g.lineTo(19, 12); g.lineTo(25, 16); g.lineTo(26, 7); g.lineTo(30, 14); g.lineTo(34, 7); g.lineTo(35, 16); g.lineTo(41, 12); g.lineTo(38, 21);
+        g.quadraticCurveTo(38, 28, 33, 30); g.lineTo(27, 30); g.quadraticCurveTo(22, 28, 22, 21); g.closePath(); g.fill();
+        g.beginPath();
+        g.moveTo(27, 30); g.lineTo(33, 30); g.lineTo(43, 33); g.lineTo(47, 44); g.lineTo(44, 46); g.lineTo(40, 37); g.lineTo(39, 45);
+        g.lineTo(42, 60); g.lineTo(34, 60); g.lineTo(30, 50); g.lineTo(26, 60); g.lineTo(18, 60); g.lineTo(21, 45); g.lineTo(20, 37);
+        g.lineTo(16, 46); g.lineTo(13, 44); g.lineTo(17, 33); g.closePath(); g.fill();
+        g.restore();
+        g.strokeStyle = "#ffd23f"; g.lineWidth = 2;
+        g.beginPath(); g.arc(30, 30, 28.5, 0, Math.PI * 2); g.stroke();
+    }
+    perfilSilhuetaCache = { k, c };
+    return c;
+}
+// Botão desabilitado (cinza, sem resposta e fora da navegação do controle)
+function drawBtnDesabilitado(r, texto, font = "bold 10px 'Segoe UI', sans-serif") {
+    ctx.save();
+    traceRoundedRect(r.x, r.y, r.w, r.h, 2);
+    ctx.fillStyle = "rgba(40, 48, 64, 0.9)"; ctx.fill();
+    ctx.strokeStyle = "#4b5563"; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = "#8b95a5"; ctx.font = font; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(texto, r.x + r.w / 2, r.y + r.h / 2 + 1);
+    ctx.restore();
+}
+function drawMenuEsfera(alvosAntes) {
+    const b = MENU_LAYOUT.esfera.botao;
+    drawEsferaDragao(b.x + b.w / 2, b.y + b.h / 2, b.w / 2, 4);
+    if (esferaAberta) menuTargets.length = alvosAntes;   // aberto: os botões de baixo não contam (nem o controle)
+    registerMenuTarget(b.x, b.y, b.w, b.h);
+    if (!esferaAberta) return;
+    const it = getEsferaItens(), p = it.painel;
+    ctx.save();
+    ctx.fillStyle = "rgba(4, 12, 32, 0.94)";
+    traceRoundedRect(p.x, p.y, p.w, p.h, 8); ctx.fill();
+    ctx.strokeStyle = "#e85d04"; ctx.lineWidth = 1.5; ctx.stroke();
+    // perfil: foto redonda + apelido
+    const pf = it.perfil;
+    registerMenuTarget(pf.x, pf.y, pf.w, pf.h);
+    if (isMouseHovering() && hitRect(mouseX, mouseY, pf)) { ctx.fillStyle = "rgba(255, 183, 3, 0.15)"; traceRoundedRect(pf.x, pf.y, pf.w, pf.h, 6); ctx.fill(); }
+    ctx.drawImage(getPerfilSilhueta(), pf.x + 2, pf.y + 1, 58, 58);
+    ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    ctx.fillStyle = "#94a3b8"; ctx.font = "bold 9px 'Segoe UI', sans-serif";
+    ctx.fillText("PERFIL", pf.x + 68, pf.y + 20);
+    ctx.fillStyle = "#fff0a6"; ctx.font = "bold 13px 'Trebuchet MS', sans-serif";
+    let nome = getApelido() || "JOGADOR";
+    while (nome.length > 3 && ctx.measureText(nome).width > pf.w - 76) nome = nome.slice(0, -2) + "…";
+    ctx.fillText(nome, pf.x + 68, pf.y + 38);
+    ctx.restore();
+    if (it.foto) {
+        drawBtnDesabilitado(it.foto, "TROCAR FOTO");
+        drawBtnAt(it.apelido, "APELIDO", "#fff0a6", "bold 10px 'Segoe UI', sans-serif");
+    }
+    drawBtnAt(it.editorPersonagens, "EDITOR DE PERSONAGENS", "#fff0a6", "bold 11px 'Segoe UI', sans-serif");
+    drawBtnDesabilitado(it.editorArenas, "EDITOR DE ARENAS (EM BREVE)");
+    drawBtnAt(it.updates, "UPDATES", "#fbbf24", "bold 11px 'Segoe UI', sans-serif");
+}
+// APELIDO: pergunta numa janela (o canvas não tem campo de texto)
+function pedirApelido() {
+    showSystemPrompt("APELIDO", "DIGITE SEU APELIDO (ATÉ 16 LETRAS):", getApelido(), (texto) => setApelido(texto));
 }
 
 function drawDragonBallPanel(x, y, w, h, title, subtitle = "") {
@@ -3468,6 +3602,23 @@ function handleMenuClick(x, y) {
     if (inRect(x, y, fsRect.x, fsRect.y, fsRect.w, fsRect.h)) { toggleFullscreen(); return; }
     if (isMenuClickOnButton(x, y)) playSound("menu");
 
+    if (gameState === "menu" && hitRect(x, y, MENU_LAYOUT.esfera.botao)) {
+        esferaAberta = !esferaAberta;
+        esferaPerfilAberto = false;
+        return;
+    }
+    if (gameState === "menu" && esferaAberta) {
+        // menu da esfera aberto: só ele responde; tocar fora fecha
+        const it = getEsferaItens();
+        if (hitRect(x, y, it.perfil)) esferaPerfilAberto = !esferaPerfilAberto;
+        else if (it.apelido && hitRect(x, y, it.apelido)) pedirApelido();
+        else if (it.foto && hitRect(x, y, it.foto)) { /* TROCAR FOTO: desabilitado por enquanto */ }
+        else if (hitRect(x, y, it.editorPersonagens)) { esferaAberta = false; setGameState("database"); }
+        else if (hitRect(x, y, it.editorArenas)) { /* EDITOR DE ARENAS: em breve */ }
+        else if (hitRect(x, y, it.updates)) { esferaAberta = false; openUpdatesModal(); }
+        else if (!hitRect(x, y, it.painel)) { esferaAberta = false; esferaPerfilAberto = false; }
+        return;
+    }
     if (gameState === "menu") {
         if (hitRect(x, y, MENU_LAYOUT.main.play)) setGameState("mode_select");
         else if (hitRect(x, y, MENU_LAYOUT.main.characters)) abrirTelaPersonagens(null);
@@ -3477,10 +3628,8 @@ function handleMenuClick(x, y) {
             setGameState("options_main");
         }
         else if (hitRect(x, y, MENU_LAYOUT.main.ranking)) setGameState("ranking");
-        else if (hitRect(x, y, MENU_LAYOUT.main.database)) setGameState("database");
         else if (hitRect(x, y, MENU_LAYOUT.main.achievements)) { achievementsScrollY = 0; setGameState("achievements"); }
         else if (hitRect(x, y, MENU_LAYOUT.main.tutorial)) startTutorial();
-        else if (hitRect(x, y, MENU_LAYOUT.main.updates)) openUpdatesModal();
     }
     else if (gameState === "mode_select") {
         if (hitRect(x, y, MENU_LAYOUT.modeSelect.single)) {
@@ -6267,16 +6416,15 @@ function render() {
 
         drawDragonBallPanel(150, 35, 500, 270, "SAIYAN FIGHT", "A BATALHA COMEÇA AGORA");
 
+        const alvosAntesDoMenu = menuTargets.length;
         drawBtnAt(MENU_LAYOUT.main.play, "JOGAR", "#fff0a6");
         drawBtnAt(MENU_LAYOUT.main.characters, "PERSONAGENS", "#fff0a6");
         drawBtnAt(MENU_LAYOUT.main.stages, "ARENAS", "#fff0a6");
         drawBtnAt(MENU_LAYOUT.main.options, "OPÇÕES", "#fff0a6");
         drawBtnAt(MENU_LAYOUT.main.ranking, "RANKING", "#fff0a6");
-        drawBtnAt(MENU_LAYOUT.main.database, "DATABASE", "#fff0a6");
         drawBtnAt(MENU_LAYOUT.main.achievements, "CONQUISTAS", "#fff0a6");
         drawBtnAt(MENU_LAYOUT.main.tutorial, "TUTORIAL", "#fff0a6");
-
-        drawBtnAt(MENU_LAYOUT.main.updates, "UPDATES", "#fbbf24", "bold 10px 'Segoe UI', sans-serif");
+        drawMenuEsfera(alvosAntesDoMenu);
     }
     else if (gameState === "mode_select") {
         drawDragonBallMenuBackdrop(false);
@@ -7126,7 +7274,7 @@ function render() {
         ctx.fillStyle = "#00ffff";
         ctx.font = "bold 22px 'Courier New', monospace";
         ctx.textAlign = "left";
-        ctx.fillText("GERENCIADOR DE PERSONAGENS", layout.titleX, layout.titleY);
+        ctx.fillText("EDITOR DE PERSONAGENS", layout.titleX, layout.titleY);
 
         registerMenuTarget(layout.createButtonX, layout.createButtonY, layout.createButtonWidth, 30);
         ctx.fillStyle = "#071a1f";
