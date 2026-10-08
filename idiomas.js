@@ -803,6 +803,40 @@ Minion § Minion § Esbirro
 MINION CLÁSSICO: § CLASSIC MINION: § ESBIRRO CLÁSICO:
 EDITOR DE PERSONAGENS § CHARACTER EDITOR § EDITOR DE PERSONAJES
 EDITOR DE ARENAS § ARENA EDITOR § EDITOR DE ARENAS
+ILHA DE PEDRA RACHADA § CRACKED ROCK ISLAND § ISLA DE ROCA AGRIETADA
+COLUNA DE LAVA § LAVA COLUMN § COLUMNA DE LAVA
+ARCO DE LAVA § LAVA ARC § ARCO DE LAVA
+BRASAS SUBINDO § RISING EMBERS § BRASAS SUBIENDO
+FUMAÇA § SMOKE § HUMO
+NUVENS PASSANDO § DRIFTING CLOUDS § NUBES PASANDO
+RAIO § LIGHTNING § RAYO
+PLANÍCIES § PLAINS § LLANURAS
+EFEITOS § EFFECTS § EFECTOS
+CÍRCULO § CIRCLE § CÍRCULO
+OVAL § OVAL § ÓVALO
+FEIJÃO § BEAN § FRIJOL
+IRREGULAR § IRREGULAR § IRREGULAR
+RIO RETO § STRAIGHT RIVER § RÍO RECTO
+RIO EM CURVA § CURVED RIVER § RÍO CURVO
+LIMITE DE 10 EFEITOS POR ARENA. § LIMIT OF 10 EFFECTS PER ARENA. § LÍMITE DE 10 EFECTOS POR ARENA.
+LUGAR OCUPADO: a peça invadiria o espaço de outra. § SPACE TAKEN: the piece would overlap another one. § LUGAR OCUPADO: la pieza invadiría el espacio de otra.
+LUGAR OCUPADO: não há espaço livre para duplicar. § SPACE TAKEN: there is no free space to duplicate. § LUGAR OCUPADO: no hay espacio libre para duplicar.
+LUGAR OCUPADO: escolha um espaço livre para a peça. § SPACE TAKEN: pick a free spot for the piece. § LUGAR OCUPADO: elige un espacio libre para la pieza.
+LUGAR OCUPADO: a peça voltou para onde estava. § SPACE TAKEN: the piece went back to where it was. § LUGAR OCUPADO: la pieza volvió a donde estaba.
+PLANÍCIES: o chão completo de uma fase. Escolha, veja na tela grande e confirme. § PLAINS: the complete ground of a stage. Pick one, check it on the big view and confirm. § LLANURAS: el suelo completo de una fase. Elige, mírala en la vista grande y confirma.
+EM MOVIMENTO § MOVING § EN MOVIMIENTO
+GIRAR § ROTATE § GIRAR
+SEGUIR § MOVE FORWARD § AVANZAR
+CONFIRMAR PEÇA § CONFIRM PIECE § CONFIRMAR PIEZA
+VER ARENA § VIEW ARENA § VER ARENA
+DADOS DA ARENA § ARENA INFO § DATOS DE LA ARENA
+PEÇA ESCOLHIDA § SELECTED PIECE § PIEZA ELEGIDA
+Toque numa peça da planta para ajustar tamanho, giro e cor. § Tap a piece on the map to adjust size, rotation and colour. § Toca una pieza del plano para ajustar tamaño, giro y color.
+Altura (monte) § Height (mound) § Altura (montículo)
+Formato § Shape § Forma
+SEM PLANÍCIE § NO PLAIN § SIN LLANURA
+PLANÍCIE DESCONHECIDA § UNKNOWN PLAIN § LLANURA DESCONOCIDA
+Movimento § Movement § Movimiento
 GRAMA § GRASS § CÉSPED
 AREIA § SAND § ARENA
 MAR § SEA § MAR
@@ -1055,6 +1089,7 @@ const IDIOMA_REGRAS = [
     [/^PERSONAGEM (.+) SALVO!$/, "CHARACTER $1 SAVED!", "¡PERSONAJE $1 GUARDADO!"],
     [/^PERSONAGEM (.+) IMPORTADO!$/, "CHARACTER $1 IMPORTED!", "¡PERSONAJE $1 IMPORTADO!"],
     [/^ARENA (.+) SALVA!$/, "ARENA $1 SAVED!", "¡ARENA $1 GUARDADA!"],
+    [/^Toque na planta para colocar: (.+)\. Peça vermelha = lugar ocupado\.$/, (m, T) => `Tap the map to place: ${T(m[1])}. Red piece = space taken.`, (m, T) => `Toca el plano para colocar: ${T(m[1])}. Pieza roja = lugar ocupado.`],
     [/^ARENA (.+) IMPORTADA!$/, "ARENA $1 IMPORTED!", "¡ARENA $1 IMPORTADA!"],
     [/^EXCLUIR A ARENA (.+)\?$/, "DELETE THE ARENA $1?", "¿BORRAR LA ARENA $1?"],
     [/^PEÇAS: (\d+) \/ (\d+)$/, "PIECES: $1 / $2", "PIEZAS: $1 / $2"],

@@ -346,22 +346,91 @@
             width: 100%;
         }
 
-        /* EDITOR DE ARENAS (arenas.js) */
-        .ar-corpo { display: flex; gap: 14px; flex-wrap: wrap; }
-        .ar-coluna { flex: 1 1 340px; min-width: 0; }
-        #arena-previa { width: 100%; aspect-ratio: 800 / 350; border: 1px solid var(--border-color); border-radius: 6px; background: #000; display: block; }
-        #arena-planta { width: 100%; max-width: 320px; aspect-ratio: 1; border: 1px solid var(--border-color); border-radius: 6px; touch-action: none; display: block; margin: 6px auto; cursor: crosshair; }
-        .ar-linha { display: flex; align-items: center; gap: 10px; margin: 6px 0 10px; font-size: 12px; color: #cbd5e1; }
-        .ar-linha input[type="range"] { flex: 1; }
-        .ar-aba { background: #111; border: 1px solid var(--border-color); border-bottom: none; color: #888; padding: 7px 10px; cursor: pointer; border-radius: 4px 4px 0 0; font-size: 12px; font-weight: bold; }
+        /* EDITOR DE ARENAS (arenas.js): tela inteira, sem barra de rolagem. Visualização no canto superior esquerdo,
+           abas/peças/planta à direita, dados da arena e peça escolhida embaixo. */
+        #modal-arena { padding: 0; }
+        #modal-arena .ar-grade {
+            --ar-dir: clamp(250px, 31vw, 440px);
+            position: absolute; inset: 0; overflow: hidden; background: #05070d; color: #e5e7eb;
+            display: grid; grid-template-columns: minmax(0, 1fr) var(--ar-dir); grid-template-rows: auto minmax(0, 1fr);
+            grid-template-areas: "vista direita" "baixo direita";
+        }
+        .ar-vista { grid-area: vista; position: relative; line-height: 0; }
+        #arena-previa { display: block; width: min(100%, calc(56vh * 800 / 350)); aspect-ratio: 800 / 350; background: #000; }
+        @supports (height: 1dvh) { #arena-previa { width: min(100%, calc(56dvh * 800 / 350)); } }
+        .ar-vista-titulo { position: absolute; left: 8px; top: 6px; line-height: 1.2; font-size: 12px; font-weight: bold; color: #fff;
+            background: rgba(0, 0, 0, 0.55); padding: 3px 8px; border-radius: 4px; pointer-events: none; }
+        .ar-vista-barra { position: absolute; left: 6px; right: 6px; bottom: 6px; line-height: 1.2; display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+            font-size: 12px; pointer-events: none; }
+        .ar-vista-barra > * { pointer-events: auto; }
+        .ar-vista-barra .ar-mover { background: rgba(0, 0, 0, 0.6); border-radius: 4px; padding: 3px 6px; display: flex; gap: 6px; align-items: center; color: #e5e7eb; }
+        .ar-vista-barra select { font-size: 12px; padding: 2px 4px; background: #0b1226; color: #fff; border: 1px solid #334155; border-radius: 3px; }
+        .ar-vista-barra input[type="range"] { width: 90px; }
+        .ar-vista-barra .btn { padding: 5px 10px; font-size: 12px; }
+        .ar-direita { grid-area: direita; display: flex; flex-direction: column; gap: 6px; padding: 8px; min-height: 0; border-left: 1px solid #1f2937; }
+        .ar-topo { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+        .ar-topo h2 { margin: 0; font-size: 15px; color: var(--cyan); }
+        .ar-topo .close-btn { padding: 0 4px; }
+        .ar-acoes { display: flex; gap: 5px; flex-wrap: wrap; }
+        .ar-acoes select { flex: 1 1 100%; font-size: 12px; padding: 4px; background: #0b1226; color: #fff; border: 1px solid #334155; border-radius: 3px; }
+        .ar-acoes .btn { flex: 1 1 auto; padding: 5px 6px; font-size: 11px; }
+        .ar-abas { display: flex; gap: 3px; flex-wrap: wrap; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; }
+        .ar-aba { background: #111; border: 1px solid var(--border-color); color: #888; padding: 4px 7px; cursor: pointer; border-radius: 4px; font-size: 11px; font-weight: bold; }
         .ar-aba.active { background: var(--panel-bg); color: var(--cyan); border-color: var(--cyan); }
-        .ar-pecas { display: flex; flex-wrap: wrap; gap: 6px; max-height: 140px; overflow-y: auto; }
-        .ar-pecas .btn { font-size: 11px; padding: 6px 8px; }
+        .ar-pecas { display: flex; flex-wrap: wrap; gap: 4px; }
+        .ar-pecas .btn { font-size: 10px; padding: 4px 6px; }
         .ar-pecas .btn.ar-armada { background: #e85d04; color: #fff; border-color: #ffd23f; }
-        .ar-dica { font-size: 12px; color: #94a3b8; margin: 6px 0 0; }
-        .ar-selecao { border: 1px solid #ffd23f; border-radius: 6px; padding: 8px 10px; margin-top: 6px; }
-        .ar-selecao strong { color: #ffd23f; font-size: 13px; }
-        #arena-contagem { font-size: 11px; color: #94a3b8; text-align: center; }
+        .ar-dica { font-size: 11px; color: #94a3b8; margin: 0; line-height: 1.3; }
+        .ar-dica.ar-dica-erro { color: #ff6b6b; font-weight: bold; }
+        .ar-planta-caixa { flex: 1 1 auto; min-height: 120px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        #arena-planta { width: 300px; height: 300px; border: 1px solid var(--border-color); border-radius: 6px; touch-action: none; display: block; cursor: crosshair; }
+        #arena-contagem { font-size: 10px; color: #94a3b8; text-align: center; }
+        .ar-baixo { grid-area: baixo; display: flex; gap: 10px; padding: 8px; min-height: 0; overflow: hidden; border-top: 1px solid #1f2937; }
+        .ar-baixo-abas { display: none; }
+        .ar-caixa { border: 1px solid #1f2937; border-radius: 8px; padding: 8px 10px; background: rgba(15, 23, 42, 0.6); min-width: 0; overflow: hidden; }
+        .ar-caixa h3 { margin: 0 0 6px; font-size: 12px; color: #ffd23f; letter-spacing: 0.5px; }
+        .ar-dados { flex: 3 1 0; }
+        .ar-dados-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 6px 10px; }
+        .ar-campo { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .ar-campo label { font-size: 10px; color: #94a3b8; }
+        .ar-campo input, .ar-campo select { font-size: 12px; padding: 3px 5px; min-height: 26px; background: #0b1226; color: #fff; border: 1px solid #334155; border-radius: 4px; width: 100%; box-sizing: border-box; }
+        .ar-campo input[type="color"] { padding: 1px 2px; }
+        .ar-campo input[type="range"] { padding: 0; border: none; background: transparent; }
+        .ar-peca-caixa { flex: 2 1 0; }
+        .ar-peca-botoes { display: flex; gap: 6px; margin-top: 8px; }
+        .ar-peca-botoes .btn { flex: 1; padding: 6px; font-size: 11px; }
+        .ar-vazia { font-size: 12px; color: #94a3b8; margin: 0; }
+        /* telas baixas ou estreitas (celular): DADOS e PEÇA dividem o espaço de baixo com duas abas, tudo menor */
+        @media (max-height: 560px), (max-width: 760px) {
+            #modal-arena .ar-grade { --ar-dir: clamp(230px, 36vw, 300px); }
+            .ar-direita { gap: 4px; padding: 6px; }
+            .ar-topo h2 { font-size: 12px; }
+            .ar-dica { display: none; }
+            .ar-dica.ar-dica-erro { display: block; }
+            .ar-abas, .ar-pecas { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+            .ar-abas::-webkit-scrollbar, .ar-pecas::-webkit-scrollbar { display: none; }
+            .ar-aba { white-space: nowrap; padding: 3px 6px; font-size: 10px; }
+            .ar-pecas .btn { white-space: nowrap; }
+            .ar-acoes select { flex: 1 1 auto; }
+            .ar-acoes .btn { padding: 3px 5px; font-size: 9px; }
+            .ar-baixo { flex-direction: column; gap: 4px; padding: 4px 6px; }
+            .ar-baixo-abas { display: flex; gap: 4px; }
+            .ar-baixo-abas .ar-aba { flex: 1; }
+            .ar-baixo[data-vista="dados"] .ar-peca-caixa, .ar-baixo[data-vista="peca"] .ar-dados { display: none; }
+            .ar-caixa { padding: 4px 6px; flex: 1 1 auto; }
+            .ar-caixa h3 { display: none; }
+            .ar-dados-grade { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px 6px; }
+            .ar-campo input, .ar-campo select { min-height: 22px; font-size: 11px; padding: 1px 3px; }
+            .ar-campo label { font-size: 9px; }
+            .ar-peca-botoes { margin-top: 4px; }
+        }
+        /* celular em pé: tudo uma coisa embaixo da outra (vista, peças, dados), ainda sem rolar a página */
+        @media (max-aspect-ratio: 1/1) {
+            #modal-arena .ar-grade { grid-template-columns: 100%; grid-template-rows: auto minmax(0, 1fr) auto; grid-template-areas: "vista" "direita" "baixo"; }
+            #arena-previa { width: 100%; }
+            .ar-direita { border-left: none; }
+            .ar-dados-grade { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        }
 
         .form-row {
             display: flex;
@@ -1470,10 +1539,16 @@
                 Novidades e correções do jogo.
             </p>
             <ul id="lista-updates" style="margin: 0 0 18px; color: #ddd; line-height: 1.5; padding: 0 4px 0 0; list-style: none; overflow-y: auto;">
-                <li class="upd-versao"><h3>Versão 0.92 (ATUAL)</h3><p>Editor de Arenas</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>EDITOR DE ARENAS</strong><p>No menu da esfera de 4 estrelas: monte sua própria arena com peças tiradas dos cenários do jogo, em abas — CONSTRUÇÃO (paredes, janelas, portas, prédios, domos, torres, pilares, escada, ringue, portão), NAVE (casco, perna de aço, parede com janelas ovais, painel de botões, antena, cápsula, luzes), NATUREZA (coqueiros, ciprestes, árvores, pedras, mesa de pedra, montanha, cristais), CHÃO (gramado, lago, areia, terra, lava, piso, estrada, trilha), CÉU (sol, lua, planetas, nuvens, estrelas, morros, montanhas, cidade ao longe) e ENFEITES (estátua, símbolo, placa com texto, bandeira, lampião, ampulheta, esfera do dragão). Toque na planta para colocar, arraste para mover e ajuste tamanho, giro e cor; a prévia em 3D gira em volta da arena. Escolha também nome, cor, música, minion, altura da câmera, céu e chão.</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Arenas criadas no jogo</strong><p>A arena salva vira uma fase de verdade: aparece em ARENAS, no mapa e no ranking, sempre liberada, e a câmera dá a volta nela durante a luta, como nas fases 3D. Até 7 arenas criadas, com até 80 peças cada.</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Arquivos de arena</strong><p>EXPORTAR ARQUIVO baixa a arena num arquivo .arena.json e ANEXAR ARQUIVO coloca no jogo uma arena feita no jogo ou fora dele. Se o arquivo tiver erro, o jogo diz qual. O formato e a lista de peças estão em formatos/LEIA-ME-ARENAS.md, com um exemplo.</p></li>
+                <li class="upd-versao"><h3>Versão 0.93 (ATUAL)</h3><p>Editor de Arenas em tela inteira, planícies, montes e efeitos</p></li>
+                <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>Editor de Arenas em tela inteira</strong><p>A arena aparece grande no canto superior esquerdo; à direita ficam as abas, as peças e a planta; embaixo, os dados da arena e a peça escolhida. No celular cabe tudo na tela, sem barra de rolagem. A caixinha EM MOVIMENTO liga ou para a visualização, e dá para escolher se a arena GIRA ou SEGUE para a frente (também na luta).</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Ver a peça antes de colocar</strong><p>Tocar numa peça da lista mostra só ela, grande, com CONFIRMAR PEÇA e CANCELAR. Depois de colocada, a peça escolhida aparece de perto enquanto você ajusta tamanho, giro e cor (VER ARENA volta para a arena inteira).</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Cada peça no seu espaço</strong><p>Duas peças não ocupam o mesmo lugar: a peça fica vermelha quando invade outra, não é colocada ali e, se for arrastada para um lugar ocupado, volta para onde estava.</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Planícies</strong><p>Aba nova com o chão completo de cada fase do jogo: Ilha do Kame, Torneio, Planeta do Sr. Kaioh, Namek, Nave de Freeza, Namek prestes a explodir, Sala do Tempo, Torneio de Cell, Planeta Supremo Kaioh, Plataforma Celestial e Capital do Oeste.</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Formatos, montes e efeitos</strong><p>Gramado, lago, areia, terra, lava e neve ganham formatos (círculo, oval, feijão, irregular, rio reto e rio em curva) e ALTURA, para fazer montes. Aba EFEITOS com peças que se mexem: coluna de lava, arco de lava, brasas, fumaça, nuvens passando e raio (até 10 por arena). Nova ilha de pedra rachada.</p></li>
+                <li class="upd-versao"><h3>Versão 0.92</h3><p>Editor de Arenas</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>EDITOR DE ARENAS</strong><p>No menu da esfera de 4 estrelas: monte sua própria arena com peças tiradas dos cenários do jogo, em abas — CONSTRUÇÃO (paredes, janelas, portas, prédios, domos, torres, pilares, escada, ringue, portão), NAVE (casco, perna de aço, parede com janelas ovais, painel de botões, antena, cápsula, luzes), NATUREZA (coqueiros, ciprestes, árvores, pedras, mesa de pedra, montanha, cristais), CHÃO (gramado, lago, areia, terra, lava, piso, estrada, trilha), CÉU (sol, lua, planetas, nuvens, estrelas, morros, montanhas, cidade ao longe) e ENFEITES (estátua, símbolo, placa com texto, bandeira, lampião, ampulheta, esfera do dragão). Toque na planta para colocar, arraste para mover e ajuste tamanho, giro e cor; a prévia em 3D gira em volta da arena. Escolha também nome, cor, música, minion, altura da câmera, céu e chão.</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Arenas criadas no jogo</strong><p>A arena salva vira uma fase de verdade: aparece em ARENAS, no mapa e no ranking, sempre liberada, e a câmera dá a volta nela durante a luta, como nas fases 3D. Até 7 arenas criadas, com até 80 peças cada.</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Arquivos de arena</strong><p>EXPORTAR ARQUIVO baixa a arena num arquivo .arena.json e ANEXAR ARQUIVO coloca no jogo uma arena feita no jogo ou fora dele. Se o arquivo tiver erro, o jogo diz qual. O formato e a lista de peças estão em formatos/LEIA-ME-ARENAS.md, com um exemplo.</p></li>
                 <li class="upd-versao"><h3>Versão 0.91</h3><p>Esfera de 4 estrelas, perfil e arquivos de personagem</p></li>
                 <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Esfera de 4 estrelas</strong><p>No canto superior esquerdo do menu principal, a esfera do dragão de 4 estrelas abre o menu de ajustes: perfil, EDITOR DE PERSONAGENS, EDITOR DE ARENAS (em breve) e UPDATES.</p></li>
                 <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Perfil</strong><p>A foto redonda do perfil (por enquanto um lutador carregando ki) e o seu apelido. Tocando na foto aparecem TROCAR FOTO (em breve) e APELIDO.</p></li>
@@ -1775,90 +1850,98 @@
     </div>
 
     <!-- MODAL DE ALERTAS E CONFIRMAÇÕES DO SISTEMA -->
-    <!-- EDITOR DE ARENAS (arenas.js): arena montada com peças dos cenários; a prévia 3D gira em volta do centro -->
+    <!-- EDITOR DE ARENAS (arenas.js): tela inteira — visualização no canto superior esquerdo, peças à direita, dados embaixo -->
     <div id="modal-arena" class="modal" role="dialog" aria-modal="true" aria-labelledby="arena-titulo">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="arena-titulo">EDITOR DE ARENAS</h2>
-                <button class="close-btn" onclick="fecharEditorArenas()" aria-label="Fechar editor de arenas">&times;</button>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="arena-lista">ARENA</label>
-                    <select id="arena-lista" onchange="arenaTrocarDaLista()"></select>
-                </div>
-                <div class="form-group" style="flex: 3 1 360px;">
-                    <label>&nbsp;</label>
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <button type="button" class="btn" onclick="salvarArenaDoEditor()">SALVAR ARENA</button>
-                        <button type="button" class="btn" style="border-color:#ff0055; color:#ff0055;" onclick="excluirArenaDoEditor()">EXCLUIR</button>
-                        <button type="button" class="btn" onclick="exportarArenaDoEditor()">EXPORTAR ARQUIVO</button>
-                        <button type="button" class="btn" onclick="document.getElementById('arquivo-arena').click()">ANEXAR ARQUIVO</button>
-                        <input type="file" id="arquivo-arena" accept=".json" style="display: none;" onchange="anexarArquivoArena(this)">
-                    </div>
-                </div>
-            </div>
-            <div class="ar-corpo">
-                <div class="ar-coluna">
-                    <canvas id="arena-previa" width="480" height="210"></canvas>
-                    <div class="ar-linha">
-                        <label><input type="checkbox" id="arena-girar" checked onchange="arenaLerCampos()"> GIRAR SOZINHA</label>
+        <div class="ar-grade">
+            <section class="ar-vista">
+                <canvas id="arena-previa" width="800" height="350"></canvas>
+                <div id="arena-vista-titulo" class="ar-vista-titulo"></div>
+                <div class="ar-vista-barra">
+                    <div class="ar-mover">
+                        <label><input type="checkbox" id="arena-girar" checked onchange="arenaLerCampos()"> EM MOVIMENTO</label>
+                        <select id="arena-movimento" aria-label="Movimento" onchange="arenaLerCampos()">
+                            <option value="girar">GIRAR</option>
+                            <option value="seguir">SEGUIR</option>
+                        </select>
                         <input type="range" id="arena-angulo" min="0" max="359" value="0" aria-label="Girar câmera" oninput="document.getElementById('arena-girar').checked = false; arenaLerCampos()">
                     </div>
-                    <div class="form-row">
-                        <div class="form-group"><label for="arena-nome">Nome da Arena</label><input type="text" id="arena-nome" maxlength="24" oninput="arenaLerCampos()"></div>
-                        <div class="form-group"><label for="arena-cor">Cor da Arena</label><input type="color" id="arena-cor" oninput="arenaLerCampos()"></div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group"><label for="arena-musica">Música</label><select id="arena-musica" onchange="arenaLerCampos()"></select></div>
-                        <div class="form-group"><label for="arena-minion">Minion</label><select id="arena-minion" onchange="arenaLerCampos()"></select></div>
-                        <div class="form-group"><label for="arena-camera">Câmera</label>
+                    <button type="button" id="arena-confirmar" class="btn" style="display: none;" onclick="arenaConfirmarPeca()">CONFIRMAR PEÇA</button>
+                    <button type="button" id="arena-cancelar" class="btn" style="display: none; border-color:#ff0055; color:#ff0055;" onclick="arenaCancelarPeca()">CANCELAR</button>
+                    <button type="button" id="arena-ver-arena" class="btn" style="display: none;" onclick="arenaVerArena()">VER ARENA</button>
+                </div>
+            </section>
+            <section class="ar-direita">
+                <div class="ar-topo">
+                    <h2 id="arena-titulo">EDITOR DE ARENAS</h2>
+                    <button class="close-btn" onclick="fecharEditorArenas()" aria-label="Fechar editor de arenas">&times;</button>
+                </div>
+                <div class="ar-acoes">
+                    <select id="arena-lista" aria-label="Arena" onchange="arenaTrocarDaLista()"></select>
+                    <button type="button" class="btn" onclick="salvarArenaDoEditor()">SALVAR ARENA</button>
+                    <button type="button" class="btn" style="border-color:#ff0055; color:#ff0055;" onclick="excluirArenaDoEditor()">EXCLUIR</button>
+                    <button type="button" class="btn" onclick="exportarArenaDoEditor()">EXPORTAR ARQUIVO</button>
+                    <button type="button" class="btn" onclick="document.getElementById('arquivo-arena').click()">ANEXAR ARQUIVO</button>
+                    <input type="file" id="arquivo-arena" accept=".json" style="display: none;" onchange="anexarArquivoArena(this)">
+                </div>
+                <div class="ar-abas">
+                    <button type="button" id="arena-aba-construcao" class="ar-aba active" onclick="arenaMostrarAba('construcao')">CONSTRUÇÃO</button>
+                    <button type="button" id="arena-aba-nave" class="ar-aba" onclick="arenaMostrarAba('nave')">NAVE</button>
+                    <button type="button" id="arena-aba-natureza" class="ar-aba" onclick="arenaMostrarAba('natureza')">NATUREZA</button>
+                    <button type="button" id="arena-aba-chao" class="ar-aba" onclick="arenaMostrarAba('chao')">CHÃO</button>
+                    <button type="button" id="arena-aba-planicies" class="ar-aba" onclick="arenaMostrarAba('planicies')">PLANÍCIES</button>
+                    <button type="button" id="arena-aba-ceu" class="ar-aba" onclick="arenaMostrarAba('ceu')">CÉU</button>
+                    <button type="button" id="arena-aba-efeitos" class="ar-aba" onclick="arenaMostrarAba('efeitos')">EFEITOS</button>
+                    <button type="button" id="arena-aba-enfeites" class="ar-aba" onclick="arenaMostrarAba('enfeites')">ENFEITES</button>
+                </div>
+                <div id="arena-pecas" class="ar-pecas"></div>
+                <p id="arena-dica" class="ar-dica"></p>
+                <div class="ar-planta-caixa"><canvas id="arena-planta" width="320" height="320"></canvas></div>
+                <div id="arena-contagem"></div>
+            </section>
+            <section id="arena-baixo" class="ar-baixo" data-vista="dados">
+                <div class="ar-baixo-abas">
+                    <button type="button" id="arena-baixo-dados" class="ar-aba active" onclick="arenaMostrarBaixo('dados')">DADOS DA ARENA</button>
+                    <button type="button" id="arena-baixo-peca" class="ar-aba" onclick="arenaMostrarBaixo('peca')">PEÇA ESCOLHIDA</button>
+                </div>
+                <div class="ar-caixa ar-dados">
+                    <h3>DADOS DA ARENA</h3>
+                    <div class="ar-dados-grade">
+                        <div class="ar-campo"><label for="arena-nome">Nome da Arena</label><input type="text" id="arena-nome" maxlength="24" oninput="arenaLerCampos()"></div>
+                        <div class="ar-campo"><label for="arena-cor">Cor da Arena</label><input type="color" id="arena-cor" oninput="arenaLerCampos()"></div>
+                        <div class="ar-campo"><label for="arena-musica">Música</label><select id="arena-musica" onchange="arenaLerCampos()"></select></div>
+                        <div class="ar-campo"><label for="arena-minion">Minion</label><select id="arena-minion" onchange="arenaLerCampos()"></select></div>
+                        <div class="ar-campo"><label for="arena-camera">Câmera</label>
                             <select id="arena-camera" onchange="arenaLerCampos()">
                                 <option value="baixa">Baixa</option>
                                 <option value="media">Média</option>
                                 <option value="alta">Alta</option>
                             </select></div>
+                        <div class="ar-campo"><label for="arena-ceu-topo">Céu (em cima)</label><input type="color" id="arena-ceu-topo" oninput="arenaLerCampos()"></div>
+                        <div class="ar-campo"><label for="arena-ceu-horizonte">Céu (horizonte)</label><input type="color" id="arena-ceu-horizonte" oninput="arenaLerCampos()"></div>
+                        <div class="ar-campo"><label for="arena-chao-tipo">Chão</label><select id="arena-chao-tipo" onchange="arenaLerCampos()"></select></div>
+                        <div class="ar-campo"><label for="arena-chao-cor">Cor do Chão</label><input type="color" id="arena-chao-cor" oninput="arenaLerCampos()"></div>
                     </div>
-                    <div class="form-row">
-                        <div class="form-group"><label for="arena-ceu-topo">Céu (em cima)</label><input type="color" id="arena-ceu-topo" oninput="arenaLerCampos(); arenaDesenharPlanta()"></div>
-                        <div class="form-group"><label for="arena-ceu-horizonte">Céu (horizonte)</label><input type="color" id="arena-ceu-horizonte" oninput="arenaLerCampos(); arenaDesenharPlanta()"></div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group"><label for="arena-chao-tipo">Chão</label><select id="arena-chao-tipo" onchange="arenaLerCampos(); arenaDesenharPlanta()"></select></div>
-                        <div class="form-group"><label for="arena-chao-cor">Cor do Chão</label><input type="color" id="arena-chao-cor" oninput="arenaLerCampos(); arenaDesenharPlanta()"></div>
-                    </div>
-                    <p class="ar-dica">Arquivos .arena.json: veja formatos/LEIA-ME-ARENAS.md.</p>
                 </div>
-                <div class="ar-coluna">
-                    <div class="tabs">
-                        <button type="button" id="arena-aba-construcao" class="ar-aba active" onclick="arenaMostrarAba('construcao')">CONSTRUÇÃO</button>
-                        <button type="button" id="arena-aba-nave" class="ar-aba" onclick="arenaMostrarAba('nave')">NAVE</button>
-                        <button type="button" id="arena-aba-natureza" class="ar-aba" onclick="arenaMostrarAba('natureza')">NATUREZA</button>
-                        <button type="button" id="arena-aba-chao" class="ar-aba" onclick="arenaMostrarAba('chao')">CHÃO</button>
-                        <button type="button" id="arena-aba-ceu" class="ar-aba" onclick="arenaMostrarAba('ceu')">CÉU</button>
-                        <button type="button" id="arena-aba-enfeites" class="ar-aba" onclick="arenaMostrarAba('enfeites')">ENFEITES</button>
-                    </div>
-                    <div id="arena-pecas" class="ar-pecas"></div>
-                    <p id="arena-dica" class="ar-dica"></p>
-                    <canvas id="arena-planta" width="320" height="320"></canvas>
-                    <div id="arena-contagem"></div>
-                    <div id="arena-selecao" class="ar-selecao" style="display: none;">
-                        <strong id="arena-sel-nome"></strong>
-                        <div class="form-row" style="margin-top: 6px;">
-                            <div class="form-group"><label for="arena-sel-tam">Tamanho</label><input type="range" id="arena-sel-tam" min="0.3" max="3" step="0.1" oninput="arenaMudarSelecao()"></div>
-                            <div class="form-group" id="arena-sel-giro-grupo"><label for="arena-sel-giro">Girar</label><input type="range" id="arena-sel-giro" min="0" max="359" step="1" oninput="arenaMudarSelecao()"></div>
-                            <div class="form-group"><label for="arena-sel-cor">Cor</label><input type="color" id="arena-sel-cor" oninput="arenaMudarSelecao()"></div>
+                <div id="arena-selecao" class="ar-caixa ar-peca-caixa">
+                    <h3>PEÇA ESCOLHIDA</h3>
+                    <p id="arena-selecao-vazia" class="ar-vazia">Toque numa peça da planta para ajustar tamanho, giro e cor.</p>
+                    <div id="arena-selecao-campos" style="display: none;">
+                        <strong id="arena-sel-nome" style="color: #ffd23f; font-size: 12px;"></strong>
+                        <div class="ar-dados-grade" style="margin-top: 4px;">
+                            <div class="ar-campo"><label for="arena-sel-tam">Tamanho</label><input type="range" id="arena-sel-tam" min="0.3" max="3" step="0.1" oninput="arenaMudarSelecao()"></div>
+                            <div class="ar-campo" id="arena-sel-giro-grupo"><label for="arena-sel-giro">Girar</label><input type="range" id="arena-sel-giro" min="0" max="359" step="1" oninput="arenaMudarSelecao()"></div>
+                            <div class="ar-campo" id="arena-sel-altura-grupo"><label for="arena-sel-altura">Altura (monte)</label><input type="range" id="arena-sel-altura" min="0" max="3" step="0.1" oninput="arenaMudarSelecao()"></div>
+                            <div class="ar-campo" id="arena-sel-forma-grupo"><label for="arena-sel-forma">Formato</label><select id="arena-sel-forma" onchange="arenaMudarSelecao()"></select></div>
+                            <div class="ar-campo"><label for="arena-sel-cor">Cor</label><input type="color" id="arena-sel-cor" oninput="arenaMudarSelecao()"></div>
+                            <div class="ar-campo" id="arena-sel-texto-grupo"><label for="arena-sel-texto">Texto</label><input type="text" id="arena-sel-texto" maxlength="16" oninput="arenaMudarSelecao()"></div>
                         </div>
-                        <div class="form-row" id="arena-sel-texto-grupo">
-                            <div class="form-group"><label for="arena-sel-texto">Texto</label><input type="text" id="arena-sel-texto" maxlength="16" oninput="arenaMudarSelecao()"></div>
-                        </div>
-                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <div class="ar-peca-botoes">
                             <button type="button" class="btn" onclick="arenaDuplicarSelecao()">DUPLICAR</button>
                             <button type="button" class="btn" style="border-color:#ff0055; color:#ff0055;" onclick="arenaApagarSelecao()">APAGAR PEÇA</button>
                         </div>
                     </div>
                 </div>
-            </div>
+            </section>
         </div>
     </div>
 
