@@ -1108,18 +1108,35 @@ function voltarParaTelaCheia() {
 // Máximo de rolagem da tela Database. Único lugar que calcula isso — usado pelo mouse wheel, pelo arraste
 // por toque e pela navegação por controle, para não haver 3 fórmulas que podem se desalinhar.
 function getDatabaseMaxScroll(layout) {
+    return getDatabaseScrollMetrics(layout).maxScroll;
+}
+// Personagem é minion? (alinhamento MINION: não aparece para escolher herói/vilão, só no campo MINION das arenas)
+function isMinion(k) { const c = characterDB[k]; return !!(c && c.alignment === "MINION"); }
+const DATABASE_DIVISAO_H = 30;   // faixa "MINIONS" entre os personagens e os minions
+// Posições de tudo na lista do gerenciador (antes da rolagem): personagens, a divisão MINIONS (se houver
+// minion) e os minions embaixo. Desenho, cliques, rolagem e controle usam esta mesma conta.
+function getDatabaseEntradas(layout) {
     layout = layout || getDatabaseLayoutMetrics();
-    const totalRows = Math.ceil(Object.keys(characterDB).length / layout.columns);
-    const contentHeight = totalRows * (layout.cardHeight + layout.gapY) - layout.gapY;
-    return Math.max(0, contentHeight - layout.viewportHeight);
+    const todos = Object.keys(characterDB);
+    const pers = todos.filter(k => !isMinion(k)), mins = todos.filter(isMinion);
+    const passoY = layout.cardHeight + layout.gapY, passoX = layout.cardWidth + layout.gapX;
+    const itens = [];
+    pers.forEach((k, i) => itens.push({ k, x: layout.gridLeft + (i % layout.columns) * passoX, y: Math.floor(i / layout.columns) * passoY }));
+    let fim = Math.ceil(pers.length / layout.columns) * passoY - layout.gapY, divisaoY = null;
+    if (mins.length) {
+        divisaoY = Math.max(0, fim + layout.gapY / 2);
+        const topo = divisaoY + DATABASE_DIVISAO_H;
+        mins.forEach((k, i) => itens.push({ k, x: layout.gridLeft + (i % layout.columns) * passoX, y: topo + Math.floor(i / layout.columns) * passoY, minion: true }));
+        fim = topo + Math.ceil(mins.length / layout.columns) * passoY - layout.gapY;
+    }
+    return { itens, divisaoY, contentHeight: Math.max(0, fim) };
 }
 
 // Igual a getDatabaseMaxScroll, mas também devolve contentHeight (usado pela barra de rolagem para calcular
 // o tamanho do "polegar" proporcional ao total de personagens).
 function getDatabaseScrollMetrics(layout) {
     layout = layout || getDatabaseLayoutMetrics();
-    const totalRows = Math.ceil(Object.keys(characterDB).length / layout.columns);
-    const contentHeight = totalRows * (layout.cardHeight + layout.gapY) - layout.gapY;
+    const { contentHeight } = getDatabaseEntradas(layout);
     return { contentHeight, maxScroll: Math.max(0, contentHeight - layout.viewportHeight) };
 }
 
@@ -2287,18 +2304,20 @@ function padRepeatTick(held, times, name, isDown, dt) {
 function revealPadFocusInDatabase() {
     if (gameState !== "database" || !padNav.focus) return;
     const layout = getDatabaseLayoutMetrics();
-    const keys = Object.keys(characterDB);
-    const totalRows = Math.ceil(keys.length / layout.columns);
-    if (totalRows <= layout.maxVisibleRows) return;
+    const maxScroll = getDatabaseMaxScroll(layout);
+    if (maxScroll <= 0) return;
     // botões do topo (voltar, criar novo) não são de cartão. Cartões escondidos acima da área visível têm o
     // botão desenhado "por baixo" do cabeçalho (y < gridTop), por isso a checagem é pelo alvo e não pela altura.
     const focused = resolvePadFocus();
     if (!focused || isMenuBackTarget(focused)) return;
     if (focused.x === layout.createButtonX && focused.y === layout.createButtonY) return;
-    const rowStep = layout.cardHeight + layout.gapY;
-    const maxScroll = getDatabaseMaxScroll(layout);
-    const row = Math.max(0, Math.min(totalRows - 1, Math.floor((padNav.focus.y + characterDatabaseScrollY - layout.gridTop) / rowStep)));
-    const next = getScrollToRevealRow(row, rowStep, layout.cardHeight, layout.viewportHeight, characterDatabaseScrollY, maxScroll);
+    const yMapa = padNav.focus.y + characterDatabaseScrollY - layout.gridTop;
+    const item = getDatabaseEntradas(layout).itens.find(it => yMapa >= it.y - layout.gapY / 2 && yMapa <= it.y + layout.cardHeight + layout.gapY / 2);
+    if (!item) return;
+    let next = characterDatabaseScrollY;
+    if (item.y < next) next = item.y;
+    else if (item.y + layout.cardHeight > next + layout.viewportHeight) next = item.y + layout.cardHeight - layout.viewportHeight;
+    next = Math.max(0, Math.min(maxScroll, next));
     if (next !== characterDatabaseScrollY) {
         padNav.focus.y -= next - characterDatabaseScrollY;
         characterDatabaseScrollY = next;
@@ -3727,11 +3746,8 @@ function handleMenuClick(x, y) {
         if (hitRect(x, y, MENU_LAYOUT.back)) { setGameState("menu"); return; }
         if (y < layout.gridTop - 4) return;   // acima do quadro dos cartões (parte recortada) não clica em cartão
 
-        keys.forEach((k, idx) => {
-            const row = Math.floor(idx / layout.columns);
-            const col = idx % layout.columns;
-            const cx = layout.gridLeft + col * (layout.cardWidth + layout.gapX);
-            const cy = layout.gridTop + row * (layout.cardHeight + layout.gapY) - characterDatabaseScrollY;
+        getDatabaseEntradas(layout).itens.forEach(({ k, x: cx, y: yBase }) => {
+            const cy = layout.gridTop + yBase - characterDatabaseScrollY;
 
             if (cy + layout.cardHeight < layout.gridTop - 10 || cy > layout.gridTop + layout.viewportHeight + 10) return;
 
@@ -3740,13 +3756,13 @@ function handleMenuClick(x, y) {
 
             if (inRect(x, y, firstBtnX, actionY, btnW, 20)) openModal(k);
             else if (inRect(x, y, firstBtnX + btnW + 10, actionY, btnW, 20)) {
-                if (keys.length <= 1) return showSystemAlert("AVISO", "DEVE HAVER PELO MENOS UM PERSONAGEM!");
+                if (!isMinion(k) && keys.filter(q => !isMinion(q)).length <= 1) return showSystemAlert("AVISO", "DEVE HAVER PELO MENOS UM PERSONAGEM!");
                 showSystemConfirm("EXCLUIR", `REMOVER ${characterDB[k].name}?`, () => {
                     delete characterDB[k];
                     // Se o apagado era o escolhido (herói ou vilão), escolhe outro que ainda existe — senão a
                     // partida começava com um personagem inexistente (aparecia só um retângulo colorido).
                     const remaining = Object.keys(characterDB);
-                    const pick = (aligns) => remaining.find(key => aligns.includes(characterDB[key].alignment)) || remaining[0];
+                    const pick = (aligns) => remaining.find(key => aligns.includes(characterDB[key].alignment)) || remaining.find(key => !isMinion(key)) || remaining[0];
                     if (selectedCharacter === k) selectedCharacter = pick(["HERÓI", "ANTI-HERÓI"]);
                     if (selectedBoss === k) selectedBoss = pick(["VILÃO", "ANTI-HERÓI"]);
                     saveSelectedCharacters();
@@ -5309,7 +5325,58 @@ function getMinionKind() {
     return typeof selectedStage !== "undefined" ? getMinionDaFase(selectedStage) : "saibaman";
 }
 
+// Minion feito no editor (v0.87): usa os quadros do próprio desenho (parado, voando, investindo...) no tamanho de
+// minion. Saibaman e Cell Jr. continuam com o desenho clássico enquanto não forem editados.
+const minionAssinaturas = new WeakMap();
+function minionAssinatura(app) {
+    if (!app || typeof app !== "object") return "";
+    let s = minionAssinaturas.get(app);
+    if (s === undefined) { s = JSON.stringify(normalizeAppearance(app)); minionAssinaturas.set(app, s); }
+    return s;
+}
+function minionUsaDesenhoClassico(tipo) {
+    if (!MINIONS_PADRAO.some(m => m.id === tipo)) return false;
+    const c = characterDB[tipo];
+    if (!c || !c.builderAppearance || !SPRITE_PRESETS[tipo]) return true;
+    return minionAssinatura(c.builderAppearance) === minionAssinatura(SPRITE_PRESETS[tipo].appearance);
+}
+const MINION_POSE_ESTADO = { brotar: "flyUp", saltar: "flyUp", voar: "idle", investir: "flyLeft", agarrar: "chargeKi", arremessado: "flyDown" };
+const minionConstruidoCache = new Map();
+function getMinionConstruidoSprite(tipo, pose, frame) {
+    const c = characterDB[tipo], app = c && c.builderAppearance;
+    if (!app) return null;
+    const key = tipo + "|" + minionAssinatura(app) + "|" + pose + "|" + frame;
+    let item = minionConstruidoCache.get(key);
+    if (!item) {
+        const estado = MINION_POSE_ESTADO[pose] || "idle";
+        const n = (SPRITE_FRAME_COUNTS && SPRITE_FRAME_COUNTS[estado]) || 1;
+        const tela = document.createElement("canvas");
+        tela.width = (32 + SAIBAMAN_SPRITE_PAD * 2) * SAIBAMAN_SPRITE_SCALE;
+        tela.height = (40 + SAIBAMAN_SPRITE_PAD * 2) * SAIBAMAN_SPRITE_SCALE;
+        item = { tela, pronto: false };
+        const img = new Image();
+        img.onload = () => {
+            const g = tela.getContext && tela.getContext("2d");
+            if (!g) return;
+            // o desenho (96x112) no espaço do minion (32x40, pés embaixo)
+            const k = 46 / SPRITE_VIEW.h;
+            g.scale(SAIBAMAN_SPRITE_SCALE, SAIBAMAN_SPRITE_SCALE);
+            g.drawImage(img, SAIBAMAN_SPRITE_PAD + 16 - SPRITE_VIEW.w / 2 * k, SAIBAMAN_SPRITE_PAD + 1 + 40 - 104 * k, SPRITE_VIEW.w * k, SPRITE_VIEW.h * k);
+            item.pronto = true;
+        };
+        img.src = generateSpriteFrameUrl(app, estado, frame % n);
+        if (minionConstruidoCache.size > 200) minionConstruidoCache.clear();
+        minionConstruidoCache.set(key, item);
+    }
+    return item.pronto ? item.tela : null;
+}
+
 function getSaibamanSprite(pose, frame, tipo = getMinionKind()) {
+    if (!minionUsaDesenhoClassico(tipo)) {
+        const pronto = getMinionConstruidoSprite(tipo, pose, frame);
+        if (pronto) return pronto;
+        tipo = tipo === "celljr" ? "celljr" : "saibaman";   // enquanto carrega: o clássico
+    }
     const key = tipo + pose + frame;
     let c = saibamanSpriteCache.get(key);
     if (c) return c;
@@ -7246,11 +7313,24 @@ function render() {
         ctx.beginPath();
         ctx.rect(0, layout.gridTop - 4, canvas.width - 20, canvas.height - layout.gridTop + 4);
         ctx.clip();
-        keys.forEach((k, idx) => {
-            const row = Math.floor(idx / layout.columns);
-            const col = idx % layout.columns;
-            const cx = layout.gridLeft + col * (layout.cardWidth + layout.gapX);
-            const cy = layout.gridTop + row * (layout.cardHeight + layout.gapY) - characterDatabaseScrollY;
+        const entradas = getDatabaseEntradas(layout);
+        if (entradas.divisaoY !== null) {
+            // divisão: abaixo dela ficam os minions (não aparecem para escolher herói/vilão; só no MINION das arenas)
+            const dy = layout.gridTop + entradas.divisaoY - characterDatabaseScrollY;
+            if (dy > layout.gridTop - DATABASE_DIVISAO_H && dy < canvas.height) {
+                ctx.strokeStyle = "#86efac";
+                ctx.lineWidth = 1.5;
+                ctx.beginPath(); ctx.moveTo(layout.gridLeft, dy + 15); ctx.lineTo(canvas.width - layout.gridLeft, dy + 15); ctx.stroke();
+                ctx.fillStyle = "rgba(9, 9, 21, 0.95)";
+                ctx.fillRect(canvas.width / 2 - 60, dy + 5, 120, 20);
+                ctx.fillStyle = "#86efac";
+                ctx.font = "bold 13px 'Courier New', monospace";
+                ctx.textAlign = "center";
+                ctx.fillText("MINIONS", canvas.width / 2, dy + 20);
+            }
+        }
+        entradas.itens.forEach(({ k, x: cx, y: yBase }) => {
+            const cy = layout.gridTop + yBase - characterDatabaseScrollY;
 
             if (cy + layout.cardHeight < layout.gridTop - 10 || cy > layout.gridTop + layout.viewportHeight + 10) {
                 // Fora da área visível: não desenha, mas registra os botões para o controle conseguir chegar

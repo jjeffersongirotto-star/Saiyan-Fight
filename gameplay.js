@@ -1085,8 +1085,13 @@ function setMinionDaFase(faseId, minionId) {
     todos[faseId] = minionId;
     writeStorage("saiyan_minions_fase", JSON.stringify(todos));
 }
+// Minions para o campo MINION das arenas: Saibaman e Cell Jr. (sempre) + os personagens com alinhamento MINION
+// criados no editor (v0.87). O nome vem do personagem quando existe.
 function getMinionsDisponiveis() {
-    return MINIONS_PADRAO.slice();
+    const db = typeof characterDB === "object" ? characterDB : {};
+    const lista = MINIONS_PADRAO.map(m => ({ id: m.id, nome: (db[m.id] && db[m.id].alignment === "MINION" && db[m.id].name) || m.nome }));
+    Object.keys(db).forEach(k => { if (db[k] && db[k].alignment === "MINION" && !lista.some(m => m.id === k)) lista.push({ id: k, nome: db[k].name || k }); });
+    return lista;
 }
 // No modo história, o vilão escolhido para a fase já começa (e volta a cada onda) na forma escolhida
 function aplicarFormaInicialDoVilao() {

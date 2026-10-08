@@ -790,6 +790,16 @@ CONFIGURAR ARENA § ARENA SETUP § CONFIGURAR ARENA
 FASE § STAGE § FASE
 PERSONAGEM § CHARACTER § PERSONAJE
 MINION § MINION § ESBIRRO
+MINIONS § MINIONS § ESBIRROS
+Minion § Minion § Esbirro
+Minion: cabeça de Saibaman § Minion: Saibaman head § Esbirro: cabeza de Saibaman
+Minion: crista de Cell Jr. § Minion: Cell Jr. crest § Esbirro: cresta de Cell Jr.
+Minion: anéis (Saibaman) § Minion: rings (Saibaman) § Esbirro: anillos (Saibaman)
+Minion: manchas (Cell Jr.) § Minion: spots (Cell Jr.) § Esbirro: manchas (Cell Jr.)
+Minion: pés com garras § Minion: clawed feet § Esbirro: pies con garras
+Minion: mãos com garras § Minion: clawed hands § Esbirro: manos con garras
+COR DAS VEIAS / MANCHAS (PEÇAS DE MINION) § VEIN / SPOT COLOR (MINION PARTS) § COLOR DE VENAS / MANCHAS (PIEZAS DE ESBIRRO)
+COR DAS GARRAS (PEÇAS DE MINION) § CLAW COLOR (MINION PARTS) § COLOR DE LAS GARRAS (PIEZAS DE ESBIRRO)
 TROCAR § CHANGE § CAMBIAR
 NENHUM ESCOLHIDO § NONE CHOSEN § NINGUNO ELEGIDO
 ADVERSÁRIOS MAIS FORTES VIRÃO! § STRONGER OPPONENTS ARE COMING! § ¡VIENEN RIVALES MÁS FUERTES!
