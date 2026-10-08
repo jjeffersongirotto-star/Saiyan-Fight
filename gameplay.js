@@ -759,11 +759,16 @@ function initScenario() {
     }
 }
 
+// Tempo total da partida (segundos de jogo de verdade, sem pausa) e golpes sofridos — vão junto no ranking
+function dadosDaPartidaParaRanking() {
+    return { tempo: Math.max(0, Math.round(gameplayClock - (runStats.inicio || 0))), golpes: runStats.hitsReceived | 0 };
+}
+
 function startGame() {
     initAudio();
     bumpStat("gamesPlayed", 1);
     pickupTypesThisRun = new Set();
-    runStats = { attacks: 0, parries: 0, hitsReceived: 0, items: { senzu: 0, capsule: 0, cloud: 0, staff: 0 } };
+    runStats = { attacks: 0, parries: 0, hitsReceived: 0, items: { senzu: 0, capsule: 0, cloud: 0, staff: 0 }, inicio: gameplayClock };
     gameOverStats = null;
     pendingStageVictory = false;
 
@@ -893,8 +898,8 @@ function resolveStageVictory() {
     const progress = registerStageModeComplete(selectedStage, stageMode);
     if (selectedStage === STAGE_PROGRESSION[0].id && progress.normalDone) unlockAchievement("stage_" + selectedStage);
     checkStageModeAchievements();
-    saveRankingScore(score);
-    saveStageRankingScore(selectedStage, score);
+    saveRankingScore(score, dadosDaPartidaParaRanking());
+    saveStageRankingScore(selectedStage, score, dadosDaPartidaParaRanking());
     const stageInfo = STAGE_PROGRESSION.find(s => s.id === selectedStage);
     const stageIdx = STAGE_PROGRESSION.findIndex(s => s.id === selectedStage);
     const isLastStage = stageIdx === STAGE_PROGRESSION.length - 1;
@@ -1356,8 +1361,8 @@ function triggerGameOver() {
     const prevGeneralBest = Array.isArray(prevGeneralList) && prevGeneralList.length ? prevGeneralList[0].score : 0;
     const prevStageBest = getStageRecord(selectedStage);
 
-    saveRankingScore(score);
-    saveStageRankingScore(selectedStage, score);
+    saveRankingScore(score, dadosDaPartidaParaRanking());
+    saveStageRankingScore(selectedStage, score, dadosDaPartidaParaRanking());
     if (score > highScore) {
         highScore = score;
         writeStorage("saiyan_highscore", highScore);

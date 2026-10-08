@@ -1,0 +1,19 @@
+{
+  "versao": 1,
+  "id": "plataforma_celestial",
+  "nome": "PLATAFORMA CELESTIAL",
+  "posicao": 10,
+  "cor": "#7dd3fc",
+  "musica": "kami",
+  "cenario": "plataforma_celestial",
+  "camera": {
+    "tipo": "orbita",
+    "volta": 10200
+  },
+  "fundoClaro": true,
+  "minion": "saibaman",
+  "conquista": {
+    "nome": "Acima das Nuvens",
+    "desc": "Libere a Plataforma Celestial"
+  }
+}

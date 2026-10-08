@@ -106,7 +106,9 @@ let achievements = {
     stage_freeza_ship: { name: "Clandestino na Nave", desc: "Libere a Nave de Freeza sem ser visto", tier: "silver" },
     stage_time_room: { name: "Um Ano em Um Dia", desc: "Libere a Sala do Tempo. Sem relógio!", tier: "silver" },
     stage_cell_games: { name: "Convidado do Cell", desc: "Libere o Torneio de Cell", tier: "gold" },
-    stage_kaioshin: { name: "Entre os Deuses", desc: "Libere todas as fases, até o Supremo Kaioh", tier: "gold" },
+    stage_kaioshin: { name: "Entre os Deuses", desc: "Libere o Planeta Supremo Kaioh", tier: "gold" },
+    stage_plataforma_celestial: { name: "Acima das Nuvens", desc: "Libere a Plataforma Celestial", tier: "gold" },
+    stage_capital_oeste: { name: "Visita à Corporação Cápsula", desc: "Libere a Capital do Oeste", tier: "gold" },
     hard_first: { name: "Difícil? Não Para Mim", desc: "Vença o modo DIFÍCIL de uma fase pela primeira vez", tier: "silver" },
     all_normal: { name: "Rodei o Universo Inteiro", desc: "Vença o modo NORMAL de todas as fases", tier: "gold" },
     all_hard: { name: "Dificuldade? Pouco É Bobagem", desc: "Vença o modo DIFÍCIL de todas as fases", tier: "gold" },
@@ -214,11 +216,12 @@ function triggerAchievementPopup(title) {
     achievementBanner = { active: true, title: title, timer: 0, maxTimer: 180, yOffset: -60 };
 }
 
-function saveRankingScore(newScore) {
+// extra (v0.88): { tempo (segundos de partida), golpes (golpes sofridos) } — mostrados no ranking, a ordem é a pontuação
+function saveRankingScore(newScore, extra) {
     try {
         let ranking = readJsonStorage("saiyan_ranking", []);
         if (!Array.isArray(ranking)) ranking = [];
-        ranking.push({ score: newScore, date: new Date().toLocaleDateString() });
+        ranking.push(Object.assign({ score: newScore, date: new Date().toLocaleDateString() }, extra || {}));
         ranking.sort((a, b) => b.score - a.score);
         ranking = ranking.slice(0, 5);
         writeStorage("saiyan_ranking", JSON.stringify(ranking));
@@ -230,13 +233,13 @@ function saveRankingScore(newScore) {
 // ==================== RANKING POR ARENA ====================
 // Top 5 de cada arena separadamente (saiyan_stage_ranking: { [idDaArena]: [{score,date}, ...] }). O recorde
 // individual de uma arena é sempre o 1º item dessa lista — não precisa guardar em outro lugar.
-function saveStageRankingScore(stageId, newScore) {
+function saveStageRankingScore(stageId, newScore, extra) {
     if (!stageId) return;
     try {
         let all = readJsonStorage("saiyan_stage_ranking", {});
         if (!all || typeof all !== "object" || Array.isArray(all)) all = {};
         let list = Array.isArray(all[stageId]) ? all[stageId] : [];
-        list.push({ score: newScore, date: new Date().toLocaleDateString() });
+        list.push(Object.assign({ score: newScore, date: new Date().toLocaleDateString() }, extra || {}));
         list.sort((a, b) => b.score - a.score);
         all[stageId] = list.slice(0, 5);
         writeStorage("saiyan_stage_ranking", JSON.stringify(all));

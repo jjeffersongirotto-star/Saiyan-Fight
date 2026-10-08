@@ -385,11 +385,23 @@ const FASES_PADRAO = [
         conquista: { nome: "Convidado do Cell", desc: "Libere o Torneio de Cell" } },
     { id: "kaioshin", nome: "PLANETA SUPREMO KAIOH", posicao: 9, cor: "#fbbf24", musica: "boo", cenario: "planeta_supremo_kaioh",
         camera: { tipo: "arena", volta: 10800 }, fundoClaro: true, minion: "saibaman",
-        conquista: { nome: "Entre os Deuses", desc: "Libere todas as fases, até o Supremo Kaioh" } }
+        conquista: { nome: "Entre os Deuses", desc: "Libere o Planeta Supremo Kaioh" } },
+    { id: "plataforma_celestial", nome: "PLATAFORMA CELESTIAL", posicao: 10, cor: "#7dd3fc", musica: "kami", cenario: "plataforma_celestial",
+        camera: { tipo: "orbita", volta: 10200 }, fundoClaro: true, minion: "saibaman",
+        conquista: { nome: "Acima das Nuvens", desc: "Libere a Plataforma Celestial" } },
+    { id: "capital_oeste", nome: "CAPITAL DO OESTE", posicao: 11, cor: "#facc15", musica: "capital", cenario: "capital_oeste",
+        camera: { tipo: "orbita", volta: 10800 }, fundoClaro: true, minion: "saibaman",
+        conquista: { nome: "Visita à Corporação Cápsula", desc: "Libere a Capital do Oeste" } }
 ];
 // Minions que podem ser escolhidos para uma fase (na 0.87 entram os criados no editor).
 const MINIONS_PADRAO = [{ id: "saibaman", nome: "SAIBAMAN" }, { id: "celljr", nome: "CELL JR." }];
 
+// Tempo de partida em segundos -> "m:ss" (ou "h:mm:ss" a partir de 1 hora)
+function formatarTempoPartida(seg) {
+    const t = Math.max(0, Math.round(seg || 0)), h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60, s = t % 60;
+    const dois = (n) => String(n).padStart(2, "0");
+    return h ? `${h}:${dois(m)}:${dois(s)}` : `${m}:${dois(s)}`;
+}
 function getFaseDef(id) {
     return FASES_PADRAO.find(f => f.id === id) || null;
 }
@@ -708,6 +720,8 @@ const KAIO_PLANET_LAP_SCROLL = 6000;   // Planeta do Sr. Kaioh: ~67 s por volta
 const TERRA_ARENA_LAP_SCROLL = 9000;   // Torneio de Artes Marciais: ~100 s
 const KAIOSHIN_LAP_SCROLL = 10800;     // Planeta Supremo Kaioh: ~2 min
 const KAME_ISLAND_LAP_SCROLL = 9600;   // Ilha do Mestre Kame: ~107 s por volta em volta da casa
+const PLATAFORMA_LAP_SCROLL = 10200;   // Plataforma Celestial: ~113 s por volta em volta do palácio
+const CAPITAL_LAP_SCROLL = 10800;      // Capital do Oeste: ~2 min por volta em volta da Corporação Cápsula
 // Fases que andam para a frente (Namek): distância percorrida pela câmera.
 const NAMEK_FORWARD_SPEED = 1.4;
 function getForwardTravel(scroll) {
@@ -856,6 +870,7 @@ if (typeof module !== "undefined" && module.exports) {
         FASES_PADRAO,
         MINIONS_PADRAO,
         getFaseDef,
+        formatarTempoPartida,
         ordenarFases,
         trocarPosicaoFase,
         aplicarOrdemDasFases,
@@ -915,6 +930,8 @@ if (typeof module !== "undefined" && module.exports) {
         TERRA_ARENA_LAP_SCROLL,
         KAIOSHIN_LAP_SCROLL,
         KAME_ISLAND_LAP_SCROLL,
+        PLATAFORMA_LAP_SCROLL,
+        CAPITAL_LAP_SCROLL,
         migrarProgressoIlhaKame,
         NAMEK_FORWARD_SPEED,
         getForwardTravel,

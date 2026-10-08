@@ -237,7 +237,7 @@ function revealPadFocusInCharacters() {
     padNav.focus.y -= charactersScrollY - before;
 }
 function getStageCardRect(i) {
-    return rect(32 + (i % 5) * 150, 70 + Math.floor(i / 5) * 106, STAGE_CARD_W, STAGE_CARD_H);   // 5 por fileira
+    return rect(30 + (i % 6) * 124, 70 + Math.floor(i / 6) * 106, STAGE_CARD_W, STAGE_CARD_H);   // 6 por fileira
 }
 function getPcKeyRect(idx) {
     return rect(idx % 2 === 0 ? 280 : 560, PC_KEY_ROW_Y0 + Math.floor(idx / 2) * PC_KEY_ROW_STEP, 110, 24);
@@ -245,16 +245,22 @@ function getPcKeyRect(idx) {
 function getGamepadBindingRect(i) {
     return rect(330, 96 + i * 36, 210, 28);   // uma linha de espaço abaixo do subtítulo
 }
+// Linha do ranking: pontuação (a ordem), tempo total da partida e golpes sofridos (partidas antigas: "—")
+function textoLinhaRanking(idx, rk) {
+    const tempo = Number.isFinite(rk.tempo) ? formatarTempoPartida(rk.tempo) : "—";
+    const golpes = Number.isFinite(rk.golpes) ? String(rk.golpes) : "—";
+    return `${idx + 1}. SCORE: ${rk.score}  -  TEMPO: ${tempo}  -  GOLPES: ${golpes}  -  ${rk.date}`;
+}
 function getRankingStageTabRect(i) {
-    return rect(40 + (i % 8) * 92, 90, 84, 30);
+    return rect(40 + (i % 6) * 122, 84 + Math.floor(i / 6) * 30, 116, 26);   // 6 por fileira (cabem 12 fases em 2 fileiras)
 }
 // TRILHAS SONORAS: uma linha por fase (duas colunas de 4), com o botão TOCAR/PAUSAR à direita.
 function getTrackRowRect(i) {
-    return rect(86 + Math.floor(i / 5) * 322, 92 + (i % 5) * 44, 306, 40);   // 2 colunas de 5 (uma por fase)
+    return rect(86 + Math.floor(i / 6) * 322, 90 + (i % 6) * 38, 306, 35);   // 2 colunas de 6 (uma por fase)
 }
 function getTrackPlayRect(i) {
     const r = getTrackRowRect(i);
-    return rect(r.x + r.w - 92, r.y + 4, 84, 32);
+    return rect(r.x + r.w - 92, r.y + 4, 84, 27);
 }
 function hitRect(x, y, r) {
     return inRect(x, y, r.x, r.y, r.w, r.h);
@@ -330,7 +336,7 @@ const lockedStageIconCache = {};
 // Cards da tela ARENAS: cada um mostra uma foto do cenário da fase. A foto é tirada uma vez (desenhando o
 // cenário na tela e copiando um recorte) — uma fase por quadro para não engasgar — e guardada colorida e em
 // cinza (para a fase bloqueada).
-const STAGE_CARD_W = 140, STAGE_CARD_H = 92;
+const STAGE_CARD_W = 118, STAGE_CARD_H = 92;
 const stageCardThumbs = {};
 function prepareNextStageCardThumb() {
     const stg = STAGE_PROGRESSION.find(st => !stageCardThumbs[st.id]);
@@ -447,6 +453,16 @@ function drawStageNodeIcon(cx, cy, r, stageId, g = ctx) {
         g.fillStyle = "#1a0f2e"; g.fillRect(cx - r, cy - r, r * 2, r * 2);
         g.fillStyle = "#8a5fd1"; g.beginPath(); g.ellipse(cx, cy, r * 0.8, r * 0.35, 0, 0, Math.PI * 2); g.fill();
         g.fillStyle = "#c9a6f0"; g.beginPath(); g.arc(cx, cy - r * 0.15, r * 0.28, 0, Math.PI * 2); g.fill();
+    } else if (stageId === "plataforma_celestial") {
+        g.fillStyle = "#8cbcea"; g.fillRect(cx - r, cy - r, r * 2, r * 2);
+        g.fillStyle = "#f2f6fb"; g.fillRect(cx - r, cy + r * 0.3, r * 2, r);
+        g.fillStyle = "#c4a24a"; g.beginPath(); g.ellipse(cx, cy + r * 0.25, r * 0.8, r * 0.3, 0, 0, Math.PI); g.fill();
+        g.fillStyle = "#dfeaf6"; g.beginPath(); g.ellipse(cx, cy + r * 0.2, r * 0.82, r * 0.22, 0, 0, Math.PI * 2); g.fill();
+        g.fillStyle = "#d9a53c"; g.beginPath(); g.arc(cx, cy + r * 0.05, r * 0.25, Math.PI, 0); g.fill();
+    } else if (stageId === "capital_oeste") {
+        g.fillStyle = "#5fb04a"; g.fillRect(cx - r, cy - r, r * 2, r * 2);
+        g.fillStyle = "#e8eef6"; g.fillRect(cx - r * 0.8, cy - r * 0.7, r * 0.3, r); g.fillRect(cx + r * 0.5, cy - r * 0.8, r * 0.3, r * 1.1);
+        g.fillStyle = "#f2c94c"; g.beginPath(); g.arc(cx, cy + r * 0.3, r * 0.45, Math.PI, 0); g.fill();
     } else if (stageId === "kame") {
         g.fillStyle = "#5fb4f0"; g.fillRect(cx - r, cy - r, r * 2, r * 2);
         g.fillStyle = "#2f9bd0"; g.fillRect(cx - r, cy + r * 0.25, r * 2, r);
@@ -822,7 +838,7 @@ function drawPainelArena() {
     if (v) {
         ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
         ctx.fillRect(330, 154, 44, 56);
-        drawCharacterPortrait(characterDB[v.key], 332, 156, 40, 52);
+        drawRetratoNaForma(v.key, v.nivel, 332, 156, 40, 52);
         const forma = (getCharacterFormsList(v.key)[v.nivel] || {}).nome || "FORMA BASE";
         ctx.textAlign = "left";
         ctx.fillStyle = "#ffffff";
@@ -943,6 +959,15 @@ function drawCharacterFormsPanel(key, escolher = false) {
     ctx.restore();
     if (escolher) registerMenuTarget(MENU_LAYOUT.characters.infoClose.x, MENU_LAYOUT.characters.infoClose.y, MENU_LAYOUT.characters.infoClose.w, MENU_LAYOUT.characters.infoClose.h);
     drawBtnAt(MENU_LAYOUT.characters.infoClose, "✕", "#fca5a5", "bold 14px monospace");
+}
+// Retrato do personagem na forma escolhida (vilão da fase): a base usa o retrato do cartão; uma transformação usa
+// o 1º quadro parado daquela forma (mesmo desenho do quadro de formas).
+function drawRetratoNaForma(key, nivel, x, y, w, h) {
+    const c = characterDB[key];
+    if (!c) return;
+    if (!(nivel > 0)) { drawCharacterPortrait(c, x, y, w, h); return; }
+    const frames = getCharacterAnimationFrames(key, "idle", nivel);
+    drawFormPortrait(frames && frames[0], c, x, y, w, h);
 }
 function drawFormPortrait(src, cItem, x, y, w, h) {
     if (typeof src !== "string") { if (isDrawableSource(src)) ctx.drawImage(src, x, y, w, h); return; }
@@ -4755,6 +4780,12 @@ function drawStageBackground() {
     else if (selectedStage === "kame") {
         drawKameIslandStage(getStageLapAngle(scroll, KAME_ISLAND_LAP_SCROLL));
     }
+    else if (selectedStage === "plataforma_celestial") {
+        drawPlataformaStage(getStageLapAngle(scroll, PLATAFORMA_LAP_SCROLL));
+    }
+    else if (selectedStage === "capital_oeste") {
+        drawCapitalStage(getStageLapAngle(scroll, CAPITAL_LAP_SCROLL));
+    }
 
     ctx.restore();
 }
@@ -6599,7 +6630,7 @@ function render() {
                     ctx.strokeStyle = "#fca5a5";
                     ctx.lineWidth = 1;
                     ctx.stroke();
-                    drawCharacterPortrait(characterDB[vf.key], sx + cw - 38, sy + 7, 31, 42);
+                    drawRetratoNaForma(vf.key, vf.nivel, sx + cw - 38, sy + 7, 31, 42);
                 }
             } else {
                 ctx.fillStyle = "#aab2c4";
@@ -6782,10 +6813,10 @@ function render() {
             ctx.textAlign = "left";
             ctx.fillStyle = tocando ? "#fde68a" : "#e2e8f0";
             ctx.font = "bold 12px 'Segoe UI', sans-serif";
-            ctx.fillText((tocando ? "♪ " : "") + t.nome, row.x + 10, row.y + 18, row.w - 108);
+            ctx.fillText((tocando ? "♪ " : "") + t.nome, row.x + 10, row.y + 15, row.w - 108);
             ctx.fillStyle = "#94a3b8";
             ctx.font = "10px 'Segoe UI', sans-serif";
-            ctx.fillText("Fase " + (i + 1) + ": " + t.fases, row.x + 10, row.y + 34, row.w - 108);
+            ctx.fillText("Fase " + (i + 1) + ": " + t.fases, row.x + 10, row.y + 29, row.w - 108);
             drawBtnAt(getTrackPlayRect(i), tocando ? "❚❚ PAUSAR" : "▶ TOCAR", tocando ? "#fca5a5" : "#86efac");
         });
         if (isMuted || bgmVolume <= 0) {
@@ -6827,7 +6858,7 @@ function render() {
                 ranking.forEach((rk, idx) => {
                     ctx.fillStyle = idx === 0 ? "#ffff00" : "#ffffff";
                     ctx.font = "14px monospace";
-                    ctx.fillText(`${idx + 1}. SCORE: ${rk.score}  -  DATA: ${rk.date}`, canvas.width / 2, 130 + idx * 32);
+                    ctx.fillText(textoLinhaRanking(idx, rk), canvas.width / 2, 130 + idx * 32);
                 });
             }
         } else {
@@ -6839,15 +6870,15 @@ function render() {
                 const pressed = beginButtonPress(px, py, tab.w, tab.h);
                 const isSel = rankingSelectedStage === stg.id;
                 ctx.fillStyle = isSel ? "rgba(255,255,0,0.18)" : "rgba(255,255,255,0.06)";
-                ctx.fillRect(px, py, 84, 30);
+                ctx.fillRect(px, py, tab.w, tab.h);
                 ctx.strokeStyle = isSel ? "#ffff00" : "#3a3a48";
                 ctx.lineWidth = isSel ? 2 : 1;
-                ctx.strokeRect(px, py, 84, 30);
-                drawStageNodeIcon(px + 15, py + 15, 11, stg.id);
+                ctx.strokeRect(px, py, tab.w, tab.h);
+                drawStageNodeIcon(px + 13, py + tab.h / 2, 10, stg.id);
                 ctx.fillStyle = isSel ? "#ffff00" : "#cbd5e1";
                 ctx.font = "bold 8px monospace";
                 ctx.textAlign = "left";
-                ctx.fillText(T(stg.name).slice(0, 12), px + 30, py + 18, 50);
+                ctx.fillText(T(stg.name), px + 26, py + 16, tab.w - 30);
                 endButtonPress(pressed);
             });
 
@@ -6855,7 +6886,7 @@ function render() {
             ctx.textAlign = "center";
             ctx.fillStyle = "#93c5fd";
             ctx.font = "bold 13px monospace";
-            ctx.fillText(stageInfo ? stageInfo.name : "", canvas.width / 2, 148);
+            ctx.fillText(stageInfo ? stageInfo.name : "", canvas.width / 2, 160);
 
             const list = getStageRankingList(rankingSelectedStage);
             if (list.length === 0) {
@@ -6866,7 +6897,7 @@ function render() {
                 list.forEach((rk, idx) => {
                     ctx.fillStyle = idx === 0 ? "#ffff00" : "#ffffff";
                     ctx.font = "13px monospace";
-                    ctx.fillText(`${idx + 1}. SCORE: ${rk.score}  -  DATA: ${rk.date}`, canvas.width / 2, 175 + idx * 28);
+                    ctx.fillText(textoLinhaRanking(idx, rk), canvas.width / 2, 186 + idx * 26);
                 });
             }
         }
@@ -7349,7 +7380,12 @@ function render() {
 
             const geo = getDatabaseCardGeometry(layout, cx, cy);
 
-            if (!drawCharacterPortrait(cItem, cx + 6, geo.imageY - 4, layout.cardWidth - 12, geo.imageSize + 6)) {
+            // Saibaman/Cell Jr. sem edição: o mesmo desenho do gameplay
+            const classico = isMinion(k) && minionUsaDesenhoClassico(k) ? getSaibamanSprite("voar", 0, k) : null;
+            if (classico) {
+                const h = geo.imageSize + 6, w = h * classico.width / classico.height;
+                ctx.drawImage(classico, cx + layout.cardWidth / 2 - w / 2, geo.imageY - 4, w, h);
+            } else if (!drawCharacterPortrait(cItem, cx + 6, geo.imageY - 4, layout.cardWidth - 12, geo.imageSize + 6)) {
                 ctx.fillStyle = "#1a1a1a";
                 ctx.fillRect(geo.imageX, geo.imageY, geo.imageSize, geo.imageSize);
                 ctx.strokeStyle = "#00ffff";
