@@ -38,15 +38,15 @@ check("sem rotação: o toque continua igual", normal.x === 100 && normal.y === 
 // ---------- overlay de escolha de modo: sem o texto pequeno, título/subtítulo/botões mais acima ----------
 run("writeStorage('saiyan_stage_progress', ''); stageProgress = {}; setGameState('stage_map')");
 run("handleMenuClick(getStageMapNodes()[0].x, getStageMapNodes()[0].y)");
-check("mostra o overlay de escolha", run("stageChoicePendingId") === "terra");
+check("mostra o overlay de escolha", run("stageChoicePendingId") === "kame");
 h.calls.length = 0;
 run("render()");
 const textCalls = h.calls.filter(c => c[0] === "fillText");
 check("não sobra texto pequeno explicando os modos embaixo dos botões", !textCalls.some(c => String(c[1][0]).startsWith("NORMAL: ondas") || String(c[1][0]).startsWith("SEM LIMITE: todas")));
 
-// "TORNEIO ARTES MARCIAIS" também aparece como rótulo do nó no mapa (desenhado antes) — pega a ÚLTIMA
+// "ILHA DO MESTRE KAME" também aparece como rótulo do nó no mapa (desenhado antes) — pega a ÚLTIMA
 // ocorrência, que é a do título do overlay (desenhado por cima, depois).
-const titleCall = [...textCalls].reverse().find(c => c[1][0] === "TORNEIO ARTES MARCIAIS");
+const titleCall = [...textCalls].reverse().find(c => c[1][0] === "ILHA DO MESTRE KAME");
 const subtitleCall = textCalls.find(c => c[1][0] === "ESCOLHA O MODO");
 check("o título da fase subiu (fica bem mais acima do que ficava antes)", titleCall && titleCall[1][2] <= 110, `y=${titleCall && titleCall[1][2]}`);
 check("o subtítulo também subiu, logo abaixo do título", subtitleCall && subtitleCall[1][2] > titleCall[1][2] && subtitleCall[1][2] <= 130);

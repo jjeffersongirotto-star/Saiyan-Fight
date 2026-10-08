@@ -119,6 +119,7 @@ Toque para ouvir a música de cada fase § Tap to hear each stage's music § Toc
 O áudio está mutado: ative em VOLUME E ÁUDIO para ouvir § Audio is muted: turn it on in VOLUME & AUDIO to listen § El audio está silenciado: actívalo en VOLUMEN Y AUDIO para oír
 O volume BGM está em 0%: aumente para ouvir § Music volume is at 0%: turn it up to listen § El volumen de la música está en 0%: súbelo para oír
 AVENTURA NAS NUVENS § ADVENTURE IN THE CLOUDS § AVENTURA EN LAS NUBES
+BRISA DA KAME HOUSE § KAME HOUSE BREEZE § BRISA DE LA KAME HOUSE
 GALOPE DO PLANETA KAIOH § KING KAI'S PLANET GALLOP § GALOPE DEL PLANETA KAIO
 BRISA DE NAMEK § NAMEK BREEZE § BRISA DE NAMEK
 A AMEAÇA DO IMPERADOR § THE EMPEROR'S THREAT § LA AMENAZA DEL EMPERADOR
@@ -134,6 +135,7 @@ NAMEK PRESTES A EXPLODIR § NAMEK ABOUT TO EXPLODE § NAMEK A PUNTO DE EXPLOTAR
 SALA DO TEMPO § TIME CHAMBER § HABITACIÓN DEL TIEMPO
 TORNEIO DE CELL § CELL GAMES § JUEGOS DE CELL
 PLANETA SUPREMO KAIOH § SUPREME KAI'S PLANET § PLANETA DEL SUPREMO KAIO
+ILHA DO MESTRE KAME § MASTER ROSHI'S ISLAND § ISLA DEL MAESTRO ROSHI
 SALVAR § SAVE § GUARDAR
 VOLTAR AO PADRÃO § RESET TO DEFAULT § RESTABLECER
 ARRASTE OS BOTÕES PARA O LUGAR DESEJADO § DRAG THE BUTTONS WHERE YOU WANT THEM § ARRASTRA LOS BOTONES ADONDE QUIERAS
@@ -348,6 +350,9 @@ Derrote 10 chefes. Eles já te conhecem! § Defeat 10 bosses. They know you by n
 Coleção de Vilões § Villain Collection § Colección de Villanos
 Derrote 50 chefes. Ninguém mais quer lutar! § Defeat 50 bosses. Nobody wants to fight anymore! § Derrota 50 jefes. ¡Ya nadie quiere pelear!
 Campeão do Torneio § Tournament Champion § Campeón del Torneo
+Férias na Kame House § Kame House Vacation § Vacaciones en la Kame House
+Vença o NORMAL da Ilha do Mestre Kame § Beat NORMAL on Master Roshi's Island § Gana el NORMAL de la Isla del Maestro Roshi
+Libere o Torneio de Artes Marciais § Unlock the Martial Arts Tournament § Desbloquea el Torneo de Artes Marciales
 Vença o NORMAL do Torneio de Artes Marciais § Beat NORMAL on the Martial Arts Tournament § Gana el NORMAL del Torneo de Artes Marciales
 Treino com Piadas Ruins § Training with Bad Jokes § Entrenando con Chistes Malos
 Libere o Planeta do Sr. Kaioh § Unlock King Kai's Planet § Desbloquea el Planeta del Sr. Kaio
@@ -780,6 +785,7 @@ Nome do conjunto § Set name § Nombre del conjunto
 SIM, SALVAR § YES, SAVE § SÍ, GUARDAR
 Altura (cm) § Height (cm) § Altura (cm)
 VILÃO DA FASE § STAGE VILLAIN § VILLANO DE LA FASE
+EM QUAL FORMA ELE APARECE NESTA FASE? § WHICH FORM DOES HE USE IN THIS STAGE? § ¿EN QUÉ FORMA APARECE EN ESTA FASE?
 ADVERSÁRIOS MAIS FORTES VIRÃO! § STRONGER OPPONENTS ARE COMING! § ¡VIENEN RIVALES MÁS FUERTES!
 PREPARE-SE § GET READY § PREPÁRATE
 ADVERSÁRIOS MAIS FORTES VIRÃO! PREPARE-SE § STRONGER OPPONENTS ARE COMING! GET READY § ¡VIENEN RIVALES MÁS FUERTES! PREPÁRATE

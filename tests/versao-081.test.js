@@ -52,7 +52,7 @@ run(`handleMenuClick(${back.x + 5}, ${back.y + 5})`);
 check("← volta ao menu", run("gameState") === "menu");
 
 // ---------- singleplayer: fase → modo → SELEÇÃO DE PERSONAGEM → LUTAR ----------
-run("gameMode = 'singleplayer'; setGameState('stage_map'); stageChoicePendingId = 'terra'");
+run("gameMode = 'singleplayer'; setGameState('stage_map'); stageChoicePendingId = 'kame'");
 run("handleMenuClick(400 - 270 + 85, 140 + 30)");
 check("escolher o modo da fase abre a SELEÇÃO DE PERSONAGEM antes da luta", run("gameState") === "characters" && run("selecaoLuta") === "solo");
 h.calls.length = 0; run("render()");
@@ -81,7 +81,7 @@ check("CANCELAR não muda nada", run("selectedBoss") === "freeza_1" && run("sele
 run("selectedCharacter = 'vegeta'; saveSelectedCharacters()");
 const lutar = run("MENU_LAYOUT.characters.fight");
 run(`handleMenuClick(${lutar.x + 5}, ${lutar.y + 5})`);
-check("LUTAR começa a partida na fase escolhida", run("gameState") === "playing" && run("selectedStage") === "terra" && run("selecaoLuta") === null);
+check("LUTAR começa a partida na fase escolhida", run("gameState") === "playing" && run("selectedStage") === "kame" && run("selecaoLuta") === null);
 
 // ---------- vilão de sprites espelhado ----------
 check("Vegeta com o conjunto de sprites conta como personagem de sprites; Goku do construtor não",

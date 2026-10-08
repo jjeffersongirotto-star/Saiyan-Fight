@@ -22,16 +22,16 @@ check("vencer só uma rodada ainda não libera (a conquista é vencer a PARTIDA 
 run("finishVersusRound('p1')");
 check("vencer a partida do Versus DEPOIS de usar a Zenkai libera 'Quase Morri, Mas Ganhei'", run("achievements.zenkai_win.unlocked") === true);
 
-// ---------- Campeão do Torneio ----------
-run(zerar + "gameMode = 'singleplayer'; selectedStage = 'terra'; stageMode = 'normal'; startGame(); " + semSpawns + " update(1/60)");
-check("'Campeão do Torneio' NÃO é liberada só por jogar a 1ª fase", run("achievements.stage_terra.unlocked") === false);
+// ---------- 1ª fase (0.85: Ilha do Mestre Kame, "Férias na Kame House") ----------
+run(zerar + "gameMode = 'singleplayer'; selectedStage = 'kame'; stageMode = 'normal'; startGame(); " + semSpawns + " update(1/60)");
+check("a conquista da 1ª fase NÃO é liberada só por jogar a 1ª fase", run("achievements.stage_kame.unlocked") === false);
 run("stageMode = 'normal'; resolveStageVictory()");
-check("vencer o modo NORMAL do Torneio libera 'Campeão do Torneio'", run("achievements.stage_terra.unlocked") === true);
-check("a descrição diz o que fazer", run("achievements.stage_terra.desc").includes("NORMAL"));
-check("as outras arenas continuam sendo liberadas ao abrir a fase (Kaioh abriu)", (run("checkRunMilestones()"), run("achievements.stage_kaio.unlocked")) === true);
+check("vencer o modo NORMAL da Ilha do Kame libera 'Férias na Kame House'", run("achievements.stage_kame.unlocked") === true);
+check("a descrição diz o que fazer", run("achievements.stage_kame.desc").includes("NORMAL"));
+check("as outras arenas continuam sendo liberadas ao abrir a fase (Torneio abriu)", (run("checkRunMilestones()"), run("achievements.stage_terra.unlocked")) === true);
 
 // ---------- modos das fases: 1º DIFÍCIL, NORMAL em todas, DIFÍCIL em todas ----------
-run(zerar + "gameMode = 'singleplayer'; selectedStage = 'terra'; stageMode = 'normal'; startGame(); " + semSpawns + " stageMode = 'hard'; resolveStageVictory()");
+run(zerar + "gameMode = 'singleplayer'; selectedStage = 'kame'; stageMode = 'normal'; startGame(); " + semSpawns + " stageMode = 'hard'; resolveStageVictory()");
 check("1ª vitória no DIFÍCIL libera 'Difícil? Não Para Mim'", run("achievements.hard_first.unlocked") === true);
 check("vencer só uma fase não libera 'NORMAL em todas' nem 'DIFÍCIL em todas'", run("achievements.all_normal.unlocked || achievements.all_hard.unlocked") === false);
 run("STAGE_PROGRESSION.slice(0, -1).forEach(s => registerStageModeComplete(s.id, 'normal'))");

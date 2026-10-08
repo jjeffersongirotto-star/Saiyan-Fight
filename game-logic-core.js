@@ -359,6 +359,7 @@ function stepNumberValue(value, step, min, max, dir) {
 // demais mantêm a ordem relativa que já tinham entre si (namek_explosao antes de time_room antes de kaioshin).
 // Ordem: Torneio de Cell é a penúltima fase, Planeta Supremo Kaioh é a última.
 const STAGE_PROGRESSION = [
+    { id: "kame", name: "ILHA DO MESTRE KAME" },
     { id: "terra", name: "TORNEIO ARTES MARCIAIS" },
     { id: "kaio", name: "PLANETA DO SR. KAIOH" },
     { id: "namek", name: "PLANETA NAMEK" },
@@ -397,6 +398,16 @@ function isStageUnlockedByProgress(stageId, progressMap) {
     const prevId = STAGE_PROGRESSION[idx - 1].id;
     const prevProgress = (progressMap && progressMap[prevId]) || {};
     return !!prevProgress.normalDone;
+}
+
+// 0.85: a Ilha do Mestre Kame entrou como 1ª fase. Quem já tinha completado alguma fase ganha a ilha como
+// completada (NORMAL), para não perder o que já tinha liberado. Devolve true se mudou algo.
+function migrarProgressoIlhaKame(progressMap) {
+    if (!progressMap || progressMap.kame) return false;
+    const algumaFeita = Object.keys(progressMap).some(k => progressMap[k] && progressMap[k].normalDone);
+    if (!algumaFeita) return false;
+    progressMap.kame = { normalDone: true, hardDone: false };
+    return true;
 }
 
 // O modo SEM LIMITE de uma fase só libera depois que ELA MESMA (não a anterior) já teve NORMAL e DIFÍCIL completados.
@@ -641,6 +652,7 @@ function getStageLapAngle(scroll, volta) {
 const KAIO_PLANET_LAP_SCROLL = 6000;   // Planeta do Sr. Kaioh: ~67 s por volta
 const TERRA_ARENA_LAP_SCROLL = 9000;   // Torneio de Artes Marciais: ~100 s
 const KAIOSHIN_LAP_SCROLL = 10800;     // Planeta Supremo Kaioh: ~2 min
+const KAME_ISLAND_LAP_SCROLL = 9600;   // Ilha do Mestre Kame: ~107 s por volta em volta da casa
 // Fases que andam para a frente (Namek): distância percorrida pela câmera.
 const NAMEK_FORWARD_SPEED = 1.4;
 function getForwardTravel(scroll) {
@@ -650,7 +662,7 @@ function getForwardTravel(scroll) {
 // Música de cada fase: um tema original do jogo para cada uma das 8 fases — ver BGM_THEMES em audio.js.
 const STAGE_MUSIC_ERA = {
     terra: "classico", kaio: "kaio", namek: "namek", freeza_ship: "freeza",
-    namek_explosao: "explosao", time_room: "gt", cell_games: "cell", kaioshin: "boo"
+    namek_explosao: "explosao", time_room: "gt", cell_games: "cell", kaioshin: "boo", kame: "kame"
 };
 function getStageMusicEra(stageId) {
     return STAGE_MUSIC_ERA[stageId] || "classico";
@@ -678,8 +690,31 @@ const MAPA_MARGEM_X = 90;
 const MAPA_TELA_W = 800;
 function getMapaPosicaoFase(i) {
     // sobe e desce em ondas irregulares (duas senoides), nunca colando em cima do título nem embaixo
-    const y = 196 + Math.sin(i * 1.15) * 46 + Math.sin(i * 0.43 + 1) * 18;
+    // (0.85: o mapa é em perspectiva, com o horizonte em MAPA_HORIZONTE_Y — o caminho fica no chão, abaixo dele)
+    const y = 206 + Math.sin(i * 1.15) * 40 + Math.sin(i * 0.43 + 1) * 16;
     return { x: MAPA_MARGEM_X + i * MAPA_PASSO_X, y: Math.round(y) };
+}
+const MAPA_HORIZONTE_Y = 100;
+// Mistura dos ambientes ao longo do mapa (x do mapa): perto da divisa entre dois trechos o ambiente muda aos
+// poucos, ao longo de MAPA_MISTURA_FASES fases. Devolve { a, b, w }: trecho a, trecho b (o seguinte) e o peso de
+// b (0 = só a, 1 = só b). Longe da divisa, w = 0.
+const MAPA_MISTURA_FASES = 3;
+function getMapaMistura(mx) {
+    const trechoW = MAPA_FASES_POR_TRECHO * MAPA_PASSO_X, meia = MAPA_MISTURA_FASES * MAPA_PASSO_X / 2;
+    // divisa entre o trecho k e o k+1: no meio do caminho entre a última fase de k e a primeira de k+1
+    const rel = mx - MAPA_MARGEM_X + MAPA_PASSO_X / 2;
+    const k = Math.floor(rel / trechoW);
+    const dentro = rel - k * trechoW;   // 0..trechoW
+    if (k < 0) return { a: 0, b: 0, w: 0 };
+    if (dentro > trechoW - meia) {
+        const t = (dentro - (trechoW - meia)) / (2 * meia);
+        return { a: Math.max(0, k), b: Math.max(0, k + 1), w: t * t * (3 - 2 * t) };
+    }
+    if (dentro < meia && k > 0) {
+        const t = (dentro + meia) / (2 * meia);
+        return { a: k - 1, b: k, w: t * t * (3 - 2 * t) };
+    }
+    return { a: Math.max(0, k), b: Math.max(0, k), w: 0 };
 }
 function getMapaTrecho(i) {
     return Math.floor(Math.max(0, i) / MAPA_FASES_POR_TRECHO);
@@ -821,6 +856,8 @@ if (typeof module !== "undefined" && module.exports) {
         KAIO_PLANET_LAP_SCROLL,
         TERRA_ARENA_LAP_SCROLL,
         KAIOSHIN_LAP_SCROLL,
+        KAME_ISLAND_LAP_SCROLL,
+        migrarProgressoIlhaKame,
         NAMEK_FORWARD_SPEED,
         getForwardTravel,
         getLoopFrameIndex,
@@ -835,6 +872,8 @@ if (typeof module !== "undefined" && module.exports) {
         getMapaLargura,
         limitarRolagemMapa,
         rolagemParaFase,
+        MAPA_HORIZONTE_Y,
+        getMapaMistura,
         ALTURA_PADRAO_CM,
         ESCALA_ALTURA_MIN,
         ESCALA_ALTURA_MAX

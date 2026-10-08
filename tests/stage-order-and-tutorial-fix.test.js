@@ -10,16 +10,16 @@ const { run, check, fire, touch, summary } = h;
 
 // ---------- ordem das fases ----------
 const order = run("STAGE_PROGRESSION.map(s => s.id)");
-check("Nave de Freeza é a fase 4", order[3] === "freeza_ship", JSON.stringify(order));
-check("Torneio de Cell é a penúltima fase (7ª)", order[6] === "cell_games", JSON.stringify(order));
-check("Planeta Supremo Kaioh é a última fase (8ª)", order[7] === "kaioshin", JSON.stringify(order));
-check("continuam sendo 8 fases", order.length === 8);
+check("Nave de Freeza é a fase 5 (0.85: Ilha do Kame entrou como 1ª)", order[4] === "freeza_ship", JSON.stringify(order));
+check("Torneio de Cell é a penúltima fase (8ª)", order[7] === "cell_games", JSON.stringify(order));
+check("Planeta Supremo Kaioh é a última fase (9ª)", order[8] === "kaioshin", JSON.stringify(order));
+check("são 9 fases (Ilha do Kame + as 8 de antes)", order.length === 9 && order[0] === "kame");
 
 // o mapa de fases usa a mesma ordem — o nó na posição 4 do mapa já é a Nave de Freeza
 const nodes = run("getStageMapNodes()");
-check("mapa de fases: o 4º nó já é a Nave de Freeza", nodes[3].id === "freeza_ship");
-check("mapa de fases: o 8º (último) nó já é o Planeta Supremo Kaioh", nodes[7].id === "kaioshin");
-check("mapa de fases: o 7º nó já é o Torneio de Cell", nodes[6].id === "cell_games");
+check("mapa de fases: o 5º nó já é a Nave de Freeza", nodes[4].id === "freeza_ship");
+check("mapa de fases: o 9º (último) nó já é o Planeta Supremo Kaioh", nodes[8].id === "kaioshin");
+check("mapa de fases: o 8º nó já é o Torneio de Cell", nodes[7].id === "cell_games");
 
 // ---------- tutorial: o balão de instrução não pode cobrir os botões de toque (o bug relatado) ----------
 run("isTouchDevice = true; startTutorial(); tutorialStepIndex = 1; setupTutorialStep()");

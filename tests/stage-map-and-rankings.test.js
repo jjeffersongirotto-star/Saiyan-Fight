@@ -27,7 +27,7 @@ check("ranking de uma arena não mistura com o de outra", run("getStageRankingLi
 
 // ---------- fim de partida grava os dois rankings (geral + da arena) ----------
 run("writeStorage('saiyan_ranking', ''); writeStorage('saiyan_stage_ranking', '')");
-const doneUpToFreeza = { terra: { normalDone: true }, kaio: { normalDone: true }, namek: { normalDone: true } };
+const doneUpToFreeza = { kame: { normalDone: true }, terra: { normalDone: true }, kaio: { normalDone: true }, namek: { normalDone: true } };
 run(`gameMode = 'singleplayer'; writeStorage('saiyan_stage_progress', ${JSON.stringify(JSON.stringify(doneUpToFreeza))}); stageProgress = ${JSON.stringify(doneUpToFreeza)}; selectedStage = 'freeza_ship'; startGame(); score = 7; player.hp = 1; world.obstacles = [{ x: player.x + player.w/2, y: player.y + player.h/2, radius: 20, vx: 0, vy: 0, fromPlayer: false, color: '#fff', damage: 5 }]`);
 run("update(1/60)");
 check("game over grava no ranking GERAL", run("readJsonStorage('saiyan_ranking', [])").some(r => r.score === 7));
@@ -40,31 +40,31 @@ check("escolher SINGLEPLAYER abre o mapa de fases (não começa a partida na hor
 // ---------- nós do mapa seguem STAGE_PROGRESSION, com liberado/bloqueado corretos (completar o normal libera a próxima) ----------
 run("stageProgress = {}");
 let nodes = run("getStageMapNodes()");
-check("mapa tem os 8 nós, na mesma ordem/ids de STAGE_PROGRESSION", nodes.length === 8 && nodes.every((n, i) => n.id === run("STAGE_PROGRESSION")[i].id));
+check("mapa tem um nó por fase, na mesma ordem/ids de STAGE_PROGRESSION", nodes.length === run("STAGE_PROGRESSION.length") && nodes.every((n, i) => n.id === run("STAGE_PROGRESSION")[i].id));
 check("sem nenhum modo normal completado, só a 1ª fase está liberada no mapa", nodes[0].unlocked === true && nodes.slice(1).every(n => !n.unlocked));
 
 const allNormalDone = {}; run("STAGE_PROGRESSION").forEach(s => { allNormalDone[s.id] = { normalDone: true }; });
 run(`stageProgress = ${JSON.stringify(allNormalDone)}`);
 nodes = run("getStageMapNodes()");
-check("com o normal de todas completado, todas as 8 fases aparecem liberadas", nodes.every(n => n.unlocked === true));
+check("com o normal de todas completado, todas as fases aparecem liberadas", nodes.every(n => n.unlocked === true));
 
 // ---------- clicar num nó bloqueado avisa e não muda a fase; num liberado, sempre abre a escolha de modo ----------
-run("stageProgress = {}; setGameState('stage_map'); selectedStage = 'terra'; stageLockedHintTimer = 0");
+run("stageProgress = {}; setGameState('stage_map'); selectedStage = 'kame'; stageLockedHintTimer = 0");
 const lockedNode = run("getStageMapNodes()[3]"); // freeza_ship, ainda bloqueada
 run(`handleMenuClick(${lockedNode.x}, ${lockedNode.y})`);
-check("clicar numa fase bloqueada avisa e mantém a fase atual", run("selectedStage") === "terra" && run("stageLockedHintTimer") > 0 && run("gameState") === "stage_map");
+check("clicar numa fase bloqueada avisa e mantém a fase atual", run("selectedStage") === "kame" && run("stageLockedHintTimer") > 0 && run("gameState") === "stage_map");
 
-const unlockedNode = run("getStageMapNodes()[0]"); // terra, sempre liberada
+const unlockedNode = run("getStageMapNodes()[0]"); // ilha do Kame, sempre liberada
 run(`handleMenuClick(${unlockedNode.x}, ${unlockedNode.y})`);
-check("clicar numa fase liberada abre a escolha de modo (não começa direto)", run("stageChoicePendingId") === "terra" && run("gameState") === "stage_map");
+check("clicar numa fase liberada abre a escolha de modo (não começa direto)", run("stageChoicePendingId") === "kame" && run("gameState") === "stage_map");
 run("handleMenuClick(400 - 270 + 85, 140 + 30)"); // botão NORMAL
-check("escolher NORMAL seleciona a fase e abre a seleção de personagem (0.81) nesse modo", run("selectedStage") === "terra" && run("stageMode") === "normal" && run("gameState") === "characters" && run("selecaoLuta") === "solo");
+check("escolher NORMAL seleciona a fase e abre a seleção de personagem (0.81) nesse modo", run("selectedStage") === "kame" && run("stageMode") === "normal" && run("gameState") === "characters" && run("selecaoLuta") === "solo");
 
 // ---------- depois de liberar uma fase nova, dá pra escolher ela OU repetir uma anterior já com normal completo ----------
-const upToFour = { terra: { normalDone: true }, kaio: { normalDone: true }, namek: { normalDone: true }, freeza_ship: { normalDone: true } }; // completou o normal das 4 primeiras -> libera até a 5ª (índice 4)
+const upToFour = { kame: { normalDone: true }, terra: { normalDone: true }, kaio: { normalDone: true }, namek: { normalDone: true }, freeza_ship: { normalDone: true } }; // completou o normal das 5 primeiras -> libera até a 6ª (índice 5)
 run(`stageProgress = ${JSON.stringify(upToFour)}; setGameState('stage_map')`);
 nodes = run("getStageMapNodes()");
-check("com progresso parcial, tanto a fase nova quanto as anteriores aparecem liberadas ao mesmo tempo", nodes[4].unlocked === true && nodes[0].unlocked === true && nodes[5].unlocked === false);
+check("com progresso parcial, tanto a fase nova quanto as anteriores aparecem liberadas ao mesmo tempo", nodes[5].unlocked === true && nodes[0].unlocked === true && nodes[6].unlocked === false);
 
 // repetir uma fase já com o normal completo também abre a escolha de modo (agora com DIFÍCIL liberado)
 run(`handleMenuClick(${nodes[1].x}, ${nodes[1].y})`); // kaio, normal já completo
@@ -73,16 +73,16 @@ run("handleMenuClick(400 - 85 + 85, 140 + 30)"); // botão DIFÍCIL, agora liber
 check("escolher DIFÍCIL funciona quando já liberado", run("selectedStage") === nodes[1].id && run("stageMode") === "hard" && run("gameState") === "characters");
 
 // a fase nova (normal ainda não completo) também abre a escolha — só que só o NORMAL funciona nela
-run(`setGameState('stage_map'); handleMenuClick(${nodes[4].x}, ${nodes[4].y})`);
-check("fase liberada mas com normal ainda não completo também mostra a escolha", run("stageChoicePendingId") === nodes[4].id);
+run(`setGameState('stage_map'); handleMenuClick(${nodes[5].x}, ${nodes[5].y})`);
+check("fase liberada mas com normal ainda não completo também mostra a escolha", run("stageChoicePendingId") === nodes[5].id);
 run("handleMenuClick(400 - 270 + 85, 140 + 30)"); // botão NORMAL
-check("e o NORMAL sempre funciona nela", run("selectedStage") === nodes[4].id && run("stageMode") === "normal" && run("gameState") === "characters" && run("selecaoLuta") === "solo");
+check("e o NORMAL sempre funciona nela", run("selectedStage") === nodes[5].id && run("stageMode") === "normal" && run("gameState") === "characters" && run("selecaoLuta") === "solo");
 
 // ---------- estrada entre as fases (0.84: mapa de progresso; acende só até onde está liberado) ----------
-run(`stageProgress = ${JSON.stringify({ terra: { normalDone: true }, kaio: { normalDone: true } })}; setGameState('stage_map')`); // libera até namek (índice 2)
+run(`stageProgress = ${JSON.stringify({ kame: { normalDone: true }, terra: { normalDone: true }, kaio: { normalDone: true } })}; setGameState('stage_map')`); // libera até namek (índice 3)
 h.calls.length = 0;
 run("render()");
-check("a estrada liga as fases (curvas)", h.calls.filter(c => c[0] === "bezierCurveTo").length >= 7);
+check("a estrada liga as fases (faixa do meio tracejada)", h.calls.some(c => c[0] === "setLineDash") && h.calls.filter(c => c[0] === "lineTo").length >= 70);
 
 // ---------- tela de Ranking: geral x por fase ----------
 run("setGameState('ranking'); rankingViewMode = 'geral'");
