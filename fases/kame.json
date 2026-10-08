@@ -1,0 +1,19 @@
+{
+  "versao": 1,
+  "id": "kame",
+  "nome": "ILHA DO MESTRE KAME",
+  "posicao": 1,
+  "cor": "#f472b6",
+  "musica": "kame",
+  "cenario": "ilha_kame",
+  "camera": {
+    "tipo": "orbita",
+    "volta": 9600
+  },
+  "fundoClaro": true,
+  "minion": "saibaman",
+  "conquista": {
+    "nome": "Férias na Kame House",
+    "desc": "Vença o NORMAL da Ilha do Mestre Kame"
+  }
+}

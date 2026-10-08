@@ -1,0 +1,19 @@
+{
+  "versao": 1,
+  "id": "time_room",
+  "nome": "SALA DO TEMPO",
+  "posicao": 7,
+  "cor": "#e2e8f0",
+  "musica": "gt",
+  "cenario": "sala_do_tempo",
+  "camera": {
+    "tipo": "orbita",
+    "volta": 10800
+  },
+  "fundoClaro": true,
+  "minion": "saibaman",
+  "conquista": {
+    "nome": "Um Ano em Um Dia",
+    "desc": "Libere a Sala do Tempo. Sem relógio!"
+  }
+}

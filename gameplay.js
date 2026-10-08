@@ -1068,6 +1068,26 @@ function setVilaoDaFase(faseId, key, nivel) {
     todos[faseId] = { key, nivel: Math.max(0, nivel | 0) };
     writeStorage("saiyan_viloes_fase", JSON.stringify(todos));
 }
+// Minion de cada fase (escolhido em ARENAS): sem escolha, o padrão da definição da fase (Cell Jr. no Torneio de
+// Cell, Saibaman nas outras).
+function getMinionsDasFases() {
+    const v = readJsonStorage("saiyan_minions_fase", {});
+    return v && typeof v === "object" ? v : {};
+}
+function getMinionDaFase(faseId) {
+    const salvo = getMinionsDasFases()[faseId];
+    if (salvo && getMinionsDisponiveis().some(m => m.id === salvo)) return salvo;
+    const f = getFaseDef(faseId);
+    return (f && f.minion) || "saibaman";
+}
+function setMinionDaFase(faseId, minionId) {
+    const todos = getMinionsDasFases();
+    todos[faseId] = minionId;
+    writeStorage("saiyan_minions_fase", JSON.stringify(todos));
+}
+function getMinionsDisponiveis() {
+    return MINIONS_PADRAO.slice();
+}
 // No modo história, o vilão escolhido para a fase já começa (e volta a cada onda) na forma escolhida
 function aplicarFormaInicialDoVilao() {
     if (gameMode === "coop") return;

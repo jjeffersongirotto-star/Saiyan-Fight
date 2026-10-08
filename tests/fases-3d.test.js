@@ -44,7 +44,7 @@ check("Namek: o caminho é sempre o mesmo (mesma fileira, mesmas árvores)", run
 check("Namek explodindo: o caminho é sempre o mesmo", run("JSON.stringify(nxFileira(37)) === JSON.stringify(nxFileira(37))"));
 
 check("placar com fundo escuro nas fases de céu claro (Torneio, Kaioh, Namek, Supremo Kaioh)",
-    ["terra", "kaio", "namek", "kaioshin"].every(id => new RegExp('const STAGES_FUNDO_CLARO = \\[[^\\]]*"' + id + '"').test(menu)));
+    ["terra", "kaio", "namek", "kaioshin"].every(id => run(`faseTemFundoClaro('${id}')`) === true));
 
 for (const id of Object.keys(fases)) {
     run(`selectedCharacter = 'goku_adult'; selectedStage = '${id}'; gameMode = 'solo'; startGame();`);

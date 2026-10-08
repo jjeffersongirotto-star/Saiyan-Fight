@@ -15,7 +15,10 @@ run(`stageProgress = ${JSON.stringify(prog)}; gameMode = 'singleplayer'; selecte
 run("setGameState('stages')");
 const card = run("getStageCardRect(2)");
 run(`handleMenuClick(${card.x + 30}, ${card.y + 30})`);
-check("tocar numa fase liberada abre a escolha do vilão dela", run("gameState") === "characters" && run("selecaoLuta") === "fase" && run("faseEscolhendoVilao") === "kaio");
+check("(0.86) tocar na fase abre o quadro da arena", run("arenaPainel && arenaPainel.id") === "kaio");
+const trocar = run("MENU_LAYOUT.arenaPainel.trocarVilao");
+run(`handleMenuClick(${trocar.x + 5}, ${trocar.y + 5})`);
+check("TROCAR (PERSONAGEM) abre a escolha do vilão dela", run("gameState") === "characters" && run("selecaoLuta") === "fase" && run("faseEscolhendoVilao") === "kaio");
 const lista = run("getFilteredCharacters()");
 check("só vilões e anti-heróis na lista", lista.length > 0 && lista.every(k => ["VILÃO", "ANTI-HERÓI"].includes(run(`characterDB['${k}'].alignment`))) && !lista.includes("goku_adult"));
 h.calls.length = 0; run("render()");
@@ -34,7 +37,10 @@ run("canvas.onwheel({ deltaX: 0, deltaY: -99999, preventDefault() {} })");
 check("a roda do mouse volta a rolagem", run("escolhaFormaRolagem") === 0);
 const rf = run(`getFormaRect('freeza_1', ${formas.indexOf("SEGUNDA FORMA")}, true)`);
 run(`handleMenuClick(${rf.x + rf.w / 2}, ${rf.y + rf.h / 2})`);
-check("fica salvo como vilão daquela fase, na forma escolhida", JSON.stringify(run("getVilaoDaFase('kaio')")) === JSON.stringify({ key: "freeza_1", nivel: 1 }) && run("gameState") === "stages");
+check("(0.86) volta ao quadro da arena com o personagem e a forma preenchidos", run("gameState") === "stages" && JSON.stringify(run("arenaPainel.vilao")) === JSON.stringify({ key: "freeza_1", nivel: 1 }));
+const salvar = run("MENU_LAYOUT.arenaPainel.salvar");
+run(`handleMenuClick(${salvar.x + 5}, ${salvar.y + 5})`);
+check("SALVAR guarda como vilão daquela fase, na forma escolhida", JSON.stringify(run("getVilaoDaFase('kaio')")) === JSON.stringify({ key: "freeza_1", nivel: 1 }) && run("gameState") === "stages" && run("arenaPainel") === null);
 check("o card da fase mostra o retrato do vilão", fs.readFileSync(__dirname + "/../menu.js", "utf8").includes("drawCharacterPortrait(characterDB[vf.key]"));
 
 // ---------- luta da fase ----------

@@ -1,0 +1,19 @@
+{
+  "versao": 1,
+  "id": "namek",
+  "nome": "PLANETA NAMEK",
+  "posicao": 4,
+  "cor": "#4ade80",
+  "musica": "namek",
+  "cenario": "namek",
+  "camera": {
+    "tipo": "anda",
+    "volta": 0
+  },
+  "fundoClaro": true,
+  "minion": "saibaman",
+  "conquista": {
+    "nome": "Turista em Namek",
+    "desc": "Libere o Planeta Namek. Leve protetor!"
+  }
+}

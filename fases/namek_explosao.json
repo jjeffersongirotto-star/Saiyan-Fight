@@ -1,0 +1,19 @@
+{
+  "versao": 1,
+  "id": "namek_explosao",
+  "nome": "NAMEK PRESTES A EXPLODIR",
+  "posicao": 6,
+  "cor": "#f87171",
+  "musica": "explosao",
+  "cenario": "namek_explodindo",
+  "camera": {
+    "tipo": "anda",
+    "volta": 0
+  },
+  "fundoClaro": false,
+  "minion": "saibaman",
+  "conquista": {
+    "nome": "Fuga por um Triz",
+    "desc": "Libere Namek Prestes a Explodir. Corre!"
+  }
+}

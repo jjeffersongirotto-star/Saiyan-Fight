@@ -44,7 +44,7 @@ check("o chão perto dos lutadores anda mais que a nave (parece que eles andam e
     trCam = TR_CAM;
     return Math.abs(chao) > 5 * Math.abs(nave) + 1;
 })()`));
-check("placar com fundo escuro no céu claro de Namek", /const STAGES_FUNDO_CLARO = \[[^\]]*"freeza_ship"/.test(menu));
+check("placar com fundo escuro no céu claro de Namek", run("faseTemFundoClaro('freeza_ship')") === true);
 
 run("selectedCharacter = 'goku_adult'; selectedStage = 'freeza_ship'; gameMode = 'coop'; startGame(); world.saibamanSpawnTimer = -1e9;");
 h.step(60);

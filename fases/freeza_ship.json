@@ -1,0 +1,19 @@
+{
+  "versao": 1,
+  "id": "freeza_ship",
+  "nome": "NAVE DE FREEZA",
+  "posicao": 5,
+  "cor": "#c084fc",
+  "musica": "freeza",
+  "cenario": "nave_freeza",
+  "camera": {
+    "tipo": "orbita",
+    "volta": 10800
+  },
+  "fundoClaro": true,
+  "minion": "saibaman",
+  "conquista": {
+    "nome": "Clandestino na Nave",
+    "desc": "Libere a Nave de Freeza sem ser visto"
+  }
+}
