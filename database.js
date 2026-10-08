@@ -2346,6 +2346,9 @@ const DEFAULT_CHARACTERS = {
     majin_buu: { name: "MAJIN BUU", presetKey: "majin", align: "VILÃO", aura: "rosa", spec: "CHOCOLATE BEAM", transformations: BUU_TRANSFORMACOES },
     raditz: { name: "RADITZ", presetKey: "raditz", align: "VILÃO", aura: "roxo", spec: "DOUBLE SUNDAY" },
     broly: { name: "BROLY", presetKey: "broly", align: "VILÃO", aura: "verde", spec: "ERASER CANNON", transformations: BROLY_TRANSFORMACOES },
+    // Minions (alinhamento MINION): ficam embaixo da divisão MINIONS no gerenciador e só aparecem no campo MINION das arenas
+    saibaman: { name: "SAIBAMAN", presetKey: "saibaman", align: "MINION", aura: "verde", spec: "AUTODESTRUIÇÃO" },
+    celljr: { name: "CELL JR.", presetKey: "celljr", align: "MINION", aura: "azul", spec: "KAMEHAMEHA JR." },
     gotenks: { name: "GOTENKS", presetKey: "gotenks", align: "HERÓI", aura: "amarelo", spec: "SUPER GHOST KAMIKAZE" },
     // Cell: começa na 1ª forma (imperfeito) e transforma em semi-perfeito e perfeito
     cell: { name: "CELL", presetKey: "cell", align: "VILÃO", aura: "verde", spec: "KAMEHAMEHA PERFEITO", transformations: CELL_TRANSFORMACOES }
@@ -2358,6 +2361,7 @@ const ALTURAS_PADRAO = {
     goku_adult: { base: 175 }, vegeta: { base: 164 }, piccolo: { base: 226 }, trunks: { base: 170 },
     gohan: { base: 155 }, kaioshin: { base: 157 }, gogeta: { base: 175 }, bardock: { base: 175 },
     android17: { base: 172 }, android18: { base: 172 }, raditz: { base: 198 }, gotenks: { base: 125 },
+    saibaman: { base: 120 }, celljr: { base: 110 },
     freeza_1: { base: 132, "Segunda forma": 221, "Terceira forma": 214, "Forma final": 158, "Freeza ciborgue": 158, "Golden Freeza": 158, "Black Freeza": 158 },
     cell: { base: 228, "Semi-perfeito": 259, "Perfeito": 213 },
     majin_buu: { base: 149, "Buu gordo": 244 },
@@ -2593,7 +2597,8 @@ function saveCharacterData() {
 
 function getFilteredCharacters() {
     // VERSUS: os dois jogadores podem escolher qualquer personagem, herói ou vilão
-    if (gameMode === "coop" && selecaoLuta) return Object.keys(characterDB);
+    // minions (alinhamento MINION) nunca aparecem para escolher herói/vilão
+    if (gameMode === "coop" && selecaoLuta) return Object.keys(characterDB).filter(k => characterDB[k].alignment !== "MINION");
     return Object.keys(characterDB).filter(k => {
         let a = characterDB[k].alignment;
         return currentTab === "HERÓIS" ? (a === "HERÓI" || a === "ANTI-HERÓI") : (a === "VILÃO" || a === "ANTI-HERÓI");
@@ -2617,7 +2622,8 @@ const BUILDER_FIELD_IDS = {
     pants: "build-pants", shoes: "build-shoes", gloves: "build-gloves", cape: "build-cape", capeColor: "build-cape-color",
     tail: "build-tail", wings: "build-wings", backWeapon: "build-back-weapon", primaryColor: "build-primary-color",
     secondaryColor: "build-secondary-color", accentColor: "build-accent-color", kiColor: "build-ki-color",
-    shirtColor: "build-shirt-color", pantsColor: "build-pants-color", armPose: "build-arm-pose"
+    shirtColor: "build-shirt-color", pantsColor: "build-pants-color", armPose: "build-arm-pose",
+    minionColor: "build-minion-color", clawColor: "build-claw-color"
 };
 
 function populateBuilderPresetOptions() {

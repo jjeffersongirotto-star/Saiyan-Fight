@@ -77,7 +77,7 @@ function spriteCtx() {
 // ---------------------------------------------------------------------------
 const SPRITE_RACE_SKIN = {
     "Saiyajin": "#f3c29a", "Humano": "#f7d1b1", "Namekuseijin": "#62c24a", "Raça Freeza": "#f1eef6",
-    "Majin": "#ff9fc9", "Android": "#f6d3b0", "Bio-Androide": "#eee2ef", "Kaioshin": "#c9a6e8", "Alienígena": "#8d76e0", "ET/Alienígena genérico": "#8d76e0"
+    "Majin": "#ff9fc9", "Android": "#f6d3b0", "Bio-Androide": "#eee2ef", "Kaioshin": "#c9a6e8", "Alienígena": "#8d76e0", "ET/Alienígena genérico": "#8d76e0", "Minion": "#6fc046"
 };
 
 const SPRITE_DEFAULT_APPEARANCE = {
@@ -88,7 +88,8 @@ const SPRITE_DEFAULT_APPEARANCE = {
     innerShirt: "regata", outerShirt: "kimono", pants: "larga", shoes: "botas_artes", gloves: "pulseiras",
     primaryColor: "#f26a0f", secondaryColor: "#1f4fbf", accentColor: "#ffd23f", shirtColor: "#1f4fbf", pantsColor: "#f26a0f",
     cape: "none", capeColor: "#ffffff", tail: "none", wings: "none", backWeapon: "none",
-    symbol: "none", scar: "none", kiColor: "#5be3ff", armPose: "guarda"
+    symbol: "none", scar: "none", kiColor: "#5be3ff", armPose: "guarda",
+    minionColor: "#2f6f22", clawColor: "#f2eee0"   // peças de minion: veias/manchas/placa e garras (v0.87)
 };
 
 // Valores do jogo antigo (32x32) que mudaram de nome/uso.
@@ -276,14 +277,14 @@ function spriteCellShoe(f, side, rot, tipo) {
 }
 
 // Pé de 3 dedos (raça do Freeza): sola comprida, dedos para a frente e garras pretas.
-function spriteClawFoot(f, side, rot, color) {
+function spriteClawFoot(f, side, rot, color, unha) {
     const o = SPRITE_OUTLINE, x = f[0], y = f[1], sd = side;
     const dark = spriteShade(color, -0.4), light = spriteShade(color, 0.35);
     let g = `<path d="M${_n2(x - sd * 3.6)} ${_n2(y - 1.4)} L${_n2(x + sd * 2.6)} ${_n2(y - 1.2)} Q${_n2(x + sd * 4.4)} ${_n2(y + 0.4)} ${_n2(x + sd * 4.6)} ${_n2(y + 3.2)} L${_n2(x - sd * 3.8)} ${_n2(y + 3.6)} Z" fill="${color}" stroke="${o}" stroke-width="1.1" stroke-linejoin="round"/>`;
     [[0.4, 1.1, 8.6], [2.0, 2.4, 9.6], [3.4, 3.4, 8.2]].forEach(([dy0, dy1, len]) => {
         const bx = x + sd * 3, tx = x + sd * len;
         g += `<path d="M${_n2(bx)} ${_n2(y + dy0 - 0.9)} Q${_n2(tx - sd * 1.2)} ${_n2(y + dy1 - 1.1)} ${_n2(tx)} ${_n2(y + dy1)} Q${_n2(tx - sd * 1.4)} ${_n2(y + dy1 + 0.9)} ${_n2(bx)} ${_n2(y + dy0 + 0.9)} Z" fill="${color}" stroke="${o}" stroke-width="0.9" stroke-linejoin="round"/>`;
-        g += `<path d="M${_n2(tx - sd * 0.2)} ${_n2(y + dy1 - 0.7)} L${_n2(tx + sd * 1.8)} ${_n2(y + dy1 + 0.2)} L${_n2(tx - sd * 0.2)} ${_n2(y + dy1 + 0.8)} Z" fill="#141018"/>`;
+        g += `<path d="M${_n2(tx - sd * 0.2)} ${_n2(y + dy1 - 0.7)} L${_n2(tx + sd * 1.8)} ${_n2(y + dy1 + 0.2)} L${_n2(tx - sd * 0.2)} ${_n2(y + dy1 + 0.8)} Z" fill="${unha || "#141018"}"${unha ? ` stroke="${SPRITE_OUTLINE}" stroke-width="0.4"` : ""}/>`;
     });
     g += `<path d="M${_n2(x - sd * 3)} ${_n2(y - 0.4)} L${_n2(x + sd * 2.4)} ${_n2(y - 0.2)}" stroke="${light}" stroke-width="0.9" opacity="0.7"/>`;
     g += `<path d="M${_n2(x - sd * 3.4)} ${_n2(y + 2.8)} L${_n2(x + sd * 3.6)} ${_n2(y + 2.6)}" stroke="${dark}" stroke-width="1"/>`;
@@ -1009,6 +1010,43 @@ function spriteCellHead(R, a, rx, ry) {
     return s;
 }
 
+// Peças de minion (v0.87; qualquer personagem pode usar). Cores: pele, a.minionColor (veias, manchas, placa) e
+// a.clawColor (garras). Cabeça de Saibaman: domo grande em forma de cérebro com sulco e veias; crista de Cell Jr.:
+// duas abas manchadas e placa no meio da testa.
+function spriteMinionHead(R, a, skin, rx) {
+    const cor = a.minionColor, o = SPRITE_OUTLINE;
+    let s = "";
+    if (a.headFeature === "cabeca_saibaman") {
+        const domo = R.rad(-3, -20, 22, [[0, spriteShade(skin, 0.45)], [0.55, spriteShade(skin, 0.18)], [1, spriteShade(skin, -0.12)]]);
+        s += spritePath(`M${_n2(-rx - 1.4)} -1 C${_n2(-rx - 5)} -18 -9 -28.6 0 -28.6 C9 -28.6 ${_n2(rx + 5)} -18 ${_n2(rx + 1.4)} -1 Q0 -8.4 ${_n2(-rx - 1.4)} -1 Z`, domo);
+        s += `<path d="M0 -28 C-1.2 -22 1.2 -16 0 -9.6" fill="none" stroke="${cor}" stroke-width="1.2" stroke-linecap="round"/>`;
+        s += `<path d="M-10 -14 Q-7 -18 -4 -16 Q-3 -21 -6 -24 M10 -14 Q7 -18 4 -16 Q3 -21 6 -24 M-12 -6 Q-8 -9 -5 -7 M12 -6 Q8 -9 5 -7 M-6 -26 Q-3 -24 -3 -20 M6 -26 Q3 -24 3 -20" fill="none" stroke="${cor}" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>`;
+        s += `<ellipse cx="-5" cy="-21" rx="3.4" ry="1.6" fill="#ffffff" opacity="0.3" transform="rotate(-25 -5 -21)"/>`;
+    } else {
+        const aba = R.lin(-14, -30, 12, -4, [[0, spriteShade(skin, 0.35)], [0.5, skin], [1, spriteShade(skin, -0.35)]]);
+        s += spritePath(`M-3 -9 L-8 -28 L-16 -25 L${_n2(-rx - 2)} -8 L-7 -3 Z`, aba);
+        s += spritePath(`M3 -9 L8 -28 L16 -25 L${_n2(rx + 2)} -8 L7 -3 Z`, aba);
+        [[-11, -21, 1.3], [-9, -14, 1.1], [-13, -11, 1], [11, -21, 1.3], [9, -14, 1.1], [13, -11, 1]].forEach(([x, y, r], i) => {
+            s += `<ellipse cx="${x}" cy="${y}" rx="${_n2(r * 1.3)}" ry="${r}" fill="${cor}" transform="rotate(${i * 30} ${x} ${y})"/>`;
+        });
+        s += spritePath(`M-4.4 -12 L0 -18.4 L4.4 -12 L4.2 -4.6 L-4.2 -4.6 Z`, R.lin(-4, -18, 4, -4, [[0, spriteShade(cor, 0.4)], [0.5, cor], [1, spriteShade(cor, -0.45)]]));
+        s += `<ellipse cx="-1.4" cy="-13" rx="1" ry="2.2" fill="#ffffff" opacity="0.45"/>`;
+    }
+    return s;
+}
+// Anéis (Saibaman) ou manchas (Cell Jr.) nos braços/pernas à mostra, na cor a.minionColor
+function spriteMinionMarks(m, cor, p0, p1, p2, w, cima, baixo, semente) {
+    let s = "";
+    if (m === "aneis_minion") {
+        if (cima) s += spriteStripes(p0[0], p0[1], p1[0], p1[1], w * 1.3, w * 0.9, 0.2, 0.9, 4, cor, 0.9, 0.85);
+        if (baixo) s += spriteStripes(p1[0], p1[1], p2[0], p2[1], w * 1.0, w * 0.72, 0.15, 0.85, 4, cor, 0.9, 0.85);
+    } else {
+        if (cima) s += spriteCellPintas(p0[0], p0[1], p1[0], p1[1], w * 1.3, w * 0.9, 4, semente, cor);
+        if (baixo) s += spriteCellPintas(p1[0], p1[1], p2[0], p2[1], w, w * 0.72, 3, semente + 4, cor);
+    }
+    return s;
+}
+
 function spriteHeadAccessory(R, a, ctx, skin, pose, rx, ry) {
     let s = "";
     const acc = a.accessory;
@@ -1024,6 +1062,7 @@ function spriteHeadAccessory(R, a, ctx, skin, pose, rx, ry) {
     }
     if (["capacete_freeza", "capacete_chifres", "cabeca_longa", "meia_cabeca_metal"].includes(a.headFeature)) s += spriteFreezaHead(R, a, rx, ry);
     if (["capacete_cell1", "capacete_cell2", "capacete_cell3"].includes(a.headFeature)) s += spriteCellHead(R, a, rx, ry);
+    if (a.headFeature === "cabeca_saibaman" || a.headFeature === "crista_celljr") s += spriteMinionHead(R, a, skin, rx);
     if (a.headFeature === "antena_longa") {
         // antena longa e fina saindo do alto da cabeça, curvada para a frente e para baixo (Kid Buu)
         s += spriteTaper([[0.6, -15], [_n2(4 + sway), -34], [_n2(20 + sway * 2), -38], [_n2(27 + sway * 3), -25]], 4.4, 1.4, spriteShade(skin, 0.04), null, null);
@@ -1114,6 +1153,7 @@ function spriteBootSpec(a) {
         case "botas_cell": return { color: "#2a2532", trim: "#e9e3ee", h: 0.42 };
         case "caneleiras_freeza": return { color: "#f4f4f2", trim: "#8a4a1a", h: 0.62, guard: true, claws: true };
         case "pes_garras": return { claws: true };
+        case "garras_minion": return { claws: true, unha: a.clawColor };   // pés de minion: garras na cor escolhida
         case "sapato_cell": return { sapato: "semi" };
         case "sapato_ponta": return { sapato: "perfeito" };
         default: return null;
@@ -1130,6 +1170,7 @@ function spriteGloveSpec(a) {
     if (a.gloves === "luvas_punho_largo") return { color: "#f4f4f6", trim: "#d3d8e2", full: true, punho: 3 };
     if (a.gloves === "luvas_douradas") return { color: "#e8b830", trim: "#b8861a", full: true };
     if (a.gloves === "bracadeiras_freeza") return { color: "#f4f4f2", trim: null, full: false, guard: "#8a4a1a" };
+    if (a.gloves === "garras_minion") return { garras: a.clawColor };   // mãos de minion: 3 garras na cor escolhida
     return null;
 }
 
@@ -1414,6 +1455,13 @@ function spriteTorso(R, a, B, spec, skin, pose) {
 function spriteTorsoMarks(R, a, B, skin, x0, x1, ww, y0b) {
     const m = a.bodyMarks;
     let d = "";
+    if (m === "aneis_minion") {
+        // barriga segmentada e linha do meio (Saibaman)
+        let st = `M48 ${_n2(y0b + 3)} L48 67 `;
+        [58, 62, 66].forEach((y, i) => { const lw = ww * (0.42 - i * 0.04); st += `M${_n2(48 - lw)} ${y} Q48 ${y + 1.6} ${_n2(48 + lw)} ${y} `; });
+        d += `<path d="${st}" fill="none" stroke="${a.minionColor}" stroke-width="0.9" opacity="0.9"/>`;
+    }
+    if (m === "manchas_minion") d += spriteCellPintas(48, y0b + 5, 48, 66, ww * 1.5, ww * 1.1, 7, 21, a.minionColor);
     if (m === "carapaca_freeza") {
         const branco = R.lin(x0, y0b, x1, 62, [[0, "#ffffff"], [0.55, "#eceaf2"], [1, "#a9a6b8"]]);
         // desce pelas laterais até a cintura; no meio fica um recorte com a barriga rosada listrada acima do short
@@ -1604,7 +1652,7 @@ function spriteArm(R, a, B, spec, glove, skin, side, angles, handKind) {
         const p = [sx + (e[0] - sx) * spec.sleeve.frac, sy + (e[1] - sy) * spec.sleeve.frac];
         s += spriteMuscle(sx, sy, p[0], p[1], w * 1.42, w * 1.2, spec.sleeve.color, { bulge: 0.04 });
     }
-    if (glove) {
+    if (glove && !glove.garras) {
         const from = glove.full ? 0.5 : glove.longa ? 0.18 : 0.6, to = glove.full ? 1 : glove.longa ? 0.9 : 0.86;
         const q1 = [e[0] + (h[0] - e[0]) * from, e[1] + (h[1] - e[1]) * from], q2 = [e[0] + (h[0] - e[0]) * to, e[1] + (h[1] - e[1]) * to];
         if (glove.guard) {
@@ -1619,6 +1667,16 @@ function spriteArm(R, a, B, spec, glove, skin, side, angles, handKind) {
         }
     }
     s += mao.fill;
+    if (glove && glove.garras) {
+        // garras de minion: três unhas curvas e compridas saindo da mão, na direção do braço
+        const r = w * 0.52, ux = Math.sin(dirA * Math.PI / 180), uy = -Math.cos(dirA * Math.PI / 180);
+        [-0.55, 0, 0.55].forEach(k => {
+            const bx = h[0] + ux * r * 0.6 - uy * r * k, by = h[1] + uy * r * 0.6 + ux * r * k;
+            const tx = bx + ux * r * 1.5 - uy * r * k * 0.4, ty = by + uy * r * 1.5 + ux * r * k * 0.4;
+            const nx = -uy * r * 0.22, ny = ux * r * 0.22;
+            s += `<path d="M${_n2(bx + nx)} ${_n2(by + ny)} Q${_n2((bx + tx) / 2 + nx * 1.6)} ${_n2((by + ty) / 2 + ny * 1.6)} ${_n2(tx)} ${_n2(ty)} L${_n2(bx - nx)} ${_n2(by - ny)} Z" fill="${glove.garras}" stroke="${SPRITE_OUTLINE}" stroke-width="0.6" stroke-linejoin="round"/>`;
+        });
+    }
     if (glove && glove.unhas) {
         // unhas pretas na ponta dos dedos
         const r = w * 0.52, ux = Math.sin(dirA * Math.PI / 180), uy = -Math.cos(dirA * Math.PI / 180);
@@ -1651,6 +1709,7 @@ function spriteArmMarks(R, a, B, spec, skin, sx, sy, e, h, w, side) {
         s += spriteStripes(e[0], e[1], h[0], h[1], w, w * 0.72, 0.25, 0.85, 4, junta, 0.9, 0.9);
         s += `<circle cx="${_n2(e[0])}" cy="${_n2(e[1])}" r="${_n2(w * 0.42)}" fill="${junta}" stroke="${SPRITE_OUTLINE}" stroke-width="0.7"/>`;
     }
+    if (m === "aneis_minion" || m === "manchas_minion") s += spriteMinionMarks(m, a.minionColor, [sx, sy], e, h, w, spec.armUpper === skin, spec.armLower === skin, 31 + side);
     if (m === "majin") {
         // furinhos do Majin no ombro e no braço
         const furo = (p1, p2, t, off) => { const x = p1[0] + (p2[0] - p1[0]) * t, y = p1[1] + (p2[1] - p1[1]) * t; return `<ellipse cx="${_n2(x + off)}" cy="${_n2(y)}" rx="${_n2(w * 0.13)}" ry="${_n2(w * 0.16)}" fill="${spriteShade(skin, -0.55)}"/>`; };
@@ -1677,6 +1736,7 @@ function spriteArmMarks(R, a, B, spec, skin, sx, sy, e, h, w, side) {
 function spriteLegMarks(R, a, B, color, hx, hy, k, f, w, colorLo, side) {
     const m = a.bodyMarks;
     let s = "";
+    if (m === "aneis_minion" || m === "manchas_minion") s += spriteMinionMarks(m, a.minionColor, [hx, hy], k, f, w * 1.05, color === spriteSkin(a), colorLo === spriteSkin(a), 41 + side);
     const cel = spriteCellCores(a);
     if (cel) {
         // Cell: pintas só nas partes verdes; juntas azuis (1ª forma) e joelheira verde escura (2ª forma)
@@ -1782,7 +1842,7 @@ function spriteLeg(R, a, B, spec, boot, skin, side, angles) {
         }
     }
     const celP = spriteCellCores(a);
-    if (garras) return { svg: s + spriteClawFoot(f, side, angles[1] * 0.45 + side * 4, a.bodyMarks === "metal_freeza" ? SPRITE_METAL : (celP ? celP.pe : skin)), foot: f, knee: k };
+    if (garras) return { svg: s + spriteClawFoot(f, side, angles[1] * 0.45 + side * 4, a.bodyMarks === "metal_freeza" ? SPRITE_METAL : (celP ? celP.pe : skin), boot.unha), foot: f, knee: k };
     if (boot && boot.sapato) return { svg: s + spriteCellShoe(f, side, angles[1] * 0.45 + side * 4, boot.sapato), foot: f, knee: k };
     // ponta da bota em outra cor com listras (botas do Trunks)
     const ponta = boot && boot.ponta ? `<path d="M${_n2(f[0] + side * 1.4)} ${_n2(f[1] - 1)} Q${_n2(f[0] + side * 7.6 + (side < 0 ? 2 : 0))} ${_n2(f[1] + 0.4)} ${_n2(f[0] + side * 6.4 + (side < 0 ? 1.4 : 0))} ${_n2(f[1] + 3.6)} L${_n2(f[0] + side * 1)} ${_n2(f[1] + 3.6)} Z" fill="${boot.ponta}"/>` +
@@ -2328,6 +2388,9 @@ const SPRITE_PRESETS = {
     raditz: { label: "Raditz", appearance: { gender: "masculino", race: "Saiyajin", build: "musculoso", hairStyle: "raditz", hairColor: "#0e0c10", eyeType: "serio", irisColor: "#141014", mouthType: "maligno", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "scouter", outerShirt: "armadura_saiyajin", innerShirt: "malha", pants: "justa", shoes: "botas_saiyajin", gloves: "luvas_pretas", primaryColor: "#232c48", secondaryColor: "#c9c2b8", accentColor: "#c9a13a", shirtColor: "#232c48", pantsColor: "#232c48", tail: "saiyajin", kiColor: "#ff7ad9" } },
     cell: { label: "Cell", appearance: { gender: "masculino", race: "Bio-Androide", build: "normal", skinColor: "#86bf3e", hairStyle: "careca", hairColor: "#3e8a2c", eyeType: "serio", irisColor: "#d0466e", mouthType: "serio", earType: "nenhuma", headFeature: "capacete_cell1", bodyMarks: "cell_imperfeito", accessory: "none", outerShirt: "none", innerShirt: "nenhuma", pants: "nenhuma", shoes: "pes_garras", gloves: "nenhuma", primaryColor: "#3e8a2c", secondaryColor: "#17141c", accentColor: "#e8662a", shirtColor: "#17141c", pantsColor: "#3e8a2c", wings: "cell_abertas", tail: "cell", kiColor: "#7dff7a" } },
     broly: { label: "Broly", appearance: { gender: "masculino", race: "Saiyajin", build: "musculoso", skinColor: "#c98d5e", hairStyle: "broly", hairColor: "#111014", eyeType: "serio", irisColor: "#141014", mouthType: "serio", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "coleira", outerShirt: "armadura_broly", innerShirt: "nenhuma", pants: "justa", shoes: "botas_broly", gloves: "munhequeiras_borda", primaryColor: "#3a3046", secondaryColor: "#2a2530", accentColor: "#3fae4a", shirtColor: "#3a3046", pantsColor: "#6f3a96", cape: "manto_cintura", capeColor: "#a8dc8c", kiColor: "#7dff7a" } },
+    // Minions (v0.87): Saibaman e Cell Jr. montados com as peças de minion (cores editáveis)
+    saibaman: { label: "Saibaman", appearance: { gender: "masculino", race: "Minion", build: "jovem", skinColor: "#6fc046", hairStyle: "careca", hairColor: "#3f8a28", eyeType: "bravo", irisColor: "#7a0a14", scleraColor: "#e0263a", mouthType: "grito", earType: "pontuda", headFeature: "cabeca_saibaman", bodyMarks: "aneis_minion", accessory: "none", outerShirt: "none", innerShirt: "nenhuma", pants: "nenhuma", shoes: "garras_minion", gloves: "garras_minion", primaryColor: "#6fc046", secondaryColor: "#5aa83a", accentColor: "#3f8a28", shirtColor: "#5aa83a", pantsColor: "#5aa83a", minionColor: "#2f6f22", clawColor: "#f2eee0", kiColor: "#9dff6a" } },
+    celljr: { label: "Cell Jr.", appearance: { gender: "masculino", race: "Minion", build: "jovem", skinColor: "#3f9ae6", hairStyle: "careca", hairColor: "#14215a", eyeType: "serio", irisColor: "#c2183a", mouthType: "serio", earType: "nenhuma", headFeature: "crista_celljr", bodyMarks: "manchas_minion", accessory: "none", outerShirt: "none", innerShirt: "nenhuma", pants: "justa", shoes: "botas_trunks", gloves: "luvas_saiyajin", primaryColor: "#14215a", secondaryColor: "#14215a", accentColor: "#f2b630", shirtColor: "#14215a", pantsColor: "#14215a", wings: "cell", minionColor: "#14215a", clawColor: "#f2eee0", kiColor: "#8fd0ff" } },
     gotenks: { label: "Gotenks", appearance: { gender: "masculino", race: "Saiyajin", build: "jovem", hairStyle: "gotenks_bicolor", hairColor: "#141016", hairColor2: "#b58ce0", eyeType: "serio", irisColor: "#1a1210", mouthType: "maligno", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "none", outerShirt: "colete_metamoran", innerShirt: "nenhuma", pants: "bufante", shoes: "sapatilhas_faixa", gloves: "munhequeiras_escuras", primaryColor: "#1f2a6a", secondaryColor: "#1fa59a", accentColor: "#f2c21c", shirtColor: "#1f2a6a", pantsColor: "#f6f4ee", kiColor: "#ffe45a" } }
 };
 

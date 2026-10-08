@@ -934,6 +934,7 @@
                                     <option value="HERÓI">HERÓI</option>
                                     <option value="ANTI-HERÓI">ANTI-HERÓI</option>
                                     <option value="VILÃO">VILÃO</option>
+                                    <option value="MINION">MINION</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -1185,6 +1186,7 @@
                             <option value="Namekuseijin">Namekuseijin</option><option value="Raça Freeza">Alienígena de pele lisa</option>
                             <option value="Majin">Majin</option><option value="Android">Androide</option><option value="Bio-Androide">Bio-Androide</option>
                             <option value="Kaioshin">Kaioshin</option><option value="Alienígena">Alienígena genérico</option>
+                            <option value="Minion">Minion</option>
                         </select>
                     </div>
                     <div class="form-group"><label for="build-build">PORTE FÍSICO</label>
@@ -1239,6 +1241,7 @@
                             <option value="cabeca_longa">Cabeça alongada com espinhos</option><option value="meia_cabeca_metal">Meia cabeça de metal com lente</option>
                             <option value="antena_longa">Antena longa curvada para a frente</option>
                             <option value="capacete_cell1">Capacete de inseto com pontas cruzadas</option><option value="capacete_cell2">Chapa preta e pontas laterais</option><option value="capacete_cell3">Chapa preta e pontas altas</option>
+                            <option value="cabeca_saibaman">Minion: cabeça de Saibaman</option><option value="crista_celljr">Minion: crista de Cell Jr.</option>
                         </select>
                     </div>
                 </div>
@@ -1266,6 +1269,7 @@
                             <option value="listras_freeza">Pele rosada listrada</option><option value="carapaca_freeza">Placas brancas e pele listrada</option><option value="metal_freeza">Corpo de metal (ciborgue)</option>
                             <option value="majin">Furinhos nos braços</option>
                             <option value="cell_imperfeito">Bio-androide (1ª forma)</option><option value="cell_semi">Bio-androide (semi-perfeito)</option><option value="cell_perfeito">Bio-androide (perfeito)</option>
+                            <option value="aneis_minion">Minion: anéis (Saibaman)</option><option value="manchas_minion">Minion: manchas (Cell Jr.)</option>
                         </select>
                     </div>
                     <div class="form-group"><label for="build-scar">CICATRIZ</label>
@@ -1336,10 +1340,11 @@
                             <option value="botas_vegetto">Botas brancas altas de ponta dourada</option><option value="botas_broly">Botas brancas de cano escuro e ponta verde</option>
                             <option value="botas_majin">Botas pretas de dobra dourada</option><option value="botas_douradas">Botas douradas dobradas com meia</option>
                             <option value="sapatilhas_faixa">Sapatilhas com faixas no tornozelo</option><option value="botas_ponta_dourada">Botas brancas de bico dourado</option>
+                            <option value="garras_minion">Minion: pés com garras</option>
                         </select>
                     </div>
                     <div class="form-group"><label for="build-gloves">LUVAS</label>
-                        <select id="build-gloves" onchange="refreshBuilderPreview()"><option value="pulseiras">Munhequeiras</option><option value="luvas_saiyajin">Luvas brancas</option><option value="luvas_pretas">Luvas pretas</option><option value="bracadeiras_freeza">Braçadeiras brancas</option><option value="munhequeiras_borda">Munhequeiras escuras de borda branca</option><option value="munhequeiras_escuras">Munhequeiras pretas</option><option value="bracadeiras_majin">Braçadeiras pretas longas (unhas pretas)</option><option value="luvas_douradas">Luvas douradas</option><option value="luvas_punho_largo">Luvas brancas de punho largo</option><option value="nenhuma">Nenhuma</option></select>
+                        <select id="build-gloves" onchange="refreshBuilderPreview()"><option value="pulseiras">Munhequeiras</option><option value="luvas_saiyajin">Luvas brancas</option><option value="luvas_pretas">Luvas pretas</option><option value="bracadeiras_freeza">Braçadeiras brancas</option><option value="munhequeiras_borda">Munhequeiras escuras de borda branca</option><option value="munhequeiras_escuras">Munhequeiras pretas</option><option value="bracadeiras_majin">Braçadeiras pretas longas (unhas pretas)</option><option value="luvas_douradas">Luvas douradas</option><option value="luvas_punho_largo">Luvas brancas de punho largo</option><option value="garras_minion">Minion: mãos com garras</option><option value="nenhuma">Nenhuma</option></select>
                     </div>
                     <div class="form-group"><label for="build-hat">NA CABEÇA</label>
                         <select id="build-hat" onchange="refreshBuilderPreview()"><option value="none">Nada</option><option value="turbante">Turbante</option><option value="faixa">Faixa na testa</option></select>
@@ -1368,6 +1373,10 @@
                     <div class="form-group"><label for="build-secondary-color">COR SECUNDÁRIA (faixa, munhequeira, cueca, top)</label><input type="color" id="build-secondary-color" value="#1f4fbf" oninput="refreshBuilderPreview()"></div>
                     <div class="form-group"><label for="build-accent-color">COR DE DETALHE</label><input type="color" id="build-accent-color" value="#ffd23f" oninput="refreshBuilderPreview()"></div>
                     <div class="form-group"><label for="build-ki-color">COR DO KI / AURA</label><input type="color" id="build-ki-color" value="#5be3ff" oninput="refreshBuilderPreview()"></div>
+                </div>
+                <div class="sprite-control-row">
+                    <div class="form-group"><label for="build-minion-color">COR DAS VEIAS / MANCHAS (PEÇAS DE MINION)</label><input type="color" id="build-minion-color" value="#2f6f22" oninput="refreshBuilderPreview()"></div>
+                    <div class="form-group"><label for="build-claw-color">COR DAS GARRAS (PEÇAS DE MINION)</label><input type="color" id="build-claw-color" value="#f2eee0" oninput="refreshBuilderPreview()"></div>
                 </div>
 
                 <div style="display:flex; gap:10px; margin-top:10px; align-items:center; flex-wrap:wrap;">
@@ -1421,10 +1430,14 @@
                 Novidades e correções do jogo.
             </p>
             <ul id="lista-updates" style="margin: 0 0 18px; color: #ddd; line-height: 1.5; padding: 0 4px 0 0; list-style: none; overflow-y: auto;">
-                <li class="upd-versao"><h3>Versão 0.86 (ATUAL)</h3><p>Arenas configuráveis</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Quadro da arena</strong><p>Em ARENAS, tocar numa arena abre um quadro com 3 campos: FASE (o número dela no mapa — ao trocar, ela troca de lugar com a fase que estava naquele número), PERSONAGEM (o vilão e a forma dele) e MINION (Saibaman ou Cell Jr.). SALVAR aplica tudo; CANCELAR desfaz.</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Ordem das fases</strong><p>A nova ordem vale no mapa, em ARENAS, na liberação das fases, no ranking e nas trilhas. Fase em que você já completou o NORMAL continua liberada, em qualquer posição.</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Arquivos das arenas</strong><p>Cada arena agora tem o seu arquivo com nome, posição, cor, música, cenário e minion — base para o futuro editor de fases e para anexar fases criadas.</p></li>
+                <li class="upd-versao"><h3>Versão 0.87 (ATUAL)</h3><p>Minions no editor</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Criar minions</strong><p>No editor, a nova raça Minion e o alinhamento MINION. Peças de minion para qualquer personagem: cabeça de Saibaman, crista de Cell Jr., anéis, manchas e garras nas mãos e nos pés, com cor das veias/manchas e cor das garras à sua escolha.</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Minions no gerenciador</strong><p>No gerenciador de personagens, os minions ficam embaixo de uma divisão MINIONS. Saibaman e Cell Jr. já vêm prontos para editar. Minions não aparecem para escolher herói ou vilão.</p></li>
+                <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>Minion da arena</strong><p>O campo MINION das arenas também lista os minions que você criar, e na luta eles aparecem com o próprio desenho, com a mesma mecânica de brotar, agarrar e explodir. Saibaman e Cell Jr. sem edição continuam com o desenho de sempre.</p></li>
+                <li class="upd-versao"><h3>Versão 0.86</h3><p>Arenas configuráveis</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Quadro da arena</strong><p>Em ARENAS, tocar numa arena abre um quadro com 3 campos: FASE (o número dela no mapa — ao trocar, ela troca de lugar com a fase que estava naquele número), PERSONAGEM (o vilão e a forma dele) e MINION (Saibaman ou Cell Jr.). SALVAR aplica tudo; CANCELAR desfaz.</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Ordem das fases</strong><p>A nova ordem vale no mapa, em ARENAS, na liberação das fases, no ranking e nas trilhas. Fase em que você já completou o NORMAL continua liberada, em qualquer posição.</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Arquivos das arenas</strong><p>Cada arena agora tem o seu arquivo com nome, posição, cor, música, cenário e minion — base para o futuro editor de fases e para anexar fases criadas.</p></li>
                 <li class="upd-versao"><h3>Versão 0.85</h3><p>Ilha do Mestre Kame e mapa em 3D</p></li>
                 <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Ilha do Mestre Kame</strong><p>Nova 1ª fase, em 3D: a Kame House rosa com telhado vinho, letreiro KAME HOUSE, janelinha no telhado, cata-vento de galo e alpendre, coqueiros, arbustos, pedras e a praia. Os lutadores dão a volta na casa enquanto lutam, o mar tem ondinhas e espuma indo e voltando e as nuvens passam devagar. Tem música própria. Quem já tinha progresso ganha a ilha como completada.</p></li>
                 <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>Mapa de progresso em 3D</strong><p>O mapa agora é visto em perspectiva: céu, horizonte com montanhas e o chão com árvores, casas e pedras em várias distâncias, que passam em velocidades diferentes ao rolar. A estrada fica deitada no chão e as fases flutuam sobre ela. A troca de ambiente acontece aos poucos, ao longo de algumas fases, sem corte.</p></li>

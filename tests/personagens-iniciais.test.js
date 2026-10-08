@@ -14,10 +14,10 @@ const defaultPresets = h.run("Object.values(DEFAULT_CHARACTERS).map(d => d.prese
 h.check("cada modelo do construtor tem um personagem inicial", JSON.stringify(defaultPresets) === JSON.stringify(h.run("Object.keys(SPRITE_PRESETS).sort()")), JSON.stringify(defaultPresets));
 h.check(`perfil novo já vem com os ${presetCount} personagens no Database`, h.run("Object.keys(DEFAULT_CHARACTERS).every(k => !!characterDB[k])"));
 h.check("todos os personagens iniciais têm animações de movimento", h.run("Object.keys(DEFAULT_CHARACTERS).every(k => characterDB[k].animations && characterDB[k].animations.flyRight && characterDB[k].animations.flyRight.length > 0)"));
-h.check("cada um aparece na aba certa (herói/anti-herói em HERÓIS, vilão/anti-herói em VILÕES)", h.run(`(() => {
+h.check("cada um aparece na aba certa (herói/anti-herói em HERÓIS, vilão/anti-herói em VILÕES; minions em nenhuma)", h.run(`(() => {
     currentTab = "HERÓIS"; const herois = getFilteredCharacters();
     currentTab = "VILÕES"; const viloes = getFilteredCharacters();
-    return Object.keys(DEFAULT_CHARACTERS).every(k => herois.includes(k) || viloes.includes(k));
+    return Object.keys(DEFAULT_CHARACTERS).every(k => DEFAULT_CHARACTERS[k].align === "MINION" ? !herois.includes(k) && !viloes.includes(k) : herois.includes(k) || viloes.includes(k));
 })()`));
 h.check("o construtor continua oferecendo todos os modelos em 'COMEÇAR A PARTIR DE...'", h.run("(() => { populateBuilderPresetOptions(); return Object.keys(SPRITE_PRESETS).length; })()") === presetCount);
 

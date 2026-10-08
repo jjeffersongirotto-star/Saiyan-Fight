@@ -35,7 +35,7 @@ run("executeSystemChoice(systemChoiceOptions.findIndex(o => o.label === 'VILÃO'
 check("vilão trocado depois de confirmar", run("selectedBoss") === viloes[vi]);
 
 run("gameMode = 'coop'; selecaoLuta = 'p1'");
-const todos = run("Object.keys(characterDB).length");
+const todos = run("Object.keys(characterDB).filter(k => characterDB[k].alignment !== 'MINION').length");   // todos menos os minions (0.87)
 check("VERSUS: jogador 1 vê todos os personagens", run("currentTab = 'HERÓIS'; getFilteredCharacters().length") === todos);
 check("VERSUS: jogador 2 vê todos os personagens", run("currentTab = 'VILÕES'; getFilteredCharacters().length") === todos);
 run("gameMode = 'singleplayer'; currentTab = 'HERÓIS'; selecaoLuta = null; setGameState('menu')");
