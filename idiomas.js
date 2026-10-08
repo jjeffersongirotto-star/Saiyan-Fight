@@ -800,6 +800,24 @@ PERSONAGEM § CHARACTER § PERSONAJE
 MINION § MINION § ESBIRRO
 MINIONS § MINIONS § ESBIRROS
 Minion § Minion § Esbirro
+MINION CLÁSSICO: § CLASSIC MINION: § ESBIRRO CLÁSICO:
+MINION CLÁSSICO § CLASSIC MINION § ESBIRRO CLÁSICO
+Desenho original do jogo, com a aparência e os movimentos de sempre. Só muda a cor que você trocar. § The game's original drawing, with its usual look and moves. Only the colours you change are different. § El dibujo original del juego, con el aspecto y los movimientos de siempre. Solo cambia el color que cambies.
+VOLTAR ÀS CORES ORIGINAIS § BACK TO ORIGINAL COLOURS § VOLVER A LOS COLORES ORIGINALES
+Minion clássico escolhido! Troque as cores na aba DADOS e clique em SALVAR PERSONAGEM. § Classic minion chosen! Change the colours in the INFO tab and click SAVE CHARACTER. § ¡Esbirro clásico elegido! Cambia los colores en la pestaña DATOS y haz clic en GUARDAR PERSONAJE.
+Saibaman (clássico) § Saibaman (classic) § Saibaman (clásico)
+Cell Jr. (clássico) § Cell Jr. (classic) § Cell Jr. (clásico)
+PELE § SKIN § PIEL
+BOCA § MOUTH § BOCA
+GARRAS § CLAWS § GARRAS
+CONTORNO § OUTLINE § CONTORNO
+MANCHAS § SPOTS § MANCHAS
+ARMADURA § ARMOUR § ARMADURA
+ROSTO § FACE § ROSTRO
+MARCAS § MARKS § MARCAS
+QUEIXEIRA § CHIN GUARD § BARBOQUEJO
+MÃOS § HANDS § MANOS
+BOTAS § BOOTS § BOTAS
 Minion: cabeça de Saibaman § Minion: Saibaman head § Esbirro: cabeza de Saibaman
 Minion: crista de Cell Jr. § Minion: Cell Jr. crest § Esbirro: cresta de Cell Jr.
 Minion: anéis (Saibaman) § Minion: rings (Saibaman) § Esbirro: anillos (Saibaman)

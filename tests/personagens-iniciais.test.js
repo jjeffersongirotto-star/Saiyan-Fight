@@ -10,7 +10,7 @@ const path = __dirname + "/..";
 // ---------- perfil novo: um personagem para cada modelo do construtor ----------
 const h = createHarness(path, 800);
 const presetCount = h.run("Object.keys(SPRITE_PRESETS).length");
-const defaultPresets = h.run("Object.values(DEFAULT_CHARACTERS).map(d => d.presetKey).sort()");
+const defaultPresets = h.run("Object.values(DEFAULT_CHARACTERS).filter(d => !d.minion).map(d => d.presetKey).sort()");   // minions são os desenhos clássicos (minions.js)
 h.check("cada modelo do construtor tem um personagem inicial", JSON.stringify(defaultPresets) === JSON.stringify(h.run("Object.keys(SPRITE_PRESETS).sort()")), JSON.stringify(defaultPresets));
 h.check(`perfil novo já vem com os ${presetCount} personagens no Database`, h.run("Object.keys(DEFAULT_CHARACTERS).every(k => !!characterDB[k])"));
 h.check("todos os personagens iniciais têm animações de movimento", h.run("Object.keys(DEFAULT_CHARACTERS).every(k => characterDB[k].animations && characterDB[k].animations.flyRight && characterDB[k].animations.flyRight.length > 0)"));

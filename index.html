@@ -927,6 +927,16 @@
                             </div>
                         </div>
 
+                        <!-- MINION CLÁSSICO (minions.js): desenho e movimentos originais, só as cores mudam -->
+                        <div id="minion-classico-area" class="form-row" style="display: none;">
+                            <div class="form-group" style="flex: 1 1 100%;">
+                                <label>MINION CLÁSSICO: <span id="minion-classico-modelo"></span></label>
+                                <p style="margin: 2px 0 6px; font-size: 12px; opacity: 0.85;">Desenho original do jogo, com a aparência e os movimentos de sempre. Só muda a cor que você trocar.</p>
+                                <div id="minion-classico-cores" class="form-row"></div>
+                                <button type="button" class="btn" onclick="voltarCoresMinionClassico()">VOLTAR ÀS CORES ORIGINAIS</button>
+                            </div>
+                        </div>
+
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="char-alignment">Alinhamento</label>
@@ -1430,7 +1440,11 @@
                 Novidades e correções do jogo.
             </p>
             <ul id="lista-updates" style="margin: 0 0 18px; color: #ddd; line-height: 1.5; padding: 0 4px 0 0; list-style: none; overflow-y: auto;">
-                <li class="upd-versao"><h3>Versão 0.89 (ATUAL)</h3><p>Capital do Oeste refeita</p></li>
+                <li class="upd-versao"><h3>Versão 0.90 (ATUAL)</h3><p>Minions clássicos de volta</p></li>
+                <li class="upd-item upd-corrigido"><span class="upd-tag">CORRIGIDO</span><strong>Saibaman e Cell Jr. originais</strong><p>Os Minions voltaram a ser os desenhos originais do jogo, com a aparência e os movimentos de antes (brotar da terra, saltar, voar, investir, agarrar e ser arremessado), na luta, no gerenciador e no editor. Quem tinha as versões do construtor recebe os originais de volta, com o mesmo nome.</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Editar os Minions clássicos</strong><p>No editor, a aba DADOS de um Minion clássico mostra as cores dele (pele, olhos, garras, armadura...) e o botão VOLTAR ÀS CORES ORIGINAIS. Sem trocar nada ele fica exatamente o original.</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Novos Minions a partir dos clássicos</strong><p>Em "COMEÇAR A PARTIR DE..." aparecem Saibaman (clássico) e Cell Jr. (clássico): o Minion novo copia o desenho e os movimentos originais, e você escolhe nome, cores, aura e especial. As peças de minion do construtor continuam disponíveis para outros personagens.</p></li>
+                <li class="upd-versao"><h3>Versão 0.89</h3><p>Capital do Oeste refeita</p></li>
                 <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>Capital do Oeste</strong><p>A arena agora é só o quarteirão da Corporação Cápsula: o prédio-domo amarelo alongado com luz e sombra, topo branco com a cúpula pequena, duas fileiras de janelas azuis, porta e letreiro CAPSULE na frente, torrinhas e domos brancos anexos. Em volta, gramado com trilhas e árvores, casinhas redondas, o prédio de teto azul e prédios brancos com janelas, e a rua cercando o quarteirão. Saíram os prédios altos, as torres com esfera e o monotrilho.</p></li>
                 <li class="upd-versao"><h3>Versão 0.88</h3><p>Plataforma Celestial, Capital do Oeste e ranking completo</p></li>
                 <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Plataforma Celestial</strong><p>Nova arena em 3D: o disco flutuando nas nuvens com piso de ladrilhos, borda vinho com triângulos, casco dourado com janelas e a escada com a corda, o palácio de cúpulas douradas, torres-mirante, ciprestes, canteiros e coqueiros. A luta dá a volta ao redor da plataforma, com as nuvens passando embaixo. Música própria.</p></li>
@@ -1741,6 +1755,7 @@
     <script src="game-logic-core.js"></script>
     <script src="sprites.js"></script>
     <script src="conjuntos.js"></script>
+    <script src="minions.js"></script>
     <script src="database.js"></script>
     <script src="gameplay.js"></script>
     <script src="menu.js"></script>

@@ -5169,207 +5169,27 @@ function drawKiLightning(entity, cx, bottomY, w, h, forte) {
     ctx.restore();
 }
 
-// ==================== SAIBAMAN (VISUAL DO ANIME) ====================
-// Cabeça grande e bulbosa com sulcos, olhos vermelhos enormes, corpo magro e curvado e garras. Cada pose é
-// desenhada uma vez numa imagem guardada (2x, para ficar nítida) e só copiada a cada quadro.
-const SAIBAMAN_SPRITE_SCALE = 3, SAIBAMAN_SPRITE_PAD = 8;
-const MINION_DRAW_SCALE = 1.3;   // desenhados um pouco maiores que a caixa de colisão (os pés no mesmo lugar)
-const saibamanSpriteCache = new Map();
-
-// Minions desenhados de frente (como nas referências), num espaço de 64x80 reduzido para a caixa de 32x40.
-// Contorno escuro, sombra de um tom e brilho em cima (cel-shading). Poses: voar (padrão), saltar e agarrar.
-function minionLimb(g, pts, larg, cor, contorno, aneis) {
-    g.lineCap = "round"; g.lineJoin = "round";
-    const traco = () => { g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); pts.slice(1).forEach(p => g.lineTo(p[0], p[1])); };
-    g.strokeStyle = contorno; g.lineWidth = larg + 2.4; traco(); g.stroke();
-    g.strokeStyle = cor; g.lineWidth = larg; traco(); g.stroke();
-    if (!aneis) return;
-    // anéis/escamas atravessando o membro
-    g.strokeStyle = aneis; g.lineWidth = 0.9;
-    for (let i = 0; i < pts.length - 1; i++) {
-        const [x0, y0] = pts[i], [x1, y1] = pts[i + 1], len = Math.hypot(x1 - x0, y1 - y0) || 1;
-        const nx = -(y1 - y0) / len, ny = (x1 - x0) / len;
-        for (let t = 0.2; t < 1; t += 0.22) {
-            const cx = x0 + (x1 - x0) * t, cy = y0 + (y1 - y0) * t;
-            g.beginPath(); g.moveTo(cx - nx * larg * 0.45, cy - ny * larg * 0.45); g.quadraticCurveTo(cx + (x1 - x0) / len, cy + (y1 - y0) / len, cx + nx * larg * 0.45, cy + ny * larg * 0.45); g.stroke();
-        }
-    }
-}
-function minionClaws(g, x, y, dir, tam) {
-    // três garras brancas curvas
-    g.fillStyle = "#eef3f8"; g.strokeStyle = "#3a4656"; g.lineWidth = 0.7;
-    for (let k = -1; k <= 1; k++) {
-        const a = dir + k * 0.45;
-        g.beginPath();
-        g.moveTo(x + Math.cos(a + 1.3) * tam * 0.35, y + Math.sin(a + 1.3) * tam * 0.35);
-        g.quadraticCurveTo(x + Math.cos(a) * tam * 1.1, y + Math.sin(a) * tam * 1.1 - 1, x + Math.cos(a) * tam * 1.25, y + Math.sin(a) * tam * 1.25);
-        g.lineTo(x + Math.cos(a - 1.3) * tam * 0.35, y + Math.sin(a - 1.3) * tam * 0.35);
-        g.closePath(); g.fill(); g.stroke();
-    }
-}
-function minionPose(pose, frame) {
-    const sway = pose === "voar" ? Math.sin(frame / 4 * Math.PI * 2) : 0;
-    if (pose === "saltar") return { sway, bracos: [[[20, 33], [14, 24], [12, 14]], [[44, 33], [50, 24], [52, 14]]], maos: [[12, 13, -Math.PI / 2], [52, 13, -Math.PI / 2]], pernas: [[[28, 50], [26, 62], [25, 74]], [[36, 50], [38, 62], [39, 74]]] };
-    if (pose === "agarrar") return { sway, bracos: [[[20, 33], [9, 38], [4, 44]], [[44, 33], [55, 38], [60, 44]]], maos: [[4, 45, Math.PI * 0.75], [60, 45, Math.PI * 0.25]], pernas: [[[28, 50], [19, 60], [17, 73]], [[36, 50], [45, 60], [47, 73]]] };
-    return { sway, bracos: [[[20, 33], [12, 42 + sway], [14, 53 + sway]], [[44, 33], [52, 42 - sway], [50, 53 - sway]]], maos: [[14, 54 + sway, Math.PI / 2], [50, 54 - sway, Math.PI / 2]],
-        pernas: [[[28, 50], [19, 59 + sway], [17, 72]], [[36, 50], [45, 59 - sway], [47, 72]]] };
-}
-
-function traceSaibamanFigure(g, pose, frame) {
-    g.save(); g.scale(0.5, 0.5);
-    const pele = "#6fc046", sombra = "#3f8a28", claro = "#a9e46f", linha = "#14320b", aneis = "rgba(20, 60, 12, 0.55)";
-    const P = minionPose(pose, frame);
-    // pernas agachadas com anéis e pés de garras
-    P.pernas.forEach((pts, i) => {
-        minionLimb(g, pts, 7.5, pele, linha, aneis);
-        const [fx, fy] = pts[pts.length - 1];
-        g.fillStyle = sombra; g.strokeStyle = linha; g.lineWidth = 1.1;
-        g.beginPath(); g.ellipse(fx, fy + 1, 5.5, 3, 0, 0, Math.PI * 2); g.fill(); g.stroke();
-        minionClaws(g, fx + (i ? 2 : -2), fy + 3, i ? 0.3 : Math.PI - 0.3, 5);
-    });
-    // tronco: peitoral liso em placas e barriga segmentada
-    g.fillStyle = pele; g.strokeStyle = linha; g.lineWidth = 1.3;
-    g.beginPath(); g.moveTo(19, 31); g.quadraticCurveTo(32, 27, 45, 31); g.lineTo(42, 44); g.quadraticCurveTo(32, 53, 22, 44); g.closePath(); g.fill(); g.stroke();
-    g.fillStyle = sombra;
-    g.beginPath(); g.moveTo(22, 44); g.quadraticCurveTo(32, 53, 42, 44); g.lineTo(40, 41); g.quadraticCurveTo(32, 48, 24, 41); g.closePath(); g.fill();
-    g.strokeStyle = linha; g.lineWidth = 1;
-    g.beginPath(); g.moveTo(32, 31); g.lineTo(32, 49); g.stroke();
-    g.beginPath(); g.moveTo(21, 38); g.quadraticCurveTo(26.5, 41, 31.5, 38); g.moveTo(32.5, 38); g.quadraticCurveTo(37.5, 41, 43, 38); g.stroke();
-    g.beginPath(); g.moveTo(25, 45); g.lineTo(39, 45); g.stroke();
-    g.fillStyle = "rgba(255, 255, 255, 0.35)";
-    g.beginPath(); g.ellipse(26, 34, 3.5, 1.6, -0.3, 0, Math.PI * 2); g.fill();
-    g.beginPath(); g.ellipse(38, 34, 3.5, 1.6, 0.3, 0, Math.PI * 2); g.fill();
-    // braços com anéis e mãos de garras
-    P.bracos.forEach((pts, i) => {
-        minionLimb(g, pts, 6.5, pele, linha, aneis);
-        const [hx, hy, dir] = P.maos[i];
-        g.fillStyle = sombra; g.beginPath(); g.arc(pts[2][0], pts[2][1], 3.4, 0, Math.PI * 2); g.fill();
-        minionClaws(g, hx, hy, dir, 5);
-    });
-    // orelhas pontudas
-    g.fillStyle = pele; g.strokeStyle = linha; g.lineWidth = 1.1;
-    [[1, 19], [-1, 45]].forEach(([d, x]) => { g.beginPath(); g.moveTo(x, 21); g.lineTo(x - d * 9, 15); g.lineTo(x + d * 1, 27); g.closePath(); g.fill(); g.stroke(); });
-    // cabeça grande em forma de cérebro, com o sulco no meio e veios
-    const cab = g.createRadialGradient(28, 8, 2, 32, 15, 18);
-    cab.addColorStop(0, "#d4f59a"); cab.addColorStop(0.55, claro); cab.addColorStop(1, "#78c24c");
-    g.fillStyle = cab; g.strokeStyle = linha; g.lineWidth = 1.4;
-    g.beginPath(); g.moveTo(19, 24); g.bezierCurveTo(13, 12, 20, 0, 32, 0); g.bezierCurveTo(44, 0, 51, 12, 45, 24); g.quadraticCurveTo(39, 31, 32, 31); g.quadraticCurveTo(25, 31, 19, 24); g.closePath(); g.fill(); g.stroke();
-    g.strokeStyle = "rgba(40, 90, 20, 0.85)"; g.lineWidth = 1.1;
-    g.beginPath(); g.moveTo(32, 1); g.bezierCurveTo(31, 6, 33, 10, 32, 16); g.stroke();
-    g.lineWidth = 0.7;
-    [[22, 8, 27, 6, 28, 11], [21, 14, 25, 12, 27, 16], [42, 8, 37, 6, 36, 11], [43, 14, 39, 12, 37, 16], [25, 3, 28, 4, 29, 7], [39, 3, 36, 4, 35, 7]].forEach(v => {
-        g.beginPath(); g.moveTo(v[0], v[1]); g.quadraticCurveTo(v[2], v[3] + 2, v[2] + (v[4] - v[2]) / 2, v[3]); g.quadraticCurveTo(v[4], v[5] - 2, v[4], v[5]); g.stroke();
-    });
-    // testa franzida, olhos vermelhos puxados e boca aberta
-    g.fillStyle = "rgba(60, 120, 30, 0.45)";
-    g.beginPath(); g.moveTo(22, 20); g.quadraticCurveTo(32, 16, 42, 20); g.lineTo(42, 22); g.quadraticCurveTo(32, 19, 22, 22); g.closePath(); g.fill();
-    [[26.5, 23.5, 0.38], [37.5, 23.5, -0.38]].forEach(([x, y, r]) => {
-        g.fillStyle = "#e0263a"; g.strokeStyle = "#3a0408"; g.lineWidth = 1;
-        g.beginPath(); g.ellipse(x, y, 4.6, 2.1, r, 0, Math.PI * 2); g.fill(); g.stroke();
-        g.fillStyle = "#ff9aa4"; g.beginPath(); g.ellipse(x - 1, y - 0.6, 1.4, 0.6, r, 0, Math.PI * 2); g.fill();
-    });
-    g.fillStyle = "#b5202f"; g.strokeStyle = linha; g.lineWidth = 1;
-    g.beginPath(); g.moveTo(28.5, 27.3); g.quadraticCurveTo(32, 26.4, 35.5, 27.3); g.quadraticCurveTo(32, 31.5, 28.5, 27.3); g.closePath(); g.fill(); g.stroke();
-    g.fillStyle = "#ff7b88"; g.beginPath(); g.ellipse(32, 29, 1.8, 0.8, 0, 0, Math.PI * 2); g.fill();
-    g.restore();
-}
-
-// Cell Jr. (Torneio de Cell): mesmo tamanho, poses e mecânica do Saibaman. Atarracado, armadura azul-marinho
-// brilhante (ombros, peito, cinto, canelas), painéis azul-claros com manchas escuras (crista, barriga, braços,
-// coxas), crista de duas abas, rosto claro com marcas roxas e queixeira amarela, mãos brancas, asas escuras e
-// botas amarelas. Desenhado de frente.
-function traceCellJrFigure(g, pose, frame) {
-    g.save(); g.scale(0.5, 0.5);
-    const azul = "#3f9ae6", azulClaro = "#8fd0ff", marinho = "#14215a", marinhoBrilho = "#3a52a8", linha = "#060b22", mancha = "#122a6e";
-    const P = minionPose(pose, frame);
-    const manchas = (pts, r) => { g.fillStyle = mancha; pts.forEach(([x, y], i) => { g.beginPath(); g.ellipse(x, y, r * (0.8 + (i % 3) * 0.2), r * 0.7, i * 0.7, 0, Math.PI * 2); g.fill(); }); };
-    const forma = (pts, cor) => { g.fillStyle = cor; g.strokeStyle = linha; g.lineWidth = 1.2; g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); pts.slice(1).forEach(p => g.lineTo(p[0], p[1])); g.closePath(); g.fill(); g.stroke(); };
-    const brilho = (x, y, rx, ry) => { g.fillStyle = "rgba(255, 255, 255, 0.35)"; g.beginPath(); g.ellipse(x, y, rx, ry, -0.4, 0, Math.PI * 2); g.fill(); };
-    // asas escuras atrás dos ombros (batem ao voar)
-    const bate = P.sway * 2;
-    forma([[22, 32], [6, 24 - bate], [3, 44], [14, 52], [22, 44]], "#1d1446");
-    forma([[42, 32], [58, 24 - bate], [61, 44], [50, 52], [42, 44]], "#1d1446");
-    g.strokeStyle = "#4a3b8c"; g.lineWidth = 0.8;
-    g.beginPath(); g.moveTo(20, 34); g.lineTo(7, 30 - bate); g.moveTo(44, 34); g.lineTo(57, 30 - bate); g.stroke();
-    // pernas: coxa azul manchada, joelheira e canela marinho, bota amarela pontuda
-    P.pernas.forEach((pts, i) => {
-        const [h, k, f] = pts;
-        minionLimb(g, [h, k], 9, azul, linha);
-        manchas([[(h[0] + k[0]) / 2 - 1.5, (h[1] + k[1]) / 2], [(h[0] + k[0]) / 2 + 2, (h[1] + k[1]) / 2 + 3]], 1.2);
-        minionLimb(g, [k, f], 8.5, marinho, linha);
-        g.fillStyle = marinhoBrilho; g.strokeStyle = linha; g.lineWidth = 1;
-        g.beginPath(); g.arc(k[0], k[1], 4, 0, Math.PI * 2); g.fill(); g.stroke();
-        g.fillStyle = azulClaro; g.beginPath(); g.arc(k[0] - 1, k[1] - 1, 1.6, 0, Math.PI * 2); g.fill();
-        const d = i ? 1 : -1;
-        forma([[f[0] - 5, f[1] - 1], [f[0] + 5, f[1] - 1], [f[0] + 6 * d + (d > 0 ? 2 : -2), f[1] + 5], [f[0] - 4 * d, f[1] + 5]], "#f0a624");
-        g.fillStyle = "rgba(255, 240, 180, 0.6)"; g.fillRect(f[0] - 3, f[1], 5, 1.2);
-    });
-    // barriga azul manchada, cinto e protetor marinho
-    forma([[23, 42], [41, 42], [40, 51], [24, 51]], azul);
-    manchas([[27, 45], [33, 47], [38, 44.5], [30, 49], [36, 49.5]], 1.2);
-    forma([[22.5, 50], [41.5, 50], [41, 54], [23, 54]], marinho);
-    forma([[29, 53.5], [35, 53.5], [33.5, 58], [30.5, 58]], marinho);
-    // peitoral marinho grande e brilhante
-    forma([[18, 30], [46, 30], [44, 41], [32, 44], [20, 41]], marinho);
-    g.strokeStyle = marinhoBrilho; g.lineWidth = 1;
-    g.beginPath(); g.moveTo(32, 31); g.lineTo(32, 43); g.moveTo(21, 37); g.quadraticCurveTo(26, 41, 31, 37); g.moveTo(33, 37); g.quadraticCurveTo(38, 41, 43, 37); g.stroke();
-    brilho(25, 33, 4, 1.6); brilho(39, 33, 4, 1.6);
-    // braços: azul manchado em cima, antebraço marinho e punho branco
-    P.bracos.forEach((pts, i) => {
-        const [o, c, m] = pts;
-        minionLimb(g, [o, c], 7, azul, linha);
-        manchas([[(o[0] + c[0]) / 2, (o[1] + c[1]) / 2]], 1.2);
-        minionLimb(g, [c, m], 7, marinho, linha);
-        g.fillStyle = "#f2f4f8"; g.strokeStyle = linha; g.lineWidth = 1;
-        g.beginPath(); g.arc(m[0], m[1], 3.6, 0, Math.PI * 2); g.fill(); g.stroke();
-        g.strokeStyle = "#9aa6b8"; g.lineWidth = 0.6;
-        g.beginPath(); g.moveTo(m[0] - 2, m[1]); g.lineTo(m[0] + 2, m[1]); g.stroke();
-    });
-    // ombreiras redondas marinho com brilho
-    [[17, 32], [47, 32]].forEach(([x, y]) => {
-        g.fillStyle = marinho; g.strokeStyle = linha; g.lineWidth = 1.2;
-        g.beginPath(); g.arc(x, y, 7, 0, Math.PI * 2); g.fill(); g.stroke();
-        brilho(x - 2, y - 3, 3, 1.4);
-    });
-    // crista de duas abas (azul manchado) e o meio marinho brilhante
-    forma([[29, 14], [22, 1], [14, 5], [15, 18], [22, 24], [27, 22]], azul);
-    forma([[35, 14], [42, 1], [50, 5], [49, 18], [42, 24], [37, 22]], azul);
-    manchas([[19, 8], [22, 14], [17, 13], [24, 19], [45, 8], [42, 14], [47, 13], [40, 19]], 1.3);
-    forma([[26, 8], [32, 3], [38, 8], [38, 17], [26, 17]], marinho);
-    brilho(30, 7, 2.5, 1.2);
-    // rosto claro, olhos, marcas roxas e a queixeira amarela
-    forma([[25.5, 15], [38.5, 15], [38, 23], [32, 28.5], [26, 23]], "#eeebf5");
-    [[29, 18.5, 0.25], [35, 18.5, -0.25]].forEach(([x, y, r]) => {
-        g.fillStyle = "#c2183a"; g.beginPath(); g.ellipse(x, y, 2.1, 1.1, r, 0, Math.PI * 2); g.fill();
-        g.strokeStyle = linha; g.lineWidth = 0.8; g.beginPath(); g.moveTo(x - 2.4, y - 1.6 + r * 2); g.lineTo(x + 2.4, y - 1.6 - r * 2); g.stroke();
-    });
-    g.fillStyle = "#9c4bc4"; g.fillRect(26.6, 19.5, 1.2, 4); g.fillRect(36.2, 19.5, 1.2, 4);
-    g.strokeStyle = "#f2b630"; g.lineWidth = 2.4; g.lineJoin = "round";
-    g.beginPath(); g.moveTo(25.5, 21); g.lineTo(28, 26); g.lineTo(32, 29); g.lineTo(36, 26); g.lineTo(38.5, 21); g.stroke();
-    g.strokeStyle = "#a76d0e"; g.lineWidth = 0.6; g.stroke();
-    g.strokeStyle = linha; g.lineWidth = 0.7; g.beginPath(); g.moveTo(30.5, 24.5); g.quadraticCurveTo(32, 25.3, 33.5, 24.5); g.stroke();
-    g.restore();
-}
 
 // Minion da fase atual (escolhido em ARENAS; padrão: Cell Jr. no Torneio de Cell, Saibaman nas outras).
 function getMinionKind() {
     return typeof selectedStage !== "undefined" ? getMinionDaFase(selectedStage) : "saibaman";
 }
 
-// Minion feito no editor (v0.87): usa os quadros do próprio desenho (parado, voando, investindo...) no tamanho de
-// minion. Saibaman e Cell Jr. continuam com o desenho clássico enquanto não forem editados.
+// Minion de cada personagem: o clássico (minions.js: Saibaman/Cell Jr. originais ou um minion feito a partir deles,
+// com as cores do editor) ou um minion montado no construtor (v0.87: os quadros do próprio desenho no tamanho de
+// minion). Saibaman/Cell Jr. apagados do gerenciador continuam com o desenho original na luta.
+function getMinionClassico(tipo) {
+    const c = typeof characterDB === "object" ? characterDB[tipo] : null;
+    if (c && c.minionClassico) return normalizarMinionClassico(c.minionClassico);
+    if (c && c.builderAppearance) return null;
+    return { modelo: tipo === "celljr" ? "celljr" : "saibaman", cores: {} };
+}
 const minionAssinaturas = new WeakMap();
 function minionAssinatura(app) {
     if (!app || typeof app !== "object") return "";
     let s = minionAssinaturas.get(app);
     if (s === undefined) { s = JSON.stringify(normalizeAppearance(app)); minionAssinaturas.set(app, s); }
     return s;
-}
-function minionUsaDesenhoClassico(tipo) {
-    if (!MINIONS_PADRAO.some(m => m.id === tipo)) return false;
-    const c = characterDB[tipo];
-    if (!c || !c.builderAppearance || !SPRITE_PRESETS[tipo]) return true;
-    return minionAssinatura(c.builderAppearance) === minionAssinatura(SPRITE_PRESETS[tipo].appearance);
 }
 const MINION_POSE_ESTADO = { brotar: "flyUp", saltar: "flyUp", voar: "idle", investir: "flyLeft", agarrar: "chargeKi", arremessado: "flyDown" };
 const minionConstruidoCache = new Map();
@@ -5403,23 +5223,17 @@ function getMinionConstruidoSprite(tipo, pose, frame) {
 }
 
 function getSaibamanSprite(pose, frame, tipo = getMinionKind()) {
-    if (!minionUsaDesenhoClassico(tipo)) {
+    let mc = getMinionClassico(tipo);
+    if (!mc) {
         const pronto = getMinionConstruidoSprite(tipo, pose, frame);
         if (pronto) return pronto;
-        tipo = tipo === "celljr" ? "celljr" : "saibaman";   // enquanto carrega: o clássico
+        mc = { modelo: "saibaman", cores: {} };   // enquanto a imagem carrega: o clássico
     }
-    const key = tipo + pose + frame;
+    const key = minionAssinaturaClassica(mc) + pose + frame;
     let c = saibamanSpriteCache.get(key);
     if (c) return c;
-    c = document.createElement("canvas");
-    c.width = (32 + SAIBAMAN_SPRITE_PAD * 2) * SAIBAMAN_SPRITE_SCALE;
-    c.height = (40 + SAIBAMAN_SPRITE_PAD * 2) * SAIBAMAN_SPRITE_SCALE;
-    const g = c.getContext("2d");
-    if (g) {
-        g.scale(SAIBAMAN_SPRITE_SCALE, SAIBAMAN_SPRITE_SCALE);
-        g.translate(SAIBAMAN_SPRITE_PAD, SAIBAMAN_SPRITE_PAD + 1);
-        if (tipo === "celljr") traceCellJrFigure(g, pose, frame); else traceSaibamanFigure(g, pose, frame);
-    }
+    c = desenharMinionClassico(mc, pose, frame);
+    if (saibamanSpriteCache.size > 300) saibamanSpriteCache.clear();
     saibamanSpriteCache.set(key, c);
     return c;
 }
@@ -7380,8 +7194,8 @@ function render() {
 
             const geo = getDatabaseCardGeometry(layout, cx, cy);
 
-            // Saibaman/Cell Jr. sem edição: o mesmo desenho do gameplay
-            const classico = isMinion(k) && minionUsaDesenhoClassico(k) ? getSaibamanSprite("voar", 0, k) : null;
+            // minions clássicos: o mesmo desenho do gameplay
+            const classico = isMinion(k) && getMinionClassico(k) ? getSaibamanSprite("voar", 0, k) : null;
             if (classico) {
                 const h = geo.imageSize + 6, w = h * classico.width / classico.height;
                 ctx.drawImage(classico, cx + layout.cardWidth / 2 - w / 2, geo.imageY - 4, w, h);

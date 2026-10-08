@@ -34,7 +34,6 @@ check("abas do ranking por fase cabem e não se sobrepõem", run(`(() => { const
 run("setGameState('menu')");
 
 // ---------- porte minion ----------
-check("Saibaman e Cell Jr. usam o porte minion (cabeça grande, corpo baixo)", sp.SPRITE_PRESETS.saibaman.appearance.build === "minion" && sp.SPRITE_PRESETS.celljr.appearance.build === "minion");
 run("setBuilderFormFromAppearance(SPRITE_PRESETS.goku.appearance); document.getElementById('build-race').value = 'Minion'; escolherRaca()");
 check("escolher a raça Minion já põe o porte minion", run("document.getElementById('build-build').value") === "minion");
 

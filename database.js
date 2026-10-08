@@ -2057,6 +2057,8 @@ function openModal(key = null) {
     populateBuilderPresetOptions();
     builderLastAppearance = char.builderAppearance || null;
     builderMexido = false;
+    tempMinionClassico = key && char.minionClassico ? normalizarMinionClassico(char.minionClassico) : null;
+    atualizarPainelMinionClassico();
     // cópia das transformações: o editor só grava no personagem ao SALVAR
     tempTransformations = JSON.parse(JSON.stringify(key ? getCharacterTransformations(key) : [SPRITE_DEFAULT_TRANSFORMATION]));
     editingTransformIndex = null;
@@ -2199,6 +2201,7 @@ function saveCharacterFromModal() {
                 bgRemoval: getBgRemovalFromForm(),
                 transformations: JSON.parse(JSON.stringify(tempTransformations.length ? tempTransformations : [SPRITE_DEFAULT_TRANSFORMATION]))
             };
+            if (tempMinionClassico) aplicarMinionClassico(characterDB[key], tempMinionClassico);   // minion clássico: desenho do modelo com as cores
             conjAplicarNoPersonagem(characterDB[key], previousCharacter && previousCharacter.spriteForms);
             if (!saveCharacterData()) {
                 // Não coube no armazenamento do navegador: desfaz na memória também, para o jogo não mostrar
@@ -2258,7 +2261,8 @@ function loadCharacterData() {
                 // Personagem do construtor: as animações e a imagem são sempre refeitas com o desenho atual a partir
                 // da aparência guardada (não ficam salvas no localStorage, ver saveCharacterData; e um personagem salvo
                 // por versões antigas, no estilo antigo, passa a usar o desenho atual).
-                if (character.builderAppearance) {
+                if (character.minionClassico) aplicarMinionClassico(character, character.minionClassico);
+                else if (character.builderAppearance) {
                     character.builderAppearance = normalizeAppearance(character.builderAppearance);
                     Object.assign(character, buildProceduralAnimations(character.builderAppearance));
                     character.defaultUrl = generateSpriteFrameUrl(character.builderAppearance, "idle", 0);
@@ -2277,6 +2281,7 @@ function loadCharacterData() {
                 atualizarPersonagens075();
                 apagarTrunksDeTeste081();
                 piccoloAntiHeroi085();
+                minionsClassicos090();
                 conjuntosAoCarregar();
                 return;
             }
@@ -2346,9 +2351,10 @@ const DEFAULT_CHARACTERS = {
     majin_buu: { name: "MAJIN BUU", presetKey: "majin", align: "VILÃO", aura: "rosa", spec: "CHOCOLATE BEAM", transformations: BUU_TRANSFORMACOES },
     raditz: { name: "RADITZ", presetKey: "raditz", align: "VILÃO", aura: "roxo", spec: "DOUBLE SUNDAY" },
     broly: { name: "BROLY", presetKey: "broly", align: "VILÃO", aura: "verde", spec: "ERASER CANNON", transformations: BROLY_TRANSFORMACOES },
-    // Minions (alinhamento MINION): ficam embaixo da divisão MINIONS no gerenciador e só aparecem no campo MINION das arenas
-    saibaman: { name: "SAIBAMAN", presetKey: "saibaman", align: "MINION", aura: "verde", spec: "AUTODESTRUIÇÃO" },
-    celljr: { name: "CELL JR.", presetKey: "celljr", align: "MINION", aura: "azul", spec: "KAMEHAMEHA JR." },
+    // Minions (alinhamento MINION): ficam embaixo da divisão MINIONS no gerenciador e só aparecem no campo MINION das
+    // arenas. São os desenhos clássicos de minions.js (minion = modelo de MINION_MODELOS), não modelos do construtor.
+    saibaman: { name: "SAIBAMAN", minion: "saibaman", align: "MINION", aura: "verde", spec: "AUTODESTRUIÇÃO" },
+    celljr: { name: "CELL JR.", minion: "celljr", align: "MINION", aura: "azul", spec: "KAMEHAMEHA JR." },
     gotenks: { name: "GOTENKS", presetKey: "gotenks", align: "HERÓI", aura: "amarelo", spec: "SUPER GHOST KAMIKAZE" },
     // Cell: começa na 1ª forma (imperfeito) e transforma em semi-perfeito e perfeito
     cell: { name: "CELL", presetKey: "cell", align: "VILÃO", aura: "verde", spec: "KAMEHAMEHA PERFEITO", transformations: CELL_TRANSFORMACOES }
@@ -2402,6 +2408,15 @@ const ORIGINAL_DEFAULT_CHARACTER_KEYS = ["goku_adult", "vegeta", "piccolo", "fre
 
 function createDefaultCharacter(k) {
     const d = DEFAULT_CHARACTERS[k];
+    if (d.minion) {
+        // minion clássico: o desenho original, sem nenhuma adaptação (minions.js)
+        characterDB[k] = aplicarMinionClassico({
+            name: d.name, imageObj: null, alignment: d.align, aura: d.aura, special: d.spec, scale: 1,
+            frameWidth: 32, frameHeight: 32, totalFrames: 1, projColor: "#00ffff", projSize: "normal", bgRemoval: { mode: "none" }
+        }, { modelo: d.minion, cores: {} });
+        loadImageSecure(characterDB[k].defaultUrl, (img) => { if (characterDB[k]) characterDB[k].imageObj = img; });
+        return;
+    }
     const appearance = SPRITE_PRESETS[d.presetKey].appearance;
     const svg = generateSpriteFrameUrl(appearance, "idle", 0);
     const { animations, fpsSettings } = buildProceduralAnimations(appearance);
@@ -2560,6 +2575,23 @@ function apagarTrunksDeTeste081() {
     if (mudou) { saveCharacterData(); if (typeof saveSelectedCharacters === "function") saveSelectedCharacters(); }
 }
 
+// 0.90: o Saibaman e o Cell Jr. tinham virado modelos do construtor (0.87/0.88). Uma vez: voltam a ser os
+// desenhos clássicos originais (minions.js), com o mesmo nome, aura e especial que o jogador tinha.
+function minionsClassicos090() {
+    if (readStorage("saiyan_minions_classicos_090") === "1") return;
+    writeStorage("saiyan_minions_classicos_090", "1");
+    let mudou = false;
+    ["saibaman", "celljr"].forEach(k => {
+        const c = characterDB[k];
+        if (!c || c.minionClassico) return;
+        const antigo = { name: c.name, aura: c.aura, special: c.special, alignment: c.alignment };
+        createDefaultCharacter(k);
+        Object.keys(antigo).forEach(p => { if (antigo[p]) characterDB[k][p] = antigo[p]; });
+        mudou = true;
+    });
+    if (mudou) saveCharacterData();
+}
+
 function seedNewDefaultCharacters() {
     let seeded = readJsonStorage("saiyan_defaults_seeded", null);
     if (!Array.isArray(seeded)) seeded = ORIGINAL_DEFAULT_CHARACTER_KEYS.slice();
@@ -2583,7 +2615,7 @@ function saveCharacterData() {
             // builderAppearance só é gravado no personagem quando as animações batem exatamente com o que o
             // construtor geraria (ver saveCharacterFromModal) — nesse caso não precisa duplicar ~1MB de SVGs
             // no armazenamento; loadCharacterData recria tudo a partir da aparência ao carregar.
-            if (rest.builderAppearance) delete rest.animations;
+            if (rest.builderAppearance || rest.minionClassico) delete rest.animations;   // minion clássico: refeito pelo modelo
             if (Array.isArray(rest.spriteForms)) rest.spriteForms = rest.spriteForms.map(conjFormaParaSalvar);   // imagens das formas vão para o IndexedDB
             exportData[k] = rest;
         }
@@ -2633,6 +2665,13 @@ function populateBuilderPresetOptions() {
         const opt = document.createElement("option");
         opt.value = key;
         opt.textContent = SPRITE_PRESETS[key].label;
+        sel.appendChild(opt);
+    });
+    // minions clássicos: o desenho e os movimentos originais (minions.js), editáveis só nas cores
+    Object.keys(MINION_MODELOS).forEach(m => {
+        const opt = document.createElement("option");
+        opt.value = "minion:" + m;
+        opt.textContent = MINION_MODELOS[m].rotulo;
         sel.appendChild(opt);
     });
     sel.dataset.filled = "1";
@@ -2686,6 +2725,7 @@ function escolherCorDaPele() {
 function applyBuilderPreset() {
     const sel = document.getElementById("build-preset");
     const key = sel ? sel.value : "";
+    if (key.startsWith("minion:") && MINION_MODELOS[key.slice(7)]) return comecarMinionClassico(key.slice(7));
     if (key && SPRITE_PRESETS[key]) {
         setBuilderFormFromAppearance(SPRITE_PRESETS[key].appearance);
         const nameField = document.getElementById("char-name");
@@ -2757,6 +2797,7 @@ function applyBuilderToCharacter() {
     });
     builderLastAppearance = appearance;
     builderMexido = false;
+    if (!conjEstaEditando() && tempMinionClassico) { tempMinionClassico = null; atualizarPainelMinionClassico(); }   // virou personagem do construtor
     if (conjEstaEditando()) conjEdicao.stash.salvos = {}; else savedSpriteMotionPreviewFrames = {};
     spriteMotionPreviewImageCache = {};
     activeSpriteMovement = "idle";
@@ -2767,6 +2808,72 @@ function applyBuilderToCharacter() {
     updateModalPreview();
     renderSpriteAssignedFrames();
     renderSpriteMotionPreview();
+}
+
+// ==================== MINION CLÁSSICO NO EDITOR ====================
+// Saibaman, Cell Jr. e os minions feitos a partir deles: o desenho original (minions.js) com as cores trocadas
+// aqui. Sem mexer nas cores fica exatamente o original. Usar o construtor (USAR ESTE PERSONAGEM) troca para o
+// desenho do construtor.
+let tempMinionClassico = null;
+let minionCorTimer = null;
+function aplicarMinionClassicoNoEditor() {
+    const a = minionClassicoAnimacoes(tempMinionClassico);
+    SUB_ANIM_KEYS.forEach(state => { tempAnimations[state] = a.animations[state].slice(); tempFps[state] = a.fpsSettings[state]; });
+    savedSpriteMotionPreviewFrames = {};
+    spriteMotionPreviewImageCache = {};
+    updateModalPreview();
+    renderSpriteAssignedFrames();
+    renderSpriteMotionPreview();
+}
+function atualizarPainelMinionClassico() {
+    const area = document.getElementById("minion-classico-area"), lista = document.getElementById("minion-classico-cores");
+    if (!area || !lista) return;
+    const n = tempMinionClassico && normalizarMinionClassico(tempMinionClassico);
+    area.style.display = n ? "" : "none";
+    lista.innerHTML = "";
+    if (!n) return;
+    const titulo = document.getElementById("minion-classico-modelo");
+    if (titulo) titulo.textContent = MINION_MODELOS[n.modelo].nome;
+    MINION_MODELOS[n.modelo].editaveis.forEach(([k, rotulo]) => {
+        const grupo = document.createElement("div");
+        grupo.className = "form-group";
+        const label = document.createElement("label");
+        label.htmlFor = "minion-cor-" + k;
+        label.textContent = rotulo;
+        const input = document.createElement("input");
+        input.type = "color";
+        input.id = "minion-cor-" + k;
+        input.value = n.cores[k] || MINION_MODELOS[n.modelo].padrao[k];
+        input.oninput = () => mudarCorMinionClassico(k, input.value);
+        grupo.appendChild(label);
+        grupo.appendChild(input);
+        lista.appendChild(grupo);
+    });
+}
+function mudarCorMinionClassico(k, cor) {
+    if (!tempMinionClassico) return;
+    tempMinionClassico = normalizarMinionClassico({ modelo: tempMinionClassico.modelo, cores: Object.assign({}, tempMinionClassico.cores, { [k]: cor }) });
+    clearTimeout(minionCorTimer);
+    minionCorTimer = setTimeout(aplicarMinionClassicoNoEditor, 120);
+}
+function voltarCoresMinionClassico() {
+    if (!tempMinionClassico) return;
+    tempMinionClassico = { modelo: tempMinionClassico.modelo, cores: {} };
+    atualizarPainelMinionClassico();
+    aplicarMinionClassicoNoEditor();
+}
+// "COMEÇAR A PARTIR DE..." um minion clássico: o personagem passa a ser esse minion (desenho e movimentos originais)
+function comecarMinionClassico(modelo) {
+    tempMinionClassico = { modelo, cores: {} };
+    builderLastAppearance = null;
+    builderMexido = false;
+    const nameField = document.getElementById("char-name"), align = document.getElementById("char-alignment");
+    if (nameField && !nameField.value.trim()) nameField.value = MINION_MODELOS[modelo].nome;
+    if (align) align.value = "MINION";
+    atualizarPainelMinionClassico();
+    aplicarMinionClassicoNoEditor();
+    const status = document.getElementById("build-status");
+    if (status) status.textContent = "Minion clássico escolhido! Troque as cores na aba DADOS e clique em SALVAR PERSONAGEM.";
 }
 
 // ==================== ABA TRANSFORMAÇÃO ====================
