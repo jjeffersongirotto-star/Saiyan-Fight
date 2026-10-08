@@ -1,0 +1,19 @@
+{
+  "versao": 1,
+  "id": "kaio",
+  "nome": "PLANETA DO SR. KAIOH",
+  "posicao": 3,
+  "cor": "#a78bfa",
+  "musica": "kaio",
+  "cenario": "planeta_kaioh",
+  "camera": {
+    "tipo": "planeta",
+    "volta": 6000
+  },
+  "fundoClaro": true,
+  "minion": "saibaman",
+  "conquista": {
+    "nome": "Treino com Piadas Ruins",
+    "desc": "Libere o Planeta do Sr. Kaioh"
+  }
+}

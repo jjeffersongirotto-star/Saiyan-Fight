@@ -786,6 +786,12 @@ SIM, SALVAR § YES, SAVE § SÍ, GUARDAR
 Altura (cm) § Height (cm) § Altura (cm)
 VILÃO DA FASE § STAGE VILLAIN § VILLANO DE LA FASE
 EM QUAL FORMA ELE APARECE NESTA FASE? § WHICH FORM DOES HE USE IN THIS STAGE? § ¿EN QUÉ FORMA APARECE EN ESTA FASE?
+CONFIGURAR ARENA § ARENA SETUP § CONFIGURAR ARENA
+FASE § STAGE § FASE
+PERSONAGEM § CHARACTER § PERSONAJE
+MINION § MINION § ESBIRRO
+TROCAR § CHANGE § CAMBIAR
+NENHUM ESCOLHIDO § NONE CHOSEN § NINGUNO ELEGIDO
 ADVERSÁRIOS MAIS FORTES VIRÃO! § STRONGER OPPONENTS ARE COMING! § ¡VIENEN RIVALES MÁS FUERTES!
 PREPARE-SE § GET READY § PREPÁRATE
 ADVERSÁRIOS MAIS FORTES VIRÃO! PREPARE-SE § STRONGER OPPONENTS ARE COMING! GET READY § ¡VIENEN RIVALES MÁS FUERTES! PREPÁRATE
@@ -798,6 +804,7 @@ Tamanho na luta: 175 cm = tamanho normal. Muito alto ou muito baixo tem limite, 
 const IDIOMA_REGRAS = [
     [/^Deseja selecionar (.+) para o (JOGADOR \d)\?$/, (m, T) => `Select ${m[1]} for ${T(m[2])}?`, (m, T) => `¿Seleccionar a ${m[1]} para el ${T(m[2])}?`],
     [/^Em qual forma (.+) aparece nesta fase\?$/, "Which form does $1 appear in on this stage?", "¿En qué forma aparece $1 en esta fase?"],
+    [/^TROCA DE LUGAR COM: (.*) \(VAI PARA A FASE (\d+)\)$/, "SWAPS PLACES WITH: $1 (GOES TO STAGE $2)", "CAMBIA DE LUGAR CON: $1 (VA A LA FASE $2)"],
     [/^Deseja selecionar (.+) para o herói\?$/, "Select $1 as the hero?", "¿Seleccionar a $1 como héroe?"],
     [/^Deseja selecionar (.+) para:$/, "Select $1 as:", "¿Seleccionar a $1 como:"],
     [/^JOGADOR (\d)$/, "PLAYER $1", "JUGADOR $1"],

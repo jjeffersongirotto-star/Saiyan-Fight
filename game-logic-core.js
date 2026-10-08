@@ -353,22 +353,75 @@ function stepNumberValue(value, step, min, max, dir) {
 }
 
 // ---- Progressão de arenas (fases) ----
-// Ordem cronológica das sagas + a partir de qual "recorde de onda" cada uma libera. A primeira sempre começa
-// liberada. currentAndBeyond: usado pela tela de seleção para saber a partir de que onda o jogador já viu tudo.
-// Ordem ajustada a pedido do jogador: Nave de Freeza vira a fase 4, Torneio de Cell vira a última (8) — as
-// demais mantêm a ordem relativa que já tinham entre si (namek_explosao antes de time_room antes de kaioshin).
-// Ordem: Torneio de Cell é a penúltima fase, Planeta Supremo Kaioh é a última.
-const STAGE_PROGRESSION = [
-    { id: "kame", name: "ILHA DO MESTRE KAME" },
-    { id: "terra", name: "TORNEIO ARTES MARCIAIS" },
-    { id: "kaio", name: "PLANETA DO SR. KAIOH" },
-    { id: "namek", name: "PLANETA NAMEK" },
-    { id: "freeza_ship", name: "NAVE DE FREEZA" },
-    { id: "namek_explosao", name: "NAMEK PRESTES A EXPLODIR" },
-    { id: "time_room", name: "SALA DO TEMPO" },
-    { id: "cell_games", name: "TORNEIO DE CELL" },
-    { id: "kaioshin", name: "PLANETA SUPREMO KAIOH" }
+// Definição de cada arena (v0.86). É a cópia embutida dos arquivos da pasta fases/ (um .json por arena, mesmos
+// campos): o jogo sempre funciona com ela e, quando os arquivos carregam (fases.js), usa o que estiver neles.
+// Campos: id (fixo; o progresso salvo fica ligado a ele), nome, posicao (número no mapa, 1 = primeira), cor
+// (tema no mapa/ARENAS), musica (tema de BGM_THEMES), cenario (qual desenho 3D usar), camera (tipo e volta),
+// fundoClaro (HUD com placas escuras), minion (padrão: "saibaman" ou "celljr") e conquista (nome/descrição).
+const FASES_PADRAO = [
+    { id: "kame", nome: "ILHA DO MESTRE KAME", posicao: 1, cor: "#f472b6", musica: "kame", cenario: "ilha_kame",
+        camera: { tipo: "orbita", volta: 9600 }, fundoClaro: true, minion: "saibaman",
+        conquista: { nome: "Férias na Kame House", desc: "Vença o NORMAL da Ilha do Mestre Kame" } },
+    { id: "terra", nome: "TORNEIO ARTES MARCIAIS", posicao: 2, cor: "#f6b93b", musica: "classico", cenario: "torneio_artes_marciais",
+        camera: { tipo: "arena", volta: 9000 }, fundoClaro: true, minion: "saibaman",
+        conquista: { nome: "Campeão do Torneio", desc: "Libere o Torneio de Artes Marciais" } },
+    { id: "kaio", nome: "PLANETA DO SR. KAIOH", posicao: 3, cor: "#a78bfa", musica: "kaio", cenario: "planeta_kaioh",
+        camera: { tipo: "planeta", volta: 6000 }, fundoClaro: true, minion: "saibaman",
+        conquista: { nome: "Treino com Piadas Ruins", desc: "Libere o Planeta do Sr. Kaioh" } },
+    { id: "namek", nome: "PLANETA NAMEK", posicao: 4, cor: "#4ade80", musica: "namek", cenario: "namek",
+        camera: { tipo: "anda", volta: 0 }, fundoClaro: true, minion: "saibaman",
+        conquista: { nome: "Turista em Namek", desc: "Libere o Planeta Namek. Leve protetor!" } },
+    { id: "freeza_ship", nome: "NAVE DE FREEZA", posicao: 5, cor: "#c084fc", musica: "freeza", cenario: "nave_freeza",
+        camera: { tipo: "orbita", volta: 10800 }, fundoClaro: true, minion: "saibaman",
+        conquista: { nome: "Clandestino na Nave", desc: "Libere a Nave de Freeza sem ser visto" } },
+    { id: "namek_explosao", nome: "NAMEK PRESTES A EXPLODIR", posicao: 6, cor: "#f87171", musica: "explosao", cenario: "namek_explodindo",
+        camera: { tipo: "anda", volta: 0 }, fundoClaro: false, minion: "saibaman",
+        conquista: { nome: "Fuga por um Triz", desc: "Libere Namek Prestes a Explodir. Corre!" } },
+    { id: "time_room", nome: "SALA DO TEMPO", posicao: 7, cor: "#e2e8f0", musica: "gt", cenario: "sala_do_tempo",
+        camera: { tipo: "orbita", volta: 10800 }, fundoClaro: true, minion: "saibaman",
+        conquista: { nome: "Um Ano em Um Dia", desc: "Libere a Sala do Tempo. Sem relógio!" } },
+    { id: "cell_games", nome: "TORNEIO DE CELL", posicao: 8, cor: "#38bdf8", musica: "cell", cenario: "torneio_cell",
+        camera: { tipo: "arena", volta: 9000 }, fundoClaro: true, minion: "celljr",
+        conquista: { nome: "Convidado do Cell", desc: "Libere o Torneio de Cell" } },
+    { id: "kaioshin", nome: "PLANETA SUPREMO KAIOH", posicao: 9, cor: "#fbbf24", musica: "boo", cenario: "planeta_supremo_kaioh",
+        camera: { tipo: "arena", volta: 10800 }, fundoClaro: true, minion: "saibaman",
+        conquista: { nome: "Entre os Deuses", desc: "Libere todas as fases, até o Supremo Kaioh" } }
 ];
+// Minions que podem ser escolhidos para uma fase (na 0.87 entram os criados no editor).
+const MINIONS_PADRAO = [{ id: "saibaman", nome: "SAIBAMAN" }, { id: "celljr", nome: "CELL JR." }];
+
+function getFaseDef(id) {
+    return FASES_PADRAO.find(f => f.id === id) || null;
+}
+// Ordem das fases: segue a ordem salva (lista de ids) e, sem ela, o campo posicao. Ids que faltarem na ordem
+// salva entram no fim (pela posição); ids que não existem mais são ignorados.
+function ordenarFases(fases, ordemSalva) {
+    const porPosicao = fases.slice().sort((a, b) => (a.posicao || 0) - (b.posicao || 0));
+    if (!Array.isArray(ordemSalva) || !ordemSalva.length) return porPosicao;
+    const lista = [];
+    ordemSalva.forEach(id => { const f = porPosicao.find(x => x.id === id); if (f && !lista.includes(f)) lista.push(f); });
+    porPosicao.forEach(f => { if (!lista.includes(f)) lista.push(f); });
+    return lista;
+}
+// Coloca a fase `id` na posição `novaPos` (1 = primeira) TROCANDO de lugar com a que estava lá: as outras ficam
+// onde estão. Devolve a nova lista de ids.
+function trocarPosicaoFase(ordemIds, id, novaPos) {
+    const lista = ordemIds.slice();
+    const de = lista.indexOf(id), para = Math.max(0, Math.min(lista.length - 1, (novaPos | 0) - 1));
+    if (de < 0 || de === para) return lista;
+    [lista[de], lista[para]] = [lista[para], lista[de]];
+    return lista;
+}
+
+// Lista usada pelo jogo inteiro (mapa, ARENAS, liberação, ranking, trilhas): { id, name } na ordem atual.
+// É reordenada no lugar (aplicarOrdemDasFases) para quem já guardou a referência continuar vendo a certa.
+const STAGE_PROGRESSION = ordenarFases(FASES_PADRAO).map(f => ({ id: f.id, name: f.nome }));
+function aplicarOrdemDasFases(ordemSalva) {
+    const nova = ordenarFases(FASES_PADRAO, ordemSalva).map(f => ({ id: f.id, name: f.nome }));
+    STAGE_PROGRESSION.length = 0;
+    nova.forEach(f => STAGE_PROGRESSION.push(f));
+    return STAGE_PROGRESSION;
+}
 
 // ---- 3 modos por fase: NORMAL, DIFÍCIL e SEM LIMITE ----
 // NORMAL: 5 ondas, na dificuldade das ondas 1 a 5 (a metade mais fácil). Sempre disponível.
@@ -392,9 +445,11 @@ function getRealWaveForModeStep(mode, stepIndex) {
 }
 
 // Uma fase libera quando a fase ANTERIOR já teve o modo NORMAL completado ao menos uma vez. A primeira sempre libera.
+// Fase com o NORMAL já completo continua liberada mesmo que a ordem das fases mude (v0.86).
 function isStageUnlockedByProgress(stageId, progressMap) {
     const idx = STAGE_PROGRESSION.findIndex(s => s.id === stageId);
     if (idx <= 0) return idx === 0;
+    if (progressMap && progressMap[stageId] && progressMap[stageId].normalDone) return true;
     const prevId = STAGE_PROGRESSION[idx - 1].id;
     const prevProgress = (progressMap && progressMap[prevId]) || {};
     return !!prevProgress.normalDone;
@@ -659,13 +714,10 @@ function getForwardTravel(scroll) {
     return Math.max(0, scroll) * NAMEK_FORWARD_SPEED;
 }
 
-// Música de cada fase: um tema original do jogo para cada uma das 8 fases — ver BGM_THEMES em audio.js.
-const STAGE_MUSIC_ERA = {
-    terra: "classico", kaio: "kaio", namek: "namek", freeza_ship: "freeza",
-    namek_explosao: "explosao", time_room: "gt", cell_games: "cell", kaioshin: "boo", kame: "kame"
-};
+// Música de cada fase: um tema original do jogo para cada fase (campo musica da definição) — ver BGM_THEMES em audio.js.
 function getStageMusicEra(stageId) {
-    return STAGE_MUSIC_ERA[stageId] || "classico";
+    const f = getFaseDef(stageId);
+    return (f && f.musica) || "classico";
 }
 
 // Quadro de uma animação com "cadeado" (editor de quadros): a 1ª volta toca todos os quadros; depois recomeça no
@@ -801,6 +853,12 @@ if (typeof module !== "undefined" && module.exports) {
         NORMAL_ATTACK_DAMAGE,
         WAVE_DIFFICULTY_CAP,
         STAGE_PROGRESSION,
+        FASES_PADRAO,
+        MINIONS_PADRAO,
+        getFaseDef,
+        ordenarFases,
+        trocarPosicaoFase,
+        aplicarOrdemDasFases,
         VERSUS_ROUNDS_TO_WIN,
         registerVersusRoundWin,
         STAGE_MODE_WAVE_COUNT,

@@ -1,0 +1,19 @@
+{
+  "versao": 1,
+  "id": "cell_games",
+  "nome": "TORNEIO DE CELL",
+  "posicao": 8,
+  "cor": "#38bdf8",
+  "musica": "cell",
+  "cenario": "torneio_cell",
+  "camera": {
+    "tipo": "arena",
+    "volta": 9000
+  },
+  "fundoClaro": true,
+  "minion": "celljr",
+  "conquista": {
+    "nome": "Convidado do Cell",
+    "desc": "Libere o Torneio de Cell"
+  }
+}

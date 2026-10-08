@@ -268,9 +268,20 @@ function loadStageProgress() {
         const parsed = readJsonStorage("saiyan_stage_progress", {});
         if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) stageProgress = parsed;
         if (migrarProgressoIlhaKame(stageProgress)) saveStageProgress();   // 0.85: ilha nova na 1ª posição
+        aplicarOrdemDasFases(getOrdemFasesSalva());                          // 0.86: ordem escolhida em ARENAS
     } catch (e) {
         console.warn("Erro ao carregar progresso das fases:", e);
     }
+}
+
+// Ordem das fases escolhida pelo jogador em ARENAS (lista de ids). Sem ela vale o campo posicao das fases.
+function getOrdemFasesSalva() {
+    const v = readJsonStorage("saiyan_ordem_fases", null);
+    return Array.isArray(v) ? v : null;
+}
+function salvarOrdemFases(ordem) {
+    writeStorage("saiyan_ordem_fases", JSON.stringify(ordem));
+    aplicarOrdemDasFases(ordem);
 }
 
 function saveStageProgress() {

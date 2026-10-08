@@ -1,0 +1,19 @@
+{
+  "versao": 1,
+  "id": "kaioshin",
+  "nome": "PLANETA SUPREMO KAIOH",
+  "posicao": 9,
+  "cor": "#fbbf24",
+  "musica": "boo",
+  "cenario": "planeta_supremo_kaioh",
+  "camera": {
+    "tipo": "arena",
+    "volta": 10800
+  },
+  "fundoClaro": true,
+  "minion": "saibaman",
+  "conquista": {
+    "nome": "Entre os Deuses",
+    "desc": "Libere todas as fases, até o Supremo Kaioh"
+  }
+}

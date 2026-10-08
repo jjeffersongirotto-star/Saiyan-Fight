@@ -27,7 +27,7 @@ const telas = [
     "setGameState('menu')", "setGameState('mode_select')", "setGameState('options_main')", "setGameState('options_controls')",
     "setGameState('options_pc')", "setGameState('options_touch')", "setGameState('options_gamepad')", "setGameState('options_audio')",
     "setGameState('options_tracks')", "setGameState('controls_test')", "setGameState('ranking')", "setGameState('achievements')",
-    "setGameState('database')", "setGameState('stages')", "setGameState('stage_map'); stageChoicePendingId = 'terra'",
+    "setGameState('database')", "setGameState('stages')", "abrirPainelArena('terra'); arenaPainel.pos = 3", "arenaPainel = null", "setGameState('stage_map'); stageChoicePendingId = 'terra'",
     "stageChoicePendingId = null; abrirTelaPersonagens(null)", "infoPersonagemKey = 'freeza_1'",
     "infoPersonagemKey = null; abrirTelaPersonagens('solo')", "gameMode = 'singleplayer'; selecaoLuta = null; startGame(); update(1/60)",
     "pauseGame()", "setGameState('playing'); player.hp = 0; triggerGameOver()", "setGameState('stage_victory')",

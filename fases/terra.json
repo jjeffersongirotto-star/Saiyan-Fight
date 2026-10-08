@@ -1,0 +1,19 @@
+{
+  "versao": 1,
+  "id": "terra",
+  "nome": "TORNEIO ARTES MARCIAIS",
+  "posicao": 2,
+  "cor": "#f6b93b",
+  "musica": "classico",
+  "cenario": "torneio_artes_marciais",
+  "camera": {
+    "tipo": "arena",
+    "volta": 9000
+  },
+  "fundoClaro": true,
+  "minion": "saibaman",
+  "conquista": {
+    "nome": "Campeão do Torneio",
+    "desc": "Libere o Torneio de Artes Marciais"
+  }
+}

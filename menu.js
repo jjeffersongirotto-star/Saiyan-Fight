@@ -53,6 +53,14 @@ const MENU_LAYOUT = {
     },
     ranking: { tabGeneral: rect(220, 52, 170, 30), tabStage: rect(410, 52, 170, 30) },
     stageVictory: { continue: rect(canvas.width / 2 - 90, 300, 180, 34) },
+    // ARENAS: quadro de uma arena (posição da fase, vilão + forma e minion)
+    arenaPainel: {
+        painel: rect(170, 44, 460, 274),
+        faseMenos: rect(400, 100, 36, 32), faseMais: rect(540, 100, 36, 32),
+        trocarVilao: rect(522, 166, 92, 30),
+        minionMenos: rect(330, 226, 36, 32), minionMais: rect(578, 226, 36, 32),
+        salvar: rect(250, 276, 140, 34), cancelar: rect(410, 276, 140, 34)
+    },
     stageMap: {
         normal: rect(canvas.width / 2 - 270, 140, 170, 60), hard: rect(canvas.width / 2 - 85, 140, 170, 60),
         unlimited: rect(canvas.width / 2 + 100, 140, 170, 60), cancel: rect(canvas.width / 2 - 70, 224, 140, 30),
@@ -137,6 +145,32 @@ function escolherPersonagemNaSelecao(key) {
 // Tela ARENAS: escolheu o vilão da fase -> pergunta em qual forma ele aparece
 // ARENAS: escolhido o personagem, abre o quadro das formas (imagem + nome de cada uma, rolando de lado quando são
 // muitas) para escolher em qual forma ele aparece na fase. Tocar numa forma salva; o ✕ cancela.
+// Quadro de uma arena aberto em ARENAS: { id, pos (1..n), vilao: {key, nivel} | null, minion }. Só vale no SALVAR.
+let arenaPainel = null;
+function abrirPainelArena(id) {
+    const pos = STAGE_PROGRESSION.findIndex(s => s.id === id) + 1;
+    const vilao = getVilaoDaFase(id) || (characterDB[selectedBoss] ? { key: selectedBoss, nivel: 0 } : null);
+    arenaPainel = { id, pos, vilao, minion: getMinionDaFase(id) };
+    padNav.focus = null;
+}
+function salvarPainelArena() {
+    const p = arenaPainel;
+    if (!p) return;
+    arenaPainel = null;
+    const ordem = STAGE_PROGRESSION.map(s => s.id);
+    if (ordem.indexOf(p.id) + 1 !== p.pos) salvarOrdemFases(trocarPosicaoFase(ordem, p.id, p.pos));
+    if (p.vilao && characterDB[p.vilao.key]) setVilaoDaFase(p.id, p.vilao.key, p.vilao.nivel);
+    setMinionDaFase(p.id, p.minion);
+    if (isStageUnlockedByProgress(p.id, stageProgress)) {
+        selectedStage = p.id;
+        if (p.vilao && characterDB[p.vilao.key]) selectedBoss = p.vilao.key;
+        saveSettings();
+        saveSelectedCharacters();
+    }
+    padNav.focus = null;
+}
+// fase que hoje está na posição `pos` (para mostrar com quem a arena vai trocar de lugar)
+function faseNaPosicao(pos) { return STAGE_PROGRESSION[pos - 1] || null; }
 let escolhaFormaKey = null;
 let escolhaFormaRolagem = 0;
 const escolhaFormaToque = { active: false, touchId: null, startX: 0, startScroll: 0, dragged: false };
@@ -150,6 +184,14 @@ function confirmarFormaDoVilao(nivel) {
     const key = escolhaFormaKey, fase = faseEscolhendoVilao;
     escolhaFormaKey = null;
     if (!key || !fase) return;
+    // veio do quadro da arena: só preenche o campo PERSONAGEM (salva junto com o resto no SALVAR do quadro)
+    if (arenaPainel && arenaPainel.id === fase) {
+        arenaPainel.vilao = { key, nivel };
+        selecaoLuta = null;
+        faseEscolhendoVilao = null;
+        setGameState("stages");
+        return;
+    }
     setVilaoDaFase(fase, key, nivel);
     if (selectedStage === fase) selectedBoss = key;
     saveSelectedCharacters();
@@ -275,10 +317,10 @@ const TIER_COLORS = { diamond: "#7fe8ff", gold: "#ffd23f", silver: "#cbd2da", br
 const STAGE_MAP_NODE_R = 26;
 
 // Cor "tema" de cada arena, usada no anel do nó e no traço pontilhado até ela.
-const STAGE_THEME_COLOR = {
-    terra: "#f6b93b", kaio: "#a78bfa", namek: "#4ade80", namek_explosao: "#f87171",
-    freeza_ship: "#c084fc", time_room: "#e2e8f0", cell_games: "#38bdf8", kaioshin: "#fbbf24", kame: "#f472b6"
-};
+// Vem do campo cor da definição de cada fase (FASES_PADRAO / arquivos da pasta fases/).
+const STAGE_THEME_COLOR = {};
+function atualizarCoresDasFases() { FASES_PADRAO.forEach(f => { STAGE_THEME_COLOR[f.id] = f.cor; }); }
+atualizarCoresDasFases();
 
 // Ilustração pequena e simples de cada arena dentro do círculo do nó — não é o cenário completo (custaria caro
 // nesse tamanho), só um símbolo que lembra a fase: o suficiente pra reconhecer de relance no mapa.
@@ -734,6 +776,92 @@ function getCharacterFormsList(key) {
     getCharacterTransformations(key).forEach((t, i) => lista.push({ nome: String((t && t.name) || ("TRANSFORMAÇÃO " + (i + 1))).toUpperCase(), nivel: i + 1 }));
     return lista;
 }
+// Quadro de uma arena (tela ARENAS): 3 campos — FASE (posição no mapa; trocar o número troca de lugar com a fase
+// que estava lá), PERSONAGEM (vilão e forma; TROCAR abre a escolha) e MINION. SALVAR aplica tudo; CANCELAR descarta.
+function drawPainelArena() {
+    const p = arenaPainel, L = MENU_LAYOUT.arenaPainel, P = L.painel;
+    const stg = STAGE_PROGRESSION.find(s => s.id === p.id);
+    const alvo = (r) => registerMenuTarget(r.x, r.y, r.w, r.h);
+    ctx.save();
+    ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "rgba(6, 18, 44, 0.97)";
+    ctx.fillRect(P.x, P.y, P.w, P.h);
+    ctx.strokeStyle = STAGE_THEME_COLOR[p.id] || "#ffd23f";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(P.x, P.y, P.w, P.h);
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#fff0a6";
+    ctx.font = "bold 15px 'Trebuchet MS', sans-serif";
+    ctx.fillText(stg ? stg.name : p.id, canvas.width / 2, P.y + 24);
+    ctx.fillStyle = "#9fb3d8";
+    ctx.font = "10px monospace";
+    ctx.fillText("CONFIGURAR ARENA", canvas.width / 2, P.y + 40);
+    const rotulo = (texto, y) => { ctx.textAlign = "left"; ctx.fillStyle = "#7dd3fc"; ctx.font = "bold 12px monospace"; ctx.fillText(texto, P.x + 26, y); };
+
+    // FASE
+    rotulo("FASE", L.faseMenos.y + 21);
+    alvo(L.faseMenos); alvo(L.faseMais);
+    drawBtnAt(L.faseMenos, "◀", "#ffd23f", "bold 14px monospace");
+    drawBtnAt(L.faseMais, "▶", "#ffd23f", "bold 14px monospace");
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 18px monospace";
+    ctx.fillText(String(p.pos), (L.faseMenos.x + L.faseMenos.w + L.faseMais.x) / 2, L.faseMenos.y + 23);
+    const atual = STAGE_PROGRESSION.findIndex(s => s.id === p.id) + 1;
+    if (p.pos !== atual) {
+        const outra = faseNaPosicao(p.pos);
+        ctx.fillStyle = "#fca5a5";
+        ctx.font = "9px monospace";
+        ctx.fillText(`TROCA DE LUGAR COM: ${outra ? T(outra.name) : ""} (VAI PARA A FASE ${atual})`, canvas.width / 2, L.faseMenos.y + L.faseMenos.h + 14, P.w - 30);
+    }
+
+    // PERSONAGEM
+    rotulo("PERSONAGEM", L.trocarVilao.y + 20);
+    const v = p.vilao && characterDB[p.vilao.key] ? p.vilao : null;
+    if (v) {
+        ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
+        ctx.fillRect(330, 154, 44, 56);
+        drawCharacterPortrait(characterDB[v.key], 332, 156, 40, 52);
+        const forma = (getCharacterFormsList(v.key)[v.nivel] || {}).nome || "FORMA BASE";
+        ctx.textAlign = "left";
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 12px monospace";
+        ctx.fillText(characterDB[v.key].name || v.key, 384, 176, L.trocarVilao.x - 392);
+        ctx.fillStyle = "#ffd23f";
+        ctx.font = "10px monospace";
+        ctx.fillText(forma, 384, 192, L.trocarVilao.x - 392);
+    } else {
+        ctx.textAlign = "left";
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "11px monospace";
+        ctx.fillText("NENHUM ESCOLHIDO", 334, 186);
+    }
+    alvo(L.trocarVilao);
+    drawBtnAt(L.trocarVilao, "TROCAR", "#86efac", "bold 11px monospace");
+
+    // MINION
+    rotulo("MINION", L.minionMenos.y + 21);
+    alvo(L.minionMenos); alvo(L.minionMais);
+    drawBtnAt(L.minionMenos, "◀", "#ffd23f", "bold 14px monospace");
+    drawBtnAt(L.minionMais, "▶", "#ffd23f", "bold 14px monospace");
+    const minion = getMinionsDisponiveis().find(m => m.id === p.minion) || getMinionsDisponiveis()[0];
+    const img = getSaibamanSprite("voar", 0, minion.id);
+    if (img && img.width) {
+        const h = 44, w = h * img.width / img.height;
+        ctx.drawImage(img, 400 - w / 2, L.minionMenos.y + 16 - h / 2, w, h);
+    }
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 12px monospace";
+    ctx.fillText(minion.nome, 500, L.minionMenos.y + 21);
+
+    alvo(L.salvar); alvo(L.cancelar);
+    drawBtnAt(L.salvar, "SALVAR", "#86efac", "bold 12px monospace");
+    drawBtnAt(L.cancelar, "CANCELAR", "#fca5a5", "bold 12px monospace");
+    ctx.restore();
+}
+
 // Colunas do quadro de formas. escolher = quadro de escolha do vilão da fase (colunas com largura mínima e
 // rolagem de lado quando não cabem); senão é o quadro "i" (as colunas encolhem para caber).
 function getFormasLayout(key, escolher) {
@@ -3366,19 +3494,24 @@ function handleMenuClick(x, y) {
         });
     }
     else if (gameState === "stages") {
-        STAGE_PROGRESSION.forEach((stg, i) => {
-            if (hitRect(x, y, getStageCardRect(i))) {
-                if (isStageUnlockedByProgress(stg.id, stageProgress)) {
-                    selectedStage = stg.id;
-                    saveSettings();
-                    faseEscolhendoVilao = stg.id;
-                    abrirTelaPersonagens("fase");   // escolhe o vilão desta fase (só vilões e anti-heróis)
-                } else {
-                    const prevName = (STAGE_PROGRESSION[i - 1] || {}).name || "";
-                    stageLockedHintText = `COMPLETE O MODO NORMAL DE "${prevName}" PRA LIBERAR`;
-                    stageLockedHintTimer = 120;
-                }
+        // quadro da arena aberto: FASE ◀ ▶, PERSONAGEM (TROCAR), MINION ◀ ▶, SALVAR e CANCELAR
+        if (arenaPainel) {
+            const L = MENU_LAYOUT.arenaPainel, n = STAGE_PROGRESSION.length, minions = getMinionsDisponiveis();
+            const iMinion = Math.max(0, minions.findIndex(m => m.id === arenaPainel.minion));
+            if (hitRect(x, y, L.faseMenos)) arenaPainel.pos = arenaPainel.pos <= 1 ? n : arenaPainel.pos - 1;
+            else if (hitRect(x, y, L.faseMais)) arenaPainel.pos = arenaPainel.pos >= n ? 1 : arenaPainel.pos + 1;
+            else if (hitRect(x, y, L.minionMenos)) arenaPainel.minion = minions[(iMinion - 1 + minions.length) % minions.length].id;
+            else if (hitRect(x, y, L.minionMais)) arenaPainel.minion = minions[(iMinion + 1) % minions.length].id;
+            else if (hitRect(x, y, L.trocarVilao)) {
+                faseEscolhendoVilao = arenaPainel.id;
+                abrirTelaPersonagens("fase");   // escolhe o vilão desta fase (só vilões e anti-heróis) e a forma
             }
+            else if (hitRect(x, y, L.salvar)) salvarPainelArena();
+            else if (hitRect(x, y, L.cancelar) || hitRect(x, y, MENU_LAYOUT.back)) { arenaPainel = null; padNav.focus = null; }
+            return;
+        }
+        STAGE_PROGRESSION.forEach((stg, i) => {
+            if (hitRect(x, y, getStageCardRect(i))) abrirPainelArena(stg.id);   // liberada ou não: dá para configurar
         });
 
         if (hitRect(x, y, MENU_LAYOUT.back)) setGameState("menu");
@@ -5171,13 +5304,12 @@ function traceCellJrFigure(g, pose, frame) {
     g.restore();
 }
 
-// Na fase do Torneio de Cell os inimigos pequenos são os Cell Jr.; nas outras, Saibamans.
+// Minion da fase atual (escolhido em ARENAS; padrão: Cell Jr. no Torneio de Cell, Saibaman nas outras).
 function getMinionKind() {
-    return typeof selectedStage !== "undefined" && selectedStage === "cell_games" ? "celljr" : "saibaman";
+    return typeof selectedStage !== "undefined" ? getMinionDaFase(selectedStage) : "saibaman";
 }
 
-function getSaibamanSprite(pose, frame) {
-    const tipo = getMinionKind();
+function getSaibamanSprite(pose, frame, tipo = getMinionKind()) {
     const key = tipo + pose + frame;
     let c = saibamanSpriteCache.get(key);
     if (c) return c;
@@ -5626,11 +5758,12 @@ function drawScreenFlash() {
 
 // Fases de fundo claro (céu claro, nuvens, luas ou a Sala do Tempo toda branca): placas escuras translúcidas atrás do placar do topo,
 // senão os textos brancos/claros somem no fundo.
-const STAGES_FUNDO_CLARO = ["kame", "terra", "kaio", "namek", "time_room", "cell_games", "freeza_ship", "kaioshin"];
+// (campo fundoClaro da definição de cada fase)
+function faseTemFundoClaro(id) { const f = getFaseDef(id); return !!(f && f.fundoClaro); }
 
 function drawHUD() {
     ctx.save();
-    if (STAGES_FUNDO_CLARO.includes(selectedStage)) {
+    if (faseTemFundoClaro(selectedStage)) {
         ctx.fillStyle = "rgba(15, 23, 42, 0.55)";
         roundRectPath(10, 8, 250, 66, 10);
         ctx.fill();
@@ -6347,8 +6480,8 @@ function render() {
             const unlocked = isStageUnlockedByProgress(stg.id, stageProgress);
             const tema = STAGE_THEME_COLOR[stg.id] || "#00ffff";
 
-            registerMenuTarget(sx, sy, cw, ch);
-            const pressed = beginButtonPress(sx, sy, cw, ch);
+            if (!arenaPainel) registerMenuTarget(sx, sy, cw, ch);
+            const pressed = !arenaPainel && beginButtonPress(sx, sy, cw, ch);
             const isSel = selectedStage === stg.id && unlocked;
 
             // foto do cenário da fase (colorida se liberada, cinza e escura se bloqueada)
@@ -6422,7 +6555,8 @@ function render() {
             ctx.fillText(stageLockedHintText, canvas.width / 2, canvas.height - 14);
         }
 
-        drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
+        if (arenaPainel) drawPainelArena();
+        else drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
     }
     else if (gameState === "options_main") {
         drawDragonBallMenuBackdrop(false);
