@@ -50,6 +50,20 @@ const BGM_THEMES = {
         snare: "....x.......x...",
         hat:   "..x...x...x...x."
     },
+    kame: {
+        nome: "BRISA DA KAME HOUSE",
+        clima: "Calipso ensolarado em Fá maior, tambor de aço saltitante e baixo balançado de ilha",
+        bpm: 116, compasso: 16, swing: 0.18,
+        lead: { wave: "triangle", vol: 0.09, staccato: 0.5 },
+        bassWave: "triangle", bassVol: 0.08,
+        acordes: ["F2", "F2", "Bb1", "C2", "F2", "Bb1", "C2", "F2"],
+        melodia: "C5:2 A4:2 F4:2 A4:2 C5:3 D5:1 C5:4 | A4:2 G4:2 F4:2 G4:2 A4:6 -:2 | Bb4:2 D5:2 F5:2 D5:2 C5:3 Bb4:1 A4:4 | G4:6 -:2 E4:2 F4:2 G4:4 |" +
+                 "A4:2 C5:2 F5:3 E5:1 D5:2 C5:2 A4:4 | Bb4:2 A4:2 G4:2 Bb4:2 D5:6 -:2 | C5:2 E5:2 G5:2 E5:2 C5:3 Bb4:1 G4:4 | F4:8 -:4 C4:2 E4:2",
+        baixo: "R:3 Q:3 O:2 R:3 Q:3 R:2",
+        kick:  "x.....x.x.......",
+        snare: "....x.......x.x.",
+        hat:   "x.x.x.x.x.x.x.x."
+    },
     freeza: {
         nome: "A AMEAÇA DO IMPERADOR",
         clima: "Marcha heroica em Ré menor, metais com ritmo pontuado e tambores de guerra",

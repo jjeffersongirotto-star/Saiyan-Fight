@@ -2275,6 +2275,7 @@ function loadCharacterData() {
                 atualizarHeroisSalvos();
                 atualizarPersonagens075();
                 apagarTrunksDeTeste081();
+                piccoloAntiHeroi085();
                 conjuntosAoCarregar();
                 return;
             }
@@ -2330,7 +2331,7 @@ const DEFAULT_CHARACTERS = {
             { name: "Transformação 2", diff: { hairStyle: "ssj_longo", hairColor: "#ffe34d" }, ssj: false, aura: "amarelo" }
         ] },
     vegeta: { name: "VEGETA", presetKey: "vegeta", align: "ANTI-HERÓI", aura: "amarelo", spec: "FINAL FLASH" },
-    piccolo: { name: "PICCOLO", presetKey: "piccolo", align: "HERÓI", aura: "verde", spec: "MAKAN KOSAPPO" },
+    piccolo: { name: "PICCOLO", presetKey: "piccolo", align: "ANTI-HERÓI", aura: "verde", spec: "MAKAN KOSAPPO" },
     // Freeza: começa na 1ª forma (armadura do exército) e cada TRANSFORMAR sobe uma forma, até o ciborgue
     freeza_1: { name: "FREEZA", presetKey: "freeza", align: "VILÃO", aura: "roxo", spec: "DEATH BEAM",
         transformations: FREEZA_TRANSFORMACOES },
@@ -2433,6 +2434,14 @@ function loadDefaultCharacters() {
 // (ex.: os modelos novos do construtor). Um personagem inicial que o jogador apagar depois não volta sozinho.
 // Perfil com o Freeza antigo (só a forma final, sem transformações próprias): passa uma vez para o Freeza novo
 // (1ª forma + 4 transformações). Um Freeza que o jogador editou (outra aparência) fica como está.
+// 0.85: o Piccolo é anti-herói (aparece em HERÓIS e em VILÕES). Uma vez só, para saves em que ele ainda é HERÓI.
+function piccoloAntiHeroi085() {
+    if (readStorage("saiyan_piccolo_085") === "1") return;
+    writeStorage("saiyan_piccolo_085", "1");
+    const c = characterDB.piccolo;
+    if (c && c.alignment === "HERÓI") { c.alignment = "ANTI-HERÓI"; saveCharacterData(); }
+}
+
 function atualizarFreezaSalvo() {
     // uma vez: o Freeza com transformações já salvas ganha também o Golden e o Black no fim da lista
     if (readStorage("saiyan_freeza_golden") !== "1") {

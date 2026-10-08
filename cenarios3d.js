@@ -918,3 +918,415 @@ function drawNamekExplodingStage(andado) {
         else { ctx.fillStyle = i % 2 ? "#ffb43b" : "#ff7a1e"; ctx.fillRect(x, y, 2, 5); }
     }
 }
+
+// ==================== ILHA DO MESTRE KAME ====================
+// A ilhazinha no meio do mar: a Kame House rosa de telhado vinho (KAME HOUSE na empena, janela no sótão, cata-
+// vento de galo, alpendre com porta verde-água), três coqueiros, arbustos, pedras e a faixa de areia. Como na
+// Sala do Tempo e na Nave de Freeza, a câmera dá a volta na casa conforme os lutadores avançam (trProj com a
+// câmera KH_CAM); a ilha fica numa camada guardada refeita a cada 1/4 de grau (drawCachedOrbitLayer). O céu com
+// as nuvens grandes é uma faixa de 360° que também desliza devagar sozinha, e o mar (ondinhas e espuma da
+// praia) é desenhado a cada quadro com poucas chamadas.
+const KH_CAM = { CX: 400, HY: 112, D: 600, H: 140, F: 600, PERTO: 30 };
+const khCena = { passo: null, canvas: null };
+const KH_CASA = { X: 70, Z: 52, H: 60, R: 112 };   // meia largura, meia profundidade, altura da parede, cumeeira
+
+// posição da câmera na planta (para saber quais faces da casa estão viradas para ela)
+function khCamera(ang) {
+    return [KH_CAM.D * Math.sin(ang), KH_CAM.H, KH_CAM.D * Math.cos(ang)];
+}
+// face plana (pontos da planta) com a normal para fora: só desenha se estiver virada para a câmera
+function khFace(pts, normal, cor, ang, contorno) {
+    const cam = khCamera(ang), p = pts[0];
+    if ((cam[0] - p[0]) * normal[0] + (cam[1] - p[1]) * normal[1] + (cam[2] - p[2]) * normal[2] <= 0) return null;
+    const tela = pts.map(q => trProj(q[0], q[1], q[2], ang));
+    trPoly(tela);
+    trG.fillStyle = cor;
+    trG.fill();
+    if (contorno) { trG.strokeStyle = contorno; trG.lineWidth = 1; trG.stroke(); }
+    return tela;
+}
+// retângulo numa parede: origem o, direção u (largura), de a0 a a1 ao longo de u e de b0 a b1 de altura
+function khRet(o, u, a0, a1, b0, b1, cor, ang, contorno) {
+    const P = (a, b) => trProj(o[0] + u[0] * a, o[1] + b, o[2] + u[2] * a, ang);
+    const tela = [P(a0, b0), P(a1, b0), P(a1, b1), P(a0, b1)];
+    trPoly(tela);
+    trG.fillStyle = cor;
+    trG.fill();
+    if (contorno) { trG.strokeStyle = contorno; trG.lineWidth = 1; trG.stroke(); }
+}
+// janela com moldura branca, vidro azul-escuro com reflexo e (opcional) cruz no meio
+function khJanela(o, u, a0, a1, b0, b1, ang, cruz) {
+    khRet(o, u, a0 - 2, a1 + 2, b0 - 2, b1 + 2, "#f4f4f6", ang, "#7a5a68");
+    khRet(o, u, a0, a1, b0, b1, "#2c4f86", ang);
+    khRet(o, u, a0, a0 + (a1 - a0) * 0.45, b0 + (b1 - b0) * 0.45, b1, "#4f7fbf", ang);
+    if (cruz) {
+        khRet(o, u, (a0 + a1) / 2 - 0.8, (a0 + a1) / 2 + 0.8, b0, b1, "#f4f4f6", ang);
+        khRet(o, u, a0, a1, (b0 + b1) / 2 - 0.8, (b0 + b1) / 2 + 0.8, "#f4f4f6", ang);
+    }
+}
+// tábuas da parede (linhas horizontais finas)
+function khTabuas(o, u, a0, a1, b0, b1, ang) {
+    trG.strokeStyle = "rgba(170, 90, 120, 0.35)";
+    trG.lineWidth = 0.8;
+    trG.beginPath();
+    for (let b = b0 + 7; b < b1; b += 7) {
+        const p = trProj(o[0] + u[0] * a0, o[1] + b, o[2] + u[2] * a0, ang), q = trProj(o[0] + u[0] * a1, o[1] + b, o[2] + u[2] * a1, ang);
+        trG.moveTo(p[0], p[1]); trG.lineTo(q[0], q[1]);
+    }
+    trG.stroke();
+}
+// texto pintado numa parede (perspectiva aproximada pela transformação afim do ponto do texto)
+function khTexto(o, u, a, b, texto, tam, ang) {
+    const A = trProj(o[0] + u[0] * a, o[1] + b, o[2] + u[2] * a, ang);
+    const B = trProj(o[0] + u[0] * (a + 1), o[1] + b, o[2] + u[2] * (a + 1), ang);
+    const C = trProj(o[0] + u[0] * a, o[1] + b - 1, o[2] + u[2] * a, ang);
+    trG.save();
+    trG.transform(B[0] - A[0], B[1] - A[1], C[0] - A[0], C[1] - A[1], A[0], A[1]);
+    trG.font = `bold ${tam}px 'Trebuchet MS', sans-serif`;
+    trG.textAlign = "center";
+    trG.fillStyle = "#c22a3a";
+    trG.fillText(texto, 0, 0);
+    trG.restore();
+}
+
+function khDrawCasa(ang) {
+    const { X, Z, H, R } = KH_CASA;
+    const rosa = "#f6b3cf", rosaSombra = "#e597ba", vinho = "#a8243a", vinhoEsc = "#7c1428", traco = "rgba(120, 40, 70, 0.6)";
+    // paredes (a frente e os fundos são pentágonos: a empena sobe até a cumeeira)
+    const frente = khFace([[-X, 0, Z], [X, 0, Z], [X, H, Z], [0, R, Z], [-X, H, Z]], [0, 0, 1], rosa, ang, traco);
+    const fundos = khFace([[X, 0, -Z], [-X, 0, -Z], [-X, H, -Z], [0, R, -Z], [X, H, -Z]], [0, 0, -1], rosaSombra, ang, traco);
+    const dir = khFace([[X, 0, Z], [X, 0, -Z], [X, H, -Z], [X, H, Z]], [1, 0, 0], rosaSombra, ang, traco);
+    const esq = khFace([[-X, 0, -Z], [-X, 0, Z], [-X, H, Z], [-X, H, -Z]], [-1, 0, 0], rosa, ang, traco);
+    if (frente) {
+        const o = [-X, 0, Z + 0.5], u = [1, 0, 0];
+        khTabuas(o, u, 0, 2 * X, 0, H, ang);
+        khJanela(o, u, 18, 66, 16, 44, ang, true);            // janela grande da frente
+        khTexto(o, u, 70, 78, "KAME", 14, ang);                // letreiro na empena
+        khTexto(o, u, 70, 63, "HOUSE", 14, ang);
+        khRet(o, u, 0, 2 * X, 0, 3, "#d77fa6", ang);           // rodapé
+    }
+    if (fundos) {
+        const o = [X, 0, -Z - 0.5], u = [-1, 0, 0];
+        khTabuas(o, u, 0, 2 * X, 0, H, ang);
+        khJanela(o, u, 50, 90, 18, 42, ang, true);
+    }
+    if (dir) {
+        const o = [X + 0.5, 0, Z], u = [0, 0, -1];
+        khTabuas(o, u, 0, 2 * Z, 0, H, ang);
+        khJanela(o, u, 30, 74, 16, 42, ang, true);
+    }
+    if (esq) {
+        const o = [-X - 0.5, 0, -Z], u = [0, 0, 1];
+        khTabuas(o, u, 0, 2 * Z, 0, H, ang);
+        // janelão escuro de vidro (o da esquerda na imagem)
+        khRet(o, u, 22, 84, 12, 46, "#f4f4f6", ang, "#7a5a68");
+        khRet(o, u, 24, 82, 14, 44, "#22406e", ang);
+        khRet(o, u, 24, 50, 30, 44, "#3f68a3", ang);
+        khRet(o, u, 52, 53.6, 14, 44, "#f4f4f6", ang);
+    }
+    // telhado de duas águas com beiral (vinho), a cumeeira vai da frente para os fundos
+    const ox = X + 12, oz = Z + 9, eb = H - 5;
+    const aguaEsq = khFace([[0, R, -oz], [-ox, eb, -oz], [-ox, eb, oz], [0, R, oz]], [-(R - eb), ox, 0], vinho, ang, vinhoEsc);
+    const aguaDir = khFace([[0, R, oz], [ox, eb, oz], [ox, eb, -oz], [0, R, -oz]], [R - eb, ox, 0], "#b8304a", ang, vinhoEsc);
+    // telhas: linhas ao longo de cada água
+    [[aguaEsq, -1], [aguaDir, 1]].forEach(([face, lado]) => {
+        if (!face) return;
+        trG.strokeStyle = "rgba(90, 10, 25, 0.35)";
+        trG.lineWidth = 0.8;
+        trG.beginPath();
+        for (let i = 1; i < 6; i++) {
+            const f = i / 6, y = R + (eb - R) * f, x = lado * ox * f;
+            const p = trProj(x, y, oz, ang), q = trProj(x, y, -oz, ang);
+            trG.moveTo(p[0], p[1]); trG.lineTo(q[0], q[1]);
+        }
+        trG.stroke();
+    });
+    // espessura do beiral nas empenas (frente e fundos)
+    khFace([[-ox, eb - 5, oz], [-ox, eb, oz], [0, R, oz], [ox, eb, oz], [ox, eb - 5, oz], [0, R - 6, oz]], [0, 0, 1], vinhoEsc, ang);
+    khFace([[ox, eb - 5, -oz], [ox, eb, -oz], [0, R, -oz], [-ox, eb, -oz], [-ox, eb - 5, -oz], [0, R - 6, -oz]], [0, 0, -1], vinhoEsc, ang);
+    // beiral dos lados (faixa escura embaixo da telha)
+    khFace([[ox, eb - 4, oz], [ox, eb - 4, -oz], [ox, eb, -oz], [ox, eb, oz]], [1, 0, 0], vinhoEsc, ang);
+    khFace([[-ox, eb - 4, -oz], [-ox, eb - 4, oz], [-ox, eb, oz], [-ox, eb, -oz]], [-1, 0, 0], vinhoEsc, ang);
+    // água-furtada (janelinha no telhado da esquerda), com o seu próprio telhadinho
+    if (aguaEsq) khDrawAguaFurtada(ang);
+    // cata-vento de galo na ponta da frente da cumeeira
+    khDrawCataVento(0, R, oz - 6, ang);
+}
+
+function khDrawAguaFurtada(ang) {
+    const { R, X, H } = KH_CASA;
+    const x0 = -X * 0.62, x1 = -X * 0.2, zf = 14, zb = -10, yb = H + 18, yt = H + 40, yr = H + 52;
+    const ladoX = (x) => H - 5 + (R - H + 5) * (1 - Math.abs(x) / (X + 12));   // altura do telhado nesse x
+    khFace([[x0, ladoX(x0), zf], [x1, ladoX(x1), zf], [x1, yt, zf], [(x0 + x1) / 2, yr, zf], [x0, yt, zf]], [0, 0, 1], "#f6b3cf", ang, "rgba(120, 40, 70, 0.6)");
+    khFace([[x0, yb - 6, zb], [x0, yb - 6, zf], [x0, yt, zf], [x0, yt, zb]], [-1, 0, 0], "#e597ba", ang, "rgba(120, 40, 70, 0.6)");
+    const cam = khCamera(ang);
+    if (cam[2] > zf) {
+        const o = [x0, 0, zf + 0.5], u = [1, 0, 0];
+        khJanela(o, u, 6, x1 - x0 - 6, ladoX(x0) + 4, yt - 3, ang, true);
+    }
+    khFace([[(x0 + x1) / 2, yr, zb], [x0 - 4, yt - 2, zb], [x0 - 4, yt - 2, zf + 4], [(x0 + x1) / 2, yr, zf + 4]], [-(yr - yt), (x1 - x0) / 2, 0], "#a8243a", ang, "#7c1428");
+    khFace([[(x0 + x1) / 2, yr, zf + 4], [x1 + 4, yt - 2, zf + 4], [x1 + 4, yt - 2, zb], [(x0 + x1) / 2, yr, zb]], [yr - yt, (x1 - x0) / 2, 0], "#b8304a", ang, "#7c1428");
+}
+
+function khDrawCataVento(x, y, z, ang) {
+    const base = trProj(x, y, z, ang), topo = trProj(x, y + 22, z, ang), k = base[3];
+    trG.strokeStyle = "#3a3a44";
+    trG.lineWidth = Math.max(1, 1.4 * k);
+    trG.beginPath(); trG.moveTo(base[0], base[1]); trG.lineTo(topo[0], topo[1]); trG.stroke();
+    // setas N-S/L-O
+    const a = trProj(x - 9, y + 14, z, ang), b = trProj(x + 9, y + 14, z, ang), c = trProj(x, y + 14, z - 9, ang), d = trProj(x, y + 14, z + 9, ang);
+    trG.lineWidth = Math.max(0.8, k);
+    trG.beginPath(); trG.moveTo(a[0], a[1]); trG.lineTo(b[0], b[1]); trG.moveTo(c[0], c[1]); trG.lineTo(d[0], d[1]); trG.stroke();
+    // galo (silhueta) no topo
+    const s = 8 * k, gx = topo[0], gy = topo[1];
+    trG.fillStyle = "#4a4a52";
+    trG.beginPath();
+    trG.moveTo(gx - s, gy);
+    trG.quadraticCurveTo(gx - s * 1.3, gy - s * 1.2, gx - s * 0.6, gy - s * 1.1);   // rabo
+    trG.lineTo(gx - s * 0.2, gy - s * 0.4);
+    trG.quadraticCurveTo(gx + s * 0.3, gy - s * 1.0, gx + s * 0.6, gy - s * 0.9);   // pescoço e cabeça
+    trG.lineTo(gx + s * 0.95, gy - s * 0.75);                                        // bico
+    trG.lineTo(gx + s * 0.6, gy - s * 0.6);
+    trG.quadraticCurveTo(gx + s * 0.7, gy, gx, gy);
+    trG.closePath();
+    trG.fill();
+    trG.fillStyle = "#d23a3a";
+    trG.fillRect(gx + s * 0.4, gy - s * 1.15, s * 0.3, s * 0.25);   // crista
+}
+
+// alpendre da porta (frente, à direita): telhadinho vinho, pilares, porta verde-água e degrau
+function khDrawAlpendre(ang) {
+    const { X, Z } = KH_CASA;
+    const x0 = X - 46, x1 = X + 6, zf = Z + 24;
+    khFace([[x0, 0, zf], [x1, 0, zf], [x1, 4, zf], [x0, 4, zf]], [0, 0, 1], "#e8e0d8", ang, "#a89a90");   // degrau
+    khFace([[x0, 4, Z], [x0, 4, zf], [x1, 4, zf], [x1, 4, Z]], [0, 1, 0], "#f2ece6", ang);
+    const frente = khCamera(ang)[2] > Z;
+    if (frente) {
+        const o = [x0, 0, Z + 0.6], u = [1, 0, 0];
+        khRet(o, u, 14, 38, 4, 44, "#f4f4f6", ang, "#7a5a68");
+        khRet(o, u, 16, 36, 4, 42, "#3fa7a0", ang);
+        khRet(o, u, 18, 34, 26, 40, "#7fd3cc", ang);
+    }
+    // pilares
+    [x0 + 3, x1 - 3].forEach(px => {
+        const a = trProj(px, 4, zf - 3, ang), b = trProj(px, 50, zf - 3, ang);
+        trG.strokeStyle = "#f4f0ea";
+        trG.lineWidth = Math.max(1.5, 3 * a[3]);
+        trG.beginPath(); trG.moveTo(a[0], a[1]); trG.lineTo(b[0], b[1]); trG.stroke();
+    });
+    // telhadinho inclinado
+    khFace([[x0 - 4, 56, Z], [x1 + 6, 56, Z], [x1 + 6, 48, zf + 4], [x0 - 4, 48, zf + 4]], [0, zf + 4 - Z, 8], "#b8304a", ang, "#7c1428");
+    khFace([[x0 - 4, 44, zf + 4], [x0 - 4, 48, zf + 4], [x1 + 6, 48, zf + 4], [x1 + 6, 44, zf + 4]], [0, 0, 1], "#7c1428", ang);
+}
+
+// coqueiro: tronco curvo com anéis e copa de folhas compridas caídas
+function khDrawCoqueiro(c, ang) {
+    const pts = [];
+    for (let i = 0; i <= 6; i++) {
+        const f = i / 6;
+        pts.push(trProj(c.x + c.lx * f * f, 6 + c.h * f, c.z + c.lz * f * f, ang));
+    }
+    const k = pts[0][3];
+    trG.lineCap = "round";
+    for (let i = 0; i < 6; i++) {
+        trG.strokeStyle = i % 2 ? "#8a6a44" : "#9c7a50";
+        trG.lineWidth = Math.max(1.5, (9 - i * 0.9) * k);
+        trG.beginPath(); trG.moveTo(pts[i][0], pts[i][1]); trG.lineTo(pts[i + 1][0], pts[i + 1][1]); trG.stroke();
+    }
+    trG.lineCap = "butt";
+    const top = pts[6], s = top[3];
+    // folhas: cada uma é uma curva grossa com bordas recortadas, caindo para os lados
+    const folhas = [-2.7, -2.1, -1.45, -0.85, -0.25, 0.4, 1.0, 1.6, 2.3, 3.0];
+    folhas.forEach((a, i) => {
+        const comp = (48 + (i % 3) * 8) * s, queda = (18 + (i % 2) * 10) * s;
+        const ex = top[0] + Math.cos(a) * comp, ey = top[1] - Math.sin(a) * comp * 0.35 + queda;
+        const mx = top[0] + Math.cos(a) * comp * 0.5, my = top[1] - Math.sin(a) * comp * 0.35 - 10 * s;
+        trG.strokeStyle = i % 2 ? "#2f8a3a" : "#3fa548";
+        trG.lineWidth = Math.max(2, 7 * s);
+        trG.beginPath(); trG.moveTo(top[0], top[1]); trG.quadraticCurveTo(mx, my, ex, ey); trG.stroke();
+        trG.strokeStyle = "#5cc463";
+        trG.lineWidth = Math.max(0.8, 1.6 * s);
+        trG.beginPath(); trG.moveTo(top[0], top[1]); trG.quadraticCurveTo(mx, my - 2 * s, ex, ey); trG.stroke();
+        // folíolos
+        trG.strokeStyle = "#2a7a33";
+        trG.lineWidth = Math.max(0.6, 1.2 * s);
+        trG.beginPath();
+        for (let j = 1; j <= 5; j++) {
+            const f = j / 6, px = (1 - f) * (1 - f) * top[0] + 2 * (1 - f) * f * mx + f * f * ex, py = (1 - f) * (1 - f) * top[1] + 2 * (1 - f) * f * my + f * f * ey;
+            trG.moveTo(px, py); trG.lineTo(px + Math.cos(a - 1.2) * 7 * s, py + 6 * s);
+            trG.moveTo(px, py); trG.lineTo(px + Math.cos(a + 1.2) * 7 * s, py + 7 * s);
+        }
+        trG.stroke();
+    });
+    // cocos
+    trG.fillStyle = "#6b4a22";
+    [[-3, 3], [3, 4], [0, 6]].forEach(([dx, dy]) => { trG.beginPath(); trG.arc(top[0] + dx * s, top[1] + dy * s, 3 * s, 0, Math.PI * 2); trG.fill(); });
+}
+
+function khDrawArbusto(b, ang) {
+    const p = trProj(b.x, 6, b.z, ang), k = p[3], r = b.r * k;
+    [[-0.7, 0, 0.75], [0.7, 0.05, 0.7], [0, -0.35, 0.9], [-0.25, 0.1, 0.8], [0.35, -0.1, 0.75]].forEach(([dx, dy, rr], i) => {
+        trG.fillStyle = i < 2 ? "#2f7a32" : "#3c9440";
+        trG.beginPath(); trG.arc(p[0] + dx * r, p[1] - r * 0.5 + dy * r, rr * r, 0, Math.PI * 2); trG.fill();
+    });
+    trG.fillStyle = "rgba(140, 220, 120, 0.45)";
+    trG.beginPath(); trG.arc(p[0] - r * 0.2, p[1] - r * 1.05, r * 0.35, 0, Math.PI * 2); trG.fill();
+}
+
+function khDrawPedra(pd, ang) {
+    const p = trProj(pd.x, 4, pd.z, ang), k = p[3], w = pd.r * k, h = pd.r * 0.62 * k;
+    trG.fillStyle = "#9aa58a";
+    trG.beginPath(); trG.ellipse(p[0], p[1] - h * 0.5, w, h, 0, Math.PI, 0); trG.lineTo(p[0] + w, p[1]); trG.lineTo(p[0] - w, p[1]); trG.closePath(); trG.fill();
+    trG.fillStyle = "#c3cbb0";
+    trG.beginPath(); trG.ellipse(p[0] - w * 0.25, p[1] - h * 0.85, w * 0.5, h * 0.4, -0.2, 0, Math.PI * 2); trG.fill();
+    trG.strokeStyle = "rgba(60, 70, 50, 0.5)"; trG.lineWidth = 1;
+    trG.beginPath(); trG.ellipse(p[0], p[1] - h * 0.5, w, h, 0, Math.PI, 0); trG.stroke();
+}
+
+// contorno da ilha (raio um pouco irregular, sempre igual)
+function khRaioIlha(a, base) {
+    return base * (1 + 0.06 * Math.sin(a * 3 + 0.7) + 0.04 * Math.sin(a * 5 + 2.1));
+}
+const KH_COQUEIROS = [
+    { x: -150, z: 40, h: 150, lx: -26, lz: 10 },
+    { x: 118, z: -78, h: 175, lx: 14, lz: -8 },
+    { x: 160, z: -38, h: 140, lx: 30, lz: 6 }
+];
+const KH_ARBUSTOS = [{ x: -92, z: 62, r: 16 }, { x: 110, z: 52, r: 13 }, { x: 140, z: 18, r: 15 }, { x: -110, z: -60, r: 14 }, { x: 40, z: -80, r: 12 }];
+const KH_PEDRAS = [{ x: -40, z: 128, r: 15 }, { x: -12, z: 138, r: 10 }, { x: 150, z: 110, r: 9 }, { x: -168, z: -40, r: 11 }];
+
+// A ilha inteira (camada guardada, fundo transparente): areia, grama, sombras e o que fica em pé, por profundidade
+function drawKameIslandScene(ang) {
+    const N = 64;
+    const anel = (base, y) => { const l = []; for (let i = 0; i < N; i++) { const a = i / N * Math.PI * 2; const r = khRaioIlha(a, base); l.push(trProj(Math.sin(a) * r, y, Math.cos(a) * r, ang)); } return l; };
+    // areia molhada (borda) e areia seca por cima
+    trPoly(anel(246, 0)); trG.fillStyle = "#d9c08a"; trG.fill();
+    trPoly(anel(238, 5)); trG.fillStyle = "#f2e2b0"; trG.fill();
+    // grama (mancha irregular em volta da casa)
+    trPoly(anel(180, 6)); trG.fillStyle = "#6fbf4a"; trG.fill();
+    trPoly(anel(150, 6)); trG.fillStyle = "#7ccb52"; trG.fill();
+    // sombras (luz do alto, à esquerda): casa e coqueiros
+    trG.fillStyle = "rgba(40, 80, 30, 0.25)";
+    const { X, Z } = KH_CASA;
+    trPoly([[-X + 14, Z + 14], [X + 30, Z + 14], [X + 30, -Z + 10], [-X + 14, -Z + 10]].map(c => trProj(c[0], 6, c[1], ang)));
+    trG.fill();
+    KH_COQUEIROS.forEach(c => {
+        const p = trProj(c.x + 12, 6, c.z + 10, ang);
+        trG.beginPath(); trG.ellipse(p[0], p[1], 22 * p[3], 7 * p[3], 0, 0, Math.PI * 2); trG.fill();
+    });
+    // objetos em pé, do mais longe para o mais perto da câmera
+    const prof = (x, z) => trRot(x, z, ang)[1];
+    const objetos = [{ z: prof(0, 0), d: () => khDrawCasa(ang) }, { z: prof(KH_CASA.X - 20, KH_CASA.Z + 14), d: () => khDrawAlpendre(ang) }];
+    KH_COQUEIROS.forEach(c => objetos.push({ z: prof(c.x, c.z), d: () => khDrawCoqueiro(c, ang) }));
+    KH_ARBUSTOS.forEach(b => objetos.push({ z: prof(b.x, b.z), d: () => khDrawArbusto(b, ang) }));
+    KH_PEDRAS.forEach(pd => objetos.push({ z: prof(pd.x, pd.z), d: () => khDrawPedra(pd, ang) }));
+    objetos.sort((a, b) => a.z - b.z).forEach(o => o.d());
+}
+
+// Céu de 360°: azul forte no alto clareando no horizonte, com as nuvens grandes de algodão (como na imagem)
+const KH_PANO_W = Math.round(Math.PI * 2 * KH_CAM.F);
+let khPanorama = null;
+function getKameIslandPanorama() {
+    if (c3Valida(khPanorama)) return khPanorama;
+    const f = c3NovaFaixa(KH_PANO_W, KH_CAM.HY + 6);
+    if (!f) return null;
+    const { c, g } = f;
+    const W = KH_PANO_W, base = KH_CAM.HY + 2;
+    const ceu = g.createLinearGradient(0, 0, 0, base);
+    ceu.addColorStop(0, "#1f6fd8"); ceu.addColorStop(0.55, "#4f9be8"); ceu.addColorStop(1, "#bfe3fb");
+    g.fillStyle = ceu;
+    g.fillRect(0, 0, W, c.__h);
+    // nuvens de algodão: bolos de círculos brancos com a base azulada, subindo do horizonte
+    for (let i = 0; i < 9; i++) {
+        const cx = (i * 419.3 + 120) % W, larg = 120 + (i * 37) % 110, alt = 34 + (i * 23) % 30;
+        c3NaVolta(W, cx, larg, x => khNuvem(g, x, base - 4, larg, alt, i));
+    }
+    // nuvens pequenas no alto
+    g.fillStyle = "rgba(255, 255, 255, 0.8)";
+    for (let i = 0; i < 14; i++) {
+        const x = (i * 271.9 + 40) % W, y = 14 + (i * 13) % 30, r = 6 + (i * 3) % 6;
+        c3NaVolta(W, x, r * 4, xx => { g.beginPath(); g.ellipse(xx, y, r * 3, r, 0, 0, Math.PI * 2); g.fill(); g.beginPath(); g.arc(xx - r, y - r * 0.5, r, 0, Math.PI * 2); g.fill(); });
+    }
+    khPanorama = c;
+    return c;
+}
+function khNuvem(g, x, base, larg, alt, semente) {
+    const bolas = [];
+    const n = 9;
+    for (let j = 0; j < n; j++) {
+        const f = j / (n - 1), h = Math.sin(f * Math.PI);
+        const r = (0.1 + 0.12 * h) * larg * (0.85 + c3Hash(semente * 17 + j) * 0.3);
+        bolas.push([x - larg / 2 + f * larg, base - r * 0.5 - h * alt * 0.5, r]);
+    }
+    bolas.push([x - larg * 0.08, base - alt * 0.9, larg * 0.15], [x + larg * 0.12, base - alt * 0.75, larg * 0.13]);
+    // sombra azulada embaixo
+    g.fillStyle = "#c9dcf2";
+    bolas.forEach(([bx, by, r]) => { g.beginPath(); g.arc(bx, by + r * 0.12, r, 0, Math.PI * 2); g.fill(); });
+    g.fillStyle = "#ffffff";
+    bolas.forEach(([bx, by, r]) => { g.beginPath(); g.arc(bx - r * 0.08, by - r * 0.08, r * 0.92, 0, Math.PI * 2); g.fill(); });
+}
+
+// Ondinhas do mar (fixas no mundo; brilham e somem devagar)
+const KH_ONDAS = (() => {
+    const l = [];
+    for (let i = 0; i < 64; i++) {
+        const a = c3Hash(i * 3.1) * Math.PI * 2, r = 280 + c3Hash(i * 7.7) * 1300;
+        l.push({ x: Math.sin(a) * r, z: Math.cos(a) * r, fase: c3Hash(i * 1.9) * 6.28, tam: 14 + c3Hash(i * 5.3) * 26 });
+    }
+    return l;
+})();
+
+function drawKameIslandSea(ang, t) {
+    // céu (com as nuvens deslizando devagar além do giro da câmera)
+    const pano = getKameIslandPanorama();
+    if (!pano || !c3BlitPanorama(pano, ang + t * 0.006, KH_CAM.F, KH_CAM.CX)) { ctx.fillStyle = "#4f9be8"; ctx.fillRect(0, 0, canvas.width, KH_CAM.HY); }
+    // mar: verde-água claro no horizonte, azul mais fundo perto
+    const mar = ctx.createLinearGradient(0, KH_CAM.HY, 0, canvas.height);
+    mar.addColorStop(0, "#8fd6e8"); mar.addColorStop(0.18, "#4fb3dc"); mar.addColorStop(1, "#2a86c4");
+    ctx.fillStyle = mar;
+    ctx.fillRect(0, KH_CAM.HY + 1, canvas.width, canvas.height - KH_CAM.HY);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
+    ctx.fillRect(0, KH_CAM.HY, canvas.width, 1.5);
+    // ondinhas: agrupadas em 4 níveis de brilho (4 traços por quadro em vez de um por onda)
+    const lim = KH_CAM.D - KH_CAM.PERTO * 2;
+    const niveis = [[], [], [], []];
+    KH_ONDAS.forEach(o => {
+        const r = trRot(o.x, o.z, ang);
+        if (r[1] > lim) return;
+        const brilho = 0.5 + 0.5 * Math.sin(t * 1.3 + o.fase);
+        if (brilho < 0.15) return;
+        const p = trProj(o.x + Math.sin(t * 0.4 + o.fase) * 6, 0, o.z, ang);
+        if (p[1] < KH_CAM.HY + 2) return;
+        niveis[Math.min(3, Math.floor(brilho * 4))].push(p.concat(o.tam));
+    });
+    ctx.strokeStyle = "#e6f7ff";
+    ctx.lineWidth = 1.6;
+    niveis.forEach((lista, n) => {
+        if (!lista.length) return;
+        ctx.globalAlpha = (n + 0.5) / 4 * 0.8;
+        ctx.beginPath();
+        lista.forEach(([x, y, , k, tam]) => { ctx.moveTo(x - tam * k, y); ctx.quadraticCurveTo(x, y - tam * 0.18 * k, x + tam * k, y); });
+        ctx.stroke();
+    });
+    ctx.globalAlpha = 1;
+    // espuma da praia em volta da ilha, indo e voltando
+    const N = 40, onda = 262 + Math.sin(t * 1.1) * 8;
+    const anel = [];
+    for (let i = 0; i < N; i++) { const a = i / N * Math.PI * 2, rr = khRaioIlha(a, onda); anel.push(trProj(Math.sin(a) * rr, 0, Math.cos(a) * rr, ang)); }
+    ctx.fillStyle = "rgba(170, 230, 240, 0.85)";
+    ctx.beginPath(); anel.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = `rgba(255, 255, 255, ${0.6 + 0.3 * Math.sin(t * 1.1)})`;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+}
+
+function drawKameIslandStage(ang) {
+    const t = typeof gameplayClock === "number" ? gameplayClock : 0;
+    trCam = KH_CAM;
+    try {
+        drawKameIslandSea(ang, t);
+        drawCachedOrbitLayer(khCena, ang, drawKameIslandScene);
+    } finally {
+        trCam = TR_CAM;
+    }
+}

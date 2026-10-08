@@ -8,12 +8,12 @@ const { createHarness } = require("./harness.js");
 const h = createHarness(__dirname + "/..", 800);
 const { run, check, summary } = h;
 run("deltaTime = 1/60");
-const prog = {}; ["terra", "kaio", "namek", "freeza_ship", "namek_explosao", "time_room", "cell_games", "kaioshin"].forEach(f => prog[f] = { normalDone: true });
+const prog = {}; ["kame", "terra", "kaio", "namek", "freeza_ship", "namek_explosao", "time_room", "cell_games", "kaioshin"].forEach(f => prog[f] = { normalDone: true });
 run(`stageProgress = ${JSON.stringify(prog)}; gameMode = 'singleplayer'; selectedBoss = 'vegeta'`);
 
 // ---------- ARENAS: tocar na fase abre a escolha do vilão ----------
 run("setGameState('stages')");
-const card = run("getStageCardRect(1)");
+const card = run("getStageCardRect(2)");
 run(`handleMenuClick(${card.x + 30}, ${card.y + 30})`);
 check("tocar numa fase liberada abre a escolha do vilão dela", run("gameState") === "characters" && run("selecaoLuta") === "fase" && run("faseEscolhendoVilao") === "kaio");
 const lista = run("getFilteredCharacters()");
@@ -24,9 +24,16 @@ check("título VILÃO DA FASE e o nome da fase", textos.includes("VILÃO DA FASE
 const iFreeza = lista.indexOf("freeza_1");
 const r = run(`getCharacterCardRect(${iFreeza})`);
 run(`handleMenuClick(${r.x + r.w / 2}, ${r.y + r.h / 2})`);
-const formas = run("systemChoiceOptions.map(o => o.label)");
-check("escolher o personagem pergunta a forma (base e transformações)", formas[0] === "FORMA BASE" && formas.includes("SEGUNDA FORMA") && formas[formas.length - 1] === "CANCELAR");
-run("executeSystemChoice(systemChoiceOptions.findIndex(o => o.label === 'SEGUNDA FORMA'))");
+const formas = run("getCharacterFormsList(escolhaFormaKey).map(f => f.nome)");
+check("escolher o personagem abre o quadro das formas (base e transformações)", run("escolhaFormaKey") === "freeza_1" && formas[0] === "FORMA BASE" && formas.includes("SEGUNDA FORMA"));
+h.calls.length = 0; run("render()");
+check("o quadro mostra a imagem de cada forma", h.calls.filter(c => c[0] === "drawImage").length >= 3 && h.calls.some(c => c[0] === "fillText" && c[1][0] === "SEGUNDA FORMA"));
+const maxRol = run("getFormasLayout('freeza_1', true).maxRolagem");
+check("com muitas formas o quadro rola de lado", maxRol > 0 && (run("setEscolhaFormaRolagem(99999), escolhaFormaRolagem") === maxRol));
+run("canvas.onwheel({ deltaX: 0, deltaY: -99999, preventDefault() {} })");
+check("a roda do mouse volta a rolagem", run("escolhaFormaRolagem") === 0);
+const rf = run(`getFormaRect('freeza_1', ${formas.indexOf("SEGUNDA FORMA")}, true)`);
+run(`handleMenuClick(${rf.x + rf.w / 2}, ${rf.y + rf.h / 2})`);
 check("fica salvo como vilão daquela fase, na forma escolhida", JSON.stringify(run("getVilaoDaFase('kaio')")) === JSON.stringify({ key: "freeza_1", nivel: 1 }) && run("gameState") === "stages");
 check("o card da fase mostra o retrato do vilão", fs.readFileSync(__dirname + "/../menu.js", "utf8").includes("drawCharacterPortrait(characterDB[vf.key]"));
 

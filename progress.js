@@ -98,7 +98,8 @@ let achievements = {
     boss_defeat_10: { name: "Pesadelo dos Vilões", desc: "Derrote 10 chefes. Eles já te conhecem!", statKey: "bossesDefeated", threshold: 10, tier: "silver" },
     boss_defeat_50: { name: "Coleção de Vilões", desc: "Derrote 50 chefes. Ninguém mais quer lutar!", statKey: "bossesDefeated", threshold: 50, tier: "gold" },
     // -- Arenas (uma por fase, na ordem de STAGE_PROGRESSION) --
-    stage_terra: { name: "Campeão do Torneio", desc: "Vença o NORMAL do Torneio de Artes Marciais", tier: "bronze" },
+    stage_kame: { name: "Férias na Kame House", desc: "Vença o NORMAL da Ilha do Mestre Kame", tier: "bronze" },
+    stage_terra: { name: "Campeão do Torneio", desc: "Libere o Torneio de Artes Marciais", tier: "bronze" },
     stage_kaio: { name: "Treino com Piadas Ruins", desc: "Libere o Planeta do Sr. Kaioh", tier: "bronze" },
     stage_namek: { name: "Turista em Namek", desc: "Libere o Planeta Namek. Leve protetor!", tier: "bronze" },
     stage_namek_explosao: { name: "Fuga por um Triz", desc: "Libere Namek Prestes a Explodir. Corre!", tier: "silver" },
@@ -266,6 +267,7 @@ function loadStageProgress() {
     try {
         const parsed = readJsonStorage("saiyan_stage_progress", {});
         if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) stageProgress = parsed;
+        if (migrarProgressoIlhaKame(stageProgress)) saveStageProgress();   // 0.85: ilha nova na 1ª posição
     } catch (e) {
         console.warn("Erro ao carregar progresso das fases:", e);
     }

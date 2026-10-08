@@ -11,7 +11,7 @@ const { run, check, summary } = h;
 
 // ---------- game over mostra estatísticas mesmo sem dominar a fase ----------
 run("writeStorage('saiyan_ranking', ''); writeStorage('saiyan_stage_ranking', '')");
-run("gameMode = 'singleplayer'; selectedStage = 'terra'; startGame()");
+run("gameMode = 'singleplayer'; selectedStage = 'kame'; startGame()");
 run("fireKiBarrage(player, false); fireKiBarrage(player, false)");
 run(`player.parryCooldown = 0; world.obstacles = [{ x: player.x + player.w/2, y: player.y + player.h/2 - 5, radius: 8, vx: 0, vy: 2, fromPlayer: false, color: '#fff' }]`);
 run("tryReflect(player, false)");
@@ -28,15 +28,15 @@ check("a tela de derrota guarda os golpes recebidos", gs.hitsReceived === 1);
 
 // ---------- registra recorde (fase e geral) mesmo perdendo, se a pontuação for a maior até agora ----------
 check("1ª partida: já é recorde (fase e geral), pois não havia nenhuma pontuação antes", gs.isNewStageRecord === true && gs.isNewGeneralRecord === true);
-check("o recorde da fase já aparece salvo de verdade", run("getStageRecord('terra')") === run("score"));
+check("o recorde da fase já aparece salvo de verdade", run("getStageRecord('kame')") === run("score"));
 
-run("gameMode = 'singleplayer'; selectedStage = 'terra'; startGame(); score = 0");
+run("gameMode = 'singleplayer'; selectedStage = 'kame'; startGame(); score = 0");
 run("player.hp = 1; player.shield = false; world.obstacles.push({ x: player.x+5, y: player.y+5, radius: 20, vx:0, vy:0, fromPlayer:false, color:'#fff', damage:5 })");
 run("update(1/60)");
 check("uma pontuação pior (0) NÃO é registrada como novo recorde", run("gameOverStats.isNewStageRecord") === false && run("gameOverStats.isNewGeneralRecord") === false);
 
 // ---------- parry: mecânica simples — devolve em linha reta, rumo ao adversário ----------
-run("gameMode = 'singleplayer'; selectedStage = 'terra'; startGame()");
+run("gameMode = 'singleplayer'; selectedStage = 'kame'; startGame()");
 // golpe vindo de cima
 run(`player.parryCooldown = 0; world.obstacles = [{ x: player.x + player.w/2, y: player.y + player.h/2 - 40, radius: 8, vx: -3, vy: 5, fromPlayer: false, color: '#fff' }]`);
 run("tryReflect(player, false)");
@@ -71,7 +71,7 @@ run("gameMode = 'singleplayer'");
 // ---------- overlay de escolha de modo: sem o texto pequeno embaixo, tudo centralizado mais acima ----------
 run("writeStorage('saiyan_stage_progress', JSON.stringify({ terra: { normalDone: true } })); stageProgress = { terra: { normalDone: true } }; setGameState('stage_map')");
 run("handleMenuClick(getStageMapNodes()[0].x, getStageMapNodes()[0].y)");
-check("mostra o overlay de escolha", run("stageChoicePendingId") === "terra");
+check("mostra o overlay de escolha", run("stageChoicePendingId") === "kame");
 h.calls.length = 0;
 run("render()");
 const textCalls = h.calls.filter(c => c[0] === "fillText");

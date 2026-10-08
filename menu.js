@@ -78,7 +78,7 @@ function getCharacterInfoRect(card) {
 }
 function abrirTelaPersonagens(modo) {
     selecaoLuta = modo;
-    infoPersonagemKey = null;
+    infoPersonagemKey = null; escolhaFormaKey = null;
     charactersScrollY = 0;
     currentTab = modo === "p2" || modo === "fase" ? "VILÕES" : "HERÓIS";   // no VERSUS a "aba" diz qual jogador está escolhendo
     // antes da luta da história: a fase com vilão escolhido na tela ARENAS já vem com ele
@@ -90,14 +90,14 @@ function voltarDaTelaPersonagens() {
     const modo = selecaoLuta;
     if (modo === "p2") { abrirTelaPersonagens("p1"); return; }
     selecaoLuta = null;
-    infoPersonagemKey = null;
+    infoPersonagemKey = null; escolhaFormaKey = null;
     setGameState(modo === "solo" ? "stage_map" : modo === "p1" ? "mode_select" : modo === "fase" ? "stages" : "menu");
 }
 // LUTAR (ou PRÓXIMO no JOGADOR 1 do VERSUS): segue com quem está escolhido
 function avancarSelecaoLuta() {
     if (selecaoLuta === "p1") { abrirTelaPersonagens("p2"); return; }
     selecaoLuta = null;
-    infoPersonagemKey = null;
+    infoPersonagemKey = null; escolhaFormaKey = null;
     startGame();
 }
 function escolherPersonagemNaSelecao(key) {
@@ -135,23 +135,43 @@ function escolherPersonagemNaSelecao(key) {
 }
 
 // Tela ARENAS: escolheu o vilão da fase -> pergunta em qual forma ele aparece
+// ARENAS: escolhido o personagem, abre o quadro das formas (imagem + nome de cada uma, rolando de lado quando são
+// muitas) para escolher em qual forma ele aparece na fase. Tocar numa forma salva; o ✕ cancela.
+let escolhaFormaKey = null;
+let escolhaFormaRolagem = 0;
+const escolhaFormaToque = { active: false, touchId: null, startX: 0, startScroll: 0, dragged: false };
 function escolherVilaoDaFase(key) {
-    const c = characterDB[key];
-    if (!c || !faseEscolhendoVilao) return;
-    const fase = faseEscolhendoVilao;
-    const opcoes = getCharacterFormsList(key).map(f => ({
-        label: f.nome,
-        acao: () => {
-            setVilaoDaFase(fase, key, f.nivel);
-            if (selectedStage === fase) selectedBoss = key;
-            saveSelectedCharacters();
-            selecaoLuta = null;
-            faseEscolhendoVilao = null;
-            setGameState("stages");
-        }
-    }));
-    opcoes.push({ label: "CANCELAR", cancelar: true });
-    showSystemChoice("VILÃO DA FASE", `Em qual forma ${c.name || key} aparece nesta fase?`, opcoes);
+    if (!characterDB[key] || !faseEscolhendoVilao) return;
+    escolhaFormaKey = key;
+    escolhaFormaRolagem = 0;
+    padNav.focus = null;
+}
+function confirmarFormaDoVilao(nivel) {
+    const key = escolhaFormaKey, fase = faseEscolhendoVilao;
+    escolhaFormaKey = null;
+    if (!key || !fase) return;
+    setVilaoDaFase(fase, key, nivel);
+    if (selectedStage === fase) selectedBoss = key;
+    saveSelectedCharacters();
+    selecaoLuta = null;
+    faseEscolhendoVilao = null;
+    setGameState("stages");
+}
+function setEscolhaFormaRolagem(v) {
+    const m = escolhaFormaKey ? getFormasLayout(escolhaFormaKey, true).maxRolagem : 0;
+    escolhaFormaRolagem = Math.max(0, Math.min(m, v));
+}
+// Controle: a forma focada perto da borda faz o quadro rolar (o foco acompanha)
+function revealPadFocusInFormas() {
+    if (gameState !== "characters" || !escolhaFormaKey || !padNav.focus) return;
+    const L = getFormasLayout(escolhaFormaKey, true);
+    let delta = 0;
+    if (padNav.focus.x - L.colW / 2 < L.areaX) delta = padNav.focus.x - L.colW / 2 - L.areaX;
+    else if (padNav.focus.x + L.colW / 2 > L.areaX + L.areaW) delta = padNav.focus.x + L.colW / 2 - (L.areaX + L.areaW);
+    if (!delta) return;
+    const antes = escolhaFormaRolagem;
+    setEscolhaFormaRolagem(escolhaFormaRolagem + delta);
+    padNav.focus.x -= escolhaFormaRolagem - antes;
 }
 
 function getCharactersMaxScroll() {
@@ -175,7 +195,7 @@ function revealPadFocusInCharacters() {
     padNav.focus.y -= charactersScrollY - before;
 }
 function getStageCardRect(i) {
-    return rect(40 + (i % 4) * 190, 68 + Math.floor(i / 4) * 104, 175, 90);
+    return rect(32 + (i % 5) * 150, 70 + Math.floor(i / 5) * 106, STAGE_CARD_W, STAGE_CARD_H);   // 5 por fileira
 }
 function getPcKeyRect(idx) {
     return rect(idx % 2 === 0 ? 280 : 560, PC_KEY_ROW_Y0 + Math.floor(idx / 2) * PC_KEY_ROW_STEP, 110, 24);
@@ -188,11 +208,11 @@ function getRankingStageTabRect(i) {
 }
 // TRILHAS SONORAS: uma linha por fase (duas colunas de 4), com o botão TOCAR/PAUSAR à direita.
 function getTrackRowRect(i) {
-    return rect(86 + Math.floor(i / 4) * 322, 104 + (i % 4) * 50, 306, 44);
+    return rect(86 + Math.floor(i / 5) * 322, 92 + (i % 5) * 44, 306, 40);   // 2 colunas de 5 (uma por fase)
 }
 function getTrackPlayRect(i) {
     const r = getTrackRowRect(i);
-    return rect(r.x + r.w - 92, r.y + 6, 84, 32);
+    return rect(r.x + r.w - 92, r.y + 4, 84, 32);
 }
 function hitRect(x, y, r) {
     return inRect(x, y, r.x, r.y, r.w, r.h);
@@ -257,7 +277,7 @@ const STAGE_MAP_NODE_R = 26;
 // Cor "tema" de cada arena, usada no anel do nó e no traço pontilhado até ela.
 const STAGE_THEME_COLOR = {
     terra: "#f6b93b", kaio: "#a78bfa", namek: "#4ade80", namek_explosao: "#f87171",
-    freeza_ship: "#c084fc", time_room: "#e2e8f0", cell_games: "#38bdf8", kaioshin: "#fbbf24"
+    freeza_ship: "#c084fc", time_room: "#e2e8f0", cell_games: "#38bdf8", kaioshin: "#fbbf24", kame: "#f472b6"
 };
 
 // Ilustração pequena e simples de cada arena dentro do círculo do nó — não é o cenário completo (custaria caro
@@ -268,7 +288,7 @@ const lockedStageIconCache = {};
 // Cards da tela ARENAS: cada um mostra uma foto do cenário da fase. A foto é tirada uma vez (desenhando o
 // cenário na tela e copiando um recorte) — uma fase por quadro para não engasgar — e guardada colorida e em
 // cinza (para a fase bloqueada).
-const STAGE_CARD_W = 175, STAGE_CARD_H = 90;
+const STAGE_CARD_W = 140, STAGE_CARD_H = 92;
 const stageCardThumbs = {};
 function prepareNextStageCardThumb() {
     const stg = STAGE_PROGRESSION.find(st => !stageCardThumbs[st.id]);
@@ -385,6 +405,12 @@ function drawStageNodeIcon(cx, cy, r, stageId, g = ctx) {
         g.fillStyle = "#1a0f2e"; g.fillRect(cx - r, cy - r, r * 2, r * 2);
         g.fillStyle = "#8a5fd1"; g.beginPath(); g.ellipse(cx, cy, r * 0.8, r * 0.35, 0, 0, Math.PI * 2); g.fill();
         g.fillStyle = "#c9a6f0"; g.beginPath(); g.arc(cx, cy - r * 0.15, r * 0.28, 0, Math.PI * 2); g.fill();
+    } else if (stageId === "kame") {
+        g.fillStyle = "#5fb4f0"; g.fillRect(cx - r, cy - r, r * 2, r * 2);
+        g.fillStyle = "#2f9bd0"; g.fillRect(cx - r, cy + r * 0.25, r * 2, r);
+        g.fillStyle = "#f0dca0"; g.beginPath(); g.ellipse(cx, cy + r * 0.3, r * 0.75, r * 0.2, 0, 0, Math.PI * 2); g.fill();
+        g.fillStyle = "#f6a8c8"; g.fillRect(cx - r * 0.35, cy - r * 0.15, r * 0.7, r * 0.45);
+        g.fillStyle = "#b0283c"; g.beginPath(); g.moveTo(cx - r * 0.45, cy - r * 0.1); g.lineTo(cx, cy - r * 0.55); g.lineTo(cx + r * 0.45, cy - r * 0.1); g.closePath(); g.fill();
     } else if (stageId === "time_room") {
         g.fillStyle = "#e8e8ef"; g.fillRect(cx - r, cy - r, r * 2, r * 2);
         g.fillStyle = "#b8b8c8";
@@ -708,11 +734,27 @@ function getCharacterFormsList(key) {
     getCharacterTransformations(key).forEach((t, i) => lista.push({ nome: String((t && t.name) || ("TRANSFORMAÇÃO " + (i + 1))).toUpperCase(), nivel: i + 1 }));
     return lista;
 }
-function drawCharacterFormsPanel(key) {
+// Colunas do quadro de formas. escolher = quadro de escolha do vilão da fase (colunas com largura mínima e
+// rolagem de lado quando não cabem); senão é o quadro "i" (as colunas encolhem para caber).
+function getFormasLayout(key, escolher) {
+    const n = getCharacterFormsList(key).length;
+    const px = 50, py = 52, pw = canvas.width - 100, ph = canvas.height - 72, gap = 8;
+    const areaX = px + 12, areaW = pw - 24;
+    const colW = escolher ? Math.max(104, Math.min(130, (areaW - gap * (n - 1)) / n)) : Math.min(130, (areaW - gap * (n - 1)) / n);
+    const total = colW * n + gap * (n - 1);
+    const x0 = total <= areaW ? canvas.width / 2 - total / 2 : areaX;
+    return { px, py, pw, ph, gap, areaX, areaW, colW, x0, topo: py + 56, altura: ph - 66, maxRolagem: Math.max(0, total - areaW) };
+}
+function getFormaRect(key, i, escolher) {
+    const L = getFormasLayout(key, escolher);
+    return rect(L.x0 + i * (L.colW + L.gap) - (escolher ? escolhaFormaRolagem : 0), L.topo, L.colW, L.altura);
+}
+function drawCharacterFormsPanel(key, escolher = false) {
     const c = characterDB[key];
-    if (!c) { infoPersonagemKey = null; return; }
+    if (!c) { infoPersonagemKey = null; escolhaFormaKey = null; return; }
     const formas = getCharacterFormsList(key);
-    const px = 50, py = 52, pw = canvas.width - 100, ph = canvas.height - 72;
+    const L = getFormasLayout(key, escolher);
+    const { px, py, pw, ph, topo, altura } = L;
     ctx.save();
     ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -727,19 +769,27 @@ function drawCharacterFormsPanel(key) {
     ctx.fillText(c.name || key, canvas.width / 2, py + 24);
     ctx.fillStyle = "#9fb3d8";
     ctx.font = "10px monospace";
-    ctx.fillText(`${c.alignment || ""}  ·  ESPECIAL: ${c.special || "-"}`, canvas.width / 2, py + 40);
-    // uma coluna por forma (encolhe quando são muitas)
-    const n = formas.length, gap = 8, colW = Math.min(130, (pw - 24 - gap * (n - 1)) / n);
-    const x0 = canvas.width / 2 - (colW * n + gap * (n - 1)) / 2, topo = py + 56, altura = ph - 66;
+    if (escolher) ctx.fillText("EM QUAL FORMA ELE APARECE NESTA FASE?", canvas.width / 2, py + 40);
+    else ctx.fillText(`${c.alignment || ""}  ·  ESPECIAL: ${c.special || "-"}`, canvas.width / 2, py + 40);
     // cada forma do tamanho da sua ALTURA na luta (a maior ocupa a coluna inteira; as outras ficam proporcionais)
     const escalas = formas.map(f => escalaDaAltura(getAlturaPersonagem(key, f.nivel)));
     const maiorEscala = Math.max(...escalas);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(L.areaX, topo - 2, L.areaW, altura + 4);
+    ctx.clip();
     formas.forEach((f, i) => {
-        const x = x0 + i * (colW + gap);
-        ctx.fillStyle = "rgba(23, 79, 120, 0.35)";
+        const r = getFormaRect(key, i, escolher), x = r.x, colW = r.w;
+        if (x + colW < L.areaX || x > L.areaX + L.areaW) return;
+        let pressed = false;
+        if (escolher) {
+            if (x >= L.areaX - 1 && x + colW <= L.areaX + L.areaW + 1) registerMenuTarget(r.x, r.y, r.w, r.h);
+            pressed = beginButtonPress(r.x, r.y, r.w, r.h);
+        }
+        ctx.fillStyle = escolher ? "rgba(23, 79, 120, 0.55)" : "rgba(23, 79, 120, 0.35)";
         ctx.fillRect(x, topo, colW, altura);
-        ctx.strokeStyle = "rgba(125, 211, 252, 0.5)";
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = escolher ? "#e85d04" : "rgba(125, 211, 252, 0.5)";
+        ctx.lineWidth = escolher ? 2 : 1;
         ctx.strokeRect(x, topo, colW, altura);
         ctx.fillStyle = f.nivel ? "#ffd23f" : "#e0f2fe";
         let fonte = 10;
@@ -751,8 +801,19 @@ function drawCharacterFormsPanel(key) {
         const k = escalas[i] / maiorEscala;
         const ih = (altura - 26) * k, iw = Math.min(colW - 8, (altura - 26) * 96 / 112) * k;
         drawFormPortrait(src, c, x + (colW - iw) / 2, topo + altura - 6 - ih, iw, ih);   // pés na mesma linha (a altura em cm fica só no editor)
+        if (escolher) endButtonPress(pressed);
     });
     ctx.restore();
+    if (escolher && L.maxRolagem > 0) {
+        // barrinha de rolagem embaixo: mostra que há mais formas para o lado
+        const trilho = L.areaW, barra = Math.max(30, trilho * L.areaW / (L.areaW + L.maxRolagem));
+        ctx.fillStyle = "rgba(255, 255, 255, 0.12)";
+        ctx.fillRect(L.areaX, py + ph - 7, trilho, 4);
+        ctx.fillStyle = "#e85d04";
+        ctx.fillRect(L.areaX + (trilho - barra) * (escolhaFormaRolagem / L.maxRolagem), py + ph - 7, barra, 4);
+    }
+    ctx.restore();
+    if (escolher) registerMenuTarget(MENU_LAYOUT.characters.infoClose.x, MENU_LAYOUT.characters.infoClose.y, MENU_LAYOUT.characters.infoClose.w, MENU_LAYOUT.characters.infoClose.h);
     drawBtnAt(MENU_LAYOUT.characters.infoClose, "✕", "#fca5a5", "bold 14px monospace");
 }
 function drawFormPortrait(src, cItem, x, y, w, h) {
@@ -2076,6 +2137,7 @@ function movePadFocus(dx, dy) {
         revealPadFocusInDatabase();
         revealPadFocusInCharacters();
         revealPadFocusInMapa();
+        revealPadFocusInFormas();
     }
 }
 
@@ -2605,6 +2667,11 @@ canvas.onclick = (e) => {
 window.addEventListener("mouseup", () => { if (menuPointerPress && menuPointerPress.id === "mouse") menuPointerPress = null; });
 
 canvas.onwheel = (e) => {
+    if (gameState === "characters" && escolhaFormaKey) {
+        e.preventDefault();
+        setEscolhaFormaRolagem(escolhaFormaRolagem + (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY) * 0.8);
+        return;
+    }
     if (gameState === "stage_map" && !stageChoicePendingId) {
         e.preventDefault();
         setMapaRolagem(getMapaRolagem() + (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY) * 0.8);
@@ -2719,7 +2786,9 @@ canvas.addEventListener("touchstart", (e) => {
     }
 
     if (gameState !== "playing" && gameState !== "tutorial") {
-        if (gameState === "characters") {
+        if (gameState === "characters" && escolhaFormaKey) {
+            Object.assign(escolhaFormaToque, { active: true, touchId: firstTouch.identifier, startX: firstPoint.x, startScroll: escolhaFormaRolagem, dragged: false });
+        } else if (gameState === "characters") {
             Object.assign(charactersTouchScroll, { active: true, touchId: firstTouch.identifier, startY: firstPoint.y, startScrollY: charactersScrollY, dragged: false });
         }
         if (gameState === "stage_map" && !stageChoicePendingId) {
@@ -2823,6 +2892,20 @@ canvas.addEventListener("touchmove", (e) => {
         return;
     }
 
+    if (gameState === "characters" && escolhaFormaKey && escolhaFormaToque.active) {
+        const touch = Array.from(e.touches).find(t => t.identifier === escolhaFormaToque.touchId);
+        if (touch) {
+            const c = getCanvasCoords(touch.clientX, touch.clientY);
+            const dx = c.x - escolhaFormaToque.startX;
+            if (!escolhaFormaToque.dragged && Math.abs(dx) > DATABASE_DRAG_THRESHOLD) {
+                escolhaFormaToque.dragged = true;
+                menuPointerPress = null;   // virou arraste: não escolhe a forma
+            }
+            if (escolhaFormaToque.dragged) setEscolhaFormaRolagem(escolhaFormaToque.startScroll - dx);
+        }
+        return;
+    }
+
     if (gameState === "characters" && charactersTouchScroll.active) {
         const touch = Array.from(e.touches).find(t => t.identifier === charactersTouchScroll.touchId);
         if (touch) {
@@ -2911,6 +2994,7 @@ canvas.addEventListener("touchend", (e) => {
     controlsTestTouches = Array.from(e.touches).map(t => getCanvasCoords(t.clientX, t.clientY));
     releaseTouchPress(e);
     if (charactersTouchScroll.active && !Array.from(e.touches).some(t => t.identifier === charactersTouchScroll.touchId)) charactersTouchScroll.active = false;
+    if (escolhaFormaToque.active && !Array.from(e.touches).some(t => t.identifier === escolhaFormaToque.touchId)) escolhaFormaToque.active = false;
     if (mapaTouchScroll.active && !Array.from(e.touches).some(t => t.identifier === mapaTouchScroll.touchId)) mapaTouchScroll.active = false;
     const stillDown = Array.from(e.touches).map(t => t.identifier);
     Object.keys(hudPressHeld).forEach(id => {
@@ -3255,6 +3339,15 @@ function handleMenuClick(x, y) {
     else if (gameState === "characters") {
         // quadro "i" aberto: qualquer toque fecha (o X também)
         if (infoPersonagemKey) { infoPersonagemKey = null; padNav.focus = null; return; }
+        // escolha da forma do vilão da fase: tocar numa forma salva; o ✕ (ou fora do quadro) cancela
+        if (escolhaFormaKey) {
+            const formas = getCharacterFormsList(escolhaFormaKey), L = getFormasLayout(escolhaFormaKey, true);
+            if (hitRect(x, y, MENU_LAYOUT.characters.infoClose) || !inRect(x, y, L.px, L.py, L.pw, L.ph)) { escolhaFormaKey = null; padNav.focus = null; return; }
+            if (x < L.areaX || x > L.areaX + L.areaW) return;
+            const i = formas.findIndex((f, j) => hitRect(x, y, getFormaRect(escolhaFormaKey, j, true)));
+            if (i >= 0) confirmarFormaDoVilao(formas[i].nivel);
+            return;
+        }
         const versus = gameMode === "coop" && !!selecaoLuta && selecaoLuta !== "fase";
         if (!versus && selecaoLuta !== "fase") {
             if (hitRect(x, y, MENU_LAYOUT.characters.tabHeroes)) { currentTab = "HERÓIS"; charactersScrollY = 0; }
@@ -4510,6 +4603,9 @@ function drawStageBackground() {
     else if (selectedStage === "cell_games") {
         drawCellArenaStage(getCellArenaOrbitAngle(scroll));
     }
+    else if (selectedStage === "kame") {
+        drawKameIslandStage(getStageLapAngle(scroll, KAME_ISLAND_LAP_SCROLL));
+    }
 
     ctx.restore();
 }
@@ -5530,7 +5626,7 @@ function drawScreenFlash() {
 
 // Fases de fundo claro (céu claro, nuvens, luas ou a Sala do Tempo toda branca): placas escuras translúcidas atrás do placar do topo,
 // senão os textos brancos/claros somem no fundo.
-const STAGES_FUNDO_CLARO = ["terra", "kaio", "namek", "time_room", "cell_games", "freeza_ship", "kaioshin"];
+const STAGES_FUNDO_CLARO = ["kame", "terra", "kaio", "namek", "time_room", "cell_games", "freeza_ship", "kaioshin"];
 
 function drawHUD() {
     ctx.save();
@@ -6158,7 +6254,7 @@ function render() {
         const versus = gameMode === "coop" && !!selecaoLuta && selecaoLuta !== "fase";
         const modoFase = selecaoLuta === "fase";
         const vilaoFase = modoFase ? getVilaoDaFase(faseEscolhendoVilao) : null;
-        const info = !!infoPersonagemKey;
+        const info = !!infoPersonagemKey || !!escolhaFormaKey;
         const alvo = info ? () => {} : registerMenuTarget;   // com o quadro "i" aberto só ele recebe o controle
         ctx.fillText(modoFase ? "VILÃO DA FASE" : !selecaoLuta ? "PERSONAGENS" : versus ? `SELEÇÃO DE PERSONAGEM — ${selecaoLuta === "p1" ? "JOGADOR 1" : "JOGADOR 2"}` : "SELEÇÃO DE PERSONAGEM", canvas.width / 2, 25);
 
@@ -6228,7 +6324,8 @@ function render() {
             ctx.fillRect(canvas.width - 14, thumbY, 5, thumbH);
         }
 
-        if (info) drawCharacterFormsPanel(infoPersonagemKey);
+        if (escolhaFormaKey) drawCharacterFormsPanel(escolhaFormaKey, true);
+        else if (info) drawCharacterFormsPanel(infoPersonagemKey);
         else drawBtnAt(MENU_LAYOUT.back, "←", "#e2e8f0", "bold 20px monospace");
     }
     else if (gameState === "stages") {
@@ -6832,6 +6929,7 @@ function render() {
             if (!naTela(f)) return;
             const r = STAGE_MAP_NODE_R;
             if (!stageChoicePendingId && alvoNaTela(f)) registerMenuTarget(f.x - r, f.y - r, r * 2, r * 2);
+            drawMapaSombraFase(f.x, f.y, r);
             const pressed = !stageChoicePendingId && beginButtonPress(f.x - r, f.y - r, r * 2, r * 2);
             ctx.fillStyle = "#11131c";
             ctx.beginPath();
@@ -6855,6 +6953,7 @@ function render() {
 
         nodes.forEach((node, i) => {
             if (!naTela(node)) return;
+            drawMapaSombraFase(node.x, node.y, STAGE_MAP_NODE_R);
             // com o quadro de modo aberto, os círculos ficam escondidos atrás: não entram na navegação do controle
             if (!stageChoicePendingId && alvoNaTela(node)) registerMenuTarget(node.x - STAGE_MAP_NODE_R, node.y - STAGE_MAP_NODE_R, STAGE_MAP_NODE_R * 2, STAGE_MAP_NODE_R * 2);
             const pressed = !stageChoicePendingId && beginButtonPress(node.x - STAGE_MAP_NODE_R, node.y - STAGE_MAP_NODE_R, STAGE_MAP_NODE_R * 2, STAGE_MAP_NODE_R * 2);

@@ -32,10 +32,10 @@ run("gameMode = 'singleplayer'; startGame(); player.isCharging = true; for (let 
 check("sem os riscos de luz da aura antiga", run("typeof updateAura === 'undefined' && world.auraParticles === undefined"));
 
 // ---------- 2 jogadores não entra no ranking da fase ----------
-run("writeStorage('saiyan_stage_ranking', ''); gameMode = 'coop'; selectedStage = 'terra'; startGame(); score = 77; triggerGameOver()");
-check("partida de 2 jogadores NÃO entra no ranking da fase", run("getStageRecord('terra')") === 0);
+run("writeStorage('saiyan_stage_ranking', ''); gameMode = 'coop'; selectedStage = 'kame'; startGame(); score = 77; triggerGameOver()");
+check("partida de 2 jogadores NÃO entra no ranking da fase", run("getStageRecord('kame')") === 0);
 run("gameMode = 'singleplayer'; startGame(); score = 33; triggerGameOver()");
-check("partida do modo história continua entrando no ranking da fase", run("getStageRecord('terra')") === 33);
+check("partida do modo história continua entrando no ranking da fase", run("getStageRecord('kame')") === 33);
 
 // ---------- tela de derrota: para onde volta ----------
 run("handleMenuClick(400, 175)");

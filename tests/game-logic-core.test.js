@@ -463,11 +463,12 @@ test("getWaveParams: cresce até o teto e trava depois (dificuldade some de esta
     assert.ok(getWaveParams(WAVE_DIFFICULTY_CAP).speedMult > getWaveParams(1).speedMult, "ainda cresce ANTES do teto");
 });
 
-test("progressão de arenas: 8 fases, na ordem certa (Cell penúltima, Supremo Kaioh última)", () => {
-    assert.equal(STAGE_PROGRESSION.length, 8);
-    assert.equal(STAGE_PROGRESSION[0].id, "terra");
-    assert.equal(STAGE_PROGRESSION[6].id, "cell_games");
-    assert.equal(STAGE_PROGRESSION[7].id, "kaioshin");
+test("progressão de arenas: 9 fases, na ordem certa (Ilha do Kame 1ª, Cell penúltima, Supremo Kaioh última)", () => {
+    assert.equal(STAGE_PROGRESSION.length, 9);
+    assert.equal(STAGE_PROGRESSION[0].id, "kame");
+    assert.equal(STAGE_PROGRESSION[1].id, "terra");
+    assert.equal(STAGE_PROGRESSION[7].id, "cell_games");
+    assert.equal(STAGE_PROGRESSION[8].id, "kaioshin");
 });
 
 test("getModeWaveSequence / getRealWaveForModeStep: NORMAL usa 1-5, DIFÍCIL pula pros degraus 2,4,6,8,10", () => {
@@ -486,7 +487,7 @@ test("getModeWaveSequence / getRealWaveForModeStep: NORMAL usa 1-5, DIFÍCIL pul
 
 test("isStageUnlockedByProgress: completar o NORMAL da anterior já libera a próxima", () => {
     const unlockedIds = (progress) => STAGE_PROGRESSION.filter(s => isStageUnlockedByProgress(s.id, progress)).map(s => s.id);
-    assert.deepEqual(unlockedIds({}), ["terra"], "do zero, só a 1ª fase está liberada");
+    assert.deepEqual(unlockedIds({}), ["kame"], "do zero, só a 1ª fase está liberada");
     assert.equal(isStageUnlockedByProgress("kaio", {}), false);
     assert.equal(isStageUnlockedByProgress("kaio", { terra: { normalDone: true, hardDone: false } }), true, "completar o NORMAL já basta — não precisa do difícil");
     assert.equal(isStageUnlockedByProgress("namek", { terra: { normalDone: true, hardDone: true } }), false, "pular fase não vale — precisa completar kaio também");
