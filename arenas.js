@@ -19,12 +19,19 @@ const ARENA_CHAOS = {
     ladrilho: { nome: "PISO DE LADRILHOS", cor: "#cfd6df" }, terra: { nome: "TERRA", cor: "#a0703f" }, nuvens: { nome: "NUVENS", cor: "#e8f1fb" },
     espaco: { nome: "ESPAÇO", cor: "#1b1638" }, lava: { nome: "LAVA", cor: "#7a1d0c" }, neve: { nome: "NEVE", cor: "#eef4fb" }
 };
-const ARENA_ABAS = [["construcao", "CONSTRUÇÃO"], ["nave", "NAVE"], ["natureza", "NATUREZA"], ["chao", "CHÃO"], ["planicies", "PLANÍCIES"], ["ceu", "CÉU"], ["efeitos", "EFEITOS"], ["enfeites", "ENFEITES"]];
+const ARENA_ABAS = [["construcao", "CONSTRUÇÃO"], ["nave", "NAVE"], ["natureza", "NATUREZA"], ["chao", "CHÃO"], ["planicies", "PLANÍCIES"], ["ceu", "CÉU"], ["efeitos", "EFEITOS"], ["enfeites", "ENFEITES"], ["conjuntos", "CONJUNTOS"], ["lista", "NA ARENA"]];
 const ARENA_ANIMADAS_MAX = 10;   // peças que se mexem (desenhadas a cada quadro)
 const ARENA_DESFAZER_MAX = 50;   // passos guardados no ↶ DESFAZER do editor
 const ARENA_GRADE = 20;          // GRADE ligada: posições de 20 em 20 e giro de 15 em 15 graus
 const ARENA_TESTE_ID = "arena_teste";   // fase temporária do TESTAR (só existe durante a luta de teste)
 let arenaTeste = null;           // { ed, arena, antes } enquanto a luta de teste do editor acontece
+// EMPILHAR: construções soltas em cima destas peças encaixam alinhadas no topo (altura do topo, sem o tamanho)
+const ARENA_SUPORTES = { bloco: 30, pilar: 68, predio: 72.2, ringue: 10 };
+// altura aproximada de cada peça (espaço em pé, câmera perto, toque na tela grande); as outras: 40
+const AR_ALTURAS = { bloco: 30, pilar: 68, predio: 72, ringue: 10, parede: 36, parede_janelas: 40, parede_porta: 40, escada: 24, portao: 63,
+    coluna_lava: 260, arco_lava: 190, torre: 100, torre_mirante: 90, montanha: 140, mesa_pedra: 90, fumaca: 160, antena: 70, coqueiro: 80, brasas: 110 };
+function arenaAlturaPeca(p) { return (AR_ALTURAS[p.t] || 40) * (p.e || 1); }
+const ARENA_CONJUNTOS_MAX = 20;  // conjuntos de peças guardados (aba CONJUNTOS)
 // formatos das peças do chão (gramado, lago, lava...): o mesmo contorno serve de piso ou, com ALTURA, de monte
 const ARENA_FORMATOS = [["circulo", "CÍRCULO"], ["oval", "OVAL"], ["feijao", "FEIJÃO"], ["irregular", "IRREGULAR"], ["rio", "RIO RETO"], ["rio_curvo", "RIO EM CURVA"]];
 
@@ -607,6 +614,17 @@ function normalizarPecaArena(q) {
         p.f = ARENA_FORMATOS.some(f => f[0] === q.f) ? q.f : "circulo";
         p.v = Math.round(arenaNum(q.v, 0, 3, 0) * 10) / 10;
     }
+    if (!def.ceu) {
+        const b = arenaNum(q.b, 0, 900, 0);   // empilhada: altura da base (topo da peça de baixo)
+        if (b > 0) p.b = Math.round(b * 10) / 10;
+        if (p.b && Array.isArray(q.al) && q.al.length === 3 && q.al.every(Number.isFinite)) {   // centro alinhado + largura da de baixo
+            p.al = q.al.map(v => Math.round(v * 10) / 10);
+            p.d = Math.round(arenaNum(q.d, -0.9, 0.9, 0) * 10) / 10;   // DESALINHAR (fração da largura da de baixo)
+        }
+        if (Number.isInteger(q.g) && q.g > 0 && q.g < 1000) { p.g = q.g; if (q.fv) p.fv = true; }   // FUNDIR: grupo e quem dá a aparência
+    }
+    if (q.oc) p.oc = true;   // 👁 escondida no editor
+    if (q.tr) p.tr = true;   // 🔒 travada
     return p;
 }
 function arenaPadrao() {
@@ -629,7 +647,10 @@ function normalizarArena(a) {
         planicie: ARENA_PLANICIES[a.planicie] ? a.planicie : "",
         ceu: { topo: arenaCorValida(a.ceu && a.ceu.topo, d.ceu.topo), horizonte: arenaCorValida(a.ceu && a.ceu.horizonte, d.ceu.horizonte) },
         chao: { tipo: chaoTipo, cor: arenaCorValida(a.chao && a.chao.cor, ARENA_CHAOS[chaoTipo].cor) },
-        pecas: (Array.isArray(a.pecas) ? a.pecas : []).map(normalizarPecaArena).filter(Boolean).slice(0, ARENA_PECAS_MAX)
+        pecas: (Array.isArray(a.pecas) ? a.pecas : []).map(normalizarPecaArena).filter(Boolean).slice(0, ARENA_PECAS_MAX),
+        // USAR COMO CAPA: ângulo (GIRAR) ou caminho andado (SEGUIR) da foto do card; a luta começa dessa vista
+        capa: a.capa && typeof a.capa === "object" && Number.isFinite(a.capa.ang)
+            ? { ang: Math.round(arModulo(a.capa.ang, Math.PI * 2) * 1000) / 1000, andado: Math.round(arenaNum(a.capa.andado, -1e6, 1e6, 0)) } : null
     };
 }
 function getArenasCriadas() {
@@ -661,10 +682,16 @@ function registrarArenasCriadas() {
 function arenaPegada(p) {
     const def = ARENA_PECAS[p.t];
     if (!def || def.ceu || (def.chao && !(p.v > 0))) return null;
-    const e = p.e || 1;
-    if (def.forma) return { r: arRaioForma(p, def.forma) * e * 0.92, x: p.x, z: p.z };
-    if (def.planta && def.planta.ret) return { x: p.x, z: p.z, hw: def.planta.ret[0] * e, hd: def.planta.ret[1] * e, a: (p.r || 0) * Math.PI / 180 };
-    return { r: ((def.planta && def.planta.circ) || 8) * e, x: p.x, z: p.z };
+    const e = p.e || 1, y0 = p.b || 0, y1 = y0 + arenaAlturaPeca(p);
+    if (def.forma) return { r: arRaioForma(p, def.forma) * e * 0.92, x: p.x, z: p.z, y0, y1 };
+    if (def.planta && def.planta.ret) return { x: p.x, z: p.z, hw: def.planta.ret[0] * e, hd: def.planta.ret[1] * e, a: (p.r || 0) * Math.PI / 180, y0, y1 };
+    return { r: ((def.planta && def.planta.circ) || 8) * e, x: p.x, z: p.z, y0, y1 };
+}
+// o ponto (x, z) está dentro da pegada g?
+function arenaPontoNaPegada(g, x, z) {
+    if (g.r !== undefined) return Math.hypot(x - g.x, z - g.z) <= g.r;
+    const c = Math.cos(g.a), s = Math.sin(g.a), dx = x - g.x, dz = z - g.z;
+    return Math.abs(dx * c + dz * s) <= g.hw && Math.abs(-dx * s + dz * c) <= g.hd;
 }
 function arPontoNoRet(px, pz, q) {   // ponto do retângulo q mais perto de (px, pz)
     const c = Math.cos(q.a), s = Math.sin(q.a), dx = px - q.x, dz = pz - q.z;
@@ -677,6 +704,8 @@ function arRetCantos(q) {
 }
 function arenaPegadasSeTocam(a, b) {
     const folga = 1;
+    // uma em cima da outra (ex.: bloco empilhado) não se chocam
+    if (a.y1 !== undefined && b.y1 !== undefined && (a.y1 <= b.y0 + 0.5 || b.y1 <= a.y0 + 0.5)) return false;
     if (a.r !== undefined && b.r !== undefined) return Math.hypot(a.x - b.x, a.z - b.z) < a.r + b.r - folga;
     if (a.r !== undefined || b.r !== undefined) {
         const c = a.r !== undefined ? a : b, q = a.r !== undefined ? b : a, [nx, nz] = arPontoNoRet(c.x, c.z, q);
@@ -692,10 +721,22 @@ function arenaPegadasSeTocam(a, b) {
     return true;
 }
 // a peça i (ou uma peça p fora da lista) invade o espaço de outra?
+// ignorar: índice ou lista de índices que não contam (ex.: as peças arrastadas junto); peças do mesmo grupo de FUSÃO podem se sobrepor
 function arenaPecaColide(pecas, p, ignorar) {
     const g = arenaPegada(p);
     if (!g) return false;
-    return pecas.some((q, j) => { if (j === ignorar || q === p) return false; const h = arenaPegada(q); return !!h && arenaPegadasSeTocam(g, h); });
+    const pula = Array.isArray(ignorar) ? ignorar : [ignorar];
+    return pecas.some((q, j) => {
+        if (pula.includes(j) || q === p || (p.g && q.g === p.g)) return false;
+        const h = arenaPegada(q);
+        return !!h && arenaPegadasSeTocam(g, h);
+    });
+}
+// índices das peças que se sobrepõem à peça i (sem olhar grupos de fusão)
+function arenaPecasTocando(pecas, i) {
+    const g = arenaPegada(pecas[i]);
+    if (!g) return [];
+    return pecas.map((q, j) => j).filter(j => { if (j === i) return false; const h = arenaPegada(pecas[j]); return !!h && arenaPegadasSeTocam(g, h); });
 }
 
 // ---------------- desenho da arena (luta, ARENAS, prévia do editor) ----------------
@@ -773,27 +814,57 @@ function arCopiasDaPeca(p, desl, repete) {
 }
 // opts: desl {x, z} (centro da vista), repete (modo SEGUIR), vermelha (índice da peça que invade outra), anima (desenha
 // os efeitos agora: false = deixa para a passada de cada quadro)
+// peça de base de cada peça empilhada (a pilha é desenhada de baixo para cima, na profundidade da peça do chão)
+function arRaizesDasPilhas(pecas) {
+    const raiz = pecas.map((p, i) => i);
+    pecas.forEach((p, i) => {
+        let atual = i, passos = 0;
+        while (pecas[atual].b > 0 && passos++ < 12) {
+            const q = pecas[atual], base = pecas.findIndex((r, j) => j !== atual && !ARENA_PECAS[r.t].ceu && (r.b || 0) < q.b
+                && Math.abs((r.b || 0) + arenaAlturaPeca(r) - q.b) < 2 && arenaPontoNaPegada(arenaPegada(r) || { r: 0, x: r.x, z: r.z }, q.al ? q.al[0] : q.x, q.al ? q.al[1] : q.z));
+            if (base < 0) break;
+            atual = base;
+        }
+        raiz[i] = atual;
+    });
+    return raiz;
+}
+// desenha a peça com a base levantada (empilhada): subir a peça = baixar a câmera do mesmo tanto
+function arDesenharPecaElevada(o, ang, t) {
+    const antes = trCam;
+    if (o.p.b > 0) trCam = Object.assign({}, antes, { H: antes.H - o.p.b });
+    try { o.d.desenha(o.p, ang, t); } catch (e) { /* peça com erro não derruba o cenário */ }
+    finally { trCam = antes; }
+}
 function arDesenharCena(a, ang, cam, opts) {
     const desl = opts.desl, repete = !!opts.repete;
     const comPos = (p, pos) => Object.assign({ _s: arSemente(p) }, p, pos);
     const plan = ARENA_PLANICIES[a.planicie];
     if (plan) plan.pecas.forEach(p => arCopiasDaPeca(p, desl, repete).forEach(pos => ARENA_PECAS[p.t].desenha(comPos(Object.assign({ r: 0, f: "circulo", v: 0 }, p), pos), ang)));
-    const objs = [];
+    const objs = [], raiz = a.pecas.some(p => p.b > 0) ? arRaizesDasPilhas(a.pecas) : null;
+    const verm = [].concat(opts.vermelha === undefined || opts.vermelha === null ? [] : opts.vermelha);
     a.pecas.forEach((p, i) => {
         const d = ARENA_PECAS[p.t];
-        if (d.ceu || (d.anim && !opts.anima)) return;
-        const q = i === opts.vermelha ? Object.assign({}, p, { c: "#ff3030" }) : p;
+        if (d.ceu || (d.anim && !opts.anima) || (p.oc && opts.esconder)) return;
+        const q = verm.includes(i) ? Object.assign({}, p, { c: "#ff3030" }) : p;
         arCopiasDaPeca(p, desl, repete).forEach(pos => {
-            if (d.chao && !(p.v > 0)) { d.desenha(comPos(q, pos), ang); return; }   // piso plano: embaixo de tudo, na ordem
+            if (d.chao && !(p.v > 0) && !p.b) { d.desenha(comPos(q, pos), ang); return; }   // piso plano: embaixo de tudo, na ordem
             const z = trRot(pos.x, pos.z, ang)[1];
             if (z > cam.CORTE) return;   // perto da câmera demais: tamparia a luta
-            objs.push({ z, p: comPos(q, pos), d, i });
+            // profundidade para ordenar: a da peça do chão da pilha (empilhadas logo depois dela, de baixo para cima)
+            const r = raiz ? a.pecas[raiz[i]] : p;
+            const zk = r === p ? z : trRot(pos.x + r.x - p.x, pos.z + r.z - p.z, ang)[1];
+            objs.push({ z, zk, p: comPos(q, pos), d, i });
         });
     });
+    // FUNDIR: as peças de um grupo saem juntas, na profundidade da mais perto, e a que dá a aparência por último (por cima)
+    const grupoZ = {};
+    objs.forEach(o => { const g = a.pecas[o.i].g; if (g) grupoZ[g] = Math.max(grupoZ[g] === undefined ? -Infinity : grupoZ[g], o.zk); });
+    objs.forEach(o => { const p = a.pecas[o.i]; o.k = p.g ? grupoZ[p.g] : o.zk; o.ult = p.g && p.fv ? 1 : 0; });
     const t = arRelogio();
-    objs.sort((u, v) => u.z - v.z).forEach(o => {
-        try { o.d.desenha(o.p, ang, t); } catch (e) { /* peça com erro não derruba o cenário */ }
-        if (o.i === opts.vermelha) arDesenharPegadaVermelha(o.p, ang);
+    objs.sort((u, v) => (u.k - v.k) || (u.ult - v.ult) || ((u.p.b || 0) - (v.p.b || 0)) || (u.z - v.z)).forEach(o => {
+        arDesenharPecaElevada(o, ang, t);
+        if (verm.includes(o.i)) arDesenharPegadaVermelha(o.p, ang);
     });
 }
 // área da peça pintada de vermelho no chão (invadindo outra peça)
@@ -803,7 +874,7 @@ function arDesenharPegadaVermelha(p, ang) {
     const pts = g.r !== undefined
         ? Array.from({ length: 24 }, (_, i) => { const a = i / 24 * Math.PI * 2; return [g.x + Math.cos(a) * g.r, g.z + Math.sin(a) * g.r]; })
         : arRetCantos(g);
-    trPoly(pts.map(q => trProj(q[0], 1, q[1], ang)));
+    trPoly(pts.map(q => trProj(q[0], 1 + (p.b || 0), q[1], ang)));
     trG.fillStyle = "rgba(255, 30, 30, 0.35)"; trG.fill();
     trG.strokeStyle = "#ff2a2a"; trG.lineWidth = 2; trG.stroke();
 }
@@ -813,13 +884,13 @@ function arDesenharAnimadas(a, ang, cam, opts) {
     const objs = [];
     a.pecas.forEach(p => {
         const d = ARENA_PECAS[p.t];
-        if (!d.anim) return;
+        if (!d.anim || (p.oc && opts.esconder)) return;
         arCopiasDaPeca(p, opts.desl, !!opts.repete).forEach(pos => {
             const z = trRot(pos.x, pos.z, ang)[1];
             if (z <= cam.CORTE) objs.push({ z, p: Object.assign({ _s: arSemente(p) }, p, pos), d });
         });
     });
-    objs.sort((u, v) => u.z - v.z).forEach(o => { try { o.d.desenha(o.p, ang, t); } catch (e) { /* ignora */ } });
+    objs.sort((u, v) => u.z - v.z).forEach(o => arDesenharPecaElevada(o, ang, t));
 }
 // desenha a arena no ctx do jogo. opts: cam (outra câmera), chave (cache), desl, andado (modo SEGUIR), vermelha
 function drawArenaCriada(a, ang, opts) {
@@ -833,7 +904,7 @@ function drawArenaCriada(a, ang, opts) {
         const pano = arPanorama(a, cena, cam);
         if (!pano || !c3BlitPanorama(pano, seguir ? 0 : ang, cam.F, cam.CX)) { ctx.fillStyle = a.ceu.topo; ctx.fillRect(0, 0, canvas.width, cam.HY + 2); }
         arDesenharChao(a, ang, cam, desl);
-        const o = { desl, repete: seguir, vermelha: opts.vermelha };
+        const o = { desl, repete: seguir, vermelha: opts.vermelha, esconder: !!opts.esconder };
         if (seguir || opts.desl) {
             // a vista anda (SEGUIR) ou está centrada numa peça: desenha direto, sem a camada guardada
             trG = ctx;
@@ -850,8 +921,9 @@ function drawArenaCriada(a, ang, opts) {
 function drawArenaCriadaStage(id, scroll) {
     const f = getFaseDef(id);
     if (!f || !f.arena) return;
-    if (f.arena.movimento === "seguir") drawArenaCriada(f.arena, 0, { andado: getForwardTravel(scroll) });
-    else drawArenaCriada(f.arena, getStageLapAngle(scroll, f.camera.volta || 10800));
+    const capa = f.arena.capa;   // USAR COMO CAPA: o card e o começo da luta mostram essa vista
+    if (f.arena.movimento === "seguir") drawArenaCriada(f.arena, 0, { andado: getForwardTravel(scroll) + (capa ? capa.andado : 0) });
+    else drawArenaCriada(f.arena, getStageLapAngle(scroll, f.camera.volta || 10800) + (capa ? capa.ang : 0));
 }
 
 // ---------------- arquivo .arena.json ----------------
@@ -892,7 +964,7 @@ function abrirEditorArenas(id, semRascunho) {
     arenaEd = { arena: a ? JSON.parse(JSON.stringify(a)) : arenaPadrao(), aba: "construcao", tipo: null, previa: null, sel: -1, vista: "arena",
         mover: true, angulo: 0, andado: 0, arrasto: null, vermelhoAte: 0, baixo: "dados",
         zoom: 1, pan: { x: 0, y: 0 }, grade: false, congelar: false, maximizado: false, dedos: new Map(), pinca: null,
-        hist: { pilha: [], i: -1 } };
+        hist: { pilha: [], i: -1 }, multi: [], fundir: false, retangulo: null, conjunto: null, rotulos: null };
     const m = document.getElementById("modal-arena");
     if (!m) return;
     arenaRegistrarPasso(true);
@@ -928,6 +1000,7 @@ function arenaIrParaPasso(i) {
     h.i = i;
     arenaEd.arena = JSON.parse(h.pilha[i]);
     arenaEd.sel = Math.min(arenaEd.sel, arenaEd.arena.pecas.length - 1);
+    arenaEd.multi = [];
     arenaEd.arrasto = null;
     arenaEd.vista = arenaEd.sel >= 0 ? "foco" : "arena";
     arenaPreencherCampos();
@@ -956,6 +1029,7 @@ function arenaAtualizarFerramentas() {
     liga("arena-desfazer", h.i > 0);
     liga("arena-refazer", h.i < h.pilha.length - 1);
     liga("arena-grade", true, arenaEd.grade);
+    liga("arena-fundir", true, arenaEd.fundir);
     const mx = document.getElementById("arena-maximizar");
     if (mx) mx.textContent = T(arenaEd.maximizado ? "MINIMIZAR" : "MAXIMIZAR");
 }
@@ -991,7 +1065,7 @@ function arenaPerguntarRascunho() {
     showSystemConfirm("EDITOR DE ARENAS", `CONTINUAR O RASCUNHO DA ARENA ${r.nome}?`, () => {
         if (!arenaEd) return;
         arenaEd.arena = r;
-        arenaEd.sel = -1; arenaEd.vista = "arena";
+        arenaEd.sel = -1; arenaEd.multi = []; arenaEd.vista = "arena";
         arenaPreencherCampos();
         arenaRegistrarPasso();
     }, "CONTINUAR", "COMEÇAR LIMPO");
@@ -1113,11 +1187,41 @@ function arenaMostrarAba(aba) {
             b.onclick = acao;
             lista.appendChild(b);
         };
-        if (aba === "planicies") {
+        if (aba === "conjuntos") {
+            const conj = getArenaConjuntos();
+            if (!conj.length) { const p = document.createElement("p"); p.className = "ar-vazia"; p.textContent = "Escolha várias peças (arraste um retângulo na planta) e toque em SALVAR CONJUNTO."; lista.appendChild(p); }
+            conj.forEach((c, k) => {
+                botao(c.nome, arenaEd.conjunto === k, () => { if (arenaEd.conjunto === k) { arenaEd.conjunto = null; arenaMostrarAba("conjuntos"); } else arenaVerPeca("conjunto:" + k); });
+                const x = document.createElement("button");
+                x.type = "button"; x.className = "btn ar-peca ar-apagar"; x.textContent = "✕"; x.setAttribute && x.setAttribute("aria-label", "Apagar conjunto");
+                x.onclick = () => arenaApagarConjunto(k);
+                lista.appendChild(x);
+            });
+        } else if (aba === "lista") {
+            // peças da arena: tocar escolhe; 👁 esconde só no editor; 🔒 trava (não dá para tocar/arrastar)
+            arenaEd.arena.pecas.forEach((p, i) => {
+                const linha = document.createElement("div");
+                linha.className = "ar-linha" + (i === arenaEd.sel || (arenaEd.multi || []).includes(i) ? " ar-linha-sel" : "");
+                const nome = document.createElement("button");
+                nome.type = "button"; nome.className = "btn ar-peca" + (p.oc ? " ar-oculta" : "");
+                nome.textContent = `${i + 1}. ${ARENA_PECAS[p.t].nome}`;
+                nome.onclick = () => arenaEscolherDaLista(i);
+                const olho = document.createElement("button");
+                olho.type = "button"; olho.className = "btn ar-peca ar-icone" + (p.oc ? " ar-desligado" : ""); olho.textContent = "👁";
+                olho.onclick = () => arenaAlternarOculta(i);
+                const trava = document.createElement("button");
+                trava.type = "button"; trava.className = "btn ar-peca ar-icone" + (p.tr ? " ar-armada" : ""); trava.textContent = p.tr ? "🔒" : "🔓";
+                trava.onclick = () => arenaAlternarTrava(i);
+                linha.appendChild(nome); linha.appendChild(olho); linha.appendChild(trava);
+                lista.appendChild(linha);
+            });
+        } else if (aba === "planicies") {
             botao("SEM PLANÍCIE", !arenaEd.arena.planicie, () => { arenaEd.arena.planicie = ""; arenaMostrarAba("planicies"); arenaDesenharPlanta(); arenaRegistrarPasso(); });
             Object.keys(ARENA_PLANICIES).forEach(k => botao(ARENA_PLANICIES[k].nome, arenaEd.arena.planicie === k, () => arenaVerPeca("planicie:" + k)));
         } else {
-            Object.keys(ARENA_PECAS).filter(k => ARENA_PECAS[k].aba === aba).forEach(k => botao(ARENA_PECAS[k].nome, arenaEd.tipo === k, () => arenaVerPeca(k)));
+            // tocar de novo na peça pronta para colocar desliga (os toques voltam a escolher peças)
+            Object.keys(ARENA_PECAS).filter(k => ARENA_PECAS[k].aba === aba).forEach(k => botao(ARENA_PECAS[k].nome, arenaEd.tipo === k,
+                () => { if (arenaEd.tipo === k) { arenaEd.tipo = null; arenaMostrarAba(aba); } else arenaVerPeca(k); }));
         }
     }
     arenaDica();
@@ -1127,7 +1231,11 @@ function arenaDica(texto) {
     const dica = document.getElementById("arena-dica");
     if (!dica || !arenaEd) return;
     dica.classList && dica.classList.toggle("ar-dica-erro", !!texto);
-    dica.textContent = texto || (arenaEd.aba === "planicies"
+    dica.textContent = texto || (arenaEd.aba === "lista"
+        ? "NA ARENA: todas as peças. 👁 esconde a peça só no editor; 🔒 trava (não dá para tocar nem arrastar)."
+        : arenaEd.aba === "conjuntos"
+        ? (arenaEd.conjunto !== null ? "Toque na planta ou na tela grande para colocar o conjunto." : "CONJUNTOS: peças guardadas juntas. Escolha um, veja na tela grande e confirme.")
+        : arenaEd.aba === "planicies"
         ? "PLANÍCIES: o chão completo de uma fase. Escolha, veja na tela grande e confirme."
         : arenaEd.aba === "ceu"
             ? "CÉU: escolha uma peça e toque na faixa do céu (esquerda/direita = em volta, altura = mais alto ou mais baixo)."
@@ -1145,7 +1253,11 @@ function arenaVerPeca(k) {
 function arenaConfirmarPeca() {
     if (!arenaEd || !arenaEd.previa) return;
     const k = arenaEd.previa;
-    if (k.startsWith("planicie:")) {
+    if (k.startsWith("conjunto:")) {
+        arenaEd.conjunto = Number(k.slice(9));
+        arenaEd.tipo = null;
+        arenaMostrarAba("conjuntos");
+    } else if (k.startsWith("planicie:")) {
         const id = k.slice(9), pl = ARENA_PLANICIES[id];
         arenaEd.arena.planicie = id;
         arenaEd.arena.ceu = Object.assign({}, pl.ceu);
@@ -1156,6 +1268,7 @@ function arenaConfirmarPeca() {
         if (ARENA_PECAS[k].anim && arenaEd.arena.pecas.filter(p => ARENA_PECAS[p.t].anim).length >= ARENA_ANIMADAS_MAX)
             return showSystemAlert("EDITOR DE ARENAS", "LIMITE DE 10 EFEITOS POR ARENA.");
         arenaEd.tipo = k;
+        arenaEd.conjunto = null;
         if (ARENA_PECAS[k].aba !== arenaEd.aba) arenaMostrarAba(ARENA_PECAS[k].aba); else arenaMostrarAba(arenaEd.aba);
     }
     arenaEd.previa = null;
@@ -1183,33 +1296,55 @@ function arenaAtualizarVista() {
     if (tit) {
         const p = arenaEd.arena.pecas[arenaEd.sel];
         tit.textContent = v === "previa"
-            ? (arenaEd.previa.startsWith("planicie:") ? ARENA_PLANICIES[arenaEd.previa.slice(9)].nome : ARENA_PECAS[arenaEd.previa].nome)
+            ? (arenaEd.previa.startsWith("planicie:") ? ARENA_PLANICIES[arenaEd.previa.slice(9)].nome
+                : arenaEd.previa.startsWith("conjunto:") ? ((getArenaConjuntos()[Number(arenaEd.previa.slice(9))] || {}).nome || "")
+                : ARENA_PECAS[arenaEd.previa].nome)
             : v === "foco" && p ? ARENA_PECAS[p.t].nome : arenaEd.arena.nome;
     }
 }
-// ---- quadro da peça escolhida ----
+// ---- quadro da peça escolhida (uma peça ou várias, escolhidas com o retângulo na planta) ----
+// índices escolhidos agora: as várias do retângulo, ou só a peça escolhida
+function arenaEscolhidas() {
+    if (!arenaEd) return [];
+    if (arenaEd.multi && arenaEd.multi.length) return arenaEd.multi.filter(i => !!arenaEd.arena.pecas[i]);
+    return arenaEd.arena.pecas[arenaEd.sel] ? [arenaEd.sel] : [];
+}
+function arenaLimparEscolha() { if (arenaEd) { arenaEd.sel = -1; arenaEd.multi = []; } }
 function arenaAtualizarSelecao() {
     const box = document.getElementById("arena-selecao");
     if (!box || !arenaEd) return;
-    const p = arenaEd.arena.pecas[arenaEd.sel];
-    arenaMostrar("arena-selecao-vazia", !p);
+    const multi = arenaEd.multi && arenaEd.multi.length > 1;
+    const p = multi ? null : arenaEd.arena.pecas[arenaEd.sel];
+    arenaMostrar("arena-selecao-vazia", !p && !multi);
     arenaMostrar("arena-selecao-campos", !!p);
+    arenaMostrar("arena-selecao-multi", multi);
+    if (multi) { const t = document.getElementById("arena-multi-nome"); if (t) t.textContent = `${arenaEd.multi.length} PEÇAS ESCOLHIDAS`; }
+    arenaMostrar("arena-sel-espelho", !!p || multi);
     if (!p) return;
     const def = ARENA_PECAS[p.t];
     const nome = document.getElementById("arena-sel-nome"); if (nome) nome.textContent = def.nome;
     arenaDefinir("arena-sel-tam", p.e); arenaDefinir("arena-sel-cor", p.c);
     arenaMostrar("arena-sel-giro-grupo", !def.ceu);
     arenaDefinir("arena-sel-giro", def.ceu ? 0 : p.r);
+    const giro = document.getElementById("arena-sel-giro");
+    if (giro && giro.setAttribute) giro.setAttribute("step", arenaEd.grade ? "15" : "1");
     arenaMostrar("arena-sel-texto-grupo", def.texto !== undefined);
     arenaDefinir("arena-sel-texto", p.txt || "");
     arenaMostrar("arena-sel-forma-grupo", !!def.forma);
     arenaMostrar("arena-sel-altura-grupo", !!def.forma);
     if (def.forma) { arenaDefinir("arena-sel-forma", p.f || "circulo"); arenaDefinir("arena-sel-altura", p.v || 0); }
+    // DESALINHAR: só para peça empilhada (de 10 em 10% da largura da peça de baixo)
+    arenaMostrar("arena-sel-desalinho-grupo", !!p.al);
+    if (p.al) {
+        arenaDefinir("arena-sel-desalinho", Math.round((p.d || 0) * 100));
+        const v = document.getElementById("arena-sel-desalinho-valor"); if (v) v.textContent = Math.round((p.d || 0) * 100) + "%";
+    }
 }
 function arenaMudarSelecao() {
     const p = arenaEd && arenaEd.arena.pecas[arenaEd.sel];
     if (!p) return;
-    const def = ARENA_PECAS[p.t], antes = Object.assign({}, p);
+    const def = ARENA_PECAS[p.t], antes = JSON.parse(JSON.stringify(p));
+    const acima = arenaPecasAcima(arenaEd.arena.pecas, arenaEd.sel), acimaAntes = acima.map(j => JSON.parse(JSON.stringify(arenaEd.arena.pecas[j])));
     p.e = Math.round(arenaNum(arenaValorDe("arena-sel-tam"), 0.3, 3, p.e) * 100) / 100;
     p.c = arenaCorValida(arenaValorDe("arena-sel-cor"), p.c);
     if (!def.ceu) p.r = arenaGiroNaGrade(arenaNum(arenaValorDe("arena-sel-giro"), 0, 359, p.r));
@@ -1219,49 +1354,341 @@ function arenaMudarSelecao() {
         if (ARENA_FORMATOS.some(x => x[0] === f)) p.f = f;
         p.v = Math.round(arenaNum(arenaValorDe("arena-sel-altura"), 0, 3, p.v || 0) * 10) / 10;
     }
-    // maior ou girada, invadiria outra peça: volta como estava e pisca vermelho
-    if (arenaPecaColide(arenaEd.arena.pecas, p, arenaEd.sel)) {
-        Object.assign(p, antes);
+    if (p.al) {   // DESALINHAR: anda pela largura da peça de baixo; quem está em cima vai junto
+        p.d = Math.round(arenaNum(arenaValorDe("arena-sel-desalinho"), -90, 90, (p.d || 0) * 100) / 10) / 10;
+        const x0 = p.x, z0 = p.z;
+        arenaAplicarDesalinho(p);
+        acima.forEach(j => arenaDeslocar(arenaEd.arena.pecas[j], p.x - x0, p.z - z0, 0));
+        const v = document.getElementById("arena-sel-desalinho-valor"); if (v) v.textContent = Math.round(p.d * 100) + "%";
+    }
+    // maior, girada ou desalinhada, invadiria outra peça: volta como estava e pisca vermelho
+    const ignorar = [arenaEd.sel].concat(acima);
+    if (!arenaEd.fundir && [arenaEd.sel].concat(acima).some(j => arenaPecaColide(arenaEd.arena.pecas, arenaEd.arena.pecas[j], ignorar))) {
+        Object.keys(p).forEach(k => delete p[k]); Object.assign(p, antes);
+        acima.forEach((j, n) => { const q = arenaEd.arena.pecas[j]; Object.keys(q).forEach(k => delete q[k]); Object.assign(q, acimaAntes[n]); });
         arenaAtualizarSelecao();
         arenaEd.vermelhoAte = performance.now() + 700;
         arenaDica("LUGAR OCUPADO: a peça invadiria o espaço de outra.");
-    }
+    } else if (arenaEd.fundir) arenaRefazerGrupos(arenaEd.arena.pecas);
     arenaEd.vista = "foco";
     arenaAtualizarVista();
     arenaDesenharPlanta();
     arenaRegistrarPasso();
 }
 function arenaApagarSelecao() {
-    if (!arenaEd || arenaEd.sel < 0) return;
-    arenaEd.arena.pecas.splice(arenaEd.sel, 1);
-    arenaEd.sel = -1;
+    const lista = arenaEscolhidas();
+    if (!lista.length) return;
+    lista.slice().sort((a, b) => b - a).forEach(i => arenaEd.arena.pecas.splice(i, 1));
+    arenaRefazerGrupos(arenaEd.arena.pecas);
+    arenaLimparEscolha();
     arenaEd.vista = "arena";
     arenaAtualizarSelecao(); arenaAtualizarVista(); arenaDesenharPlanta();
     arenaRegistrarPasso();
 }
+// cabem mais estas peças? (limite de peças e de efeitos)
+function arenaCabemPecas(novas) {
+    const a = arenaEd.arena;
+    if (a.pecas.length + novas.length > ARENA_PECAS_MAX) { showSystemAlert("EDITOR DE ARENAS", "LIMITE DE 80 PEÇAS POR ARENA."); return false; }
+    const anim = (l) => l.filter(q => ARENA_PECAS[q.t].anim).length;
+    if (anim(a.pecas) + anim(novas) > ARENA_ANIMADAS_MAX) { showSystemAlert("EDITOR DE ARENAS", "LIMITE DE 10 EFEITOS POR ARENA."); return false; }
+    return true;
+}
+// cópia limpa de uma peça (sem grupo de fusão e sem 👁/🔒)
+function arenaCopiaPeca(p) { const q = JSON.parse(JSON.stringify(p)); delete q.g; delete q.fv; delete q.oc; delete q.tr; return q; }
+function arenaDeslocar(q, dx, dz, db) {
+    if (ARENA_PECAS[q.t].ceu) return;
+    q.x = Math.round(q.x + dx); q.z = Math.round(q.z + dz);
+    if (q.al) { q.al[0] = Math.round((q.al[0] + dx) * 10) / 10; q.al[1] = Math.round((q.al[1] + dz) * 10) / 10; }
+    if (db) { q.b = Math.round(((q.b || 0) + db) * 10) / 10; if (!(q.b > 0)) { delete q.b; delete q.al; delete q.d; } }
+}
 function arenaDuplicarSelecao() {
-    const p = arenaEd && arenaEd.arena.pecas[arenaEd.sel];
-    if (!p) return;
-    if (arenaEd.arena.pecas.length >= ARENA_PECAS_MAX) return showSystemAlert("EDITOR DE ARENAS", "LIMITE DE 80 PEÇAS POR ARENA.");
-    if (ARENA_PECAS[p.t].anim && arenaEd.arena.pecas.filter(q => ARENA_PECAS[q.t].anim).length >= ARENA_ANIMADAS_MAX) return showSystemAlert("EDITOR DE ARENAS", "LIMITE DE 10 EFEITOS POR ARENA.");
-    const q = Object.assign({}, p);
-    if (ARENA_PECAS[p.t].ceu) q.a = (q.a + 20) % 360;
+    const lista = arenaEscolhidas();
+    if (!lista.length) return;
+    const pecas = arenaEd.arena.pecas, orig = lista.map(i => pecas[i]);
+    if (!arenaCabemPecas(orig)) return;
+    let copias = null;
+    if (orig.length === 1 && ARENA_PECAS[orig[0].t].ceu) { copias = [arenaCopiaPeca(orig[0])]; copias[0].a = (copias[0].a + 20) % 360; }
     else {
-        // procura um lugar livre ao lado, em voltas cada vez maiores
-        let achou = false;
-        for (let r = 30; r <= 600 && !achou; r += 30) for (let i = 0; i < 12 && !achou; i++) {
-            const a = i / 12 * Math.PI * 2;
-            q.x = Math.round(Math.max(-ARENA_RAIO, Math.min(ARENA_RAIO, p.x + Math.cos(a) * r)));
-            q.z = Math.round(Math.max(-ARENA_RAIO, Math.min(ARENA_RAIO, p.z + Math.sin(a) * r)));
-            achou = !arenaPecaColide(arenaEd.arena.pecas, q, -1);
+        // procura um lugar livre ao lado (o mesmo deslocamento para todas), em voltas cada vez maiores
+        for (let r = 30; r <= 600 && !copias; r += 30) for (let k = 0; k < 12 && !copias; k++) {
+            const a = k / 12 * Math.PI * 2, dx = Math.round(Math.cos(a) * r), dz = Math.round(Math.sin(a) * r);
+            const l = orig.map(p => { const q = arenaCopiaPeca(p); arenaDeslocar(q, dx, dz, 0); return q; });
+            if (l.some(q => !ARENA_PECAS[q.t].ceu && (Math.abs(q.x) > ARENA_RAIO || Math.abs(q.z) > ARENA_RAIO))) continue;
+            const teste = pecas.concat(l);
+            if (!l.some((q, n) => arenaPecaColide(teste, q, l.map((_, m) => pecas.length + m).filter(m => m !== pecas.length + n)))) copias = l;
         }
-        if (!achou) return arenaDica("LUGAR OCUPADO: não há espaço livre para duplicar.");
+        if (!copias) return arenaDica("LUGAR OCUPADO: não há espaço livre para duplicar.");
     }
-    arenaEd.arena.pecas.push(q);
-    arenaEd.sel = arenaEd.arena.pecas.length - 1;
-    arenaEd.vista = "foco";
+    const ini = pecas.length;
+    copias.forEach(q => pecas.push(q));
+    if (copias.length > 1) { arenaEd.multi = copias.map((_, n) => ini + n); arenaEd.sel = -1; }
+    else { arenaEd.sel = ini; arenaEd.multi = []; arenaEd.vista = "foco"; }
     arenaAtualizarSelecao(); arenaAtualizarVista(); arenaDesenharPlanta();
     arenaRegistrarPasso();
+}
+// gira a peça escolhida (ou as várias, em volta do centro delas)
+function arenaGirarSelecao(graus) {
+    const lista = arenaEscolhidas().filter(i => !ARENA_PECAS[arenaEd.arena.pecas[i].t].ceu);
+    if (!lista.length) return;
+    const pecas = arenaEd.arena.pecas, antes = lista.map(i => JSON.parse(JSON.stringify(pecas[i])));
+    const cx = lista.reduce((s, i) => s + pecas[i].x, 0) / lista.length, cz = lista.reduce((s, i) => s + pecas[i].z, 0) / lista.length;
+    const a = graus * Math.PI / 180, c = Math.cos(a), sn = Math.sin(a);
+    lista.forEach(i => {
+        const p = pecas[i], gira = (x, z) => [cx + (x - cx) * c - (z - cz) * sn, cz + (x - cx) * sn + (z - cz) * c];
+        p.r = ((p.r + graus) % 360 + 360) % 360;
+        if (lista.length > 1) {
+            [p.x, p.z] = gira(p.x, p.z).map(Math.round);
+            if (p.al) { const g = gira(p.al[0], p.al[1]); p.al[0] = Math.round(g[0] * 10) / 10; p.al[1] = Math.round(g[1] * 10) / 10; }
+        } else if (p.al) arenaAplicarDesalinho(p);
+    });
+    if (!arenaEd.fundir && lista.some(i => arenaPecaColide(pecas, pecas[i], lista))) {
+        lista.forEach((i, n) => { Object.keys(pecas[i]).forEach(k => delete pecas[i][k]); Object.assign(pecas[i], antes[n]); });
+        arenaEd.vermelhoAte = performance.now() + 700;
+        arenaDica("LUGAR OCUPADO: a peça invadiria o espaço de outra.");
+    }
+    arenaAtualizarSelecao(); arenaDesenharPlanta();
+    arenaRegistrarPasso();
+}
+// ESPELHAR: copia a escolha do outro lado da arena (esquerda/direita, frente/trás ou os dois) — simetria em volta da luta
+function arenaEspelhar(modo) {
+    const lista = arenaEscolhidas().filter(i => !ARENA_PECAS[arenaEd.arena.pecas[i].t].ceu);
+    if (!lista.length) return;
+    const pecas = arenaEd.arena.pecas, novas = [];
+    const lados = modo === "os_dois" ? [[-1, 1], [1, -1], [-1, -1]] : [modo === "lado" ? [-1, 1] : [1, -1]];
+    lados.forEach(([sx, sz]) => lista.forEach(i => {
+        const q = arenaCopiaPeca(pecas[i]);
+        q.x = q.x * sx; q.z = q.z * sz;
+        if (q.al) { q.al[0] *= sx; q.al[1] *= sz; }
+        q.r = sx < 0 && sz < 0 ? (q.r + 180) % 360 : sx < 0 ? ((180 - q.r) % 360 + 360) % 360 : ((360 - q.r) % 360);
+        novas.push(q);
+    }));
+    let postas = 0, fora = 0;
+    for (const q of novas) {
+        if (pecas.length >= ARENA_PECAS_MAX || (ARENA_PECAS[q.t].anim && pecas.filter(r => ARENA_PECAS[r.t].anim).length >= ARENA_ANIMADAS_MAX)) { fora++; continue; }
+        if (arenaPecaColide(pecas, q, -1)) { fora++; continue; }
+        pecas.push(q); postas++;
+    }
+    arenaDica(fora ? `ESPELHO: ${postas} PEÇA(S) COPIADA(S), ${fora} SEM ESPAÇO.` : `ESPELHO: ${postas} PEÇA(S) COPIADA(S).`);
+    arenaDesenharPlanta();
+    arenaRegistrarPasso();
+}
+// ---- empilhar (construção em cima de bloco, pilar, prédio ou ringue) e DESALINHAR ----
+function arenaTopoSuporte(q) { return (q.b || 0) + ARENA_SUPORTES[q.t] * (q.e || 1); }
+// suporte mais alto embaixo do ponto (x, z), sem contar as peças de "excluir"
+function arenaSuporteEm(pecas, x, z, excluir) {
+    let melhor = -1, topo = -1;
+    pecas.forEach((q, j) => {
+        if (excluir.includes(j) || !ARENA_SUPORTES[q.t] || q.oc) return;
+        const g = arenaPegada(q);
+        if (!g || !arenaPontoNaPegada(g, x, z)) return;
+        const t = arenaTopoSuporte(q);
+        if (t > topo) { topo = t; melhor = j; }
+    });
+    return melhor;
+}
+function arenaAplicarDesalinho(p) {
+    if (!p.al) return;
+    const a = (p.r || 0) * Math.PI / 180, k = (p.d || 0) * p.al[2];
+    p.x = Math.round(p.al[0] + Math.cos(a) * k);
+    p.z = Math.round(p.al[1] + Math.sin(a) * k);
+}
+function arenaEmpilharSobre(p, q) {
+    const def = ARENA_PECAS[q.t], e = q.e || 1;
+    p.b = Math.round(arenaTopoSuporte(q) * 10) / 10;
+    p.r = q.r || 0;
+    p.al = [q.x, q.z, Math.round((def.planta.ret ? def.planta.ret[0] * 2 : (def.planta.circ || 8) * 2) * e * 10) / 10];
+    p.d = p.d || 0;
+    arenaAplicarDesalinho(p);
+}
+// põe a peça em (x, z); construção solta em cima de um suporte encaixa alinhada no topo dele (devolve true)
+function arenaPorPecaEncaixada(p, x, z, excluir) {
+    if (ARENA_PECAS[p.t].aba === "construcao" && !arenaEd.fundir) {
+        const j = arenaSuporteEm(arenaEd.arena.pecas, x, z, excluir || []);
+        if (j >= 0) { arenaEmpilharSobre(p, arenaEd.arena.pecas[j]); return true; }
+    }
+    arenaPorPeca(p, x, z);
+    delete p.b; delete p.al; delete p.d;
+    return false;
+}
+// peças apoiadas em cima da peça i (e em cima delas, e assim por diante)
+function arenaPecasAcima(pecas, i) {
+    const res = [], fila = [i];
+    while (fila.length) {
+        const k = fila.shift(), q = pecas[k];
+        if (!q || !ARENA_SUPORTES[q.t]) continue;
+        const topo = arenaTopoSuporte(q), g = arenaPegada(q);
+        pecas.forEach((r, j) => {
+            if (j === i || res.includes(j) || !(r.b > 0) || Math.abs(r.b - topo) > 1) return;
+            if (g && arenaPontoNaPegada(g, r.al ? r.al[0] : r.x, r.al ? r.al[1] : r.z)) { res.push(j); fila.push(j); }
+        });
+    }
+    return res;
+}
+// ---- FUNDIR (recorte): peças sobrepostas viram um grupo; uma delas dá a aparência da parte fundida ----
+// refaz os grupos depois de mover/apagar: só ficam juntas as que ainda se sobrepõem, cada grupo com uma aparência
+function arenaRefazerGrupos(pecas) {
+    const comG = pecas.map((p, i) => i).filter(i => pecas[i].g);
+    const visto = new Set();
+    let proximo = 1;
+    const novos = [];
+    comG.forEach(i => {
+        if (visto.has(i)) return;
+        const comp = [], fila = [i];
+        visto.add(i);
+        while (fila.length) {
+            const k = fila.shift();
+            comp.push(k);
+            arenaPecasTocando(pecas, k).forEach(j => { if (pecas[j].g && !visto.has(j)) { visto.add(j); fila.push(j); } });
+        }
+        novos.push(comp);
+    });
+    novos.forEach(comp => {
+        if (comp.length < 2) { comp.forEach(k => { delete pecas[k].g; delete pecas[k].fv; }); return; }
+        const g = proximo++, fv = comp.find(k => pecas[k].fv);
+        comp.forEach(k => { pecas[k].g = g; delete pecas[k].fv; });
+        pecas[fv !== undefined ? fv : comp[0]].fv = true;
+    });
+}
+// algum ponto da peça p cai numa parte NÃO fundida (coberta por uma só peça) do grupo?
+function arenaTocaParteSolta(pecas, p, membros) {
+    const g = arenaPegada(p);
+    if (!g) return false;
+    const R = g.r !== undefined ? g.r : Math.hypot(g.hw, g.hd), pegs = membros.map(j => arenaPegada(pecas[j])).filter(Boolean);
+    for (let u = -1; u <= 1.001; u += 0.25) for (let v = -1; v <= 1.001; v += 0.25) {
+        const x = g.x + u * R, z = g.z + v * R;
+        if (!arenaPontoNaPegada(g, x, z)) continue;
+        const n = pegs.filter(h => arenaPontoNaPegada(h, x, z)).length;
+        if (n === 1) return true;
+    }
+    return false;
+}
+// a peça i acabou de ser posta/solta com FUNDIR ligado: entra no grupo e, quando precisa, pergunta a aparência
+function arenaFundirPeca(i) {
+    const pecas = arenaEd.arena.pecas, p = pecas[i];
+    const toca = arenaPecasTocando(pecas, i);
+    delete p.fv;
+    if (!toca.length) { delete p.g; arenaRefazerGrupos(pecas); return; }
+    const grupos = [...new Set(toca.map(j => pecas[j].g).filter(Boolean))], soltas = toca.filter(j => !pecas[j].g);
+    // só encosta na parte fundida de um grupo: segue a aparência escolhida nele, sem perguntar
+    const membrosAntes = grupos.length === 1 ? pecas.map((q, j) => j).filter(j => j !== i && pecas[j].g === grupos[0]) : [];
+    const pergunta = !(soltas.length === 0 && grupos.length === 1 && !arenaTocaParteSolta(pecas, p, membrosAntes));
+    // marca todas as que se tocam; arenaRefazerGrupos junta tudo o que se sobrepõe num grupo só
+    p.g = 999;
+    soltas.forEach(j => { pecas[j].g = 998; });
+    arenaRefazerGrupos(pecas);
+    if (pergunta && pecas[i].g) arenaPerguntarAparencia(pecas.map((q, j) => j).filter(j => pecas[j].g === pecas[i].g));
+}
+function arenaPerguntarAparencia(membros) {
+    const pecas = arenaEd.arena.pecas;
+    arenaEd.rotulos = {};
+    membros.forEach((j, n) => { arenaEd.rotulos[j] = n + 1; });
+    arenaDesenharPlanta();
+    const escolher = (j) => () => {
+        if (!arenaEd) return;
+        const g = pecas[j] && pecas[j].g;
+        if (g) { pecas.forEach(q => { if (q.g === g) delete q.fv; }); pecas[j].fv = true; }
+        arenaEd.rotulos = null;
+        arenaDesenharPlanta();
+        arenaRegistrarPasso();
+    };
+    showSystemChoice("FUNDIR", "QUAL PEÇA DÁ A APARÊNCIA DA PARTE FUNDIDA? (OS NÚMEROS ESTÃO NA PLANTA)",
+        membros.map((j, n) => ({ label: `${n + 1}. ${ARENA_PECAS[pecas[j].t].nome}`, acao: escolher(j) })));
+}
+function arenaAlternarFundir() {
+    if (!arenaEd) return;
+    arenaEd.fundir = !arenaEd.fundir;
+    arenaAtualizarFerramentas();
+    arenaDica(arenaEd.fundir ? "FUNDIR LIGADO: peças podem se sobrepor e as partes sobrepostas se fundem." : null);
+}
+// ---- CONJUNTOS: grupos de peças guardados para usar de novo (em qualquer arena) ----
+function getArenaConjuntos() {
+    const l = readJsonStorage("saiyan_arena_conjuntos", []);
+    return (Array.isArray(l) ? l : []).filter(c => c && typeof c.nome === "string" && Array.isArray(c.pecas))
+        .map(c => ({ nome: c.nome.slice(0, 24), pecas: c.pecas.map(normalizarPecaArena).filter(Boolean).slice(0, ARENA_PECAS_MAX) }))
+        .filter(c => c.pecas.length).slice(0, ARENA_CONJUNTOS_MAX);
+}
+function arenaSalvarConjunto() {
+    const lista = arenaEscolhidas().filter(i => !ARENA_PECAS[arenaEd.arena.pecas[i].t].ceu);
+    if (!lista.length) return;
+    const conj = getArenaConjuntos();
+    if (conj.length >= ARENA_CONJUNTOS_MAX) return showSystemAlert("EDITOR DE ARENAS", "LIMITE DE 20 CONJUNTOS. APAGUE UM NA ABA CONJUNTOS.");
+    const pecas = arenaEd.arena.pecas;
+    const cx = Math.round(lista.reduce((s, i) => s + pecas[i].x, 0) / lista.length), cz = Math.round(lista.reduce((s, i) => s + pecas[i].z, 0) / lista.length);
+    const rel = lista.map(i => { const q = arenaCopiaPeca(pecas[i]); arenaDeslocar(q, -cx, -cz, 0); if (pecas[i].g) { q.g = pecas[i].g; if (pecas[i].fv) q.fv = true; } return q; });
+    showSystemPrompt("SALVAR CONJUNTO", "NOME DO CONJUNTO:", "CONJUNTO " + (conj.length + 1), (nome) => {
+        const n = String(nome || "").trim().toUpperCase().slice(0, 24) || "CONJUNTO " + (conj.length + 1);
+        conj.push({ nome: n, pecas: rel });
+        writeStorage("saiyan_arena_conjuntos", JSON.stringify(conj));
+        if (arenaEd && arenaEd.aba === "conjuntos") arenaMostrarAba("conjuntos");
+        arenaDica(`CONJUNTO ${n} SALVO NA ABA CONJUNTOS.`);
+    }, 24);
+}
+function arenaApagarConjunto(k) {
+    const conj = getArenaConjuntos(), c = conj[k];
+    if (!c) return;
+    showSystemConfirm("CONJUNTOS", `APAGAR O CONJUNTO ${c.nome}?`, () => {
+        conj.splice(k, 1);
+        writeStorage("saiyan_arena_conjuntos", JSON.stringify(conj));
+        if (arenaEd) { if (arenaEd.conjunto === k) arenaEd.conjunto = null; arenaMostrarAba("conjuntos"); }
+    }, "APAGAR");
+}
+// peças do conjunto k postas com o centro em (x, z); null se não couber
+function arenaPecasDoConjunto(k, x, z) {
+    const c = getArenaConjuntos()[k];
+    if (!c) return null;
+    const dx = arenaNaGrade(x), dz = arenaNaGrade(z), base = Math.max(0, ...arenaEd.arena.pecas.map(p => p.g || 0));
+    return c.pecas.map(p => { const q = JSON.parse(JSON.stringify(p)); arenaDeslocar(q, dx, dz, 0); if (q.g) q.g += base; return q; });
+}
+function arenaColocarConjunto(x, z) {
+    const novas = arenaPecasDoConjunto(arenaEd.conjunto, x, z);
+    if (!novas) return false;
+    if (!arenaCabemPecas(novas)) return false;
+    const pecas = arenaEd.arena.pecas;
+    if (novas.some(q => !ARENA_PECAS[q.t].ceu && (Math.abs(q.x) > ARENA_RAIO || Math.abs(q.z) > ARENA_RAIO)) || novas.some(q => arenaPecaColide(pecas, q, -1))) {
+        arenaDica("LUGAR OCUPADO: escolha um espaço livre para o conjunto.");
+        arenaEd.vermelhoAte = performance.now() + 700;
+        arenaDesenharPlanta();
+        return false;
+    }
+    const ini = pecas.length;
+    novas.forEach(q => pecas.push(q));
+    arenaRefazerGrupos(pecas);
+    arenaEd.sel = -1;
+    arenaEd.multi = novas.map((_, n) => ini + n);
+    arenaMostrarBaixo("peca");
+    arenaAtualizarSelecao(); arenaAtualizarVista(); arenaDesenharPlanta();
+    arenaRegistrarPasso();
+    return true;
+}
+// ---- 👁 esconder (só no editor) e 🔒 travar ----
+function arenaAlternarOculta(i) {
+    const p = arenaEd && arenaEd.arena.pecas[i];
+    if (!p) return;
+    if (p.oc) delete p.oc; else { p.oc = true; if (arenaEd.sel === i) arenaEd.sel = -1; arenaEd.multi = (arenaEd.multi || []).filter(j => j !== i); }
+    arenaMostrarAba("lista"); arenaAtualizarSelecao(); arenaRegistrarPasso();
+}
+function arenaAlternarTrava(i) {
+    const p = arenaEd && arenaEd.arena.pecas[i];
+    if (!p) return;
+    if (p.tr) delete p.tr; else { p.tr = true; arenaEd.multi = (arenaEd.multi || []).filter(j => j !== i); }
+    arenaMostrarAba("lista"); arenaRegistrarPasso();
+}
+function arenaEscolherDaLista(i) {
+    const p = arenaEd && arenaEd.arena.pecas[i];
+    if (!p) return;
+    if (p.oc) delete p.oc;
+    arenaEd.multi = []; arenaEd.sel = i;
+    arenaEd.vista = ARENA_PECAS[p.t].ceu ? "arena" : "foco";
+    arenaMostrarBaixo("peca");
+    arenaMostrarAba("lista");
+    arenaAtualizarSelecao(); arenaAtualizarVista();
+}
+// ---- capa da arena (foto do card em ARENAS e começo da luta) ----
+function arenaUsarComoCapa() {
+    if (!arenaEd) return;
+    arenaEd.arena.capa = { ang: Math.round(arModulo(arenaEd.angulo, Math.PI * 2) * 1000) / 1000, andado: Math.round(arenaEd.andado || 0) };
+    arenaRegistrarPasso();
+    arenaDica("CAPA ESCOLHIDA: o card da arena mostra esta vista (salve a arena).");
 }
 function arenaMostrarBaixo(qual) {
     if (!arenaEd) return;
@@ -1293,7 +1720,7 @@ function arenaDesenharPlanta() {
     const cv = document.getElementById("arena-planta");
     const g = cv && cv.getContext && cv.getContext("2d");
     if (!g || !arenaEd) return;
-    const a = arenaEd.arena, S = AR_PLANTA;
+    const a = arenaEd.arena, S = AR_PLANTA, multi = arenaEd.multi || [];
     g.save();
     g.clearRect(0, 0, S, S);
     if (arenaModoCeu()) {
@@ -1305,7 +1732,7 @@ function arenaDesenharPlanta() {
         ["N", "L", "S", "O"].forEach((t, i) => g.fillText(T(t), (i / 4) * S + 8, H + 14));
         a.pecas.forEach((p, i) => {
             const def = ARENA_PECAS[p.t];
-            if (!def.ceu) return;
+            if (!def.ceu || p.oc) return;
             const [x, y] = arenaCeuParaPlanta(p), r = 6 + 4 * p.e;
             g.fillStyle = p.c; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
             g.strokeStyle = i === arenaEd.sel ? "#ffd23f" : "rgba(0, 0, 0, 0.6)"; g.lineWidth = i === arenaEd.sel ? 3 : 1; g.stroke();
@@ -1322,60 +1749,87 @@ function arenaDesenharPlanta() {
             else if (def.planta && def.planta.ret) { const [w, d] = def.planta.ret; g.fillRect(-w * s * p.e, -d * s * p.e, w * 2 * s * p.e, d * 2 * s * p.e); }
             g.restore();
         });
-        g.strokeStyle = "rgba(0, 0, 0, 0.12)"; g.lineWidth = 1;
-        for (let i = 0; i <= 8; i++) { const v = i / 8 * S; g.beginPath(); g.moveTo(v, 0); g.lineTo(v, S); g.moveTo(0, v); g.lineTo(S, v); g.stroke(); }
+        g.strokeStyle = arenaEd.grade ? "rgba(0, 0, 0, 0.2)" : "rgba(0, 0, 0, 0.12)"; g.lineWidth = 1;
+        const linhas = arenaEd.grade ? (ARENA_RAIO * 2) / (ARENA_GRADE * 2) : 8;
+        for (let i = 0; i <= linhas; i++) { const v = i / linhas * S; g.beginPath(); g.moveTo(v, 0); g.lineTo(v, S); g.moveTo(0, v); g.lineTo(S, v); g.stroke(); }
         // centro (onde a luta acontece)
         g.strokeStyle = "rgba(255, 210, 63, 0.9)"; g.setLineDash([5, 4]);
         g.beginPath(); g.arc(S / 2, S / 2, 26, 0, Math.PI * 2); g.stroke(); g.setLineDash([]);
         g.fillStyle = "rgba(255, 210, 63, 0.95)"; g.font = "bold 9px sans-serif"; g.textAlign = "center"; g.fillText(T("LUTA"), S / 2, S / 2 + 3);
-        const vermelha = arenaPecaVermelha();
+        const vermelhas = arenaPecasVermelhas();
+        const plano = (p) => ARENA_PECAS[p.t].chao && !(p.v > 0) && !p.b;
+        // pisos primeiro, depois as de pé de baixo para cima (empilhadas por cima da de baixo)
         const ordem = a.pecas.map((p, i) => i).filter(i => !ARENA_PECAS[a.pecas[i].t].ceu)
-            .sort((i, j) => (ARENA_PECAS[a.pecas[j].t].chao && !(a.pecas[j].v > 0) ? 1 : 0) - (ARENA_PECAS[a.pecas[i].t].chao && !(a.pecas[i].v > 0) ? 1 : 0));
+            .sort((i, j) => ((plano(a.pecas[j]) ? 1 : 0) - (plano(a.pecas[i]) ? 1 : 0)) || ((a.pecas[i].b || 0) - (a.pecas[j].b || 0)) || (i - j));
         ordem.forEach(i => {
-            const p = a.pecas[i], def = ARENA_PECAS[p.t], [px, py] = arenaMundoParaPlanta(p.x, p.z);
+            const p = a.pecas[i], def = ARENA_PECAS[p.t], [px, py] = arenaMundoParaPlanta(p.x, p.z), verm = vermelhas.includes(i);
             g.save(); g.translate(px, py); g.rotate((p.r || 0) * Math.PI / 180);
-            g.fillStyle = i === vermelha ? "#ff3030" : p.c; g.globalAlpha = def.chao && !(p.v > 0) ? 0.85 : 1;
+            g.fillStyle = verm ? "#ff3030" : p.c; g.globalAlpha = p.oc ? 0.18 : plano(p) ? 0.85 : 1;
             if (def.forma) { arenaDesenharPlantaForma(g, p, def, s); g.fill(); if (p.v > 0) { g.strokeStyle = "rgba(0, 0, 0, 0.5)"; g.lineWidth = 1.5; g.stroke(); } }
-            else if (def.planta && def.planta.ret) { const [w, d] = def.planta.ret; g.fillRect(-w * s * p.e, -d * s * p.e, w * 2 * s * p.e, d * 2 * s * p.e); }
+            else if (def.planta && def.planta.ret) {
+                const [w, d] = def.planta.ret;
+                g.fillRect(-w * s * p.e, -d * s * p.e, w * 2 * s * p.e, d * 2 * s * p.e);
+                if (p.b > 0) { g.strokeStyle = "rgba(0, 0, 0, 0.55)"; g.lineWidth = 1; g.strokeRect(-w * s * p.e, -d * s * p.e, w * 2 * s * p.e, d * 2 * s * p.e); }
+            }
             else { const r = Math.max(3, ((def.planta && def.planta.circ) || 8) * s * p.e); g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.fill(); }
             g.globalAlpha = 1;
-            if (def.anim) { g.fillStyle = "#ffffff"; g.font = "bold 9px sans-serif"; g.textAlign = "center"; g.fillText("✦", 0, 3); }
-            if (i === arenaEd.sel || i === vermelha) {
-                g.strokeStyle = i === vermelha ? "#ff2a2a" : "#ffd23f"; g.lineWidth = 2.5;
+            g.rotate(-(p.r || 0) * Math.PI / 180);
+            g.textAlign = "center"; g.font = "bold 9px sans-serif";
+            if (def.anim) { g.fillStyle = "#ffffff"; g.fillText("✦", 0, 3); }
+            if (p.tr) { g.fillStyle = "#111827"; g.fillText("🔒", 0, -4); }
+            if (p.g) { g.strokeStyle = "rgba(168, 85, 247, 0.9)"; g.setLineDash([2, 2]); g.lineWidth = 1.5; g.beginPath(); g.arc(0, 0, 5, 0, Math.PI * 2); g.stroke(); g.setLineDash([]); }
+            if (arenaEd.rotulos && arenaEd.rotulos[i]) {
+                g.fillStyle = "#111827"; g.beginPath(); g.arc(0, 0, 8, 0, Math.PI * 2); g.fill();
+                g.fillStyle = "#ffd23f"; g.font = "bold 11px sans-serif"; g.fillText(String(arenaEd.rotulos[i]), 0, 4);
+            }
+            if (i === arenaEd.sel || multi.includes(i) || verm) {
+                g.strokeStyle = verm ? "#ff2a2a" : "#ffd23f"; g.lineWidth = 2.5;
                 const r = Math.max(6, (def.forma ? arRaioForma(p, def.forma) : ((def.planta && (def.planta.circ || Math.max(...def.planta.ret))) || 8)) * s * p.e + 3);
                 g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.stroke();
             }
             g.restore();
         });
+        // retângulo de escolher várias peças
+        const ret = arenaEd.retangulo;
+        if (ret) {
+            g.fillStyle = "rgba(255, 210, 63, 0.15)"; g.strokeStyle = "#ffd23f"; g.lineWidth = 1.5; g.setLineDash([4, 3]);
+            g.fillRect(Math.min(ret.x0, ret.x1), Math.min(ret.y0, ret.y1), Math.abs(ret.x1 - ret.x0), Math.abs(ret.y1 - ret.y0));
+            g.strokeRect(Math.min(ret.x0, ret.x1), Math.min(ret.y0, ret.y1), Math.abs(ret.x1 - ret.x0), Math.abs(ret.y1 - ret.y0));
+            g.setLineDash([]);
+        }
     }
     g.restore();
     const cont = document.getElementById("arena-contagem");
     if (cont) cont.textContent = `PEÇAS: ${a.pecas.length} / ${ARENA_PECAS_MAX}`;
 }
-// peça marcada de vermelho (arrastada para um lugar ocupado, ou acabou de tentar invadir outra)
-function arenaPecaVermelha() {
-    if (!arenaEd) return -1;
-    if (arenaEd.arrasto && arenaEd.arrasto.invalido) return arenaEd.arrasto.i;
-    if (arenaEd.vermelhoAte > performance.now()) return arenaEd.sel;
-    return -1;
+// peças marcadas de vermelho (arrastadas para um lugar ocupado, ou acabaram de tentar invadir outra)
+function arenaPecasVermelhas() {
+    if (!arenaEd) return [];
+    if (arenaEd.arrasto && arenaEd.arrasto.invalido) return arenaEd.arrasto.lista || [arenaEd.arrasto.i];
+    if (arenaEd.vermelhoAte > performance.now()) return arenaEscolhidas();
+    return [];
 }
+function arenaPecaVermelha() { const l = arenaPecasVermelhas(); return l.length ? l[0] : -1; }
+// peça embaixo do ponto da planta (as escondidas e travadas não são tocadas; as de cima ganham)
 function arenaPecaNoPonto(px, py) {
     const a = arenaEd.arena, s = AR_PLANTA / (ARENA_RAIO * 2);
-    // peças de pé têm prioridade sobre os pisos (desenhados embaixo)
-    const plano = (q) => ARENA_PECAS[q.t].chao && !(q.v > 0) ? 1 : 0;
-    const ordem = a.pecas.map((p, i) => i).reverse().sort((i, j) => plano(a.pecas[i]) - plano(a.pecas[j]));
-    for (const i of ordem) {
+    const plano = (q) => ARENA_PECAS[q.t].chao && !(q.v > 0) && !q.b ? 1 : 0;
+    const ordem = a.pecas.map((p, i) => i).reverse().sort((i, j) => (plano(a.pecas[i]) - plano(a.pecas[j])) || ((a.pecas[j].b || 0) - (a.pecas[i].b || 0)));
+    const achadas = ordem.filter(i => {
         const p = a.pecas[i], def = ARENA_PECAS[p.t];
-        if (arenaModoCeu() !== !!def.ceu) continue;
+        if (arenaModoCeu() !== !!def.ceu || p.oc || p.tr) return false;
         let x, y, r;
         if (def.ceu) { [x, y] = arenaCeuParaPlanta(p); r = 8 + 4 * p.e; }
         else {
             [x, y] = arenaMundoParaPlanta(p.x, p.z);
             r = Math.max(8, (def.forma ? arRaioForma(p, def.forma) : ((def.planta && (def.planta.circ || Math.max(...def.planta.ret))) || 8)) * s * p.e);
         }
-        if (Math.hypot(px - x, py - y) <= r) return i;
-    }
-    return -1;
+        return Math.hypot(px - x, py - y) <= r;
+    });
+    // pilha: tocar de novo na peça escolhida passa para a de baixo dela (para mover a pilha inteira)
+    const k = achadas.indexOf(arenaEd.sel), sel = a.pecas[arenaEd.sel];
+    if (k >= 0 && sel && sel.b > 0) { const baixo = achadas.slice(k + 1).find(j => (a.pecas[j].b || 0) < sel.b); if (baixo !== undefined) return baixo; }
+    return achadas.length ? achadas[0] : -1;
 }
 // (getElementPointFromClient já conta o jogo girado para deitado no celular em pé)
 function arenaPontoDoEvento(e) {
@@ -1396,70 +1850,146 @@ function arenaPorPeca(p, x, z) {
     p.x = Math.max(-ARENA_RAIO, Math.min(ARENA_RAIO, arenaNaGrade(x)));
     p.z = Math.max(-ARENA_RAIO, Math.min(ARENA_RAIO, arenaNaGrade(z)));
 }
+// ---- arrastar (planta e tela grande usam o mesmo arrasto) ----
+// começa a arrastar a peça i: junto vão as peças em cima dela, ou todas as escolhidas com o retângulo
+function arenaComecarArrasto(i, extra) {
+    const pecas = arenaEd.arena.pecas, p = pecas[i];
+    const multi = (arenaEd.multi || []).length > 1 && arenaEd.multi.includes(i);
+    const lista = multi ? arenaEd.multi.slice() : [i].concat(ARENA_PECAS[p.t].ceu ? [] : arenaPecasAcima(pecas, i));
+    arenaEd.arrasto = Object.assign({ i, x: p.x, z: p.z, a: p.a, h: p.h, invalido: false, multi, lista,
+        ini: lista.map(j => JSON.parse(JSON.stringify(pecas[j]))) }, extra || {});
+}
+// leva a peça arrastada para (x, z) do mundo (ou ponto da faixa do céu); as que vão junto andam o mesmo tanto
+function arenaArrastarPara(x, z, px, py) {
+    const ar = arenaEd.arrasto, pecas = arenaEd.arena.pecas, p = pecas[ar.i];
+    if (!p) return;
+    // volta todas para onde estavam no começo e aplica o deslocamento de novo (sem acumular erro)
+    ar.lista.forEach((j, n) => { const q = pecas[j]; Object.keys(q).forEach(k => delete q[k]); Object.assign(q, JSON.parse(JSON.stringify(ar.ini[n]))); });
+    if (ARENA_PECAS[p.t].ceu) { arenaMoverPara(p, px, py); ar.invalido = false; return; }
+    const ini = ar.ini[0];
+    let dx, dz, db = 0;
+    if (ar.multi) { dx = arenaNaGrade(x - ini.x); dz = arenaNaGrade(z - ini.z); ar.lista.forEach(j => arenaDeslocar(pecas[j], dx, dz, 0)); }
+    else {
+        arenaPorPecaEncaixada(p, x, z, ar.lista);
+        dx = p.x - ini.x; dz = p.z - ini.z; db = (p.b || 0) - (ini.b || 0);
+        ar.lista.slice(1).forEach(j => arenaDeslocar(pecas[j], dx, dz, db));
+    }
+    ar.movido = true;
+    ar.invalido = !arenaEd.fundir && ar.lista.some(j => arenaPecaColide(pecas, pecas[j], ar.lista));
+}
+function arenaTerminarArrasto() {
+    const ar = arenaEd.arrasto, pecas = arenaEd.arena.pecas;
+    if (ar.invalido) {   // lugar ocupado: volta tudo para o último lugar bom
+        ar.lista.forEach((j, n) => { const q = pecas[j]; Object.keys(q).forEach(k => delete q[k]); Object.assign(q, JSON.parse(JSON.stringify(ar.ini[n]))); });
+        arenaDica("LUGAR OCUPADO: a peça voltou para onde estava.");
+    } else if (ar.movido || ar.nova) {
+        if (arenaEd.fundir && !ar.multi) arenaFundirPeca(ar.i);
+        else arenaRefazerGrupos(pecas);
+    }
+}
+// coloca a peça escolhida na lista em (x, z) do mundo (ou ponto do céu); devolve o índice ou -1
+function arenaNovaPeca(x, z, px, py) {
+    const def = ARENA_PECAS[arenaEd.tipo];
+    if (!def) return -1;
+    const p = normalizarPecaArena({ t: arenaEd.tipo, c: def.cor, e: 1, txt: def.texto });
+    if (!arenaCabemPecas([p])) return -1;
+    if (def.ceu) arenaMoverPara(p, px, py);
+    else arenaPorPecaEncaixada(p, x, z, []);
+    if (!arenaEd.fundir && arenaPecaColide(arenaEd.arena.pecas, p, -1)) {
+        arenaDica(p.b ? "LUGAR OCUPADO: já tem uma peça em cima." : "LUGAR OCUPADO: escolha um espaço livre para a peça.");
+        arenaEd.vermelhoAte = performance.now() + 700;
+        arenaDesenharPlanta();
+        return -1;
+    }
+    arenaEd.arena.pecas.push(p);
+    return arenaEd.arena.pecas.length - 1;
+}
+// com uma peça escolhida na lista, tocar em cima de outra peça coloca (em vez de escolher) quando dá para empilhar
+// (construção em cima de bloco/pilar/prédio/ringue) ou quando FUNDIR está ligado
+function arenaTocarColoca(i) {
+    if (i < 0 || !arenaEd) return false;
+    const q = arenaEd.arena.pecas[i];
+    if (arenaEd.conjunto !== null && arenaEd.conjunto !== undefined) return arenaEd.fundir;
+    if (!arenaEd.tipo || !!ARENA_PECAS[arenaEd.tipo].ceu !== !!ARENA_PECAS[q.t].ceu) return false;
+    return arenaEd.fundir || (ARENA_PECAS[arenaEd.tipo].aba === "construcao" && !!ARENA_SUPORTES[q.t]);
+}
 function arenaPlantaToque(e) {
     if (!arenaEd) return;
     const [px, py] = arenaPontoDoEvento(e);
-    const i = arenaPecaNoPonto(px, py);
+    const toc = arenaPecaNoPonto(px, py), i = arenaTocarColoca(toc) ? -1 : toc;
     arenaDica();
-    if (i >= 0) {
-        const p = arenaEd.arena.pecas[i];
-        arenaEd.sel = i;
-        arenaEd.arrasto = { i, x: p.x, z: p.z, a: p.a, h: p.h, invalido: false };
-        arenaEd.vista = "foco";
-        arenaMostrarBaixo("peca");
-    } else if (arenaEd.tipo && (!!ARENA_PECAS[arenaEd.tipo].ceu === arenaModoCeu())) {
-        if (arenaEd.arena.pecas.length >= ARENA_PECAS_MAX) return showSystemAlert("EDITOR DE ARENAS", "LIMITE DE 80 PEÇAS POR ARENA.");
-        const def = ARENA_PECAS[arenaEd.tipo];
-        if (def.anim && arenaEd.arena.pecas.filter(q => ARENA_PECAS[q.t].anim).length >= ARENA_ANIMADAS_MAX) return showSystemAlert("EDITOR DE ARENAS", "LIMITE DE 10 EFEITOS POR ARENA.");
-        const p = normalizarPecaArena({ t: arenaEd.tipo, c: def.cor, e: 1, txt: def.texto });
-        arenaMoverPara(p, px, py);
-        if (arenaPecaColide(arenaEd.arena.pecas, p, -1)) {
-            arenaDica("LUGAR OCUPADO: escolha um espaço livre para a peça.");
-            arenaEd.vermelhoAte = performance.now() + 700;
-            arenaDesenharPlanta();
-            return;
-        }
-        arenaEd.arena.pecas.push(p);
-        arenaEd.sel = arenaEd.arena.pecas.length - 1;
-        arenaEd.arrasto = { i: arenaEd.sel, x: p.x, z: p.z, a: p.a, h: p.h, invalido: false, nova: true };
-        arenaEd.vista = "foco";
-        arenaMostrarBaixo("peca");
-    } else {
-        arenaEd.sel = -1;
-        arenaEd.vista = "arena";
-    }
     try { e.target.setPointerCapture && e.target.setPointerCapture(e.pointerId); } catch (er) {}
+    if (i >= 0) {
+        if (!((arenaEd.multi || []).length > 1 && arenaEd.multi.includes(i))) { arenaEd.multi = []; arenaEd.sel = i; arenaEd.vista = "foco"; }
+        arenaComecarArrasto(i);
+        arenaMostrarBaixo("peca");
+    } else if (arenaEd.conjunto !== null && arenaEd.conjunto !== undefined && !arenaModoCeu()) {
+        const [x, z] = arenaPlantaParaMundo(px, py);
+        arenaColocarConjunto(x, z);
+        return;
+    } else if (arenaEd.tipo && (!!ARENA_PECAS[arenaEd.tipo].ceu === arenaModoCeu())) {
+        const [x, z] = arenaPlantaParaMundo(px, py);
+        const k = arenaNovaPeca(x, z, px, py);
+        if (k < 0) return;
+        arenaEd.multi = []; arenaEd.sel = k;
+        arenaComecarArrasto(k, { nova: true });
+        arenaEd.vista = "foco";
+        arenaMostrarBaixo("peca");
+    } else if (!arenaModoCeu()) {
+        // tocou no vazio sem peça escolhida: arrastar desenha o retângulo de escolher várias
+        arenaLimparEscolha();
+        arenaEd.vista = "arena";
+        arenaEd.retangulo = { x0: px, y0: py, x1: px, y1: py };
+    } else { arenaLimparEscolha(); arenaEd.vista = "arena"; }
     arenaAtualizarSelecao(); arenaAtualizarVista(); arenaDesenharPlanta();
 }
 function arenaPlantaArrasto(e) {
-    if (!arenaEd || !arenaEd.arrasto) return;
-    const ar = arenaEd.arrasto, p = arenaEd.arena.pecas[ar.i];
-    if (!p) return;
-    const [px, py] = arenaPontoDoEvento(e);
-    arenaMoverPara(p, px, py);
-    ar.invalido = arenaPecaColide(arenaEd.arena.pecas, p, ar.i);
+    if (!arenaEd) return;
+    if (arenaEd.retangulo) {
+        const [px, py] = arenaPontoDoEvento(e);
+        arenaEd.retangulo.x1 = px; arenaEd.retangulo.y1 = py;
+        arenaDesenharPlanta();
+        return;
+    }
+    if (!arenaEd.arrasto || arenaEd.arrasto.previa) return;
+    const [px, py] = arenaPontoDoEvento(e), [x, z] = arenaPlantaParaMundo(px, py);
+    arenaArrastarPara(x, z, px, py);
     arenaEd.vista = "arena";   // arrastando: vê a arena inteira (e a peça vermelha se o lugar estiver ocupado)
     arenaDesenharPlanta();
 }
 function arenaPlantaSolta() {
-    if (!arenaEd || !arenaEd.arrasto) return;
-    const ar = arenaEd.arrasto, p = arenaEd.arena.pecas[ar.i];
-    if (p && ar.invalido) {   // lugar ocupado: volta para o último lugar bom
-        if (ARENA_PECAS[p.t].ceu) { p.a = ar.a; p.h = ar.h; } else { p.x = ar.x; p.z = ar.z; }
-        arenaDica("LUGAR OCUPADO: a peça voltou para onde estava.");
+    if (!arenaEd) return;
+    if (arenaEd.retangulo) {
+        const r = arenaEd.retangulo, a = arenaEd.arena;
+        arenaEd.retangulo = null;
+        const x0 = Math.min(r.x0, r.x1), x1 = Math.max(r.x0, r.x1), y0 = Math.min(r.y0, r.y1), y1 = Math.max(r.y0, r.y1);
+        if (x1 - x0 > 6 || y1 - y0 > 6) {
+            const dentro = a.pecas.map((p, i) => i).filter(i => {
+                const p = a.pecas[i];
+                if (ARENA_PECAS[p.t].ceu || p.oc || p.tr) return false;
+                const [px, py] = arenaMundoParaPlanta(p.x, p.z);
+                return px >= x0 && px <= x1 && py >= y0 && py <= y1;
+            });
+            if (dentro.length === 1) { arenaEd.sel = dentro[0]; arenaEd.vista = "foco"; }
+            else if (dentro.length > 1) arenaEd.multi = dentro;
+            if (dentro.length) arenaMostrarBaixo("peca");
+        }
+        arenaAtualizarSelecao(); arenaAtualizarVista(); arenaDesenharPlanta();
+        return;
     }
-    const pulaFoco = ar.previa;
+    if (!arenaEd.arrasto) return;
+    const ar = arenaEd.arrasto;
+    arenaTerminarArrasto();
     arenaEd.arrasto = null;
     arenaEd.congelar = false;
-    if (arenaEd.sel >= 0 && !(pulaFoco && ar.movido)) arenaEd.vista = "foco";
+    if (arenaEd.sel >= 0 && !(ar.previa && ar.movido)) arenaEd.vista = "foco";
+    arenaAtualizarSelecao();
     arenaAtualizarVista();
     arenaDesenharPlanta();
     arenaRegistrarPasso();
 }
 // ---- tela grande: desenhada no canvas do jogo (escondido atrás da tela do editor) e copiada para cá ----
 // câmera perto de uma peça (prévia ou peça escolhida), afastada conforme o tamanho dela
-const AR_ALTURAS = { coluna_lava: 260, arco_lava: 190, predio: 72, torre: 100, torre_mirante: 90, montanha: 140, mesa_pedra: 90, fumaca: 160, antena: 70, coqueiro: 80, brasas: 110 };
-function arenaAlturaPeca(p) { return (AR_ALTURAS[p.t] || 40) * (p.e || 1); }
 function arenaRaioPeca(p) {
     const def = ARENA_PECAS[p.t];
     return (def.forma ? arRaioForma(p, def.forma) : def.planta ? (def.planta.circ || Math.max(...def.planta.ret)) : 30) * (p.e || 1);
@@ -1469,7 +1999,8 @@ function arenaCameraPerto(p) {
     const raio = arenaRaioPeca(p);
     const alto = AR_ALTURAS[p.t] || 40;
     const D = Math.max(170, Math.min(900, Math.max(raio * 3.4, alto * e * 2.4) + 110));
-    return { CX: 400, HY: 70, D, H: Math.max(60, D * 0.36), F: 560, PERTO: 20, CORTE: D * 0.5 };
+    // peça empilhada: a câmera sobe junto (a peça fica no mesmo lugar da tela)
+    return { CX: 400, HY: 70, D, H: Math.max(60, D * 0.36) + (p.b || 0), F: 560, PERTO: 20, CORTE: D * 0.5 };
 }
 function arenaVistaAtual() {
     const a = arenaEd.arena;
@@ -1478,6 +2009,12 @@ function arenaVistaAtual() {
             const pl = ARENA_PLANICIES[arenaEd.previa.slice(9)];
             return { a: Object.assign({}, a, { planicie: arenaEd.previa.slice(9), ceu: pl.ceu, chao: pl.chao, pecas: [] }), opts: { chave: "_vista_planicie" } };
         }
+        if (arenaEd.previa.startsWith("conjunto:")) {   // conjunto: as peças dele em volta do centro
+            const c = getArenaConjuntos()[Number(arenaEd.previa.slice(9))], pecas = c ? c.pecas : [];
+            const R = Math.max(40, ...pecas.map(q => Math.hypot(q.x, q.z) + arenaRaioPeca(q))), alto = Math.max(40, ...pecas.map(q => (q.b || 0) + arenaAlturaPeca(q)));
+            const D = Math.max(200, Math.min(1000, Math.max(R * 2.6, alto * 2) + 120));
+            return { a: Object.assign({}, a, { planicie: "", pecas }), opts: { chave: "_vista_conjunto", cam: { CX: 400, HY: 70, D, H: Math.max(70, D * 0.38), F: 560, PERTO: 20, CORTE: D * 0.5 } } };
+        }
         const def = ARENA_PECAS[arenaEd.previa];
         const p = normalizarPecaArena({ t: arenaEd.previa, x: 0, z: 0, a: 180, h: 0.55, e: 1, c: def.cor, txt: def.texto });
         if (def.ceu) return { a: Object.assign({}, a, { pecas: [p] }), opts: { chave: "_vista_peca", cam: ARENA_CAMERAS.baixa }, angFixo: 0 };
@@ -1485,8 +2022,8 @@ function arenaVistaAtual() {
     }
     const sel = a.pecas[arenaEd.sel];
     if (arenaEd.vista === "foco" && sel && !ARENA_PECAS[sel.t].ceu)
-        return { a, opts: { chave: "_vista_foco", cam: arenaCameraPerto(sel), desl: { x: sel.x, z: sel.z }, vermelha: arenaPecaVermelha() } };
-    return { a, opts: { chave: "_vista", vermelha: arenaPecaVermelha() } };
+        return { a, opts: { chave: "_vista_foco", cam: arenaCameraPerto(sel), desl: { x: sel.x, z: sel.z }, vermelha: arenaPecasVermelhas(), esconder: true } };
+    return { a, opts: { chave: "_vista", vermelha: arenaPecasVermelhas(), esconder: true } };
 }
 function desenharPreviaArena(dt) {
     if (!arenaEd) return;
@@ -1576,12 +2113,13 @@ function arenaPecaNaTela(lx, ly) {
     let achado = -1, melhor = -Infinity;
     a.pecas.forEach((p, i) => {
         const def = ARENA_PECAS[p.t];
-        if (def.ceu) return;
-        const pr = arProjCom(u.cam, p.x - u.desl.x, 0, p.z - u.desl.z, u.ang);
+        if (def.ceu || p.oc || p.tr) return;
+        const pr = arProjCom(u.cam, p.x - u.desl.x, p.b || 0, p.z - u.desl.z, u.ang);   // base da peça (levantada se empilhada)
         if (pr[2] > u.cam.D - u.cam.PERTO) return;
         const r = Math.max(10, arenaRaioPeca(p) * pr[3]), alto = arenaAlturaPeca(p) * pr[3];
         if (Math.abs(lx - pr[0]) > r || ly > pr[1] + r * 0.5 || ly < pr[1] - alto - 6) return;
-        if (pr[2] > melhor) { melhor = pr[2]; achado = i; }
+        const nota = pr[2] + (p.b || 0) * 0.01;   // mais perto ganha; na mesma pilha, a de cima
+        if (nota > melhor) { melhor = nota; achado = i; }
     });
     return achado;
 }
@@ -1598,24 +2136,25 @@ function arenaPreviaToque(e) {
     }
     if (arenaEd.dedos.size > 2) return;
     const [lx, ly] = arenaPontoNaPrevia(e);
-    const i = arenaEd.vista === "previa" ? -1 : arenaPecaNaTela(lx, ly);
+    const toc = arenaEd.vista === "previa" ? -1 : arenaPecaNaTela(lx, ly), i = arenaTocarColoca(toc) ? -1 : toc;
     arenaDica();
-    if (i >= 0) {   // tocou numa peça: escolhe e já pode arrastar
-        const p = arenaEd.arena.pecas[i];
-        arenaEd.sel = i;
-        arenaEd.arrasto = { i, x: p.x, z: p.z, a: p.a, h: p.h, invalido: false, previa: true, movido: false };
+    if (i >= 0) {   // tocou numa peça: escolhe e já pode arrastar (o ponto do chão embaixo do dedo guia o arrasto)
+        const p = arenaEd.arena.pecas[i], chao = arenaChaoNaTela(lx, ly) || [p.x, p.z];
+        if (!((arenaEd.multi || []).length > 1 && arenaEd.multi.includes(i))) { arenaEd.multi = []; arenaEd.sel = i; }
+        arenaComecarArrasto(i, { previa: true, movido: false, desvio: [p.x - chao[0], p.z - chao[1]] });
         arenaEd.congelar = true;
         arenaMostrarBaixo("peca");
         arenaAtualizarSelecao(); arenaAtualizarVista(); arenaDesenharPlanta();
         return;
     }
-    const chao = arenaEd.vista === "arena" && arenaEd.tipo && !ARENA_PECAS[arenaEd.tipo].ceu ? arenaChaoNaTela(lx, ly) : null;
-    if (chao && Math.abs(chao[0]) <= ARENA_RAIO && Math.abs(chao[1]) <= ARENA_RAIO) {   // peça escolhida na lista: toque coloca
+    const armado = arenaEd.conjunto !== null || (arenaEd.tipo && !ARENA_PECAS[arenaEd.tipo].ceu);
+    const chao = arenaEd.vista === "arena" && armado ? arenaChaoNaTela(lx, ly) : null;
+    if (chao && Math.abs(chao[0]) <= ARENA_RAIO && Math.abs(chao[1]) <= ARENA_RAIO) {   // peça/conjunto escolhido na lista: toque coloca
         arenaColocarPecaEm(chao[0], chao[1]);
         return;
     }
     if (arenaEd.zoom > 1) arenaEd.vistaArrasto = { x: lx - arenaEd.pan.x, y: ly - arenaEd.pan.y, px: arenaEd.pan.x, py: arenaEd.pan.y };
-    else if (arenaEd.vista === "foco") { arenaEd.sel = -1; arenaEd.vista = "arena"; arenaAtualizarSelecao(); arenaAtualizarVista(); arenaDesenharPlanta(); }
+    else if (arenaEd.vista === "foco") { arenaEd.sel = -1; arenaEd.multi = []; arenaEd.vista = "arena"; arenaAtualizarSelecao(); arenaAtualizarVista(); arenaDesenharPlanta(); }
 }
 function arenaPreviaArrasto(e) {
     if (!arenaEd) return;
@@ -1635,14 +2174,11 @@ function arenaPreviaArrasto(e) {
         return;
     }
     const ar = arenaEd.arrasto;
-    if (!ar || !ar.previa) return;
-    const p = arenaEd.arena.pecas[ar.i];
-    if (!p) return;
+    if (!ar || !ar.previa || !arenaEd.arena.pecas[ar.i]) return;
     const [lx, ly] = arenaPontoNaPrevia(e), chao = arenaChaoNaTela(lx, ly);
     if (!chao) return;
-    ar.movido = true;
-    arenaPorPeca(p, chao[0], chao[1]);
-    ar.invalido = arenaPecaColide(arenaEd.arena.pecas, p, ar.i);
+    const d = ar.desvio || [0, 0];
+    arenaArrastarPara(chao[0] + d[0], chao[1] + d[1]);
     arenaDesenharPlanta();
 }
 function arenaPreviaSolta(e) {
@@ -1660,21 +2196,11 @@ function arenaPreviaRoda(e) {
 }
 // coloca a peça escolhida na lista em (x, z) do mundo (toque na tela grande)
 function arenaColocarPecaEm(x, z) {
-    const def = ARENA_PECAS[arenaEd.tipo];
-    if (!def) return;
-    if (arenaEd.arena.pecas.length >= ARENA_PECAS_MAX) return showSystemAlert("EDITOR DE ARENAS", "LIMITE DE 80 PEÇAS POR ARENA.");
-    if (def.anim && arenaEd.arena.pecas.filter(q => ARENA_PECAS[q.t].anim).length >= ARENA_ANIMADAS_MAX) return showSystemAlert("EDITOR DE ARENAS", "LIMITE DE 10 EFEITOS POR ARENA.");
-    const p = normalizarPecaArena({ t: arenaEd.tipo, c: def.cor, e: 1, txt: def.texto });
-    arenaPorPeca(p, x, z);
-    if (arenaPecaColide(arenaEd.arena.pecas, p, -1)) {
-        arenaDica("LUGAR OCUPADO: escolha um espaço livre para a peça.");
-        arenaEd.vermelhoAte = performance.now() + 700;
-        arenaDesenharPlanta();
-        return;
-    }
-    arenaEd.arena.pecas.push(p);
-    arenaEd.sel = arenaEd.arena.pecas.length - 1;
-    arenaEd.arrasto = { i: arenaEd.sel, x: p.x, z: p.z, a: p.a, h: p.h, invalido: false, previa: true, movido: false };
+    if (arenaEd.conjunto !== null) { arenaColocarConjunto(x, z); return; }
+    const k = arenaNovaPeca(x, z);
+    if (k < 0) return;
+    arenaEd.multi = []; arenaEd.sel = k;
+    arenaComecarArrasto(k, { previa: true, movido: false, nova: true, desvio: [arenaEd.arena.pecas[k].x - x, arenaEd.arena.pecas[k].z - z] });
     arenaEd.congelar = true;
     arenaMostrarBaixo("peca");
     arenaAtualizarSelecao(); arenaAtualizarVista(); arenaDesenharPlanta();
@@ -1690,20 +2216,26 @@ function arenaTeclaAtalho(e) {
         return;
     }
     if (digitando) return;
-    const p = arenaEd.arena.pecas[arenaEd.sel];
+    const pecas = arenaEd.arena.pecas, escolhidas = arenaEscolhidas(), p = escolhidas.length ? pecas[escolhidas[0]] : null;
     const passo = e.shiftKey ? 40 : (arenaEd.grade ? ARENA_GRADE : 5);
+    // setas: as escolhidas (e o que está em cima delas) andam juntas
     const mexer = (dx, dz) => {
-        if (!p || ARENA_PECAS[p.t].ceu) return;
-        const antes = { x: p.x, z: p.z };
-        arenaPorPeca(p, p.x + dx, p.z + dz);
-        if (arenaPecaColide(arenaEd.arena.pecas, p, arenaEd.sel)) { p.x = antes.x; p.z = antes.z; arenaEd.vermelhoAte = performance.now() + 700; arenaDica("LUGAR OCUPADO: a peça invadiria o espaço de outra."); }
+        const lista = [...new Set(escolhidas.filter(i => !ARENA_PECAS[pecas[i].t].ceu).flatMap(i => [i].concat(arenaPecasAcima(pecas, i))))];
+        if (!lista.length) return;
+        const antes = lista.map(i => JSON.parse(JSON.stringify(pecas[i])));
+        lista.forEach(i => arenaDeslocar(pecas[i], dx, dz, 0));
+        if (lista.some(i => Math.abs(pecas[i].x) > ARENA_RAIO || Math.abs(pecas[i].z) > ARENA_RAIO || (!arenaEd.fundir && arenaPecaColide(pecas, pecas[i], lista)))) {
+            lista.forEach((i, n) => { Object.keys(pecas[i]).forEach(k => delete pecas[i][k]); Object.assign(pecas[i], antes[n]); });
+            arenaEd.vermelhoAte = performance.now() + 700; arenaDica("LUGAR OCUPADO: a peça invadiria o espaço de outra.");
+        } else arenaRefazerGrupos(pecas);
         arenaDesenharPlanta();
         arenaRegistrarPasso();
     };
     switch (e.key) {
         case "Delete": case "Backspace": if (p) { e.preventDefault(); arenaApagarSelecao(); } break;
-        case "r": case "R": if (p && !ARENA_PECAS[p.t].ceu) { p.r = (p.r + (e.shiftKey ? -15 : 15) + 360) % 360; arenaAtualizarSelecao(); arenaDesenharPlanta(); arenaRegistrarPasso(); } break;
+        case "r": case "R": if (p) arenaGirarSelecao(e.shiftKey ? -15 : 15); break;
         case "d": case "D": if (p) arenaDuplicarSelecao(); break;
+        case "f": case "F": arenaAlternarFundir(); break;
         case "g": case "G": arenaAlternarGrade(); break;
         case "ArrowLeft": e.preventDefault(); mexer(-passo, 0); break;
         case "ArrowRight": e.preventDefault(); mexer(passo, 0); break;
@@ -1716,7 +2248,7 @@ function arenaTrocarDaLista() {
     const id = arenaValorDe("arena-lista");
     const a = getArenasCriadas().find(x => x.id === id);
     arenaEd.arena = a ? JSON.parse(JSON.stringify(a)) : arenaPadrao();
-    arenaEd.sel = -1; arenaEd.tipo = null; arenaEd.previa = null; arenaEd.vista = "arena";
+    arenaEd.sel = -1; arenaEd.multi = []; arenaEd.tipo = null; arenaEd.conjunto = null; arenaEd.previa = null; arenaEd.vista = "arena";
     arenaEd.hist = { pilha: [], i: -1 };
     arenaRegistrarPasso(true);
     arenaPreencherCampos();
@@ -1747,7 +2279,7 @@ function excluirArenaDoEditor() {
         registrarArenasCriadas();
         arCenas.delete(id);
         arenaEd.arena = getArenasCriadas()[0] ? JSON.parse(JSON.stringify(getArenasCriadas()[0])) : arenaPadrao();
-        arenaEd.sel = -1; arenaEd.vista = "arena";
+        arenaEd.sel = -1; arenaEd.multi = []; arenaEd.vista = "arena";
         arenaApagarRascunho();
         arenaPreencherCampos();
         arenaRegistrarPasso(true);
@@ -1781,7 +2313,7 @@ async function anexarArquivoArena(input) {
     const r = importarArenaDeTexto(await lerArquivoArq(f, false) || "");
     if (r.erro) return showSystemAlert("ARQUIVO COM ERRO", r.erro);
     const a = getArenasCriadas().find(x => x.id === r.id);
-    if (arenaEd) { arenaEd.arena = JSON.parse(JSON.stringify(a)); arenaEd.sel = -1; arenaEd.vista = "arena"; arenaEd.hist = { pilha: [], i: -1 }; arenaRegistrarPasso(true); arenaPreencherCampos(); }
+    if (arenaEd) { arenaEd.arena = JSON.parse(JSON.stringify(a)); arenaEd.sel = -1; arenaEd.multi = []; arenaEd.vista = "arena"; arenaEd.hist = { pilha: [], i: -1 }; arenaRegistrarPasso(true); arenaPreencherCampos(); }
     showSystemAlert("SUCESSO", `ARENA ${a.nome} IMPORTADA!`);
 }
 

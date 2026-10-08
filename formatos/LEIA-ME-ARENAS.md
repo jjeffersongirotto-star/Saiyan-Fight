@@ -44,6 +44,7 @@ Toda arena feita no **EDITOR DE ARENAS** (esfera de 4 estrelas no menu) pode vir
 | `ceu` | não | Cores do céu: `topo` (em cima) e `horizonte`. |
 | `chao` | não | `tipo` do chão (lista abaixo) e `cor`. |
 | `pecas` | não | Lista de peças (até 80). |
+| `capa` | não | Vista da foto do card em ARENAS e do começo da luta (USAR COMO CAPA): `ang` (giro da câmera em radianos, 0 a 6.283) e `andado` (caminho andado no modo `seguir`). |
 
 ## Peças
 
@@ -55,6 +56,9 @@ Cada peça tem `t` (o tipo), `e` (tamanho, 0.3 a 3; 1 = normal) e `c` (cor `#rrg
 - **Peças do céu** (aba CÉU): `a` é a posição em volta, em graus (0 a 359), e `h` a altura no céu (0 = horizonte, 1 = no alto).
 - **Efeitos** (aba EFEITOS): se mexem durante a luta. No máximo 10 por arena.
 - **Placa e símbolo:** `txt` é o texto escrito (até 16 letras; no símbolo aparecem as 2 primeiras).
+- **Empilhada:** `b` é a altura da base (o topo da peça de baixo). Construções soltas em cima de `bloco`, `pilar`, `predio` ou `ringue` encaixam alinhadas no topo; aí `al` = `[x, z, largura]` do centro e da largura da peça de baixo e `d` = DESALINHAR, de -0.9 a 0.9 (fração da largura, de 10 em 10%, para fazer escadas). Peças em alturas diferentes não se chocam.
+- **Fundidas (FUNDIR):** peças com o mesmo `g` (número do grupo) podem se sobrepor; a que tem `fv: true` dá a aparência da parte fundida (é desenhada por cima das outras do grupo).
+- **Editor:** `oc: true` esconde a peça só no editor (na luta ela aparece) e `tr: true` trava a peça (não dá para tocar nem arrastar).
 
 ### CONSTRUÇÃO
 

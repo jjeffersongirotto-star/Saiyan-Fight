@@ -30,12 +30,12 @@ check("peças de chão planas e do céu não ocupam espaço", colide({ t: "predi
 
 // ---------- editor: prévia, confirmar, colocar, foco, vermelho ----------
 run("abrirEditorArenas(); arenaEd.arena.pecas = []; const cv = document.getElementById('arena-planta'); cv.width = 320; cv.height = 320; arenaDesenharPlanta()");
-run("arenaVerPeca('predio')");
+run("arenaVerPeca('mesa_pedra')");
 check("tocar numa peça da lista mostra só ela na tela grande, com CONFIRMAR PEÇA e CANCELAR", run("arenaEd.vista") === "previa" && run("document.getElementById('arena-confirmar').style.display") === "" && run("arenaVistaAtual().a.pecas.length") === 1);
 run("arenaCancelarPeca()");
 check("CANCELAR volta para a arena sem escolher", run("arenaEd.vista") === "arena" && run("arenaEd.tipo") === null);
-run("arenaVerPeca('predio'); arenaConfirmarPeca()");
-check("CONFIRMAR PEÇA volta para a arena com a peça pronta para colocar", run("arenaEd.vista") === "arena" && run("arenaEd.tipo") === "predio" && run("document.getElementById('arena-confirmar').style.display") === "none");
+run("arenaVerPeca('mesa_pedra'); arenaConfirmarPeca()");
+check("CONFIRMAR PEÇA volta para a arena com a peça pronta para colocar", run("arenaEd.vista") === "arena" && run("arenaEd.tipo") === "mesa_pedra" && run("document.getElementById('arena-confirmar').style.display") === "none");
 const toque = (x, y) => run(`arenaPlantaToque({ clientX: ${x}, clientY: ${y}, target: {} }); arenaPlantaSolta()`);
 toque(160, 160);
 check("tocar na planta coloca e já mostra a peça de perto (tela grande)", run("arenaEd.arena.pecas.length") === 1 && run("arenaEd.vista") === "foco" && run("arenaVistaAtual().opts.desl.x") === 0);
