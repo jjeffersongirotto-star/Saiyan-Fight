@@ -120,6 +120,12 @@ O áudio está mutado: ative em VOLUME E ÁUDIO para ouvir § Audio is muted: tu
 O volume BGM está em 0%: aumente para ouvir § Music volume is at 0%: turn it up to listen § El volumen de la música está en 0%: súbelo para oír
 AVENTURA NAS NUVENS § ADVENTURE IN THE CLOUDS § AVENTURA EN LAS NUBES
 BRISA DA KAME HOUSE § KAME HOUSE BREEZE § BRISA DE LA KAME HOUSE
+ACIMA DAS NUVENS § ABOVE THE CLOUDS § SOBRE LAS NUBES
+AVENIDAS DA CAPITAL § CAPITAL AVENUES § AVENIDAS DE LA CAPITAL
+Acima das Nuvens § Above the Clouds § Sobre las Nubes
+Libere a Plataforma Celestial § Unlock the Celestial Lookout § Desbloquea la Plataforma Celestial
+Visita à Corporação Cápsula § Capsule Corp Visit § Visita a la Corporación Cápsula
+Libere a Capital do Oeste § Unlock West City § Desbloquea la Capital del Oeste
 GALOPE DO PLANETA KAIOH § KING KAI'S PLANET GALLOP § GALOPE DEL PLANETA KAIO
 BRISA DE NAMEK § NAMEK BREEZE § BRISA DE NAMEK
 A AMEAÇA DO IMPERADOR § THE EMPEROR'S THREAT § LA AMENAZA DEL EMPERADOR
@@ -133,6 +139,8 @@ PLANETA NAMEK § PLANET NAMEK § PLANETA NAMEK
 NAVE DE FREEZA § FREEZA'S SHIP § NAVE DE FREEZA
 NAMEK PRESTES A EXPLODIR § NAMEK ABOUT TO EXPLODE § NAMEK A PUNTO DE EXPLOTAR
 SALA DO TEMPO § TIME CHAMBER § HABITACIÓN DEL TIEMPO
+PLATAFORMA CELESTIAL § CELESTIAL LOOKOUT § PLATAFORMA CELESTIAL
+CAPITAL DO OESTE § WEST CITY § CAPITAL DEL OESTE
 TORNEIO DE CELL § CELL GAMES § JUEGOS DE CELL
 PLANETA SUPREMO KAIOH § SUPREME KAI'S PLANET § PLANETA DEL SUPREMO KAIO
 ILHA DO MESTRE KAME § MASTER ROSHI'S ISLAND § ISLA DEL MAESTRO ROSHI
@@ -367,7 +375,7 @@ Libere a Sala do Tempo. Sem relógio! § Unlock the Time Chamber. No clocks! § 
 Convidado do Cell § Cell's Guest § Invitado de Cell
 Libere o Torneio de Cell § Unlock the Cell Games § Desbloquea los Juegos de Cell
 Entre os Deuses § Among the Gods § Entre los Dioses
-Libere todas as fases, até o Supremo Kaioh § Unlock every stage, up to the Supreme Kai § Desbloquea todas las fases, hasta el Supremo Kaio
+Libere o Planeta Supremo Kaioh § Unlock the Supreme Kai's Planet § Desbloquea el Planeta del Supremo Kaio
 Difícil? Não Para Mim § Hard? Not for Me § ¿Difícil? Para Mí No
 Vença o modo DIFÍCIL de uma fase pela primeira vez § Beat HARD mode on a stage for the first time § Gana el modo DIFÍCIL de una fase por primera vez
 Rodei o Universo Inteiro § Toured the Whole Universe § Recorrí Todo el Universo
@@ -798,6 +806,7 @@ Minion: anéis (Saibaman) § Minion: rings (Saibaman) § Esbirro: anillos (Saiba
 Minion: manchas (Cell Jr.) § Minion: spots (Cell Jr.) § Esbirro: manchas (Cell Jr.)
 Minion: pés com garras § Minion: clawed feet § Esbirro: pies con garras
 Minion: mãos com garras § Minion: clawed hands § Esbirro: manos con garras
+Minion (baixinho, cabeça grande) § Minion (short, big head) § Esbirro (bajito, cabeza grande)
 COR DAS VEIAS / MANCHAS (PEÇAS DE MINION) § VEIN / SPOT COLOR (MINION PARTS) § COLOR DE VENAS / MANCHAS (PIEZAS DE ESBIRRO)
 COR DAS GARRAS (PEÇAS DE MINION) § CLAW COLOR (MINION PARTS) § COLOR DE LAS GARRAS (PIEZAS DE ESBIRRO)
 TROCAR § CHANGE § CAMBIAR
@@ -861,6 +870,7 @@ const IDIOMA_REGRAS = [
     [/^TAMANHO (\d+)%$/, "SIZE $1%", "TAMAÑO $1%"],
     [/^OPAC\. (\d+)%$/, "OPAC. $1%", "OPAC. $1%"],
     [/^(\d+)\. SCORE: (.+)  -  DATA: (.+)$/, "$1. SCORE: $2  -  DATE: $3", "$1. PUNTOS: $2  -  FECHA: $3"],
+    [/^(\d+)\. SCORE: (\S+)  -  TEMPO: (\S+)  -  GOLPES: (\S+)  -  (.+)$/, "$1. SCORE: $2  -  TIME: $3  -  HITS TAKEN: $4  -  $5", "$1. PUNTOS: $2  -  TIEMPO: $3  -  GOLPES RECIBIDOS: $4  -  $5"],
     [/^APERTE O BOTÃO PARA: (.+)$/, (m, T) => `PRESS THE BUTTON FOR: ${T(m[1])}`, (m, T) => `PULSA EL BOTÓN PARA: ${T(m[1])}`],
     [/^ESC OU CLIQUE CANCELA  \|  (\d+)s$/, "ESC OR CLICK CANCELS  |  $1s", "ESC O CLIC CANCELA  |  $1s"],
     [/^(.+) JÁ ERA DE (.+): OS DOIS FORAM TROCADOS$/, (m, T) => `${T(m[1])} WAS ALREADY ${T(m[2])}: THEY WERE SWAPPED`, (m, T) => `${T(m[1])} YA ERA DE ${T(m[2])}: SE INTERCAMBIARON`],

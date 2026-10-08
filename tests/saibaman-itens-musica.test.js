@@ -93,11 +93,11 @@ check("abraçado ele é desenhado na frente do herói", (() => { const r = menu.
 check("abraçado ele não fica transparente (sem versão clara do desenho)", !menu.includes("flash ?") && !run("[...saibamanSpriteCache.keys()].some(k => k.endsWith('f'))"));
 
 // música por fase
-check("cada uma das 9 fases tem a sua própria música", run(`new Set(STAGE_PROGRESSION.map(s => getStageMusicEra(s.id))).size === 9 && STAGE_PROGRESSION.every(s => !!BGM_THEMES[getStageMusicEra(s.id)])`));
-check("os 9 temas existem, com nome próprio, e melodia e baixo do mesmo tamanho", run(`Object.keys(BGM_THEMES).length === 9 && Object.keys(BGM_THEMES).every(k => { const t = BGM_THEMES[k], c = getCompiledTheme(t); return t.nome && c.melodia.length === c.baixo.length && c.melodia.length === t.compasso * 8; })`));
+check("cada uma das 11 fases tem a sua própria música", run(`new Set(STAGE_PROGRESSION.map(s => getStageMusicEra(s.id))).size === 11 && STAGE_PROGRESSION.every(s => !!BGM_THEMES[getStageMusicEra(s.id)])`));
+check("os 11 temas existem, com nome próprio, e melodia e baixo do mesmo tamanho", run(`Object.keys(BGM_THEMES).length === 11 && Object.keys(BGM_THEMES).every(k => { const t = BGM_THEMES[k], c = getCompiledTheme(t); return t.nome && c.melodia.length === c.baixo.length && c.melodia.length === t.compasso * 8; })`));
 check("cada compasso da melodia fecha certinho e todas as notas são válidas", run(`Object.values(BGM_THEMES).every(t => t.melodia.split("|").every(b => b.trim().split(/\\s+/).reduce((s, tok) => s + Number(tok.split(":")[1]), 0) === t.compasso) && getCompiledTheme(t).melodia.every(e => !e || Number.isFinite(e.midi)))`));
 check("bateria com um passo por semicolcheia do compasso", run(`Object.values(BGM_THEMES).every(t => [t.kick, t.snare, t.hat].every(p => p === "" || p.length === t.compasso))`));
-check("as 9 músicas são diferentes: nome, andamento, compasso/instrumento e começo da melodia", run(`(() => { const ts = Object.values(BGM_THEMES);
+check("as 11 músicas são diferentes: nome, andamento, compasso/instrumento e começo da melodia", run(`(() => { const ts = Object.values(BGM_THEMES);
     const dif = f => new Set(ts.map(f)).size === ts.length;
     return dif(t => t.nome) && dif(t => t.bpm) && dif(t => t.melodia.split("|")[0]) && dif(t => t.lead.wave + t.compasso + t.bassWave + t.kick + t.hat); })()`));
 check("a música toca o tema da fase escolhida", run(`selectedStage = "namek"; getCurrentBgmTheme() === BGM_THEMES.namek`) && run(`selectedStage = "kaioshin"; getCurrentBgmTheme() === BGM_THEMES.boo`));
@@ -111,8 +111,8 @@ run(`var __no = () => ({ connect() {}, start() {}, stop() {}, type: "", buffer: 
 const tr = run("JSON.stringify(MENU_LAYOUT.optionsAudio.tracks)"); const trR = JSON.parse(tr);
 run(`handleMenuClick(${trR.x + 5}, ${trR.y + 5})`);
 check("Áudio tem o botão TRILHAS SONORAS que abre a lista", run("gameState") === "options_tracks");
-check("a lista tem as 9 trilhas, uma por fase, na ordem das fases", run("getBgmTrackList().map(t => t.era).join()") === run("STAGE_PROGRESSION.map(s => getStageMusicEra(s.id)).join()") && run("getBgmTrackList().length") === 9);
-check("os 9 botões de tocar não se sobrepõem e cabem na tela", run(`(() => { const rs = [0,1,2,3,4,5,6,7,8].map(getTrackPlayRect);
+check("a lista tem as 11 trilhas, uma por fase, na ordem das fases", run("getBgmTrackList().map(t => t.era).join()") === run("STAGE_PROGRESSION.map(s => getStageMusicEra(s.id)).join()") && run("getBgmTrackList().length") === 11);
+check("os 11 botões de tocar não se sobrepõem e cabem na tela", run(`(() => { const rs = [0,1,2,3,4,5,6,7,8,9,10].map(getTrackPlayRect);
     const dentro = rs.every(r => r.x >= 0 && r.y >= 0 && r.x + r.w <= canvas.width && r.y + r.h <= canvas.height);
     const sobre = rs.some((a, i) => rs.some((b, j) => i < j && a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h));
     return dentro && !sobre; })()`));

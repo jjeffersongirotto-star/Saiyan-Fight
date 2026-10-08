@@ -303,7 +303,11 @@ const SPRITE_ANIME_BODY = {
     jovem: { sw: 21, ww: 13, hw: 15, arm: 5, leg: 6.6, headScale: 0.86, scale: 0.8 },
     // gordo (Majin Boo): barrigão redondo, pernas curtas, cabeça um pouco maior
     gordo: { sw: 30, ww: 46, hw: 34, arm: 9, leg: 10.5, torsoTop: 40, torsoBottom: 77, shoulderY: 43.5, hipY: 75, t1: 14.5, t2: 14.5,
-        l1: 13, l2: 12.5, headY: 26.5, headScale: 1.04, belly: true }
+        l1: 13, l2: 12.5, headY: 26.5, headScale: 1.04, belly: true },
+    // minion (v0.88, Saibaman/Cell Jr.): baixinho e atarracado, cabeça grande, tronco curto, braços e pernas curtos
+    // e grossos — o mesmo molde dos minions do gameplay, para os criados caberem nos movimentos deles
+    minion: { sw: 27, ww: 17, hw: 19, arm: 7, leg: 8.6, torsoTop: 55, torsoBottom: 79, shoulderY: 58, hipY: 77, t1: 14, t2: 13,
+        l1: 11.5, l2: 10.5, headY: 38, headScale: 1.32, scale: 0.86 }
 };
 
 // ---------------------------------------------------------------------------
@@ -1024,9 +1028,10 @@ function spriteMinionHead(R, a, skin, rx) {
         s += `<ellipse cx="-5" cy="-21" rx="3.4" ry="1.6" fill="#ffffff" opacity="0.3" transform="rotate(-25 -5 -21)"/>`;
     } else {
         const aba = R.lin(-14, -30, 12, -4, [[0, spriteShade(skin, 0.35)], [0.5, skin], [1, spriteShade(skin, -0.35)]]);
-        s += spritePath(`M-3 -9 L-8 -28 L-16 -25 L${_n2(-rx - 2)} -8 L-7 -3 Z`, aba);
-        s += spritePath(`M3 -9 L8 -28 L16 -25 L${_n2(rx + 2)} -8 L7 -3 Z`, aba);
-        [[-11, -21, 1.3], [-9, -14, 1.1], [-13, -11, 1], [11, -21, 1.3], [9, -14, 1.1], [13, -11, 1]].forEach(([x, y, r], i) => {
+        // abas largas abrindo para os lados (como asas de inseto), não para cima
+        s += spritePath(`M-3 -10 L-10 -25 L-21 -21 L${_n2(-rx - 3)} -7 L-7 -3 Z`, aba);
+        s += spritePath(`M3 -10 L10 -25 L21 -21 L${_n2(rx + 3)} -7 L7 -3 Z`, aba);
+        [[-13, -19, 1.3], [-10, -13, 1.1], [-16, -12, 1], [13, -19, 1.3], [10, -13, 1.1], [16, -12, 1]].forEach(([x, y, r], i) => {
             s += `<ellipse cx="${x}" cy="${y}" rx="${_n2(r * 1.3)}" ry="${r}" fill="${cor}" transform="rotate(${i * 30} ${x} ${y})"/>`;
         });
         s += spritePath(`M-4.4 -12 L0 -18.4 L4.4 -12 L4.2 -4.6 L-4.2 -4.6 Z`, R.lin(-4, -18, 4, -4, [[0, spriteShade(cor, 0.4)], [0.5, cor], [1, spriteShade(cor, -0.45)]]));
@@ -2389,8 +2394,8 @@ const SPRITE_PRESETS = {
     cell: { label: "Cell", appearance: { gender: "masculino", race: "Bio-Androide", build: "normal", skinColor: "#86bf3e", hairStyle: "careca", hairColor: "#3e8a2c", eyeType: "serio", irisColor: "#d0466e", mouthType: "serio", earType: "nenhuma", headFeature: "capacete_cell1", bodyMarks: "cell_imperfeito", accessory: "none", outerShirt: "none", innerShirt: "nenhuma", pants: "nenhuma", shoes: "pes_garras", gloves: "nenhuma", primaryColor: "#3e8a2c", secondaryColor: "#17141c", accentColor: "#e8662a", shirtColor: "#17141c", pantsColor: "#3e8a2c", wings: "cell_abertas", tail: "cell", kiColor: "#7dff7a" } },
     broly: { label: "Broly", appearance: { gender: "masculino", race: "Saiyajin", build: "musculoso", skinColor: "#c98d5e", hairStyle: "broly", hairColor: "#111014", eyeType: "serio", irisColor: "#141014", mouthType: "serio", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "coleira", outerShirt: "armadura_broly", innerShirt: "nenhuma", pants: "justa", shoes: "botas_broly", gloves: "munhequeiras_borda", primaryColor: "#3a3046", secondaryColor: "#2a2530", accentColor: "#3fae4a", shirtColor: "#3a3046", pantsColor: "#6f3a96", cape: "manto_cintura", capeColor: "#a8dc8c", kiColor: "#7dff7a" } },
     // Minions (v0.87): Saibaman e Cell Jr. montados com as peças de minion (cores editáveis)
-    saibaman: { label: "Saibaman", appearance: { gender: "masculino", race: "Minion", build: "jovem", skinColor: "#6fc046", hairStyle: "careca", hairColor: "#3f8a28", eyeType: "bravo", irisColor: "#7a0a14", scleraColor: "#e0263a", mouthType: "grito", earType: "pontuda", headFeature: "cabeca_saibaman", bodyMarks: "aneis_minion", accessory: "none", outerShirt: "none", innerShirt: "nenhuma", pants: "nenhuma", shoes: "garras_minion", gloves: "garras_minion", primaryColor: "#6fc046", secondaryColor: "#5aa83a", accentColor: "#3f8a28", shirtColor: "#5aa83a", pantsColor: "#5aa83a", minionColor: "#2f6f22", clawColor: "#f2eee0", kiColor: "#9dff6a" } },
-    celljr: { label: "Cell Jr.", appearance: { gender: "masculino", race: "Minion", build: "jovem", skinColor: "#3f9ae6", hairStyle: "careca", hairColor: "#14215a", eyeType: "serio", irisColor: "#c2183a", mouthType: "serio", earType: "nenhuma", headFeature: "crista_celljr", bodyMarks: "manchas_minion", accessory: "none", outerShirt: "none", innerShirt: "nenhuma", pants: "justa", shoes: "botas_trunks", gloves: "luvas_saiyajin", primaryColor: "#14215a", secondaryColor: "#14215a", accentColor: "#f2b630", shirtColor: "#14215a", pantsColor: "#14215a", wings: "cell", minionColor: "#14215a", clawColor: "#f2eee0", kiColor: "#8fd0ff" } },
+    saibaman: { label: "Saibaman", appearance: { gender: "masculino", race: "Minion", build: "minion", skinColor: "#6fc046", hairStyle: "careca", hairColor: "#3f8a28", eyeType: "bravo", irisColor: "#7a0a14", scleraColor: "#e0263a", mouthType: "grito", earType: "pontuda", headFeature: "cabeca_saibaman", bodyMarks: "aneis_minion", accessory: "none", outerShirt: "none", innerShirt: "nenhuma", pants: "nenhuma", shoes: "garras_minion", gloves: "garras_minion", primaryColor: "#6fc046", secondaryColor: "#5aa83a", accentColor: "#3f8a28", shirtColor: "#5aa83a", pantsColor: "#5aa83a", minionColor: "#2f6f22", clawColor: "#f2eee0", kiColor: "#9dff6a" } },
+    celljr: { label: "Cell Jr.", appearance: { gender: "masculino", race: "Minion", build: "minion", skinColor: "#3f9ae6", hairStyle: "careca", hairColor: "#14215a", eyeType: "serio", irisColor: "#c2183a", mouthType: "serio", earType: "nenhuma", headFeature: "crista_celljr", bodyMarks: "manchas_minion", accessory: "none", outerShirt: "none", innerShirt: "nenhuma", pants: "justa", shoes: "botas_trunks", gloves: "luvas_saiyajin", primaryColor: "#14215a", secondaryColor: "#14215a", accentColor: "#f2b630", shirtColor: "#14215a", pantsColor: "#14215a", wings: "cell", minionColor: "#14215a", clawColor: "#f2eee0", kiColor: "#8fd0ff" } },
     gotenks: { label: "Gotenks", appearance: { gender: "masculino", race: "Saiyajin", build: "jovem", hairStyle: "gotenks_bicolor", hairColor: "#141016", hairColor2: "#b58ce0", eyeType: "serio", irisColor: "#1a1210", mouthType: "maligno", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "none", outerShirt: "colete_metamoran", innerShirt: "nenhuma", pants: "bufante", shoes: "sapatilhas_faixa", gloves: "munhequeiras_escuras", primaryColor: "#1f2a6a", secondaryColor: "#1fa59a", accentColor: "#f2c21c", shirtColor: "#1f2a6a", pantsColor: "#f6f4ee", kiColor: "#ffe45a" } }
 };
 

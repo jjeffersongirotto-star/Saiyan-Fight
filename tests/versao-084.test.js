@@ -41,7 +41,7 @@ check("(0.86) volta ao quadro da arena com o personagem e a forma preenchidos", 
 const salvar = run("MENU_LAYOUT.arenaPainel.salvar");
 run(`handleMenuClick(${salvar.x + 5}, ${salvar.y + 5})`);
 check("SALVAR guarda como vilão daquela fase, na forma escolhida", JSON.stringify(run("getVilaoDaFase('kaio')")) === JSON.stringify({ key: "freeza_1", nivel: 1 }) && run("gameState") === "stages" && run("arenaPainel") === null);
-check("o card da fase mostra o retrato do vilão", fs.readFileSync(__dirname + "/../menu.js", "utf8").includes("drawCharacterPortrait(characterDB[vf.key]"));
+check("o card da fase mostra o retrato do vilão", fs.readFileSync(__dirname + "/../menu.js", "utf8").includes("drawRetratoNaForma(vf.key, vf.nivel"));
 
 // ---------- luta da fase ----------
 run("selectedStage = 'kaio'; abrirTelaPersonagens('solo')");

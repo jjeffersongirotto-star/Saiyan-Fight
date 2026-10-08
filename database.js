@@ -2670,6 +2670,9 @@ function setBuilderFormFromAppearance(appearance) {
 function escolherRaca() {
     const autoSkin = document.getElementById("build-skin-auto");
     if (autoSkin) autoSkin.checked = true;
+    // raça Minion já escolhe o porte de minion (o molde dos minions do gameplay); dá para trocar depois
+    const raca = document.getElementById("build-race"), porte = document.getElementById("build-build");
+    if (raca && porte && raca.value === "Minion") porte.value = "minion";
     refreshBuilderPreview();
 }
 

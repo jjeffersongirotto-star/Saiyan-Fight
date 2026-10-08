@@ -1330,3 +1330,541 @@ function drawKameIslandStage(ang) {
         trCam = TR_CAM;
     }
 }
+
+// ==================== PEÇAS 3D COMUNS (órbita) ====================
+// Usadas pela Plataforma Celestial e pela Capital do Oeste: tudo em coordenadas de planta projetadas por trProj
+// com a câmera atual (trCam). Faces com a normal para fora só aparecem viradas para a câmera.
+function c3Camera(ang) { return [trCam.D * Math.sin(ang), trCam.H, trCam.D * Math.cos(ang)]; }
+function c3Face(pts, normal, cor, ang, contorno) {
+    const cam = c3Camera(ang), p = pts[0];
+    if ((cam[0] - p[0]) * normal[0] + (cam[1] - p[1]) * normal[1] + (cam[2] - p[2]) * normal[2] <= 0) return null;
+    const tela = pts.map(q => trProj(q[0], q[1], q[2], ang));
+    trPoly(tela);
+    trG.fillStyle = cor;
+    trG.fill();
+    if (contorno) { trG.strokeStyle = contorno; trG.lineWidth = 1; trG.stroke(); }
+    return tela;
+}
+// elipse de um círculo horizontal (centro cx,cz, altura y, raio r) já em perspectiva
+function c3Anel(cx, cz, y, r, ang) {
+    const s = Math.sin(ang), co = Math.cos(ang);
+    const c = trProj(cx, y, cz, ang), fr = trProj(cx + r * s, y, cz + r * co, ang), tr = trProj(cx - r * s, y, cz - r * co, ang);
+    return { cx: c[0], cy: (fr[1] + tr[1]) / 2, rx: r * c[3], ry: Math.max(0.6, Math.abs(fr[1] - tr[1]) / 2), k: c[3] };
+}
+// cilindro em pé (lateral + tampa); cor pode ser um gradiente pronto
+function c3Cilindro(cx, cz, y0, y1, r, cor, ang, tampa, contorno) {
+    const a = c3Anel(cx, cz, y0, r, ang), b = c3Anel(cx, cz, y1, r, ang);
+    trG.fillStyle = cor;
+    trG.beginPath();
+    trG.moveTo(b.cx - b.rx, b.cy);
+    trG.lineTo(a.cx - a.rx, a.cy);
+    trG.ellipse(a.cx, a.cy, a.rx, a.ry, 0, Math.PI, 0, true);
+    trG.lineTo(b.cx + b.rx, b.cy);
+    trG.closePath();
+    trG.fill();
+    if (contorno) { trG.strokeStyle = contorno; trG.lineWidth = 1; trG.stroke(); }
+    trG.fillStyle = tampa || cor;
+    trG.beginPath(); trG.ellipse(b.cx, b.cy, b.rx, b.ry, 0, 0, Math.PI * 2); trG.fill();
+    if (contorno) trG.stroke();
+    return b;
+}
+// cúpula (meia esfera achatada de altura h) sobre o círculo de raio r na altura y
+function c3Domo(cx, cz, y, r, h, cor, ang, brilho) {
+    const a = c3Anel(cx, cz, y, r, ang), topo = trProj(cx, y + h, cz, ang);
+    const alto = a.cy - topo[1];
+    const gr = trG.createLinearGradient(a.cx - a.rx, 0, a.cx + a.rx, 0);
+    gr.addColorStop(0, spriteMixC3(cor, -0.3)); gr.addColorStop(0.38, spriteMixC3(cor, 0.35)); gr.addColorStop(1, spriteMixC3(cor, -0.35));
+    trG.fillStyle = gr;
+    trG.beginPath();
+    trG.moveTo(a.cx - a.rx, a.cy);
+    trG.bezierCurveTo(a.cx - a.rx, a.cy - alto * 0.75, a.cx - a.rx * 0.45, a.cy - alto, a.cx, a.cy - alto);
+    trG.bezierCurveTo(a.cx + a.rx * 0.45, a.cy - alto, a.cx + a.rx, a.cy - alto * 0.75, a.cx + a.rx, a.cy);
+    trG.ellipse(a.cx, a.cy, a.rx, a.ry, 0, 0, Math.PI);
+    trG.closePath();
+    trG.fill();
+    if (brilho !== false) {
+        trG.fillStyle = "rgba(255, 255, 255, 0.35)";
+        trG.beginPath(); trG.ellipse(a.cx - a.rx * 0.32, a.cy - alto * 0.68, a.rx * 0.2, alto * 0.14, -0.5, 0, Math.PI * 2); trG.fill();
+    }
+    return { cx: a.cx, base: a.cy, alto, rx: a.rx };
+}
+// clareia (q > 0) ou escurece (q < 0) uma cor #rrggbb
+function spriteMixC3(cor, q) {
+    const n = parseInt(cor.slice(1), 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    const f = (v) => Math.round(q >= 0 ? v + (255 - v) * q : v * (1 + q));
+    return `rgb(${f(r)},${f(g)},${f(b)})`;
+}
+// segmento do chão recortado antes de chegar atrás da câmera (devolve null se todo atrás)
+function c3RecorteChao(a, b, ang, lim) {
+    const da = trRot(a[0], a[1], ang)[1], db = trRot(b[0], b[1], ang)[1];
+    if (da > lim && db > lim) return null;
+    const corta = (p, q, dp, dq) => { const t = (lim - dp) / (dq - dp); return [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t]; };
+    if (da > lim) a = corta(a, b, da, db);
+    if (db > lim) b = corta(b, a, db, da);
+    return [a, b];
+}
+
+// ==================== PLATAFORMA CELESTIAL (Palácio de Kami) ====================
+// O disco flutuando entre as nuvens: piso de ladrilhos azul-claros, borda vinho com triângulos, casco dourado com
+// janelas ovais e a escada com a corda descendo; o palácio branco com cúpulas douradas (a grande no meio e duas
+// menores dos lados), torres-mirante brancas, ciprestes, canteiros de grama e dois coqueiros com sombra. A câmera
+// dá a volta na plataforma (como na Ilha do Kame); as nuvens lá embaixo e o céu passam a cada quadro.
+const PC_CAM = { CX: 400, HY: 110, D: 760, H: 150, F: 600, PERTO: 30 };
+const pcCena = { passo: null, canvas: null };
+const PC_R = 300;
+const PC_CIPRESTES = (() => {
+    const l = [];
+    const fileira = (x0, z0, dx, dz, n) => { for (let i = 0; i < n; i++) l.push({ x: x0 + dx * i, z: z0 + dz * i, h: 30 + (i % 2) * 6 }); };
+    fileira(-250, 40, 16, 10, 5); fileira(250, 40, -16, 10, 5);          // frente esquerda / direita
+    fileira(-245, -60, 18, -12, 4); fileira(245, -60, -18, -12, 4);      // fundos
+    fileira(-60, -95, 20, 0, 3); fileira(20, -95, 20, 0, 3);             // diante do palácio
+    return l;
+})();
+const PC_CANTEIROS = [[-262, 20, -175, 95], [175, 20, 262, 95], [-258, -110, -180, -40], [180, -110, 258, -40], [-75, 60, -40, 130], [40, 60, 75, 130]];
+const PC_TORRES = [[-175, -150], [-225, -95], [175, -150], [225, -95]];
+
+function pcCipreste(c, ang) {
+    const b = trProj(c.x, 0, c.z, ang), t = trProj(c.x, c.h, c.z, ang), k = b[3];
+    trG.fillStyle = "#4a3a2a"; trG.fillRect(b[0] - 1.2 * k, b[1] - 4 * k, 2.4 * k, 4 * k);
+    trG.fillStyle = "#1f5a3a";
+    trG.beginPath(); trG.ellipse(b[0], (b[1] - 4 * k + t[1]) / 2, 5.6 * k, (b[1] - 4 * k - t[1]) / 2, 0, 0, Math.PI * 2); trG.fill();
+    trG.fillStyle = "#2f7a4c";
+    trG.beginPath(); trG.ellipse(b[0] - 1.6 * k, (b[1] - 4 * k + t[1]) / 2 - 2 * k, 2.4 * k, (b[1] - 4 * k - t[1]) / 2.6, 0, 0, Math.PI * 2); trG.fill();
+}
+function pcTorre(x, z, ang) {
+    const b = trProj(x, 0, z, ang), t = trProj(x, 74, z, ang), k = b[3];
+    trG.strokeStyle = "#e8eef6"; trG.lineWidth = Math.max(1.5, 3.2 * k);
+    trG.beginPath(); trG.moveTo(b[0], b[1]); trG.lineTo(t[0], t[1]); trG.stroke();
+    trG.strokeStyle = "#a9b8cc"; trG.lineWidth = Math.max(0.6, 1 * k);
+    trG.beginPath(); trG.moveTo(b[0] + 1.2 * k, b[1]); trG.lineTo(t[0] + 1.2 * k, t[1]); trG.stroke();
+    // cone por baixo da cabine, cabine com faixa de vidro azul e a cupulazinha
+    const a = c3Anel(x, z, 72, 15, ang);
+    trG.fillStyle = "#cfd9e6";
+    trG.beginPath(); trG.moveTo(a.cx - a.rx, a.cy); trG.lineTo(t[0], t[1] + 8 * k); trG.lineTo(a.cx + a.rx, a.cy); trG.closePath(); trG.fill();
+    c3Cilindro(x, z, 72, 84, 15, "#f4f7fb", ang, "#ffffff", "rgba(80, 100, 130, 0.5)");
+    const v = c3Anel(x, z, 78, 15.4, ang);
+    trG.fillStyle = "#5b8ed0"; trG.beginPath(); trG.ellipse(v.cx, v.cy, v.rx, v.ry + 2.4 * k, 0, 0, Math.PI); trG.fill();
+    c3Domo(x, z, 84, 14, 9, "#f4f7fb", ang);
+}
+function pcPalacio(ang) {
+    const cam = c3Camera(ang);
+    // escadaria e entrada em arco na frente do palácio
+    const entrada = () => {
+        c3Face([[-14, 0, -112], [14, 0, -112], [14, 6, -126], [-14, 6, -126]], [0, 14, 1], "#e6edf5", ang, "rgba(90, 110, 140, 0.4)");
+        c3Face([[-12, 6, -126], [12, 6, -126], [12, 26, -126], [-12, 26, -126]], [0, 0, 1], "#f6f8fb", ang, "rgba(90, 110, 140, 0.4)");
+        if (cam[2] > -126) {
+            const p = trProj(0, 6, -125.5, ang), q = trProj(0, 20, -125.5, ang), k = p[3];
+            trG.fillStyle = "#b4693a";
+            trG.beginPath(); trG.moveTo(p[0] - 6 * k, p[1]); trG.lineTo(p[0] - 6 * k, q[1] + 4 * k); trG.quadraticCurveTo(p[0], q[1] - 4 * k, p[0] + 6 * k, q[1] + 4 * k); trG.lineTo(p[0] + 6 * k, p[1]); trG.closePath(); trG.fill();
+        }
+    };
+    const lateral = (x) => {
+        c3Cilindro(x, -150, 0, 20, 30, "#eef2f8", ang, "#f8fafc", "rgba(90, 110, 140, 0.45)");
+        c3Cilindro(x, -150, 20, 26, 33, "#7a4fc0", ang, "#9a6fdc");
+        const d = c3Domo(x, -150, 26, 24, 22, "#d6a23a", ang);
+        const t = trProj(x, 48, -150, ang);
+        trG.fillStyle = "#f2d27a"; trG.beginPath(); trG.arc(t[0], t[1], 2.4 * t[3], 0, Math.PI * 2); trG.fill();
+        return d;
+    };
+    const central = () => {
+        c3Cilindro(0, -175, 0, 24, 54, "#f2f5fa", ang, "#ffffff", "rgba(90, 110, 140, 0.45)");
+        // faixa de vidro azul em volta
+        const v = c3Anel(0, -175, 14, 54.5, ang);
+        trG.fillStyle = "#7fb0e6"; trG.beginPath(); trG.ellipse(v.cx, v.cy, v.rx, v.ry + 5 * v.k, 0, 0, Math.PI); trG.fill();
+        trG.strokeStyle = "rgba(255,255,255,0.6)"; trG.lineWidth = 1;
+        for (let i = -3; i <= 3; i++) { trG.beginPath(); trG.moveTo(v.cx + i * v.rx / 4, v.cy + v.ry * Math.sqrt(Math.max(0, 1 - (i / 4) ** 2)) - 1); trG.lineTo(v.cx + i * v.rx / 4, v.cy + v.ry * Math.sqrt(Math.max(0, 1 - (i / 4) ** 2)) + 5 * v.k); trG.stroke(); }
+        c3Cilindro(0, -175, 24, 30, 46, "#e7ecf4", ang, "#f6f8fb");
+        c3Domo(0, -175, 30, 44, 40, "#d9a53c", ang);
+        c3Cilindro(0, -175, 68, 80, 12, "#f6f8fb", ang, "#ffffff", "rgba(90, 110, 140, 0.45)");
+        c3Domo(0, -175, 80, 12, 10, "#d9a53c", ang);
+    };
+    // de trás para a frente conforme a câmera
+    const partes = [
+        { z: trRot(0, -175, ang)[1], d: central },
+        { z: trRot(-85, -150, ang)[1], d: () => lateral(-85) },
+        { z: trRot(85, -150, ang)[1], d: () => lateral(85) },
+        { z: trRot(0, -120, ang)[1], d: entrada }
+    ];
+    partes.sort((a, b) => a.z - b.z).forEach(p => p.d());
+}
+function pcCoqueiro(x, z, ang) {
+    const b = trProj(x, 0, z, ang), t = trProj(x + 4, 44, z, ang), k = b[3];
+    trG.strokeStyle = "#8a6a44"; trG.lineWidth = Math.max(1.5, 3.4 * k); trG.lineCap = "round";
+    trG.beginPath(); trG.moveTo(b[0], b[1]); trG.quadraticCurveTo(b[0] - 3 * k, (b[1] + t[1]) / 2, t[0], t[1]); trG.stroke();
+    trG.lineCap = "butt";
+    [-2.6, -1.9, -1.2, -0.5, 0.3, 1.0, 1.7, 2.5].forEach((a, i) => {
+        const comp = (20 + (i % 3) * 4) * k;
+        const ex = t[0] + Math.cos(a) * comp, ey = t[1] - Math.sin(a) * comp * 0.3 + (8 + (i % 2) * 5) * k;
+        trG.strokeStyle = i % 2 ? "#2f8a3a" : "#43a84c"; trG.lineWidth = Math.max(1.4, 4 * k);
+        trG.beginPath(); trG.moveTo(t[0], t[1]); trG.quadraticCurveTo(t[0] + Math.cos(a) * comp * 0.5, t[1] - 6 * k, ex, ey); trG.stroke();
+    });
+}
+
+function drawPlataformaScene(ang) {
+    const N = 64, R = PC_R;
+    // casco por baixo: faixas do maior para o menor raio, de baixo para cima (a de cima cobre a de baixo)
+    const aneis = [[-14, 298], [-40, 284], [-68, 240], [-92, 168], [-110, 78], [-118, 20]];
+    for (let i = aneis.length - 1; i > 0; i--) {
+        const a = c3Anel(0, 0, aneis[i - 1][0], aneis[i - 1][1], ang), b = c3Anel(0, 0, aneis[i][0], aneis[i][1], ang);
+        const gr = trG.createLinearGradient(a.cx - a.rx, 0, a.cx + a.rx, 0);
+        gr.addColorStop(0, "#7a6224"); gr.addColorStop(0.4, i === 1 ? "#d8bb64" : "#c4a24a"); gr.addColorStop(1, "#6a5420");
+        trG.fillStyle = gr;
+        trG.beginPath();
+        trG.ellipse(a.cx, a.cy, a.rx, a.ry, 0, Math.PI, 0, true);
+        trG.lineTo(b.cx + b.rx, b.cy);
+        trG.ellipse(b.cx, b.cy, b.rx, b.ry, 0, 0, Math.PI, false);
+        trG.closePath();
+        trG.fill();
+    }
+    // janelas ovais azuis no casco, só as viradas para a câmera
+    for (let i = 0; i < 14; i++) {
+        const a = i / 14 * Math.PI * 2, rr = trRot(Math.sin(a), Math.cos(a), ang)[1];
+        if (rr < 0.5) continue;
+        const p = trProj(Math.sin(a) * 262, -52, Math.cos(a) * 262, ang), k = p[3];
+        trG.fillStyle = "#3a4f78"; trG.beginPath(); trG.ellipse(p[0], p[1], 13 * k * rr, 4.6 * k, 0, 0, Math.PI * 2); trG.fill();
+        trG.fillStyle = "#8fb6e6"; trG.beginPath(); trG.ellipse(p[0] - 2 * k * rr, p[1] - 1 * k, 7 * k * rr, 2 * k, 0, 0, Math.PI * 2); trG.fill();
+    }
+    // borda vinho com triângulos (a faixa da lateral do disco)
+    const topo = c3Anel(0, 0, 0, R, ang), base = c3Anel(0, 0, -14, R - 2, ang);
+    trG.fillStyle = "#6e1430";
+    trG.beginPath(); trG.ellipse(topo.cx, topo.cy, topo.rx, topo.ry, 0, Math.PI, 0, true); trG.lineTo(base.cx + base.rx, base.cy); trG.ellipse(base.cx, base.cy, base.rx, base.ry, 0, 0, Math.PI, false); trG.closePath(); trG.fill();
+    trG.fillStyle = "#b8344e";
+    trG.beginPath();
+    for (let i = 0; i < 72; i++) {
+        const a0 = i / 72 * Math.PI * 2, a1 = (i + 1) / 72 * Math.PI * 2, am = (a0 + a1) / 2;
+        if (trRot(Math.sin(am), Math.cos(am), ang)[1] < 0.05) continue;
+        const p0 = trProj(Math.sin(a0) * R, -12, Math.cos(a0) * R, ang), p1 = trProj(Math.sin(a1) * R, -12, Math.cos(a1) * R, ang), pt = trProj(Math.sin(am) * R, -2, Math.cos(am) * R, ang);
+        trG.moveTo(p0[0], p0[1]); trG.lineTo(pt[0], pt[1]); trG.lineTo(p1[0], p1[1]); trG.closePath();
+    }
+    trG.fill();
+    trG.strokeStyle = "#e8c66a"; trG.lineWidth = 1;
+    trG.beginPath(); trG.ellipse(base.cx, base.cy, base.rx, base.ry, 0, 0, Math.PI); trG.stroke();
+    // escada com a corda na frente (fixa na planta, do lado +z)
+    if (trRot(0, 1, ang)[1] > 0.1) {
+        const e0 = trProj(-6, -12, R - 2, ang), e1 = trProj(-6, -120, R * 0.55, ang), d0 = trProj(6, -12, R - 2, ang), d1 = trProj(6, -120, R * 0.55, ang);
+        trG.strokeStyle = "#8a6a3a"; trG.lineWidth = 1.4;
+        trG.beginPath(); trG.moveTo(e0[0], e0[1]); trG.lineTo(e1[0], e1[1]); trG.moveTo(d0[0], d0[1]); trG.lineTo(d1[0], d1[1]);
+        for (let i = 1; i < 10; i++) { const f = i / 10; trG.moveTo(e0[0] + (e1[0] - e0[0]) * f, e0[1] + (e1[1] - e0[1]) * f); trG.lineTo(d0[0] + (d1[0] - d0[0]) * f, d0[1] + (d1[1] - d0[1]) * f); }
+        trG.stroke();
+        const c0 = trProj(0, -120, R * 0.55, ang);
+        trG.strokeStyle = "rgba(240, 240, 240, 0.8)"; trG.lineWidth = 1;
+        trG.beginPath(); trG.moveTo(c0[0], c0[1]); trG.lineTo(c0[0], canvas.height + 10); trG.stroke();
+    }
+    // piso de ladrilhos
+    const anel = []; for (let i = 0; i < N; i++) { const a = i / N * Math.PI * 2; anel.push(trProj(Math.sin(a) * R, 0, Math.cos(a) * R, ang)); }
+    trPoly(anel);
+    const piso = trG.createLinearGradient(0, topo.cy - topo.ry, 0, topo.cy + topo.ry);
+    piso.addColorStop(0, "#c9d8ea"); piso.addColorStop(1, "#e8f0f8");
+    trG.fillStyle = piso; trG.fill();
+    trG.strokeStyle = "rgba(140, 165, 200, 0.45)"; trG.lineWidth = 0.7;
+    trG.beginPath();
+    for (let v = -R + 24; v < R; v += 24) {
+        const m = Math.sqrt(R * R - v * v);
+        let p = trProj(v, 0, -m, ang), q = trProj(v, 0, m, ang); trG.moveTo(p[0], p[1]); trG.lineTo(q[0], q[1]);
+        p = trProj(-m, 0, v, ang); q = trProj(m, 0, v, ang); trG.moveTo(p[0], p[1]); trG.lineTo(q[0], q[1]);
+    }
+    trG.stroke();
+    trG.strokeStyle = "#ffffff"; trG.lineWidth = 1.4; trPoly(anel); trG.stroke();
+    // canteiros de grama e sombras dos coqueiros
+    PC_CANTEIROS.forEach(([x0, z0, x1, z1]) => {
+        trPoly([[x0, z0], [x1, z0], [x1, z1], [x0, z1]].map(c => trProj(c[0], 0.5, c[1], ang)));
+        trG.fillStyle = "#4f9a3a"; trG.fill();
+        trG.strokeStyle = "#e6eef6"; trG.lineWidth = 1; trG.stroke();
+    });
+    trG.fillStyle = "rgba(60, 90, 160, 0.35)";
+    [[-57, 95], [57, 95]].forEach(([x, z]) => {
+        for (let i = 0; i < 3; i++) { const p = trProj(x + 30 + i * 14, 0.6, z - 10 + i * 6, ang); trG.beginPath(); trG.ellipse(p[0], p[1], 10 * p[3], 3 * p[3], 0.3, 0, Math.PI * 2); trG.fill(); }
+    });
+    // o que fica em pé, de trás para a frente
+    const prof = (x, z) => trRot(x, z, ang)[1];
+    const objetos = [{ z: prof(0, -160), d: () => pcPalacio(ang) }];
+    PC_TORRES.forEach(([x, z]) => objetos.push({ z: prof(x, z), d: () => pcTorre(x, z, ang) }));
+    PC_CIPRESTES.forEach(c => objetos.push({ z: prof(c.x, c.z), d: () => pcCipreste(c, ang) }));
+    [[-57, 95], [57, 95]].forEach(([x, z]) => objetos.push({ z: prof(x, z), d: () => pcCoqueiro(x, z, ang) }));
+    objetos.sort((a, b) => a.z - b.z).forEach(o => o.d());
+}
+
+// céu azul em cima, mar de nuvens embaixo (360°, desliza devagar)
+const PC_PANO_W = Math.round(Math.PI * 2 * PC_CAM.F);
+let pcPanorama = null;
+function getPlataformaPanorama() {
+    if (c3Valida(pcPanorama)) return pcPanorama;
+    const f = c3NovaFaixa(PC_PANO_W, PC_CAM.HY + 30);
+    if (!f) return null;
+    const { c, g } = f, W = PC_PANO_W, base = PC_CAM.HY + 8;
+    const ceu = g.createLinearGradient(0, 0, 0, base);
+    ceu.addColorStop(0, "#3d7fd6"); ceu.addColorStop(0.6, "#8cbcea"); ceu.addColorStop(1, "#e6f2fc");
+    g.fillStyle = ceu; g.fillRect(0, 0, W, c.__h);
+    for (let i = 0; i < 10; i++) {
+        const cx = (i * 391.7 + 60) % W, larg = 160 + (i * 41) % 140, alt = 26 + (i * 17) % 22;
+        c3NaVolta(W, cx, larg, x => khNuvem(g, x, base + 10, larg, alt, i + 30));
+    }
+    pcPanorama = c;
+    return c;
+}
+const PC_NUVENS = (() => {
+    const l = [];
+    for (let i = 0; i < 40; i++) {
+        const a = c3Hash(i * 2.3) * Math.PI * 2, r = 380 + c3Hash(i * 5.1) * 1500;
+        l.push({ x: Math.sin(a) * r, z: Math.cos(a) * r, tam: 60 + c3Hash(i * 8.7) * 90 });
+    }
+    return l;
+})();
+function drawPlataformaCeu(ang, t) {
+    const chao = ctx.createLinearGradient(0, PC_CAM.HY, 0, canvas.height);
+    chao.addColorStop(0, "#eef6fd"); chao.addColorStop(1, "#c6dcf2");
+    ctx.fillStyle = chao;
+    ctx.fillRect(0, PC_CAM.HY, canvas.width, canvas.height - PC_CAM.HY);
+    const pano = getPlataformaPanorama();
+    if (!pano || !c3BlitPanorama(pano, ang + t * 0.005, PC_CAM.F, PC_CAM.CX)) { ctx.fillStyle = "#8cbcea"; ctx.fillRect(0, 0, canvas.width, PC_CAM.HY); }
+    // nuvens lá embaixo (plano bem abaixo da plataforma), passando devagar
+    const lim = PC_CAM.D - PC_CAM.PERTO * 2;
+    const desl = (t * 6) % 3000;
+    PC_NUVENS.map(n => ({ n, x: ((n.x + desl + 1500) % 3000) - 1500 }))
+        .map(o => ({ o, r: trRot(o.x, o.n.z, ang) }))
+        .filter(v => v.r[1] < lim)
+        .sort((a, b) => a.r[1] - b.r[1])
+        .forEach(({ o }) => {
+            const p = trProj(o.x, -420, o.n.z, ang), k = p[3], w = o.n.tam * k;
+            if (p[1] < PC_CAM.HY || p[1] - w * 0.3 > canvas.height) return;
+            ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+            ctx.beginPath(); ctx.ellipse(p[0], p[1], w, w * 0.22, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(p[0] - w * 0.3, p[1] - w * 0.1, w * 0.45, w * 0.18, 0, 0, Math.PI * 2); ctx.fill();
+        });
+}
+function drawPlataformaStage(ang) {
+    const t = typeof gameplayClock === "number" ? gameplayClock : 0;
+    trCam = PC_CAM;
+    try {
+        drawPlataformaCeu(ang, t);
+        drawCachedOrbitLayer(pcCena, ang, drawPlataformaScene);
+    } finally {
+        trCam = TR_CAM;
+    }
+}
+
+// ==================== CAPITAL DO OESTE (Corporação Cápsula) ====================
+// Vista do alto: no meio, o domo amarelo da Corporação Cápsula (letreiro CAPSULE, faixas de janelas, o domo
+// branco anexo) num jardim redondo; em volta, prédios brancos de teto colorido, casinhas-domo, torres com esfera,
+// o tubo azul do monotrilho, as ruas e o campo verde com morros ao fundo. Os lutadores voam por cima do domo e a
+// câmera dá a volta nele. Prédios que ficariam entre a câmera e o domo não são desenhados (corte), para a luta
+// ficar sempre limpa.
+const CO_CAM = { CX: 400, HY: 40, D: 700, H: 250, F: 560, PERTO: 30 };
+const coCena = { passo: null, canvas: null };
+const CO_PREDIOS = (() => {
+    const l = [], tetos = ["#f472b6", "#facc15", "#4ade80", "#60a5fa", "#f87171", "#c084fc", "#fb923c"];
+    for (let i = 0; i < 26; i++) {
+        const a = i / 26 * Math.PI * 2 + c3Hash(i * 1.7) * 0.18, r = 270 + c3Hash(i * 3.3) * 230;
+        const alto = c3Hash(i * 7.1) > 0.55;
+        l.push({ x: Math.sin(a) * r, z: Math.cos(a) * r, w: 26 + c3Hash(i * 2.9) * 22, d: 24 + c3Hash(i * 4.1) * 20,
+            h: alto ? 110 + c3Hash(i * 5.7) * 110 : 40 + c3Hash(i * 6.3) * 40, teto: tetos[i % tetos.length], tipo: "predio" });
+    }
+    for (let i = 0; i < 14; i++) {
+        const a = i / 14 * Math.PI * 2 + 0.11, r = 205 + c3Hash(i * 9.1) * 50;
+        l.push({ x: Math.sin(a) * r, z: Math.cos(a) * r, r: 12 + c3Hash(i * 2.2) * 8, faixa: ["#60a5fa", "#f472b6", "#facc15", "#4ade80"][i % 4], tipo: "casa" });
+    }
+    for (let i = 0; i < 6; i++) {
+        const a = i / 6 * Math.PI * 2 + 0.5, r = 330 + (i % 2) * 120;
+        l.push({ x: Math.sin(a) * r, z: Math.cos(a) * r, h: 90 + (i % 3) * 30, cor: ["#f472b6", "#60a5fa", "#e5e7eb"][i % 3], tipo: "torre" });
+    }
+    return l;
+})();
+const CO_CORTE = 150;   // prédios mais perto da câmera que isto (profundidade) não aparecem
+
+function coPredio(p, ang) {
+    const { x, z, w, d, h } = p, x0 = x - w / 2, x1 = x + w / 2, z0 = z - d / 2, z1 = z + d / 2;
+    const parede = "#eef2f7", lado = "#cfd8e4", traco = "rgba(80, 100, 130, 0.45)";
+    const frente = c3Face([[x0, 0, z1], [x1, 0, z1], [x1, h, z1], [x0, h, z1]], [0, 0, 1], parede, ang, traco);
+    const tras = c3Face([[x1, 0, z0], [x0, 0, z0], [x0, h, z0], [x1, h, z0]], [0, 0, -1], lado, ang, traco);
+    const dir = c3Face([[x1, 0, z1], [x1, 0, z0], [x1, h, z0], [x1, h, z1]], [1, 0, 0], lado, ang, traco);
+    const esq = c3Face([[x0, 0, z0], [x0, 0, z1], [x0, h, z1], [x0, h, z0]], [-1, 0, 0], parede, ang, traco);
+    // faixas de janelas azuis nas paredes visíveis
+    trG.strokeStyle = "rgba(70, 120, 200, 0.75)";
+    trG.lineWidth = 1.2;
+    trG.beginPath();
+    const linhas = (a, b) => { for (let y = 10; y < h - 6; y += 12) { const p1 = trProj(a[0], y, a[1], ang), p2 = trProj(b[0], y, b[1], ang); trG.moveTo(p1[0], p1[1]); trG.lineTo(p2[0], p2[1]); } };
+    if (frente) linhas([x0 + 3, z1 + 0.3], [x1 - 3, z1 + 0.3]);
+    if (tras) linhas([x1 - 3, z0 - 0.3], [x0 + 3, z0 - 0.3]);
+    if (dir) linhas([x1 + 0.3, z1 - 3], [x1 + 0.3, z0 + 3]);
+    if (esq) linhas([x0 - 0.3, z0 + 3], [x0 - 0.3, z1 - 3]);
+    trG.stroke();
+    // teto colorido arredondado
+    const topo = [[x0, h, z0], [x1, h, z0], [x1, h, z1], [x0, h, z1]].map(q => trProj(q[0], q[1], q[2], ang));
+    trPoly(topo); trG.fillStyle = p.teto; trG.fill();
+    const c = trProj(x, h + 5, z, ang), k = c[3];
+    trG.fillStyle = spriteMixC3(p.teto, 0.25);
+    trG.beginPath(); trG.ellipse(c[0], c[1] + 3 * k, w * 0.42 * k, 4 * k, 0, 0, Math.PI * 2); trG.fill();
+}
+function coCasa(p, ang) {
+    c3Cilindro(p.x, p.z, 0, 4, p.r, "#dde3ec", ang, "#eef2f7");
+    const d = c3Domo(p.x, p.z, 4, p.r, p.r * 0.85, "#f4f6fa", ang);
+    const a = c3Anel(p.x, p.z, 4 + p.r * 0.35, p.r * 0.93, ang);
+    trG.strokeStyle = p.faixa; trG.lineWidth = Math.max(1, 2.4 * a.k);
+    trG.beginPath(); trG.ellipse(a.cx, a.cy, a.rx, a.ry, 0, 0.1, Math.PI - 0.1); trG.stroke();
+    return d;
+}
+function coTorre(p, ang) {
+    const b = trProj(p.x, 0, p.z, ang), t = trProj(p.x, p.h, p.z, ang), k = b[3];
+    trG.strokeStyle = "#e5e7eb"; trG.lineWidth = Math.max(1.5, 5 * k);
+    trG.beginPath(); trG.moveTo(b[0], b[1]); trG.lineTo(t[0], t[1]); trG.stroke();
+    const r = 16 * t[3];
+    const gr = trG.createRadialGradient(t[0] - r * 0.4, t[1] - r * 0.4, r * 0.1, t[0], t[1], r);
+    gr.addColorStop(0, "#ffffff"); gr.addColorStop(1, "#b9c3d1");
+    trG.fillStyle = gr; trG.beginPath(); trG.arc(t[0], t[1], r, 0, Math.PI * 2); trG.fill();
+    trG.fillStyle = p.cor; trG.beginPath(); trG.arc(t[0], t[1], r, Math.PI * 1.05, Math.PI * 1.95); trG.closePath(); trG.fill();
+    trG.strokeStyle = "#5b8ed0"; trG.lineWidth = Math.max(1, 2 * k); trG.beginPath(); trG.ellipse(t[0], t[1] + r * 0.2, r, r * 0.25, 0, 0, Math.PI); trG.stroke();
+}
+function coCorporacao(ang) {
+    // base branca, o domo amarelo grande, janelas e o letreiro CAPSULE na frente; domo branco anexo do lado
+    const anexo = () => { c3Cilindro(-95, 60, 0, 8, 42, "#e3e8f0", ang, "#f2f5f9"); c3Domo(-95, 60, 8, 40, 34, "#f6f8fb", ang); };
+    const principal = () => {
+        c3Cilindro(0, 0, 0, 10, 118, "#e9edf3", ang, "#f6f8fb", "rgba(90, 100, 120, 0.4)");
+        const d = c3Domo(0, 0, 10, 112, 86, "#ffd75a", ang);
+        // faixas de janelas azuis no domo (só a metade virada para a câmera)
+        [[26, 0.95], [50, 0.78]].forEach(([y, f]) => {
+            const a = c3Anel(0, 0, y, 112 * f, ang);
+            for (let i = -5; i <= 5; i++) {
+                const u = i / 6, px = a.cx + u * a.rx, py = a.cy + a.ry * Math.sqrt(1 - u * u);
+                trG.fillStyle = "#4f7fbf"; trG.beginPath(); trG.ellipse(px, py, 5 * a.k * Math.sqrt(1 - u * u) + 1, 3.2 * a.k, 0, 0, Math.PI * 2); trG.fill();
+            }
+        });
+        // letreiro CAPSULE pintado no lado +z do domo (aparece quando esse lado está virado para a câmera)
+        const vira = trRot(0, 1, ang)[1];
+        if (vira > 0.25) {
+            const p = trProj(0, 38, 96, ang), q = trProj(10, 38, 96, ang), k = p[3];
+            trG.save();
+            trG.translate(p[0], p[1]);
+            trG.scale(Math.max(0.2, (q[0] - p[0]) / (10 * k)), 1);
+            trG.font = `bold ${Math.round(15 * k)}px 'Trebuchet MS', sans-serif`;
+            trG.textAlign = "center";
+            trG.fillStyle = "#1e3a8a";
+            trG.fillText("CAPSULE", 0, 0);
+            trG.restore();
+        }
+        return d;
+    };
+    const partes = [{ z: trRot(0, 0, ang)[1], d: principal }, { z: trRot(-95, 60, ang)[1], d: anexo }];
+    partes.sort((a, b) => a.z - b.z).forEach(p => p.d());
+}
+function coMonotrilho(ang, perto) {
+    // tubo azul elevado em anel; as metades longe/perto vêm em chamadas diferentes (antes/depois dos prédios)
+    const R = 560, Y = 48, pts = [];
+    for (let i = 0; i <= 96; i++) {
+        const a = i / 96 * Math.PI * 2, x = Math.sin(a) * R, z = Math.cos(a) * R, dz = trRot(x, z, ang)[1];
+        pts.push({ p: trProj(x, Y, z, ang), dz, chao: trProj(x, 0, z, ang), i });
+    }
+    const vale = (o) => perto ? o.dz > 0 && o.dz < CO_CORTE : o.dz <= 0;
+    trG.lineCap = "round";
+    for (let i = 1; i < pts.length; i++) {
+        const a = pts[i - 1], b = pts[i];
+        if (!vale(a) || !vale(b)) continue;
+        const k = a.p[3];
+        trG.strokeStyle = "#2f4fb8"; trG.lineWidth = Math.max(2, 12 * k);
+        trG.beginPath(); trG.moveTo(a.p[0], a.p[1]); trG.lineTo(b.p[0], b.p[1]); trG.stroke();
+        trG.strokeStyle = "#9db8f2"; trG.lineWidth = Math.max(1, 3 * k);
+        trG.beginPath(); trG.moveTo(a.p[0], a.p[1] - 3 * k); trG.lineTo(b.p[0], b.p[1] - 3 * k); trG.stroke();
+        if (i % 6 === 0) {
+            trG.strokeStyle = "#cbd5e1"; trG.lineWidth = Math.max(1, 3 * k);
+            trG.beginPath(); trG.moveTo(b.chao[0], b.chao[1]); trG.lineTo(b.p[0], b.p[1]); trG.stroke();
+        }
+    }
+    trG.lineCap = "butt";
+}
+function drawCapitalScene(ang) {
+    // jardim redondo da Corporação Cápsula (o resto do chão e as ruas são do chão desenhado a cada quadro)
+    const jardim = []; for (let i = 0; i < 48; i++) { const a = i / 48 * Math.PI * 2; jardim.push(trProj(Math.sin(a) * 165, 0.5, Math.cos(a) * 165, ang)); }
+    trPoly(jardim); trG.fillStyle = "#6fc04e"; trG.fill();
+    const trilha = []; for (let i = 0; i < 48; i++) { const a = i / 48 * Math.PI * 2; trilha.push(trProj(Math.sin(a) * 140, 0.6, Math.cos(a) * 140, ang)); }
+    trPoly(trilha); trG.strokeStyle = "#f2e8c8"; trG.lineWidth = 2; trG.stroke();
+    coMonotrilho(ang, false);
+    const prof = (x, z) => trRot(x, z, ang)[1];
+    const objetos = [{ z: prof(0, 0), d: () => coCorporacao(ang) }];
+    CO_PREDIOS.forEach(p => {
+        const z = prof(p.x, p.z);
+        if (z > CO_CORTE) return;   // corte: não tampa a luta
+        objetos.push({ z, d: () => (p.tipo === "predio" ? coPredio(p, ang) : p.tipo === "casa" ? coCasa(p, ang) : coTorre(p, ang)) });
+    });
+    objetos.sort((a, b) => a.z - b.z).forEach(o => o.d());
+    coMonotrilho(ang, true);
+}
+
+// céu, campo e morros ao fundo (360°)
+const CO_PANO_W = Math.round(Math.PI * 2 * CO_CAM.F);
+let coPanorama = null;
+function getCapitalPanorama() {
+    if (c3Valida(coPanorama)) return coPanorama;
+    const f = c3NovaFaixa(CO_PANO_W, CO_CAM.HY + 6);
+    if (!f) return null;
+    const { c, g } = f, W = CO_PANO_W, base = CO_CAM.HY + 2;
+    const ceu = g.createLinearGradient(0, 0, 0, base);
+    ceu.addColorStop(0, "#5aa6e8"); ceu.addColorStop(1, "#cfe8fa");
+    g.fillStyle = ceu; g.fillRect(0, 0, W, c.__h);
+    // morros e mesas rosadas ao longe
+    for (let i = 0; i < 18; i++) {
+        const x = (i * 211.3 + 40) % W, larg = 70 + (i * 23) % 80, alt = 10 + (i * 7) % 18;
+        c3NaVolta(W, x, larg, xx => {
+            g.fillStyle = i % 3 === 0 ? "#b98aa8" : "#6fa86a";
+            g.beginPath(); g.moveTo(xx - larg / 2, base); g.quadraticCurveTo(xx, base - alt * 2, xx + larg / 2, base); g.closePath(); g.fill();
+        });
+    }
+    // silhuetas de prédios distantes
+    for (let i = 0; i < 40; i++) {
+        const x = (i * 97.7 + 13) % W, w = 8 + (i * 5) % 10, h = 10 + (i * 13) % 26;
+        c3NaVolta(W, x, w, xx => { g.fillStyle = "rgba(225, 232, 245, 0.85)"; g.fillRect(xx, base - h, w, h); g.fillStyle = ["#f9a8d4", "#fde68a", "#93c5fd"][i % 3]; g.fillRect(xx, base - h, w, 2); });
+    }
+    coPanorama = c;
+    return c;
+}
+const CO_ARVORES = (() => {
+    const l = [];
+    for (let i = 0; i < 70; i++) {
+        const a = c3Hash(i * 1.9) * Math.PI * 2, r = 175 + c3Hash(i * 4.3) * 900;
+        l.push({ x: Math.sin(a) * r, z: Math.cos(a) * r, t: 6 + c3Hash(i * 3.1) * 5 });
+    }
+    return l;
+})();
+function drawCapitalChao(ang) {
+    const pano = getCapitalPanorama();
+    if (!pano || !c3BlitPanorama(pano, ang, CO_CAM.F, CO_CAM.CX)) { ctx.fillStyle = "#8cc4ef"; ctx.fillRect(0, 0, canvas.width, CO_CAM.HY); }
+    const chao = ctx.createLinearGradient(0, CO_CAM.HY, 0, canvas.height);
+    chao.addColorStop(0, "#9ccf7a"); chao.addColorStop(1, "#4f9a3a");
+    ctx.fillStyle = chao;
+    ctx.fillRect(0, CO_CAM.HY + 2, canvas.width, canvas.height - CO_CAM.HY);
+    const lim = CO_CAM.D - CO_CAM.PERTO * 2;
+    // ruas: anel em volta do jardim, um anel maior e avenidas saindo em cruz
+    const anelRua = (r0, r1) => {
+        const fora = [], dentro = [];
+        for (let i = 0; i <= 56; i++) { const a = i / 56 * Math.PI * 2; fora.push(trProj(Math.sin(a) * r1, 0, Math.cos(a) * r1, ang)); dentro.push(trProj(Math.sin(a) * r0, 0, Math.cos(a) * r0, ang)); }
+        ctx.beginPath(); fora.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
+        for (let i = dentro.length - 1; i >= 0; i--) ctx.lineTo(dentro[i][0], dentro[i][1]);
+        ctx.closePath(); ctx.fill();
+    };
+    ctx.fillStyle = "#8d96a3";
+    anelRua(168, 192);
+    anelRua(388, 410);
+    [[1, 0], [-1, 0], [0, 1], [0, -1], [0.7071, 0.7071], [-0.7071, -0.7071]].forEach(([dx, dz]) => {
+        const nx = -dz * 12, nz = dx * 12;
+        const seg = c3RecorteChao([dx * 192, dz * 192], [dx * 1600, dz * 1600], ang, lim);
+        if (!seg) return;
+        const [a, b] = seg;
+        const q = [[a[0] + nx, a[1] + nz], [b[0] + nx, b[1] + nz], [b[0] - nx, b[1] - nz], [a[0] - nx, a[1] - nz]].map(c => trProj(c[0], 0, c[1], ang));
+        ctx.beginPath(); q.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.closePath(); ctx.fill();
+    });
+    // árvores redondinhas espalhadas (fixas no mundo)
+    CO_ARVORES.forEach(t => {
+        if (trRot(t.x, t.z, ang)[1] > lim) return;
+        const p = trProj(t.x, 0, t.z, ang), k = p[3];
+        if (p[1] < CO_CAM.HY) return;
+        ctx.fillStyle = "#2f7a32"; ctx.beginPath(); ctx.arc(p[0], p[1] - t.t * k, t.t * k, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#5cb24e"; ctx.beginPath(); ctx.arc(p[0] - t.t * 0.3 * k, p[1] - t.t * 1.3 * k, t.t * 0.45 * k, 0, Math.PI * 2); ctx.fill();
+    });
+}
+function drawCapitalStage(ang) {
+    trCam = CO_CAM;
+    try {
+        drawCapitalChao(ang);
+        drawCachedOrbitLayer(coCena, ang, drawCapitalScene);
+    } finally {
+        trCam = TR_CAM;
+    }
+}

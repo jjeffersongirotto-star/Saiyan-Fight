@@ -24,7 +24,7 @@ check("rolagemParaFase centraliza a fase (quando dá)", Math.abs(core.getMapaPos
 run("deltaTime = 1/60; gameMode = 'singleplayer'; stageProgress = {}; setGameState('stage_map')");
 check("abre no começo com só a 1ª fase liberada", run("getMapaRolagem()") === 0);
 const futuras = run("getMapaFasesFuturas()");
-check("fases futuras até ~60, só a primeira com placa", futuras.length >= 50 && futuras[0].placa && futuras.filter(f => f.placa).length === 1);
+check("fases futuras até ~60, só a primeira com placa", futuras.length >= 45 && futuras[0].placa && futuras.filter(f => f.placa).length === 1);
 h.calls.length = 0; run("render()");
 let textos = h.calls.filter(c => c[0] === "fillText").map(c => String(c[1][0]));
 check("estrada e cenário desenhados (sem a placa fora da tela)", h.calls.some(c => c[0] === "setLineDash") && !textos.includes("PREPARE-SE"));

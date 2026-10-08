@@ -40,7 +40,7 @@ check("vencer o NORMAL da última fase que faltava libera 'Rodei o Universo Inte
 run("STAGE_PROGRESSION.forEach(s => registerStageModeComplete(s.id, 'hard'))");
 run("checkStageModeAchievements()");
 check("DIFÍCIL em todas as fases libera 'Dificuldade? Pouco É Bobagem'", run("achievements.all_hard.unlocked") === true);
-check("'Entre os Deuses' agora diz que é liberar todas as fases", run("achievements.stage_kaioshin.desc").includes("todas as fases"));
+check("'Entre os Deuses' diz qual fase liberar", run("achievements.stage_kaioshin.desc").includes("Planeta Supremo Kaioh"));
 
 // ---------- medalha de diamante ----------
 check("a conquista de completar todas é de DIAMANTE", run("achievements.all_achievements.tier") === "diamond");

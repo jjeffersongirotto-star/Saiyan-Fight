@@ -89,7 +89,7 @@ run("setGameState('ranking'); rankingViewMode = 'geral'");
 run("handleMenuClick(410 + 40, 52 + 15)"); // aba POR FASE
 check("clicar em POR FASE troca a visão do ranking", run("rankingViewMode") === "fase");
 run("rankingSelectedStage = 'terra'");
-run("handleMenuClick(40 + 92 * 3, 90 + 10)"); // 4ª mini-arena da fileira (freeza_ship)
+run("const __aba = getRankingStageTabRect(3); handleMenuClick(__aba.x + 10, __aba.y + 10)"); // 4ª mini-arena da fileira
 check("selecionar outra arena na visão por fase troca qual ranking está sendo visto", run("rankingSelectedStage") === run("STAGE_PROGRESSION")[3].id);
 run("handleMenuClick(220 + 40, 52 + 15)"); // aba GERAL
 check("clicar em GERAL volta pro ranking geral", run("rankingViewMode") === "geral");

@@ -463,8 +463,9 @@ test("getWaveParams: cresce até o teto e trava depois (dificuldade some de esta
     assert.ok(getWaveParams(WAVE_DIFFICULTY_CAP).speedMult > getWaveParams(1).speedMult, "ainda cresce ANTES do teto");
 });
 
-test("progressão de arenas: 9 fases, na ordem certa (Ilha do Kame 1ª, Cell penúltima, Supremo Kaioh última)", () => {
-    assert.equal(STAGE_PROGRESSION.length, 9);
+test("progressão de arenas: 11 fases, na ordem certa (Ilha do Kame 1ª, Supremo Kaioh 9ª, Plataforma e Capital no fim)", () => {
+    assert.equal(STAGE_PROGRESSION.length, 11);
+    assert.equal(STAGE_PROGRESSION[10].id, "capital_oeste");
     assert.equal(STAGE_PROGRESSION[0].id, "kame");
     assert.equal(STAGE_PROGRESSION[1].id, "terra");
     assert.equal(STAGE_PROGRESSION[7].id, "cell_games");

@@ -1,0 +1,19 @@
+{
+  "versao": 1,
+  "id": "capital_oeste",
+  "nome": "CAPITAL DO OESTE",
+  "posicao": 11,
+  "cor": "#facc15",
+  "musica": "capital",
+  "cenario": "capital_oeste",
+  "camera": {
+    "tipo": "orbita",
+    "volta": 10800
+  },
+  "fundoClaro": true,
+  "minion": "saibaman",
+  "conquista": {
+    "nome": "Visita à Corporação Cápsula",
+    "desc": "Libere a Capital do Oeste"
+  }
+}

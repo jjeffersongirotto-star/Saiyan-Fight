@@ -64,6 +64,34 @@ const BGM_THEMES = {
         snare: "....x.......x.x.",
         hat:   "x.x.x.x.x.x.x.x."
     },
+    kami: {
+        nome: "ACIMA DAS NUVENS",
+        clima: "Valsa serena em Ré maior, flauta suave com vibrato e baixo redondo, como o vento no alto do céu",
+        bpm: 92, compasso: 12, swing: 0,
+        lead: { wave: "sine", vol: 0.08, staccato: 1, vibrato: 6 },
+        bassWave: "sine", bassVol: 0.09,
+        acordes: ["D2", "B1", "G1", "A1", "D2", "B1", "A1", "D2"],
+        melodia: "A4:4 D5:2 F#5:4 E5:2 | D5:6 B4:2 A4:4 | G4:4 B4:2 D5:4 C#5:2 | A4:10 -:2 |" +
+                 "F#5:4 A5:2 G5:4 F#5:2 | E5:6 D5:2 B4:4 | C#5:4 E5:2 A4:4 B4:2 | D5:10 -:2",
+        baixo: "R:6 Q:6",
+        kick:  "x.....x.....",
+        snare: "",
+        hat:   "..x...x...x."
+    },
+    capital: {
+        nome: "AVENIDAS DA CAPITAL",
+        clima: "Pop urbano animado em Dó maior, sintetizador brilhante e baixo saltando em oitavas",
+        bpm: 138, compasso: 16, swing: 0.1,
+        lead: { wave: "sawtooth", vol: 0.035, staccato: 0.5 },
+        bassWave: "square", bassVol: 0.04,
+        acordes: ["C2", "F1", "C2", "G1", "A1", "F1", "G1", "C2"],
+        melodia: "C5:2 E5:2 G5:2 E5:2 C5:2 D5:2 E5:4 | F5:2 E5:2 D5:2 C5:2 A4:4 -:4 | G4:2 A4:2 C5:2 D5:2 E5:3 D5:1 C5:4 | D5:6 -:2 G4:2 B4:2 D5:4 |" +
+                 "E5:2 G5:2 A5:2 G5:2 E5:2 D5:2 C5:4 | A4:2 C5:2 D5:2 E5:2 F5:4 E5:4 | D5:2 C5:2 B4:2 G4:2 A4:2 B4:2 C5:2 D5:2 | C5:8 -:4 G4:2 B4:2",
+        baixo: "R:2 O:2 R:2 O:2 Q:2 O:2 R:2 O:2",
+        kick:  "x...x...x...x...",
+        snare: "....x.......x...",
+        hat:   "x.x.x.x.x.x.x.x."
+    },
     freeza: {
         nome: "A AMEAÇA DO IMPERADOR",
         clima: "Marcha heroica em Ré menor, metais com ritmo pontuado e tambores de guerra",
