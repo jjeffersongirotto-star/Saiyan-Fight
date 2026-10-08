@@ -341,3 +341,15 @@ function registerStageWaveRecord(stageId, wave) {
     return stageWaveRecord[stageId];
 }
 
+
+// Perfil (v0.91): apelido do jogador, mostrado no menu da esfera. A foto ainda não é trocável.
+const APELIDO_MAX = 16;
+function getApelido() {
+    const a = readStorage("saiyan_apelido");
+    return typeof a === "string" ? a.slice(0, APELIDO_MAX) : "";
+}
+function setApelido(texto) {
+    const a = String(texto || "").replace(/[\u0000-\u001f]/g, "").trim().slice(0, APELIDO_MAX);
+    writeStorage("saiyan_apelido", a);
+    return a;
+}

@@ -576,6 +576,39 @@ function showSystemConfirm(title, message, callback, confirmLabel = "CONFIRMAR",
     focusModal(sysAlertModal);
 }
 
+// Pergunta com um campo de texto (ex.: APELIDO). OK grava (callback(texto)); CANCELAR fecha sem mudar nada.
+function showSystemPrompt(title, message, valor, callback, maximo = 16) {
+    const alertTitle = document.getElementById("modal-alert-title");
+    const alertMsg = document.getElementById("modal-alert-msg");
+    const alertBtns = document.getElementById("modal-alert-btns");
+    if (alertTitle) alertTitle.innerText = title.toUpperCase();
+    if (alertMsg) {
+        alertMsg.innerText = message;
+        const campo = document.createElement("input");
+        campo.type = "text";
+        campo.id = "modal-alert-campo";
+        campo.maxLength = maximo;
+        campo.value = valor || "";
+        campo.style.cssText = "display:block; width:90%; margin:10px auto 0; padding:8px; font-size:16px; background:#0b1226; color:#fff0a6; border:1px solid var(--cyan); border-radius:4px;";
+        campo.onkeydown = (e) => { if (e.key === "Enter") executeSystemConfirm(true); };
+        alertMsg.appendChild(campo);
+    }
+    onConfirmCallback = () => {
+        const campo = document.getElementById("modal-alert-campo");
+        callback(campo ? campo.value : "");
+    };
+    if (alertBtns) {
+        alertBtns.innerHTML = `
+            <button class="btn" onclick="executeSystemConfirm(true)">SALVAR</button>
+            <button class="btn" style="border-color:#ff0055; color:#ff0055;" onclick="executeSystemConfirm(false)">CANCELAR</button>
+        `;
+    }
+    if (sysAlertModal) sysAlertModal.style.display = "flex";
+    focusModal(sysAlertModal);
+    const campo = document.getElementById("modal-alert-campo");
+    if (campo && campo.focus) setTimeout(() => { try { campo.focus(); } catch (e) {} }, 30);
+}
+
 // Pergunta com vários botões (ex.: ANTI-HERÓI / VILÃO / CANCELAR). opcoes: [{ label, acao, cancelar }]
 let systemChoiceOptions = null;
 function showSystemChoice(title, message, opcoes) {

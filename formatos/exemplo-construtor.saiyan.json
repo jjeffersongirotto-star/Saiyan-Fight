@@ -1,0 +1,69 @@
+{
+  "formato": "saiyan-fight-personagem",
+  "versao": 1,
+  "personagem": {
+    "name": "GOKU",
+    "alignment": "HERÓI",
+    "aura": "gelo",
+    "special": "KAMEHAMEHA",
+    "projColor": "#5be3ff",
+    "projSize": "normal",
+    "altura": 175,
+    "builderAppearance": {
+      "gender": "masculino",
+      "race": "Saiyajin",
+      "build": "musculoso",
+      "skinColor": "",
+      "hairStyle": "goku",
+      "hairColor": "#16110f",
+      "hairColor2": "#b58ce0",
+      "eyeType": "normal",
+      "irisColor": "#1a1210",
+      "scleraColor": "#ffffff",
+      "earType": "normal",
+      "mouthType": "smile",
+      "headFeature": "none",
+      "bodyMarks": "none",
+      "accessory": "none",
+      "hat": "none",
+      "innerShirt": "camiseta",
+      "outerShirt": "kimono",
+      "pants": "larga",
+      "shoes": "botas_artes",
+      "gloves": "pulseiras",
+      "primaryColor": "#f2680d",
+      "secondaryColor": "#3a46b8",
+      "accentColor": "#f7d23c",
+      "shirtColor": "#1e3a8a",
+      "pantsColor": "#f2680d",
+      "cape": "none",
+      "capeColor": "#ffffff",
+      "tail": "none",
+      "wings": "none",
+      "backWeapon": "none",
+      "symbol": "go",
+      "scar": "none",
+      "kiColor": "#5be3ff",
+      "armPose": "guarda",
+      "minionColor": "#2f6f22",
+      "clawColor": "#f2eee0"
+    },
+    "transformations": [
+      {
+        "name": "Transformação 1",
+        "diff": {},
+        "ssj": true,
+        "aura": "amarelo"
+      },
+      {
+        "name": "Transformação 2",
+        "diff": {
+          "hairStyle": "ssj_longo",
+          "hairColor": "#ffe34d"
+        },
+        "ssj": false,
+        "aura": "amarelo"
+      }
+    ]
+  }
+}

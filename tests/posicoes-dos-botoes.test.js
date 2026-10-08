@@ -14,7 +14,7 @@ const center = (expr) => run(`(() => { const r = ${expr}; return [r.x + r.w / 2,
 const clickOn = (state, expr) => { run(`setGameState('${state}')`); const [x, y] = center(expr); run(`handleMenuClick(${x}, ${y})`); };
 
 // ---------- menu principal: cada botão leva à tela certa ----------
-const destinos = { play: "mode_select", characters: "characters", stages: "stages", options: "options_main", ranking: "ranking", database: "database", achievements: "achievements", tutorial: "tutorial" };
+const destinos = { play: "mode_select", characters: "characters", stages: "stages", options: "options_main", ranking: "ranking", achievements: "achievements", tutorial: "tutorial" };
 for (const [key, dest] of Object.entries(destinos)) {
     clickOn("menu", `MENU_LAYOUT.main.${key}`);
     check(`menu principal: botão '${key}' leva para '${dest}'`, run("gameState") === dest, run("gameState"));

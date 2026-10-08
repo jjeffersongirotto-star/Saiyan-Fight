@@ -1,0 +1,24 @@
+{
+  "formato": "saiyan-fight-personagem",
+  "versao": 1,
+  "personagem": {
+    "name": "LUTADOR DA FOLHA",
+    "alignment": "VILÃO",
+    "aura": "vermelho",
+    "special": "BOLA DE ENERGIA",
+    "folha": {
+      "imagem": "folha.png",
+      "largura": 64,
+      "altura": 64,
+      "espaco": 0,
+      "movimentos": {
+        "idle": [0, 1, 2, 3],
+        "flyRight": [4, 5],
+        "flyLeft": [6, 7],
+        "attackKi": [8, 9],
+        "chargeKi": [10, 11],
+        "transform": [12, 13, 14, 15]
+      }
+    }
+  }
+}

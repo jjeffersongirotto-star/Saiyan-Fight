@@ -1,0 +1,15 @@
+{
+  "formato": "saiyan-fight-personagem",
+  "versao": 1,
+  "personagem": {
+    "name": "SAIBAMAN ROXO",
+    "alignment": "MINION",
+    "aura": "roxo",
+    "special": "AUTODESTRUIÇÃO",
+    "altura": 120,
+    "minionClassico": {
+      "modelo": "saibaman",
+      "cores": { "pele": "#9b5de5", "olhos": "#ffd23f" }
+    }
+  }
+}
