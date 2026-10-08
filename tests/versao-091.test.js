@@ -22,7 +22,7 @@ clicar("MENU_LAYOUT.esfera.botao");
 check("tocar na esfera abre o menu", run("esferaAberta") === true);
 h.calls.length = 0; run("render()");
 const textos = h.calls.filter(c => c[0] === "fillText").map(c => String(c[1][0]));
-check("o menu mostra perfil, EDITOR DE PERSONAGENS, EDITOR DE ARENAS e UPDATES (por último)", ["PERFIL", "EDITOR DE PERSONAGENS", "EDITOR DE ARENAS (EM BREVE)", "UPDATES"].every(t => textos.includes(t))
+check("o menu mostra perfil, EDITOR DE PERSONAGENS, EDITOR DE ARENAS e UPDATES (por último)", ["PERFIL", "EDITOR DE PERSONAGENS", "EDITOR DE ARENAS", "UPDATES"].every(t => textos.includes(t))
     && run("(() => { const it = getEsferaItens(); return it.updates.y > it.editorArenas.y && it.editorArenas.y > it.editorPersonagens.y && it.editorPersonagens.y > it.perfil.y; })()"));
 check("com o menu aberto, os botões de baixo não contam para o controle", !run("menuTargets.some(t => t.x === MENU_LAYOUT.main.play.x && t.y === MENU_LAYOUT.main.play.y)"));
 clicar("MENU_LAYOUT.main.play");
@@ -37,7 +37,8 @@ run("document.getElementById('modal-alert-msg').children[0].id = 'modal-alert-ca
 check("o apelido é salvo (sem espaços nas pontas)", run("getApelido()") === "Kakarotto" && h.store.saiyan_apelido === "Kakarotto");
 check("apelido longo é cortado em 16", run("setApelido('ABCDEFGHIJKLMNOPQRSTU')") === "ABCDEFGHIJKLMNOP");
 clicar("getEsferaItens().editorArenas");
-check("EDITOR DE ARENAS ainda está desabilitado", run("gameState") === "menu");
+check("EDITOR DE ARENAS abre a janela do editor (0.92)", run("arenaEditorAberto()") === true);
+run("fecharEditorArenas(); esferaAberta = true");
 clicar("getEsferaItens().editorPersonagens");
 check("EDITOR DE PERSONAGENS abre o antigo DATABASE (e fecha o menu)", run("gameState") === "database" && run("esferaAberta") === false);
 run("setGameState('menu'); esferaAberta = true; esferaPerfilAberto = false");

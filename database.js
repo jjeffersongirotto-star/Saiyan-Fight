@@ -89,6 +89,7 @@ function restoreFocusAfterModal() {
 document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
     if (modal && modal.style.display === "flex") closeModal();
+    else if (typeof arenaEditorAberto === "function" && arenaEditorAberto() && !(sysAlertModal && sysAlertModal.style.display === "flex")) fecharEditorArenas();
     else if (updatesModal && updatesModal.style.display === "flex") closeUpdatesModal();
     else if (sysAlertModal && sysAlertModal.style.display === "flex") closeSystemAlert();
 });

@@ -346,6 +346,23 @@
             width: 100%;
         }
 
+        /* EDITOR DE ARENAS (arenas.js) */
+        .ar-corpo { display: flex; gap: 14px; flex-wrap: wrap; }
+        .ar-coluna { flex: 1 1 340px; min-width: 0; }
+        #arena-previa { width: 100%; aspect-ratio: 800 / 350; border: 1px solid var(--border-color); border-radius: 6px; background: #000; display: block; }
+        #arena-planta { width: 100%; max-width: 320px; aspect-ratio: 1; border: 1px solid var(--border-color); border-radius: 6px; touch-action: none; display: block; margin: 6px auto; cursor: crosshair; }
+        .ar-linha { display: flex; align-items: center; gap: 10px; margin: 6px 0 10px; font-size: 12px; color: #cbd5e1; }
+        .ar-linha input[type="range"] { flex: 1; }
+        .ar-aba { background: #111; border: 1px solid var(--border-color); border-bottom: none; color: #888; padding: 7px 10px; cursor: pointer; border-radius: 4px 4px 0 0; font-size: 12px; font-weight: bold; }
+        .ar-aba.active { background: var(--panel-bg); color: var(--cyan); border-color: var(--cyan); }
+        .ar-pecas { display: flex; flex-wrap: wrap; gap: 6px; max-height: 140px; overflow-y: auto; }
+        .ar-pecas .btn { font-size: 11px; padding: 6px 8px; }
+        .ar-pecas .btn.ar-armada { background: #e85d04; color: #fff; border-color: #ffd23f; }
+        .ar-dica { font-size: 12px; color: #94a3b8; margin: 6px 0 0; }
+        .ar-selecao { border: 1px solid #ffd23f; border-radius: 6px; padding: 8px 10px; margin-top: 6px; }
+        .ar-selecao strong { color: #ffd23f; font-size: 13px; }
+        #arena-contagem { font-size: 11px; color: #94a3b8; text-align: center; }
+
         .form-row {
             display: flex;
             gap: 10px;
@@ -1453,11 +1470,15 @@
                 Novidades e correções do jogo.
             </p>
             <ul id="lista-updates" style="margin: 0 0 18px; color: #ddd; line-height: 1.5; padding: 0 4px 0 0; list-style: none; overflow-y: auto;">
-                <li class="upd-versao"><h3>Versão 0.91 (ATUAL)</h3><p>Esfera de 4 estrelas, perfil e arquivos de personagem</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Esfera de 4 estrelas</strong><p>No canto superior esquerdo do menu principal, a esfera do dragão de 4 estrelas abre o menu de ajustes: perfil, EDITOR DE PERSONAGENS, EDITOR DE ARENAS (em breve) e UPDATES.</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Perfil</strong><p>A foto redonda do perfil (por enquanto um lutador carregando ki) e o seu apelido. Tocando na foto aparecem TROCAR FOTO (em breve) e APELIDO.</p></li>
+                <li class="upd-versao"><h3>Versão 0.92 (ATUAL)</h3><p>Editor de Arenas</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>EDITOR DE ARENAS</strong><p>No menu da esfera de 4 estrelas: monte sua própria arena com peças tiradas dos cenários do jogo, em abas — CONSTRUÇÃO (paredes, janelas, portas, prédios, domos, torres, pilares, escada, ringue, portão), NAVE (casco, perna de aço, parede com janelas ovais, painel de botões, antena, cápsula, luzes), NATUREZA (coqueiros, ciprestes, árvores, pedras, mesa de pedra, montanha, cristais), CHÃO (gramado, lago, areia, terra, lava, piso, estrada, trilha), CÉU (sol, lua, planetas, nuvens, estrelas, morros, montanhas, cidade ao longe) e ENFEITES (estátua, símbolo, placa com texto, bandeira, lampião, ampulheta, esfera do dragão). Toque na planta para colocar, arraste para mover e ajuste tamanho, giro e cor; a prévia em 3D gira em volta da arena. Escolha também nome, cor, música, minion, altura da câmera, céu e chão.</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Arenas criadas no jogo</strong><p>A arena salva vira uma fase de verdade: aparece em ARENAS, no mapa e no ranking, sempre liberada, e a câmera dá a volta nela durante a luta, como nas fases 3D. Até 7 arenas criadas, com até 80 peças cada.</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Arquivos de arena</strong><p>EXPORTAR ARQUIVO baixa a arena num arquivo .arena.json e ANEXAR ARQUIVO coloca no jogo uma arena feita no jogo ou fora dele. Se o arquivo tiver erro, o jogo diz qual. O formato e a lista de peças estão em formatos/LEIA-ME-ARENAS.md, com um exemplo.</p></li>
+                <li class="upd-versao"><h3>Versão 0.91</h3><p>Esfera de 4 estrelas, perfil e arquivos de personagem</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Esfera de 4 estrelas</strong><p>No canto superior esquerdo do menu principal, a esfera do dragão de 4 estrelas abre o menu de ajustes: perfil, EDITOR DE PERSONAGENS, EDITOR DE ARENAS (em breve) e UPDATES.</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Perfil</strong><p>A foto redonda do perfil (por enquanto um lutador carregando ki) e o seu apelido. Tocando na foto aparecem TROCAR FOTO (em breve) e APELIDO.</p></li>
                 <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>EDITOR DE PERSONAGENS</strong><p>O DATABASE agora se chama EDITOR DE PERSONAGENS e fica no menu da esfera, junto com o UPDATES.</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Arquivos de personagem</strong><p>No editor, EXPORTAR ARQUIVO baixa o personagem num arquivo .saiyan.json e ANEXAR ARQUIVO coloca no jogo um personagem feito no jogo ou fora dele (do construtor, Minion clássico, quadros soltos ou folha de sprites). Se o arquivo tiver erro, o jogo diz qual. O formato está explicado em formatos/LEIA-ME.md, com exemplos.</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Arquivos de personagem</strong><p>No editor, EXPORTAR ARQUIVO baixa o personagem num arquivo .saiyan.json e ANEXAR ARQUIVO coloca no jogo um personagem feito no jogo ou fora dele (do construtor, Minion clássico, quadros soltos ou folha de sprites). Se o arquivo tiver erro, o jogo diz qual. O formato está explicado em formatos/LEIA-ME.md, com exemplos.</p></li>
                 <li class="upd-versao"><h3>Versão 0.90</h3><p>Minions clássicos de volta</p></li>
                 <li class="upd-item upd-corrigido"><span class="upd-tag">CORRIGIDO</span><strong>Saibaman e Cell Jr. originais</strong><p>Os Minions voltaram a ser os desenhos originais do jogo, com a aparência e os movimentos de antes (brotar da terra, saltar, voar, investir, agarrar e ser arremessado), na luta, no gerenciador e no editor. Quem tinha as versões do construtor recebe os originais de volta, com o mesmo nome.</p></li>
                 <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Editar os Minions clássicos</strong><p>No editor, a aba DADOS de um Minion clássico mostra as cores dele (pele, olhos, garras, armadura...) e o botão VOLTAR ÀS CORES ORIGINAIS. Sem trocar nada ele fica exatamente o original.</p></li>
@@ -1754,6 +1775,93 @@
     </div>
 
     <!-- MODAL DE ALERTAS E CONFIRMAÇÕES DO SISTEMA -->
+    <!-- EDITOR DE ARENAS (arenas.js): arena montada com peças dos cenários; a prévia 3D gira em volta do centro -->
+    <div id="modal-arena" class="modal" role="dialog" aria-modal="true" aria-labelledby="arena-titulo">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="arena-titulo">EDITOR DE ARENAS</h2>
+                <button class="close-btn" onclick="fecharEditorArenas()" aria-label="Fechar editor de arenas">&times;</button>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="arena-lista">ARENA</label>
+                    <select id="arena-lista" onchange="arenaTrocarDaLista()"></select>
+                </div>
+                <div class="form-group" style="flex: 3 1 360px;">
+                    <label>&nbsp;</label>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button type="button" class="btn" onclick="salvarArenaDoEditor()">SALVAR ARENA</button>
+                        <button type="button" class="btn" style="border-color:#ff0055; color:#ff0055;" onclick="excluirArenaDoEditor()">EXCLUIR</button>
+                        <button type="button" class="btn" onclick="exportarArenaDoEditor()">EXPORTAR ARQUIVO</button>
+                        <button type="button" class="btn" onclick="document.getElementById('arquivo-arena').click()">ANEXAR ARQUIVO</button>
+                        <input type="file" id="arquivo-arena" accept=".json" style="display: none;" onchange="anexarArquivoArena(this)">
+                    </div>
+                </div>
+            </div>
+            <div class="ar-corpo">
+                <div class="ar-coluna">
+                    <canvas id="arena-previa" width="480" height="210"></canvas>
+                    <div class="ar-linha">
+                        <label><input type="checkbox" id="arena-girar" checked onchange="arenaLerCampos()"> GIRAR SOZINHA</label>
+                        <input type="range" id="arena-angulo" min="0" max="359" value="0" aria-label="Girar câmera" oninput="document.getElementById('arena-girar').checked = false; arenaLerCampos()">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label for="arena-nome">Nome da Arena</label><input type="text" id="arena-nome" maxlength="24" oninput="arenaLerCampos()"></div>
+                        <div class="form-group"><label for="arena-cor">Cor da Arena</label><input type="color" id="arena-cor" oninput="arenaLerCampos()"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label for="arena-musica">Música</label><select id="arena-musica" onchange="arenaLerCampos()"></select></div>
+                        <div class="form-group"><label for="arena-minion">Minion</label><select id="arena-minion" onchange="arenaLerCampos()"></select></div>
+                        <div class="form-group"><label for="arena-camera">Câmera</label>
+                            <select id="arena-camera" onchange="arenaLerCampos()">
+                                <option value="baixa">Baixa</option>
+                                <option value="media">Média</option>
+                                <option value="alta">Alta</option>
+                            </select></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label for="arena-ceu-topo">Céu (em cima)</label><input type="color" id="arena-ceu-topo" oninput="arenaLerCampos(); arenaDesenharPlanta()"></div>
+                        <div class="form-group"><label for="arena-ceu-horizonte">Céu (horizonte)</label><input type="color" id="arena-ceu-horizonte" oninput="arenaLerCampos(); arenaDesenharPlanta()"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label for="arena-chao-tipo">Chão</label><select id="arena-chao-tipo" onchange="arenaLerCampos(); arenaDesenharPlanta()"></select></div>
+                        <div class="form-group"><label for="arena-chao-cor">Cor do Chão</label><input type="color" id="arena-chao-cor" oninput="arenaLerCampos(); arenaDesenharPlanta()"></div>
+                    </div>
+                    <p class="ar-dica">Arquivos .arena.json: veja formatos/LEIA-ME-ARENAS.md.</p>
+                </div>
+                <div class="ar-coluna">
+                    <div class="tabs">
+                        <button type="button" id="arena-aba-construcao" class="ar-aba active" onclick="arenaMostrarAba('construcao')">CONSTRUÇÃO</button>
+                        <button type="button" id="arena-aba-nave" class="ar-aba" onclick="arenaMostrarAba('nave')">NAVE</button>
+                        <button type="button" id="arena-aba-natureza" class="ar-aba" onclick="arenaMostrarAba('natureza')">NATUREZA</button>
+                        <button type="button" id="arena-aba-chao" class="ar-aba" onclick="arenaMostrarAba('chao')">CHÃO</button>
+                        <button type="button" id="arena-aba-ceu" class="ar-aba" onclick="arenaMostrarAba('ceu')">CÉU</button>
+                        <button type="button" id="arena-aba-enfeites" class="ar-aba" onclick="arenaMostrarAba('enfeites')">ENFEITES</button>
+                    </div>
+                    <div id="arena-pecas" class="ar-pecas"></div>
+                    <p id="arena-dica" class="ar-dica"></p>
+                    <canvas id="arena-planta" width="320" height="320"></canvas>
+                    <div id="arena-contagem"></div>
+                    <div id="arena-selecao" class="ar-selecao" style="display: none;">
+                        <strong id="arena-sel-nome"></strong>
+                        <div class="form-row" style="margin-top: 6px;">
+                            <div class="form-group"><label for="arena-sel-tam">Tamanho</label><input type="range" id="arena-sel-tam" min="0.3" max="3" step="0.1" oninput="arenaMudarSelecao()"></div>
+                            <div class="form-group" id="arena-sel-giro-grupo"><label for="arena-sel-giro">Girar</label><input type="range" id="arena-sel-giro" min="0" max="359" step="1" oninput="arenaMudarSelecao()"></div>
+                            <div class="form-group"><label for="arena-sel-cor">Cor</label><input type="color" id="arena-sel-cor" oninput="arenaMudarSelecao()"></div>
+                        </div>
+                        <div class="form-row" id="arena-sel-texto-grupo">
+                            <div class="form-group"><label for="arena-sel-texto">Texto</label><input type="text" id="arena-sel-texto" maxlength="16" oninput="arenaMudarSelecao()"></div>
+                        </div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button type="button" class="btn" onclick="arenaDuplicarSelecao()">DUPLICAR</button>
+                            <button type="button" class="btn" style="border-color:#ff0055; color:#ff0055;" onclick="arenaApagarSelecao()">APAGAR PEÇA</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="modal-alert" class="modal" role="alertdialog" aria-modal="true" aria-labelledby="modal-alert-title" aria-describedby="modal-alert-msg">
         <div class="modal-content" style="width: 380px; text-align: center;">
             <h2 id="modal-alert-title" style="color: var(--cyan); margin-top: 0;">ALERTA</h2>
@@ -1780,6 +1888,7 @@
     <script src="menu.js"></script>
     <script src="cenarios3d.js"></script>
     <script src="mapa.js"></script>
+    <script src="arenas.js"></script>
     <script src="fases.js"></script>
     <script src="atualizacao.js"></script>
 </body>
