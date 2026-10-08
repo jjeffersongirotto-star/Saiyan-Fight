@@ -541,6 +541,13 @@ function saveSelectedCharacters() {
 
 // ==================== GERENCIAMENTO DE ESTADO ====================
 function setGameState(newState) {
+    // TESTAR do EDITOR DE ARENAS: ao sair da luta de teste, o editor reabre do jeito que estava
+    if (typeof arenaTeste !== "undefined" && arenaTeste && (newState === "menu" || newState === "stage_map" || newState === "database")) {
+        gameState = "menu";
+        stopBGM();
+        arenaVoltarDoTeste();
+        return;
+    }
     if (newState === "stage_map" && gameState !== "stage_map" && typeof mapaRolagem !== "undefined") mapaRolagem = null;   // reabre centralizado na fase atual
     if (newState === "menu" && typeof arenaPainel !== "undefined") arenaPainel = null;   // quadro de arena não fica aberto ao voltar
     gameState = newState;

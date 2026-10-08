@@ -829,6 +829,13 @@ GIRAR § ROTATE § GIRAR
 SEGUIR § MOVE FORWARD § AVANZAR
 CONFIRMAR PEÇA § CONFIRM PIECE § CONFIRMAR PIEZA
 VER ARENA § VIEW ARENA § VER ARENA
+MAXIMIZAR § MAXIMIZE § MAXIMIZAR
+MINIMIZAR § MINIMIZE § MINIMIZAR
+↶ DESFAZER § ↶ UNDO § ↶ DESHACER
+↷ REFAZER § ↷ REDO § ↷ REHACER
+GRADE § GRID § REJILLA
+TESTAR § TEST § PROBAR
+COMEÇAR LIMPO § START CLEAN § EMPEZAR LIMPIO
 DADOS DA ARENA § ARENA INFO § DATOS DE LA ARENA
 PEÇA ESCOLHIDA § SELECTED PIECE § PIEZA ELEGIDA
 Toque numa peça da planta para ajustar tamanho, giro e cor. § Tap a piece on the map to adjust size, rotation and colour. § Toca una pieza del plano para ajustar tamaño, giro y color.
@@ -941,7 +948,7 @@ LISTA DE PEÇAS INVÁLIDA (pecas). § INVALID PIECE LIST (pecas). § LISTA DE PI
 PEÇAS DEMAIS (MÁXIMO 80) § TOO MANY PIECES (80 MAXIMUM) § DEMASIADAS PIEZAS (MÁXIMO 80)
 PEÇA DESCONHECIDA § UNKNOWN PIECE § PIEZA DESCONOCIDA
 CÉU: escolha uma peça e toque na faixa do céu (esquerda/direita = em volta, altura = mais alto ou mais baixo). § SKY: pick a piece and tap the sky strip (left/right = around, height = higher or lower). § CIELO: elige una pieza y toca la franja del cielo (izquierda/derecha = alrededor, altura = más alto o más bajo).
-Escolha uma peça e toque na planta para colocar. Toque numa peça para escolher e arraste para mover. O centro é onde a luta acontece. § Pick a piece and tap the map to place it. Tap a piece to select it and drag to move it. The centre is where the fight happens. § Elige una pieza y toca el plano para colocarla. Toca una pieza para elegirla y arrástrala para moverla. El centro es donde ocurre la pelea.
+Escolha uma peça e toque na planta ou na tela grande para colocar. Toque numa peça para escolher e arraste para mover. O centro é onde a luta acontece. § Pick a piece and tap the map or the big view to place it. Tap a piece to select it and drag to move it. The centre is where the fight happens. § Elige una pieza y toca el plano o la vista grande para colocarla. Toca una pieza para elegirla y arrástrala para moverla. El centro es donde ocurre la pelea.
 EDITOR DE ARENAS (EM BREVE) § ARENA EDITOR (COMING SOON) § EDITOR DE ARENAS (PRÓXIMAMENTE)
 PERFIL § PROFILE § PERFIL
 APELIDO § NICKNAME § APODO
@@ -1089,9 +1096,10 @@ const IDIOMA_REGRAS = [
     [/^PERSONAGEM (.+) SALVO!$/, "CHARACTER $1 SAVED!", "¡PERSONAJE $1 GUARDADO!"],
     [/^PERSONAGEM (.+) IMPORTADO!$/, "CHARACTER $1 IMPORTED!", "¡PERSONAJE $1 IMPORTADO!"],
     [/^ARENA (.+) SALVA!$/, "ARENA $1 SAVED!", "¡ARENA $1 GUARDADA!"],
-    [/^Toque na planta para colocar: (.+)\. Peça vermelha = lugar ocupado\.$/, (m, T) => `Tap the map to place: ${T(m[1])}. Red piece = space taken.`, (m, T) => `Toca el plano para colocar: ${T(m[1])}. Pieza roja = lugar ocupado.`],
+    [/^Toque na planta ou na tela grande para colocar: (.+)\. Peça vermelha = lugar ocupado\.$/, (m, T) => `Tap the map or the big view to place: ${T(m[1])}. Red piece = space taken.`, (m, T) => `Toca el plano o la vista grande para colocar: ${T(m[1])}. Pieza roja = lugar ocupado.`],
     [/^ARENA (.+) IMPORTADA!$/, "ARENA $1 IMPORTED!", "¡ARENA $1 IMPORTADA!"],
     [/^EXCLUIR A ARENA (.+)\?$/, "DELETE THE ARENA $1?", "¿BORRAR LA ARENA $1?"],
+    [/^CONTINUAR O RASCUNHO DA ARENA (.+)\?$/, "CONTINUE THE DRAFT OF THE ARENA $1?", "¿CONTINUAR EL BORRADOR DE LA ARENA $1?"],
     [/^PEÇAS: (\d+) \/ (\d+)$/, "PIECES: $1 / $2", "PIEZAS: $1 / $2"],
     // erros dos arquivos (arquivos.js): o texto fixo traduz, o detalhe entre colchetes (campo/arquivo) fica
     [/^(.+) \[(.+)\]$/, (m, T) => `${T(m[1])} [${m[2]}]`, (m, T) => `${T(m[1])} [${m[2]}]`],

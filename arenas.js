@@ -21,6 +21,10 @@ const ARENA_CHAOS = {
 };
 const ARENA_ABAS = [["construcao", "CONSTRUÇÃO"], ["nave", "NAVE"], ["natureza", "NATUREZA"], ["chao", "CHÃO"], ["planicies", "PLANÍCIES"], ["ceu", "CÉU"], ["efeitos", "EFEITOS"], ["enfeites", "ENFEITES"]];
 const ARENA_ANIMADAS_MAX = 10;   // peças que se mexem (desenhadas a cada quadro)
+const ARENA_DESFAZER_MAX = 50;   // passos guardados no ↶ DESFAZER do editor
+const ARENA_GRADE = 20;          // GRADE ligada: posições de 20 em 20 e giro de 15 em 15 graus
+const ARENA_TESTE_ID = "arena_teste";   // fase temporária do TESTAR (só existe durante a luta de teste)
+let arenaTeste = null;           // { ed, arena, antes } enquanto a luta de teste do editor acontece
 // formatos das peças do chão (gramado, lago, lava...): o mesmo contorno serve de piso ou, com ALTURA, de monte
 const ARENA_FORMATOS = [["circulo", "CÍRCULO"], ["oval", "OVAL"], ["feijao", "FEIJÃO"], ["irregular", "IRREGULAR"], ["rio", "RIO RETO"], ["rio_curvo", "RIO EM CURVA"]];
 
@@ -641,7 +645,9 @@ function arenaCeuClaro(a) {
 // coloca as arenas criadas na lista de fases (no fim, sempre liberadas)
 function registrarArenasCriadas() {
     for (let i = FASES_PADRAO.length - 1; i >= 0; i--) if (FASES_PADRAO[i].criada) FASES_PADRAO.splice(i, 1);
-    getArenasCriadas().forEach((a, i) => {
+    const lista = getArenasCriadas();
+    if (arenaTeste) lista.push(arenaTeste.arena);   // TESTAR: a arena em edição entra só durante a luta de teste
+    lista.forEach((a, i) => {
         FASES_PADRAO.push({ id: a.id, nome: a.nome, posicao: 1000 + i, cor: a.cor, musica: a.musica, cenario: "criada",
             camera: { tipo: a.movimento === "seguir" ? "anda" : "orbita", volta: 10800 }, fundoClaro: arenaCeuClaro(a), minion: a.minion, conquista: null, criada: true, arena: a });
     });
@@ -880,23 +886,153 @@ function validarArquivoArena(dados) {
 // dados da arena e o quadro da peça escolhida.
 let arenaEd = null;
 function arenaEditorAberto() { const m = document.getElementById("modal-arena"); return !!m && m.style.display === "flex"; }
-function abrirEditorArenas(id) {
+function abrirEditorArenas(id, semRascunho) {
     const lista = getArenasCriadas();
     const a = (id && lista.find(x => x.id === id)) || lista[0] || null;
     arenaEd = { arena: a ? JSON.parse(JSON.stringify(a)) : arenaPadrao(), aba: "construcao", tipo: null, previa: null, sel: -1, vista: "arena",
-        mover: true, angulo: 0, andado: 0, arrasto: null, vermelhoAte: 0, baixo: "dados" };
+        mover: true, angulo: 0, andado: 0, arrasto: null, vermelhoAte: 0, baixo: "dados",
+        zoom: 1, pan: { x: 0, y: 0 }, grade: false, congelar: false, maximizado: false, dedos: new Map(), pinca: null,
+        hist: { pilha: [], i: -1 } };
     const m = document.getElementById("modal-arena");
     if (!m) return;
+    arenaRegistrarPasso(true);
     arenaPreencherCampos();
     m.style.display = "flex";
     focusModal(m);
     arenaAjustarPlanta();
+    if (!semRascunho) arenaPerguntarRascunho();
 }
 function fecharEditorArenas() {
     const m = document.getElementById("modal-arena");
     if (m) m.style.display = "none";
+    arenaMaximizar(false);
     arenaEd = null;
     restoreFocusAfterModal();
+}
+
+// ---- DESFAZER / REFAZER (passos guardados como texto da arena) ----
+function arenaRegistrarPasso(inicio) {
+    if (!arenaEd) return;
+    const h = arenaEd.hist, txt = JSON.stringify(arenaEd.arena);
+    if (!inicio && h.pilha[h.i] === txt) return;
+    h.pilha = h.pilha.slice(0, h.i + 1);
+    h.pilha.push(txt);
+    if (h.pilha.length > ARENA_DESFAZER_MAX + 1) h.pilha.shift();
+    h.i = h.pilha.length - 1;
+    arenaAtualizarFerramentas();
+    if (!inicio) arenaGuardarRascunho();
+}
+function arenaIrParaPasso(i) {
+    const h = arenaEd.hist;
+    if (i < 0 || i >= h.pilha.length || i === h.i) return;
+    h.i = i;
+    arenaEd.arena = JSON.parse(h.pilha[i]);
+    arenaEd.sel = Math.min(arenaEd.sel, arenaEd.arena.pecas.length - 1);
+    arenaEd.arrasto = null;
+    arenaEd.vista = arenaEd.sel >= 0 ? "foco" : "arena";
+    arenaPreencherCampos();
+    arenaAtualizarFerramentas();
+    arenaGuardarRascunho();
+}
+function arenaDesfazer() { if (arenaEd) arenaIrParaPasso(arenaEd.hist.i - 1); }
+function arenaRefazer() { if (arenaEd) arenaIrParaPasso(arenaEd.hist.i + 1); }
+function arenaAlternarGrade() {
+    if (!arenaEd) return;
+    arenaEd.grade = !arenaEd.grade;
+    arenaAtualizarFerramentas();
+    arenaDesenharPlanta();
+    arenaDica(null);
+}
+function arenaAtualizarFerramentas() {
+    if (!arenaEd) return;
+    const h = arenaEd.hist;
+    const liga = (id, pode, ativo) => {
+        const b = document.getElementById(id);
+        if (!b) return;
+        b.disabled = !pode;
+        b.style.opacity = pode ? "1" : "0.4";
+        if (b.classList) b.classList.toggle("ar-armada", !!ativo);
+    };
+    liga("arena-desfazer", h.i > 0);
+    liga("arena-refazer", h.i < h.pilha.length - 1);
+    liga("arena-grade", true, arenaEd.grade);
+    const mx = document.getElementById("arena-maximizar");
+    if (mx) mx.textContent = T(arenaEd.maximizado ? "MINIMIZAR" : "MAXIMIZAR");
+}
+// posições e giros presos na grade (quando ligada)
+function arenaNaGrade(v) { return arenaEd && arenaEd.grade ? Math.round(v / ARENA_GRADE) * ARENA_GRADE : Math.round(v); }
+function arenaGiroNaGrade(v) { return arenaEd && arenaEd.grade ? (Math.round(v / 15) * 15) % 360 : Math.round(v); }
+
+// ---- rascunho (volta sozinho se o navegador fechar sem salvar) ----
+let arenaRascunhoTimer = null;
+function arenaGuardarRascunho() {
+    if (!arenaEd || arenaTeste) return;
+    if (arenaRascunhoTimer) clearTimeout(arenaRascunhoTimer);
+    const txt = JSON.stringify({ arena: arenaEd.arena, quando: Date.now() });
+    arenaRascunhoTimer = setTimeout(() => { arenaRascunhoTimer = null; writeStorage("saiyan_arena_rascunho", txt); }, 1000);
+}
+function arenaApagarRascunho() {
+    if (arenaRascunhoTimer) { clearTimeout(arenaRascunhoTimer); arenaRascunhoTimer = null; }
+    writeStorage("saiyan_arena_rascunho", "");
+}
+function arenaRascunhoGuardado() {
+    const d = readJsonStorage("saiyan_arena_rascunho", null);
+    if (!d || !d.arena || typeof d.arena !== "object") return null;
+    const v = validarArquivoArena({ formato: ARENA_FORMATO, versao: 1, arena: d.arena });
+    if (v.erro) return null;
+    v.arena.id = d.arena.id || "";
+    return v.arena;
+}
+function arenaPerguntarRascunho() {
+    const r = arenaRascunhoGuardado();
+    if (!r || !arenaEd) return;
+    const salva = getArenasCriadas().find(x => x.id === r.id);
+    if (salva && JSON.stringify(normalizarArena(salva)) === JSON.stringify(r)) return;   // nada mudou desde o save
+    showSystemConfirm("EDITOR DE ARENAS", `CONTINUAR O RASCUNHO DA ARENA ${r.nome}?`, () => {
+        if (!arenaEd) return;
+        arenaEd.arena = r;
+        arenaEd.sel = -1; arenaEd.vista = "arena";
+        arenaPreencherCampos();
+        arenaRegistrarPasso();
+    }, "CONTINUAR", "COMEÇAR LIMPO");
+}
+
+// ---- TESTAR: luta rápida na arena que está sendo editada ----
+function arenaEmTeste() { return !!arenaTeste; }
+function arenaTestarArena() {
+    if (!arenaEd) return;
+    arenaLerCampos();
+    const a = normalizarArena(arenaEd.arena);
+    a.id = ARENA_TESTE_ID;
+    arenaTeste = { arena: a, ed: { arena: JSON.parse(JSON.stringify(arenaEd.arena)), aba: arenaEd.aba, tipo: arenaEd.tipo, sel: arenaEd.sel, grade: arenaEd.grade, hist: arenaEd.hist } };
+    fecharEditorArenas();
+    registrarArenasCriadas();
+    arCenas.delete(ARENA_TESTE_ID);
+    selectedStage = ARENA_TESTE_ID;
+    gameMode = "singleplayer";
+    stageMode = "normal";
+    startGame();
+    setGameState("playing");
+}
+// a luta de teste acabou (voltou para o menu/mapa): o editor reabre como estava
+function arenaVoltarDoTeste() {
+    const t = arenaTeste;
+    if (!t) return;
+    arenaTeste = null;
+    registrarArenasCriadas();
+    arCenas.delete(ARENA_TESTE_ID);
+    if (typeof stageProgress === "object" && stageProgress) delete stageProgress[ARENA_TESTE_ID];
+    if (typeof stageWaveRecord === "object" && stageWaveRecord) delete stageWaveRecord[ARENA_TESTE_ID];
+    selectedStage = STAGE_PROGRESSION[0].id;
+    abrirEditorArenas(t.ed.arena.id, true);
+    if (!arenaEd) return;
+    arenaEd.arena = t.ed.arena;
+    arenaEd.aba = t.ed.aba; arenaEd.tipo = t.ed.tipo; arenaEd.grade = t.ed.grade;
+    arenaEd.sel = Math.min(t.ed.sel, arenaEd.arena.pecas.length - 1);
+    arenaEd.hist = t.ed.hist;
+    arenaEd.vista = arenaEd.sel >= 0 ? "foco" : "arena";
+    arenaPreencherCampos();
+    arenaAtualizarFerramentas();
 }
 function arenaValorDe(id) { const el = document.getElementById(id); return el ? el.value : ""; }
 function arenaDefinir(id, v) { const el = document.getElementById(id); if (el) el.value = v; }
@@ -932,6 +1068,9 @@ function arenaPreencherCampos() {
     if (forma && !forma.options.length) ARENA_FORMATOS.forEach(([k, nome]) => { const o = document.createElement("option"); o.value = k; o.textContent = nome; forma.appendChild(o); });
     const mover = document.getElementById("arena-girar");
     if (mover) mover.checked = arenaEd.mover;
+    const zoom = document.getElementById("arena-zoom");
+    if (zoom) zoom.value = Math.round(arenaEd.zoom * 100);
+    arenaAtualizarFerramentas();
     arenaMostrarAba(arenaEd.aba);
     arenaAtualizarSelecao();
     arenaAtualizarVista();
@@ -956,6 +1095,7 @@ function arenaLerCampos() {
     const g = document.getElementById("arena-girar");
     arenaEd.mover = !g || g.checked;
     arenaDesenharPlanta();
+    arenaRegistrarPasso();
 }
 // ---- abas e botões das peças ----
 function arenaMostrarAba(aba) {
@@ -974,7 +1114,7 @@ function arenaMostrarAba(aba) {
             lista.appendChild(b);
         };
         if (aba === "planicies") {
-            botao("SEM PLANÍCIE", !arenaEd.arena.planicie, () => { arenaEd.arena.planicie = ""; arenaMostrarAba("planicies"); arenaDesenharPlanta(); });
+            botao("SEM PLANÍCIE", !arenaEd.arena.planicie, () => { arenaEd.arena.planicie = ""; arenaMostrarAba("planicies"); arenaDesenharPlanta(); arenaRegistrarPasso(); });
             Object.keys(ARENA_PLANICIES).forEach(k => botao(ARENA_PLANICIES[k].nome, arenaEd.arena.planicie === k, () => arenaVerPeca("planicie:" + k)));
         } else {
             Object.keys(ARENA_PECAS).filter(k => ARENA_PECAS[k].aba === aba).forEach(k => botao(ARENA_PECAS[k].nome, arenaEd.tipo === k, () => arenaVerPeca(k)));
@@ -992,8 +1132,8 @@ function arenaDica(texto) {
         : arenaEd.aba === "ceu"
             ? "CÉU: escolha uma peça e toque na faixa do céu (esquerda/direita = em volta, altura = mais alto ou mais baixo)."
             : arenaEd.tipo
-                ? `Toque na planta para colocar: ${T(ARENA_PECAS[arenaEd.tipo].nome)}. Peça vermelha = lugar ocupado.`
-                : "Escolha uma peça e toque na planta para colocar. Toque numa peça para escolher e arraste para mover. O centro é onde a luta acontece.");
+                ? `Toque na planta ou na tela grande para colocar: ${T(ARENA_PECAS[arenaEd.tipo].nome)}. Peça vermelha = lugar ocupado.`
+                : "Escolha uma peça e toque na planta ou na tela grande para colocar. Toque numa peça para escolher e arraste para mover. O centro é onde a luta acontece.");
 }
 // tocar numa peça da lista: mostra só ela na tela grande, com CONFIRMAR PEÇA / CANCELAR
 function arenaVerPeca(k) {
@@ -1011,6 +1151,7 @@ function arenaConfirmarPeca() {
         arenaEd.arena.ceu = Object.assign({}, pl.ceu);
         arenaEd.arena.chao = Object.assign({}, pl.chao);
         arenaPreencherCampos();
+        arenaRegistrarPasso();
     } else {
         if (ARENA_PECAS[k].anim && arenaEd.arena.pecas.filter(p => ARENA_PECAS[p.t].anim).length >= ARENA_ANIMADAS_MAX)
             return showSystemAlert("EDITOR DE ARENAS", "LIMITE DE 10 EFEITOS POR ARENA.");
@@ -1071,7 +1212,7 @@ function arenaMudarSelecao() {
     const def = ARENA_PECAS[p.t], antes = Object.assign({}, p);
     p.e = Math.round(arenaNum(arenaValorDe("arena-sel-tam"), 0.3, 3, p.e) * 100) / 100;
     p.c = arenaCorValida(arenaValorDe("arena-sel-cor"), p.c);
-    if (!def.ceu) p.r = Math.round(arenaNum(arenaValorDe("arena-sel-giro"), 0, 359, p.r));
+    if (!def.ceu) p.r = arenaGiroNaGrade(arenaNum(arenaValorDe("arena-sel-giro"), 0, 359, p.r));
     if (def.texto !== undefined) p.txt = String(arenaValorDe("arena-sel-texto") || "").slice(0, 16);
     if (def.forma) {
         const f = arenaValorDe("arena-sel-forma");
@@ -1088,6 +1229,7 @@ function arenaMudarSelecao() {
     arenaEd.vista = "foco";
     arenaAtualizarVista();
     arenaDesenharPlanta();
+    arenaRegistrarPasso();
 }
 function arenaApagarSelecao() {
     if (!arenaEd || arenaEd.sel < 0) return;
@@ -1095,6 +1237,7 @@ function arenaApagarSelecao() {
     arenaEd.sel = -1;
     arenaEd.vista = "arena";
     arenaAtualizarSelecao(); arenaAtualizarVista(); arenaDesenharPlanta();
+    arenaRegistrarPasso();
 }
 function arenaDuplicarSelecao() {
     const p = arenaEd && arenaEd.arena.pecas[arenaEd.sel];
@@ -1118,6 +1261,7 @@ function arenaDuplicarSelecao() {
     arenaEd.sel = arenaEd.arena.pecas.length - 1;
     arenaEd.vista = "foco";
     arenaAtualizarSelecao(); arenaAtualizarVista(); arenaDesenharPlanta();
+    arenaRegistrarPasso();
 }
 function arenaMostrarBaixo(qual) {
     if (!arenaEd) return;
@@ -1233,9 +1377,10 @@ function arenaPecaNoPonto(px, py) {
     }
     return -1;
 }
+// (getElementPointFromClient já conta o jogo girado para deitado no celular em pé)
 function arenaPontoDoEvento(e) {
-    const cv = document.getElementById("arena-planta"), r = cv.getBoundingClientRect();
-    return [(e.clientX - r.left) / r.width * AR_PLANTA, (e.clientY - r.top) / r.height * AR_PLANTA];
+    const q = getElementPointFromClient(document.getElementById("arena-planta"), e.clientX, e.clientY, AR_PLANTA, AR_PLANTA);
+    return [q.x, q.y];
 }
 function arenaMoverPara(p, px, py) {
     if (ARENA_PECAS[p.t].ceu) {
@@ -1243,9 +1388,13 @@ function arenaMoverPara(p, px, py) {
         p.h = Math.round(Math.max(0, Math.min(1, 1 - (py - 20) / (AR_PLANTA * 0.45 - 30))) * 100) / 100;
     } else {
         const [x, z] = arenaPlantaParaMundo(px, py);
-        p.x = Math.round(Math.max(-ARENA_RAIO, Math.min(ARENA_RAIO, x)));
-        p.z = Math.round(Math.max(-ARENA_RAIO, Math.min(ARENA_RAIO, z)));
+        arenaPorPeca(p, x, z);
     }
+}
+// põe a peça em (x, z) do mundo, presa na grade quando ela está ligada
+function arenaPorPeca(p, x, z) {
+    p.x = Math.max(-ARENA_RAIO, Math.min(ARENA_RAIO, arenaNaGrade(x)));
+    p.z = Math.max(-ARENA_RAIO, Math.min(ARENA_RAIO, arenaNaGrade(z)));
 }
 function arenaPlantaToque(e) {
     if (!arenaEd) return;
@@ -1272,7 +1421,7 @@ function arenaPlantaToque(e) {
         }
         arenaEd.arena.pecas.push(p);
         arenaEd.sel = arenaEd.arena.pecas.length - 1;
-        arenaEd.arrasto = { i: arenaEd.sel, x: p.x, z: p.z, a: p.a, h: p.h, invalido: false };
+        arenaEd.arrasto = { i: arenaEd.sel, x: p.x, z: p.z, a: p.a, h: p.h, invalido: false, nova: true };
         arenaEd.vista = "foco";
         arenaMostrarBaixo("peca");
     } else {
@@ -1299,17 +1448,26 @@ function arenaPlantaSolta() {
         if (ARENA_PECAS[p.t].ceu) { p.a = ar.a; p.h = ar.h; } else { p.x = ar.x; p.z = ar.z; }
         arenaDica("LUGAR OCUPADO: a peça voltou para onde estava.");
     }
+    const pulaFoco = ar.previa;
     arenaEd.arrasto = null;
-    if (arenaEd.sel >= 0) arenaEd.vista = "foco";
+    arenaEd.congelar = false;
+    if (arenaEd.sel >= 0 && !(pulaFoco && ar.movido)) arenaEd.vista = "foco";
     arenaAtualizarVista();
     arenaDesenharPlanta();
+    arenaRegistrarPasso();
 }
 // ---- tela grande: desenhada no canvas do jogo (escondido atrás da tela do editor) e copiada para cá ----
 // câmera perto de uma peça (prévia ou peça escolhida), afastada conforme o tamanho dela
+const AR_ALTURAS = { coluna_lava: 260, arco_lava: 190, predio: 72, torre: 100, torre_mirante: 90, montanha: 140, mesa_pedra: 90, fumaca: 160, antena: 70, coqueiro: 80, brasas: 110 };
+function arenaAlturaPeca(p) { return (AR_ALTURAS[p.t] || 40) * (p.e || 1); }
+function arenaRaioPeca(p) {
+    const def = ARENA_PECAS[p.t];
+    return (def.forma ? arRaioForma(p, def.forma) : def.planta ? (def.planta.circ || Math.max(...def.planta.ret)) : 30) * (p.e || 1);
+}
 function arenaCameraPerto(p) {
     const def = ARENA_PECAS[p.t], e = p.e || 1;
-    const raio = (def.forma ? arRaioForma(p, def.forma) : def.planta ? (def.planta.circ || Math.max(...def.planta.ret)) : 30) * e;
-    const alto = { coluna_lava: 260, arco_lava: 190, predio: 72, torre: 100, torre_mirante: 90, montanha: 140, mesa_pedra: 90, fumaca: 160, antena: 70, coqueiro: 80, brasas: 110 }[p.t] || 40;
+    const raio = arenaRaioPeca(p);
+    const alto = AR_ALTURAS[p.t] || 40;
     const D = Math.max(170, Math.min(900, Math.max(raio * 3.4, alto * e * 2.4) + 110));
     return { CX: 400, HY: 70, D, H: Math.max(60, D * 0.36), F: 560, PERTO: 20, CORTE: D * 0.5 };
 }
@@ -1336,20 +1494,222 @@ function desenharPreviaArena(dt) {
     const g = cv && cv.getContext && cv.getContext("2d");
     if (!g) return;
     const vista = arenaVistaAtual(), seguir = vista.a.movimento === "seguir" && arenaEd.vista === "arena";
-    if (arenaEd.mover) {
+    if (arenaEd.mover && !arenaEd.congelar) {
         if (seguir) arenaEd.andado += (dt || 0) * 70;
         else arenaEd.angulo = (arenaEd.angulo + (dt || 0) * 0.35) % (Math.PI * 2);
     }
     const ang = document.getElementById("arena-angulo");
-    if (ang && !arenaEd.mover) arenaEd.angulo = Number(ang.value) / 360 * Math.PI * 2;
+    if (ang && !arenaEd.mover && !arenaEd.congelar) arenaEd.angulo = Number(ang.value) / 360 * Math.PI * 2;
     else if (ang) ang.value = Math.round(arenaEd.angulo / (Math.PI * 2) * 360);
     applyRenderTransform();
     ctx.save();
     const opts = Object.assign({}, vista.opts);
     if (seguir) opts.andado = arenaEd.andado;
-    drawArenaCriada(vista.a, seguir ? 0 : (vista.angFixo !== undefined ? vista.angFixo : arenaEd.angulo), opts);
+    const angUsado = seguir ? 0 : (vista.angFixo !== undefined ? vista.angFixo : arenaEd.angulo);
+    drawArenaCriada(vista.a, angUsado, opts);
     ctx.restore();
-    g.drawImage(canvasEl, 0, 0, canvasEl.width, canvasEl.height, 0, 0, cv.width, cv.height);
+    // guarda como a tela grande ficou: é com isso que o toque na tela virá a achar a peça e o chão
+    arenaEd.ultimo = { cam: opts.cam || ARENA_CAMERAS[vista.a.camera] || ARENA_CAMERAS.media, ang: angUsado,
+        desl: { x: (opts.desl ? opts.desl.x : 0) + (seguir ? arenaEd.andado : 0), z: opts.desl ? opts.desl.z : 0 },
+        completa: arenaEd.vista === "arena" && !seguir };
+    const z = arenaEd.zoom, vw = canvas.width / z, vh = canvas.height / z;
+    arenaLimitarPan();
+    g.drawImage(canvasEl, arenaEd.pan.x * renderScale, arenaEd.pan.y * renderScale, vw * renderScale, vh * renderScale, 0, 0, cv.width, cv.height);
+}
+// ---- zoom, arrastar a vista e tela cheia da visualização grande ----
+function arenaLimitarPan() {
+    const z = arenaEd.zoom, vw = canvas.width / z, vh = canvas.height / z;
+    arenaEd.pan.x = Math.max(0, Math.min(canvas.width - vw, arenaEd.pan.x));
+    arenaEd.pan.y = Math.max(0, Math.min(canvas.height - vh, arenaEd.pan.y));
+}
+// zoom mantendo o ponto [lx, ly] (coordenadas do canvas) embaixo do dedo/cursor
+function arenaAplicarZoom(z, centro) {
+    if (!arenaEd) return;
+    const novo = Math.max(1, Math.min(4, Math.round(z * 100) / 100));
+    const c = centro || [arenaEd.pan.x + canvas.width / arenaEd.zoom / 2, arenaEd.pan.y + canvas.height / arenaEd.zoom / 2];
+    arenaEd.pan.x = c[0] - (c[0] - arenaEd.pan.x) * (arenaEd.zoom / novo);
+    arenaEd.pan.y = c[1] - (c[1] - arenaEd.pan.y) * (arenaEd.zoom / novo);
+    arenaEd.zoom = novo;
+    arenaLimitarPan();
+    const barra = document.getElementById("arena-zoom");
+    if (barra) barra.value = Math.round(novo * 100);
+}
+function arenaZoomDaBarra() {
+    const barra = document.getElementById("arena-zoom");
+    if (barra && arenaEd) arenaAplicarZoom(Number(barra.value) / 100, null);
+}
+function arenaMaximizar(sim) {
+    const grade = document.getElementById("arena-tela");
+    if (arenaEd) arenaEd.maximizado = !!sim;
+    if (grade && grade.classList) grade.classList.toggle("ar-max", !!sim);
+    arenaAtualizarFerramentas();
+    arenaAjustarPlanta();
+}
+function arenaAlternarMaximizar() { if (arenaEd) arenaMaximizar(!arenaEd.maximizado); }
+// ---- tocar e arrastar peças na tela grande ----
+// ponto do evento em coordenadas do canvas do jogo (já contando o zoom e o arraste da vista)
+function arenaPontoNaPrevia(e) {
+    const z = arenaEd.zoom;
+    const q = getElementPointFromClient(document.getElementById("arena-previa"), e.clientX, e.clientY, canvas.width / z, canvas.height / z);
+    return [arenaEd.pan.x + q.x, arenaEd.pan.y + q.y];
+}
+// ponto da tela -> chão da arena (o contrário de trProj com y = 0)
+function arenaChaoNaTela(lx, ly) {
+    const u = arenaEd.ultimo;
+    if (!u) return null;
+    const cam = u.cam, esc = (ly - cam.HY) / cam.H;
+    if (!(esc > 0.02)) return null;
+    const rz = cam.D - cam.F / esc, rx = (lx - cam.CX) / esc;
+    const c = Math.cos(u.ang), sn = Math.sin(u.ang);
+    return [rx * c + rz * sn + u.desl.x, -rx * sn + rz * c + u.desl.z];
+}
+// projeção com uma câmera qualquer (a tela grande não é desenhada com a trCam da hora do toque)
+function arProjCom(cam, x, y, z, ang) {
+    const r = trRot(x, z, ang), esc = cam.F / Math.max(cam.PERTO, cam.D - r[1]);
+    return [cam.CX + r[0] * esc, cam.HY + (cam.H - y) * esc, r[1], esc];
+}
+// peça desenhada embaixo do ponto da tela (a mais perto da câmera ganha)
+function arenaPecaNaTela(lx, ly) {
+    const u = arenaEd.ultimo;
+    if (!u || arenaModoCeu()) return -1;
+    const a = arenaEd.arena;
+    let achado = -1, melhor = -Infinity;
+    a.pecas.forEach((p, i) => {
+        const def = ARENA_PECAS[p.t];
+        if (def.ceu) return;
+        const pr = arProjCom(u.cam, p.x - u.desl.x, 0, p.z - u.desl.z, u.ang);
+        if (pr[2] > u.cam.D - u.cam.PERTO) return;
+        const r = Math.max(10, arenaRaioPeca(p) * pr[3]), alto = arenaAlturaPeca(p) * pr[3];
+        if (Math.abs(lx - pr[0]) > r || ly > pr[1] + r * 0.5 || ly < pr[1] - alto - 6) return;
+        if (pr[2] > melhor) { melhor = pr[2]; achado = i; }
+    });
+    return achado;
+}
+function arenaPreviaToque(e) {
+    if (!arenaEd || !arenaEd.ultimo) return;
+    arenaEd.dedos.set(e.pointerId, [e.clientX, e.clientY]);
+    try { e.target.setPointerCapture && e.target.setPointerCapture(e.pointerId); } catch (er) {}
+    if (arenaEd.dedos.size === 2) {   // dois dedos: afastar/juntar dá zoom (celular)
+        const [A, B] = Array.from(arenaEd.dedos.values());
+        arenaEd.pinca = { d: Math.hypot(A[0] - B[0], A[1] - B[1]) || 1, z: arenaEd.zoom };
+        if (arenaEd.arrasto && arenaEd.arrasto.previa) arenaPlantaSolta();
+        arenaEd.vistaArrasto = null;
+        return;
+    }
+    if (arenaEd.dedos.size > 2) return;
+    const [lx, ly] = arenaPontoNaPrevia(e);
+    const i = arenaEd.vista === "previa" ? -1 : arenaPecaNaTela(lx, ly);
+    arenaDica();
+    if (i >= 0) {   // tocou numa peça: escolhe e já pode arrastar
+        const p = arenaEd.arena.pecas[i];
+        arenaEd.sel = i;
+        arenaEd.arrasto = { i, x: p.x, z: p.z, a: p.a, h: p.h, invalido: false, previa: true, movido: false };
+        arenaEd.congelar = true;
+        arenaMostrarBaixo("peca");
+        arenaAtualizarSelecao(); arenaAtualizarVista(); arenaDesenharPlanta();
+        return;
+    }
+    const chao = arenaEd.vista === "arena" && arenaEd.tipo && !ARENA_PECAS[arenaEd.tipo].ceu ? arenaChaoNaTela(lx, ly) : null;
+    if (chao && Math.abs(chao[0]) <= ARENA_RAIO && Math.abs(chao[1]) <= ARENA_RAIO) {   // peça escolhida na lista: toque coloca
+        arenaColocarPecaEm(chao[0], chao[1]);
+        return;
+    }
+    if (arenaEd.zoom > 1) arenaEd.vistaArrasto = { x: lx - arenaEd.pan.x, y: ly - arenaEd.pan.y, px: arenaEd.pan.x, py: arenaEd.pan.y };
+    else if (arenaEd.vista === "foco") { arenaEd.sel = -1; arenaEd.vista = "arena"; arenaAtualizarSelecao(); arenaAtualizarVista(); arenaDesenharPlanta(); }
+}
+function arenaPreviaArrasto(e) {
+    if (!arenaEd) return;
+    if (arenaEd.dedos.has(e.pointerId)) arenaEd.dedos.set(e.pointerId, [e.clientX, e.clientY]);
+    if (arenaEd.pinca && arenaEd.dedos.size >= 2) {
+        const [A, B] = Array.from(arenaEd.dedos.values());
+        const d = Math.hypot(A[0] - B[0], A[1] - B[1]) || 1;
+        const meio = { clientX: (A[0] + B[0]) / 2, clientY: (A[1] + B[1]) / 2 };
+        arenaAplicarZoom(arenaEd.pinca.z * (d / arenaEd.pinca.d), arenaPontoNaPrevia(meio));
+        return;
+    }
+    if (arenaEd.vistaArrasto) {   // posição do dedo dentro da vista (sem o arraste): o fundo acompanha o dedo
+        const v = arenaEd.vistaArrasto, q = getElementPointFromClient(document.getElementById("arena-previa"), e.clientX, e.clientY, canvas.width / arenaEd.zoom, canvas.height / arenaEd.zoom);
+        arenaEd.pan.x = v.px - (q.x - v.x);
+        arenaEd.pan.y = v.py - (q.y - v.y);
+        arenaLimitarPan();
+        return;
+    }
+    const ar = arenaEd.arrasto;
+    if (!ar || !ar.previa) return;
+    const p = arenaEd.arena.pecas[ar.i];
+    if (!p) return;
+    const [lx, ly] = arenaPontoNaPrevia(e), chao = arenaChaoNaTela(lx, ly);
+    if (!chao) return;
+    ar.movido = true;
+    arenaPorPeca(p, chao[0], chao[1]);
+    ar.invalido = arenaPecaColide(arenaEd.arena.pecas, p, ar.i);
+    arenaDesenharPlanta();
+}
+function arenaPreviaSolta(e) {
+    if (!arenaEd) return;
+    if (e && e.pointerId !== undefined) arenaEd.dedos.delete(e.pointerId);
+    if (arenaEd.dedos.size < 2) arenaEd.pinca = null;
+    arenaEd.vistaArrasto = null;
+    if (arenaEd.arrasto && arenaEd.arrasto.previa) arenaPlantaSolta();
+}
+function arenaPreviaRoda(e) {
+    if (!arenaEd || !arenaEd.ultimo) return;
+    if (e.preventDefault) e.preventDefault();
+    const [lx, ly] = arenaPontoNaPrevia(e);
+    arenaAplicarZoom(arenaEd.zoom * (e.deltaY > 0 ? 0.88 : 1.14), [lx, ly]);
+}
+// coloca a peça escolhida na lista em (x, z) do mundo (toque na tela grande)
+function arenaColocarPecaEm(x, z) {
+    const def = ARENA_PECAS[arenaEd.tipo];
+    if (!def) return;
+    if (arenaEd.arena.pecas.length >= ARENA_PECAS_MAX) return showSystemAlert("EDITOR DE ARENAS", "LIMITE DE 80 PEÇAS POR ARENA.");
+    if (def.anim && arenaEd.arena.pecas.filter(q => ARENA_PECAS[q.t].anim).length >= ARENA_ANIMADAS_MAX) return showSystemAlert("EDITOR DE ARENAS", "LIMITE DE 10 EFEITOS POR ARENA.");
+    const p = normalizarPecaArena({ t: arenaEd.tipo, c: def.cor, e: 1, txt: def.texto });
+    arenaPorPeca(p, x, z);
+    if (arenaPecaColide(arenaEd.arena.pecas, p, -1)) {
+        arenaDica("LUGAR OCUPADO: escolha um espaço livre para a peça.");
+        arenaEd.vermelhoAte = performance.now() + 700;
+        arenaDesenharPlanta();
+        return;
+    }
+    arenaEd.arena.pecas.push(p);
+    arenaEd.sel = arenaEd.arena.pecas.length - 1;
+    arenaEd.arrasto = { i: arenaEd.sel, x: p.x, z: p.z, a: p.a, h: p.h, invalido: false, previa: true, movido: false };
+    arenaEd.congelar = true;
+    arenaMostrarBaixo("peca");
+    arenaAtualizarSelecao(); arenaAtualizarVista(); arenaDesenharPlanta();
+}
+// ---- atalhos do teclado (PC) ----
+function arenaTeclaAtalho(e) {
+    if (!arenaEditorAberto() || !arenaEd) return;
+    const alvo = e.target, digitando = alvo && (alvo.tagName === "INPUT" || alvo.tagName === "SELECT" || alvo.tagName === "TEXTAREA");
+    if (e.ctrlKey || e.metaKey) {
+        const k = (e.key || "").toLowerCase();
+        if (k === "z") { e.preventDefault(); e.shiftKey ? arenaRefazer() : arenaDesfazer(); }
+        else if (k === "y") { e.preventDefault(); arenaRefazer(); }
+        return;
+    }
+    if (digitando) return;
+    const p = arenaEd.arena.pecas[arenaEd.sel];
+    const passo = e.shiftKey ? 40 : (arenaEd.grade ? ARENA_GRADE : 5);
+    const mexer = (dx, dz) => {
+        if (!p || ARENA_PECAS[p.t].ceu) return;
+        const antes = { x: p.x, z: p.z };
+        arenaPorPeca(p, p.x + dx, p.z + dz);
+        if (arenaPecaColide(arenaEd.arena.pecas, p, arenaEd.sel)) { p.x = antes.x; p.z = antes.z; arenaEd.vermelhoAte = performance.now() + 700; arenaDica("LUGAR OCUPADO: a peça invadiria o espaço de outra."); }
+        arenaDesenharPlanta();
+        arenaRegistrarPasso();
+    };
+    switch (e.key) {
+        case "Delete": case "Backspace": if (p) { e.preventDefault(); arenaApagarSelecao(); } break;
+        case "r": case "R": if (p && !ARENA_PECAS[p.t].ceu) { p.r = (p.r + (e.shiftKey ? -15 : 15) + 360) % 360; arenaAtualizarSelecao(); arenaDesenharPlanta(); arenaRegistrarPasso(); } break;
+        case "d": case "D": if (p) arenaDuplicarSelecao(); break;
+        case "g": case "G": arenaAlternarGrade(); break;
+        case "ArrowLeft": e.preventDefault(); mexer(-passo, 0); break;
+        case "ArrowRight": e.preventDefault(); mexer(passo, 0); break;
+        case "ArrowUp": e.preventDefault(); mexer(0, -passo); break;
+        case "ArrowDown": e.preventDefault(); mexer(0, passo); break;
+    }
 }
 // ---- botões da tela ----
 function arenaTrocarDaLista() {
@@ -1357,6 +1717,8 @@ function arenaTrocarDaLista() {
     const a = getArenasCriadas().find(x => x.id === id);
     arenaEd.arena = a ? JSON.parse(JSON.stringify(a)) : arenaPadrao();
     arenaEd.sel = -1; arenaEd.tipo = null; arenaEd.previa = null; arenaEd.vista = "arena";
+    arenaEd.hist = { pilha: [], i: -1 };
+    arenaRegistrarPasso(true);
     arenaPreencherCampos();
 }
 function salvarArenaDoEditor() {
@@ -1372,6 +1734,8 @@ function salvarArenaDoEditor() {
     arenaEd.arena = JSON.parse(JSON.stringify(a));
     registrarArenasCriadas();
     if (typeof stageCardThumbs === "object") delete stageCardThumbs[a.id];   // foto do card refeita com o cenário novo
+    arenaRegistrarPasso();
+    arenaApagarRascunho();
     arenaPreencherCampos();
     showSystemAlert("SUCESSO", `ARENA ${a.nome} SALVA!`);
 }
@@ -1384,7 +1748,9 @@ function excluirArenaDoEditor() {
         arCenas.delete(id);
         arenaEd.arena = getArenasCriadas()[0] ? JSON.parse(JSON.stringify(getArenasCriadas()[0])) : arenaPadrao();
         arenaEd.sel = -1; arenaEd.vista = "arena";
+        arenaApagarRascunho();
         arenaPreencherCampos();
+        arenaRegistrarPasso(true);
     }, "EXCLUIR");
 }
 function exportarArenaDoEditor() {
@@ -1415,7 +1781,7 @@ async function anexarArquivoArena(input) {
     const r = importarArenaDeTexto(await lerArquivoArq(f, false) || "");
     if (r.erro) return showSystemAlert("ARQUIVO COM ERRO", r.erro);
     const a = getArenasCriadas().find(x => x.id === r.id);
-    if (arenaEd) { arenaEd.arena = JSON.parse(JSON.stringify(a)); arenaEd.sel = -1; arenaEd.vista = "arena"; arenaPreencherCampos(); }
+    if (arenaEd) { arenaEd.arena = JSON.parse(JSON.stringify(a)); arenaEd.sel = -1; arenaEd.vista = "arena"; arenaEd.hist = { pilha: [], i: -1 }; arenaRegistrarPasso(true); arenaPreencherCampos(); }
     showSystemAlert("SUCESSO", `ARENA ${a.nome} IMPORTADA!`);
 }
 
@@ -1427,5 +1793,16 @@ registrarArenasCriadas();
     cv.addEventListener("pointerdown", arenaPlantaToque);
     cv.addEventListener("pointermove", arenaPlantaArrasto);
     ["pointerup", "pointercancel"].forEach(t => cv.addEventListener(t, arenaPlantaSolta));
-    if (typeof window !== "undefined" && window.addEventListener) window.addEventListener("resize", () => { if (arenaEditorAberto()) arenaAjustarPlanta(); });
+    // tela grande: tocar/arrastar peças, arrastar a vista com zoom, roda do mouse e dois dedos (celular)
+    const pv = document.getElementById("arena-previa");
+    if (pv && pv.addEventListener) {
+        pv.addEventListener("pointerdown", arenaPreviaToque);
+        pv.addEventListener("pointermove", arenaPreviaArrasto);
+        ["pointerup", "pointercancel"].forEach(t => pv.addEventListener(t, arenaPreviaSolta));
+        pv.addEventListener("wheel", arenaPreviaRoda, { passive: false });
+    }
+    if (typeof window !== "undefined" && window.addEventListener) {
+        window.addEventListener("resize", () => { if (arenaEditorAberto()) arenaAjustarPlanta(); });
+        window.addEventListener("keydown", arenaTeclaAtalho);
+    }
 })();
