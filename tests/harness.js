@@ -53,7 +53,7 @@ function createHarness(dir, width = 800, height = 360) {
         querySelectorAll: () => [],
         addEventListener(t, f) { (docL[t] = docL[t] || []).push(f); },
         hidden: false,
-        createElement: () => { const e = makeEl("x"); e.getContext = () => ctx2d; return e; },
+        createElement: () => { const e = makeEl("x"); e.getContext = () => ctx2d; e.toDataURL = () => "data:image/png;base64,AAAA"; return e; },
         activeElement: null
     };
 
