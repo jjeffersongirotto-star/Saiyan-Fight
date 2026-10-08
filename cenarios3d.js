@@ -1644,148 +1644,252 @@ function drawPlataformaStage(ang) {
 }
 
 // ==================== CAPITAL DO OESTE (Corporação Cápsula) ====================
-// Vista do alto: no meio, o domo amarelo da Corporação Cápsula (letreiro CAPSULE, faixas de janelas, o domo
-// branco anexo) num jardim redondo; em volta, prédios brancos de teto colorido, casinhas-domo, torres com esfera,
-// o tubo azul do monotrilho, as ruas e o campo verde com morros ao fundo. Os lutadores voam por cima do domo e a
-// câmera dá a volta nele. Prédios que ficariam entre a câmera e o domo não são desenhados (corte), para a luta
-// ficar sempre limpa.
+// Só o quarteirão da Corporação Cápsula: no meio o prédio-domo amarelo alongado (malha 3D com luz do sol, topo
+// branco com a cúpula pequena, duas fileiras de janelas azuis, a porta e o letreiro CAPSULE na frente, torrinhas
+// brancas atrás e domos brancos anexos); em volta, o gramado com trilhas e árvores, casinhas-domo redondas, o prédio
+// de teto azul, prédios brancos com grade de janelas e a rua em volta do quarteirão. Fora dele só campo, ruas e o
+// horizonte. A câmera dá a volta no domo; o que ficaria entre a câmera e a luta não é desenhado (corte).
 const CO_CAM = { CX: 400, HY: 40, D: 700, H: 250, F: 560, PERTO: 30 };
 const coCena = { passo: null, canvas: null };
-const CO_PREDIOS = (() => {
-    const l = [], tetos = ["#f472b6", "#facc15", "#4ade80", "#60a5fa", "#f87171", "#c084fc", "#fb923c"];
-    for (let i = 0; i < 26; i++) {
-        const a = i / 26 * Math.PI * 2 + c3Hash(i * 1.7) * 0.18, r = 270 + c3Hash(i * 3.3) * 230;
-        const alto = c3Hash(i * 7.1) > 0.55;
-        l.push({ x: Math.sin(a) * r, z: Math.cos(a) * r, w: 26 + c3Hash(i * 2.9) * 22, d: 24 + c3Hash(i * 4.1) * 20,
-            h: alto ? 110 + c3Hash(i * 5.7) * 110 : 40 + c3Hash(i * 6.3) * 40, teto: tetos[i % tetos.length], tipo: "predio" });
-    }
-    for (let i = 0; i < 14; i++) {
-        const a = i / 14 * Math.PI * 2 + 0.11, r = 205 + c3Hash(i * 9.1) * 50;
-        l.push({ x: Math.sin(a) * r, z: Math.cos(a) * r, r: 12 + c3Hash(i * 2.2) * 8, faixa: ["#60a5fa", "#f472b6", "#facc15", "#4ade80"][i % 4], tipo: "casa" });
-    }
-    for (let i = 0; i < 6; i++) {
-        const a = i / 6 * Math.PI * 2 + 0.5, r = 330 + (i % 2) * 120;
-        l.push({ x: Math.sin(a) * r, z: Math.cos(a) * r, h: 90 + (i % 3) * 30, cor: ["#f472b6", "#60a5fa", "#e5e7eb"][i % 3], tipo: "torre" });
+const CO_QUARTEIRAO = 330;   // metade do lado do gramado (a rua vem logo depois)
+const CO_CORTE = 150;        // objetos mais perto da câmera que isto (profundidade) não aparecem
+const CO_DOMO = { rx: 132, rz: 96, h: 86, y: 8 };
+const CO_SOL = (() => { const v = [-0.5, 0.75, 0.45], n = Math.hypot(v[0], v[1], v[2]); return v.map(c => c / n); })();
+const CO_OBJETOS = [
+    // prédio de teto azul à direita, prédios brancos na frente e dois menores no fundo
+    { tipo: "predio", x: 255, z: -30, w: 80, d: 120, h: 42, teto: "#3b82f6" },
+    { tipo: "predio", x: -185, z: 255, w: 110, d: 50, h: 28, teto: "#e2e8f0" },
+    { tipo: "predio", x: 175, z: 262, w: 90, d: 46, h: 34, teto: "#e2e8f0" },
+    { tipo: "predio", x: -235, z: -250, w: 70, d: 60, h: 48, teto: "#f472b6" },
+    { tipo: "predio", x: 95, z: -268, w: 64, d: 48, h: 24, teto: "#4ade80" },
+    // domos brancos colados ao prédio principal
+    { tipo: "anexo", x: -138, z: -34, r: 38, h: 32 },
+    { tipo: "anexo", x: 118, z: -78, r: 26, h: 22 },
+    // casinhas-domo redondas em grupinhos
+    ...[[-270, 70, 16], [-232, 106, 13], [-282, 132, 12], [-300, -130, 12], [-262, -165, 10],
+        [250, 140, 15], [287, 176, 12], [224, 192, 12], [-98, -238, 16], [-58, -277, 12],
+        [258, -228, 14], [292, -282, 12], [45, 238, 14], [-58, 282, 12], [-32, 222, 10]]
+        .map(([x, z, r], i) => ({ tipo: "casa", x, z, r, faixa: ["#60a5fa", "#f472b6", "#facc15", "#4ade80", "#fb923c"][i % 5] }))
+];
+// árvores redondas no gramado, longe dos prédios e das trilhas
+const CO_ARVORES_JARDIM = (() => {
+    const l = [], Q = CO_QUARTEIRAO - 12;
+    for (let i = 0; l.length < 30 && i < 400; i++) {
+        const x = (c3Hash(i * 2.31) * 2 - 1) * Q, z = (c3Hash(i * 5.17) * 2 - 1) * Q;
+        if ((x / 190) ** 2 + (z / 150) ** 2 < 1) continue;          // domo e trilha em volta
+        if (Math.abs(x) < 20 && z > 0) continue;                    // trilha da frente
+        if (Math.abs(z - 10) < 18 && x < -150) continue;            // trilha da esquerda
+        const livre = CO_OBJETOS.every(o => o.tipo === "predio"
+            ? Math.abs(x - o.x) > o.w / 2 + 12 || Math.abs(z - o.z) > o.d / 2 + 12
+            : Math.hypot(x - o.x, z - o.z) > o.r + 12);
+        if (livre && l.every(t => Math.hypot(t.x - x, t.z - z) > 26)) l.push({ x, z, t: 7 + c3Hash(i * 3.7) * 4 });
     }
     return l;
 })();
-const CO_CORTE = 150;   // prédios mais perto da câmera que isto (profundidade) não aparecem
 
+// ponto/normal da casca do domo (elipsoide): t = longitude (0 = frente, lado +z), f = latitude (0 = base, PI/2 = topo)
+function coPontoDomo(t, f, s) {
+    const D = CO_DOMO, cf = Math.cos(f), e = s || 1;
+    return [D.rx * cf * Math.sin(t) * e, D.y + D.h * Math.sin(f) * e, D.rz * cf * Math.cos(t) * e];
+}
+function coNormalDomo(t, f) {
+    const D = CO_DOMO, cf = Math.cos(f);
+    return [cf * Math.sin(t) / D.rx, Math.sin(f) / D.h, cf * Math.cos(t) / D.rz];
+}
+function coVeCamera(p, n, cam) { return (cam[0] - p[0]) * n[0] + (cam[1] - p[1]) * n[1] + (cam[2] - p[2]) * n[2] > 0; }
+function coLuz(n) { const m = Math.hypot(n[0], n[1], n[2]); return (n[0] * CO_SOL[0] + n[1] * CO_SOL[1] + n[2] * CO_SOL[2]) / m; }
+// malha do domo montada uma vez: cada quadradinho guarda o centro, a normal e a cor já iluminada
+const CO_MALHA = (() => {
+    const NT = 36, NF = 10, l = [];
+    for (let j = 0; j < NF; j++) for (let i = 0; i < NT; i++) {
+        const t0 = i / NT * Math.PI * 2, t1 = (i + 1) / NT * Math.PI * 2, f0 = j / NF * Math.PI / 2, f1 = (j + 1) / NF * Math.PI / 2;
+        const tm = (t0 + t1) / 2, fm = (f0 + f1) / 2, n = coNormalDomo(tm, fm);
+        const luz = Math.round(coLuz(n) * 8) / 8;
+        const base = j >= NF - 2 ? "#f3f5f9" : "#ffd447";            // a parte de cima é branca
+        l.push({ t0, t1, f0, f1, c: coPontoDomo(tm, fm), n, cor: spriteMixC3(base, Math.max(-0.22, Math.min(0.3, (luz - 0.45) * 0.55))) });
+    }
+    return l;
+})();
+// quadradinho na casca entre as longitudes t0..t1 e latitudes f0..f1 (um pouco para fora, para ficar por cima)
+function coQuadDomo(t0, t1, f0, f1, cor, ang, s) {
+    const e = s || 1.006;
+    trPoly([coPontoDomo(t0, f0, e), coPontoDomo(t1, f0, e), coPontoDomo(t1, f1, e), coPontoDomo(t0, f1, e)].map(p => trProj(p[0], p[1], p[2], ang)));
+    trG.fillStyle = cor; trG.fill();
+}
+// texto pintado num plano: o = ponto do meio, u = direção da leitura, v = "para cima" (vetores unitários)
+function coTexto(o, u, v, texto, tam, cor, ang) {
+    const A = trProj(o[0], o[1], o[2], ang);
+    const B = trProj(o[0] + u[0], o[1] + u[1], o[2] + u[2], ang);
+    const C = trProj(o[0] - v[0], o[1] - v[1], o[2] - v[2], ang);
+    trG.save();
+    trG.transform(B[0] - A[0], B[1] - A[1], C[0] - A[0], C[1] - A[1], A[0], A[1]);
+    trG.font = `bold ${tam}px 'Trebuchet MS', sans-serif`;
+    trG.textAlign = "center"; trG.textBaseline = "middle";
+    trG.lineWidth = tam * 0.16; trG.strokeStyle = "#ffffff"; trG.strokeText(texto, 0, 0);
+    trG.fillStyle = cor; trG.fillText(texto, 0, 0);
+    trG.restore();
+}
+function coTorrinha(x, z, ang) {
+    // torrinha redonda branca saindo da casca, com cúpula e uma faixa de janelinhas
+    const D = CO_DOMO, y = D.y + D.h * Math.sqrt(Math.max(0, 1 - (x / D.rx) ** 2 - (z / D.rz) ** 2));
+    c3Cilindro(x, z, y - 6, y + 16, 9, "#e6ebf2", ang, "#f7f9fc", "rgba(90, 100, 125, 0.45)");
+    const a = c3Anel(x, z, y + 10, 9.4, ang);
+    trG.strokeStyle = "#3d6fc2"; trG.lineWidth = Math.max(1, 2.6 * a.k);
+    trG.beginPath(); trG.ellipse(a.cx, a.cy, a.rx, a.ry, 0, 0.15, Math.PI - 0.15); trG.stroke();
+    c3Domo(x, z, y + 16, 9, 8, "#f7f9fc", ang);
+}
+function coCorporacao(ang) {
+    const D = CO_DOMO, cam = c3Camera(ang);
+    const torres = [[-58, -50], [62, -44]].map(([x, z]) => ({ x, z, frente: coVeCamera([x, 60, z], coNormalDomo(Math.atan2(x / D.rx, z / D.rz), 0.9), cam) }));
+    torres.forEach(t => { if (!t.frente) coTorrinha(t.x, t.z, ang); });   // as de trás ficam escondidas pela casca
+    // base branca (parede elíptica baixa)
+    const NT = 36;
+    for (let i = 0; i < NT; i++) {
+        const t0 = i / NT * Math.PI * 2, t1 = (i + 1) / NT * Math.PI * 2, tm = (t0 + t1) / 2;
+        const n = [Math.sin(tm) / D.rx, 0, Math.cos(tm) / D.rz];
+        const p = (t, y) => [(D.rx + 4) * Math.sin(t), y, (D.rz + 4) * Math.cos(t)];
+        if (!coVeCamera(p(tm, 4), n, cam)) continue;
+        trPoly([p(t0, 0), p(t1, 0), p(t1, D.y), p(t0, D.y)].map(q => trProj(q[0], q[1], q[2], ang)));
+        trG.fillStyle = spriteMixC3("#e7ebf1", Math.max(-0.3, (coLuz(n) - 0.4) * 0.4)); trG.fill();
+        trG.strokeStyle = trG.fillStyle; trG.lineWidth = 0.8; trG.stroke();
+    }
+    // casca amarela iluminada (convexa: basta não desenhar o que está de costas)
+    trG.lineWidth = 0.8;
+    CO_MALHA.forEach(q => {
+        if (!coVeCamera(q.c, q.n, cam)) return;
+        trPoly([coPontoDomo(q.t0, q.f0), coPontoDomo(q.t1, q.f0), coPontoDomo(q.t1, q.f1), coPontoDomo(q.t0, q.f1)].map(p => trProj(p[0], p[1], p[2], ang)));
+        trG.fillStyle = q.cor; trG.fill();
+        trG.strokeStyle = q.cor; trG.stroke();
+    });
+    // friso branco entre o amarelo e o topo
+    const fr = Math.PI / 2 * 0.8;
+    for (let i = 0; i < NT; i++) {
+        const t0 = i / NT * Math.PI * 2, t1 = (i + 1) / NT * Math.PI * 2, tm = (t0 + t1) / 2;
+        if (coVeCamera(coPontoDomo(tm, fr), coNormalDomo(tm, fr), cam)) coQuadDomo(t0, t1, fr - 0.035, fr, "#c9d3e0", ang);
+    }
+    // janelas: fileira de baixo (16, sem as da frente onde ficam a porta e o letreiro) e fileira de cima (12)
+    const janela = (tm, larg, f0, f1) => {
+        const t0 = tm - larg / 2, t1 = tm + larg / 2;
+        if (!coVeCamera(coPontoDomo(tm, (f0 + f1) / 2), coNormalDomo(tm, (f0 + f1) / 2), cam)) return;
+        coQuadDomo(t0 - 0.012, t1 + 0.012, f0 - 0.02, f1 + 0.02, "#f4f7fb", ang);
+        coQuadDomo(t0, t1, f0, f1, "#2f5fae", ang, 1.009);
+        coQuadDomo(t0, t1, f1 - (f1 - f0) * 0.4, f1, "#7fa8e6", ang, 1.011);
+    };
+    for (let i = 0; i < 16; i++) {
+        let tm = i / 16 * Math.PI * 2; if (tm > Math.PI) tm -= Math.PI * 2;
+        if (Math.abs(tm) < 0.5) continue;
+        janela(tm, 0.15, 0.2, 0.36);
+    }
+    for (let i = 0; i < 12; i++) janela((i + 0.5) / 12 * Math.PI * 2, 0.2, 0.74, 0.94);
+    // porta na frente, com marquise branca
+    if (coVeCamera(coPontoDomo(0, 0.1), coNormalDomo(0, 0.1), cam)) {
+        coQuadDomo(-0.13, 0.13, -0.02, 0.2, "#e9eef5", ang, 1.01);
+        coQuadDomo(-0.1, 0.1, -0.08, 0.16, "#2b3f66", ang, 1.016);
+        coQuadDomo(-0.004, 0.004, -0.08, 0.16, "#8aa6d6", ang, 1.02);
+    }
+    // letreiro CAPSULE pintado na frente
+    const fl = 0.42, nl = coNormalDomo(0, fl), pl = coPontoDomo(0, fl, 1.012);
+    const cl = [cam[0] - pl[0], cam[1] - pl[1], cam[2] - pl[2]], ml = Math.hypot(...cl) * Math.hypot(...nl);
+    if ((cl[0] * nl[0] + cl[1] * nl[1] + cl[2] * nl[2]) / ml > 0.18) {
+        const vy = D.h * Math.cos(fl), vz = -D.rz * Math.sin(fl), mv = Math.hypot(vy, vz);
+        coTexto(pl, [1, 0, 0], [0, vy / mv, vz / mv], "CAPSULE", 23, "#1f4fb4", ang);
+    }
+    // cúpula branca pequena no topo
+    c3Cilindro(0, 0, D.y + D.h - 4, D.y + D.h + 6, 22, "#e3e9f1", ang, "#f7f9fc", "rgba(90, 100, 125, 0.4)");
+    const anel = c3Anel(0, 0, D.y + D.h + 2, 22.4, ang);
+    trG.strokeStyle = "#3d6fc2"; trG.lineWidth = Math.max(1, 2.4 * anel.k);
+    trG.beginPath(); trG.ellipse(anel.cx, anel.cy, anel.rx, anel.ry, 0, 0.12, Math.PI - 0.12); trG.stroke();
+    c3Domo(0, 0, D.y + D.h + 6, 22, 14, "#f7f9fc", ang);
+    torres.forEach(t => { if (t.frente) coTorrinha(t.x, t.z, ang); });
+}
+// janelas em grade numa parede que vai de a até b (no chão, [x, z]) com altura h
+function coJanelasParede(a, b, h, ang) {
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]), cols = Math.max(1, Math.floor(len / 15)), rows = Math.max(1, Math.floor((h - 6) / 12));
+    const pt = (s, y) => trProj(a[0] + (b[0] - a[0]) * s, y, a[1] + (b[1] - a[1]) * s, ang);
+    const cw = 1 / cols, rh = (h - 8) / rows;
+    for (let r = 0; r < rows; r++) {
+        const y0 = 5 + r * rh, y1 = y0 + rh * 0.58;
+        for (let c = 0; c < cols; c++) {
+            const s0 = c * cw + cw * 0.2, s1 = s0 + cw * 0.6;
+            trPoly([pt(s0, y0), pt(s1, y0), pt(s1, y1), pt(s0, y1)]);
+            trG.fillStyle = "#3a6cbf"; trG.fill();
+            trPoly([pt(s0, y1 - (y1 - y0) * 0.35), pt(s1, y1 - (y1 - y0) * 0.35), pt(s1, y1), pt(s0, y1)]);
+            trG.fillStyle = "#8db3ea"; trG.fill();
+        }
+    }
+}
 function coPredio(p, ang) {
-    const { x, z, w, d, h } = p, x0 = x - w / 2, x1 = x + w / 2, z0 = z - d / 2, z1 = z + d / 2;
-    const parede = "#eef2f7", lado = "#cfd8e4", traco = "rgba(80, 100, 130, 0.45)";
-    const frente = c3Face([[x0, 0, z1], [x1, 0, z1], [x1, h, z1], [x0, h, z1]], [0, 0, 1], parede, ang, traco);
-    const tras = c3Face([[x1, 0, z0], [x0, 0, z0], [x0, h, z0], [x1, h, z0]], [0, 0, -1], lado, ang, traco);
-    const dir = c3Face([[x1, 0, z1], [x1, 0, z0], [x1, h, z0], [x1, h, z1]], [1, 0, 0], lado, ang, traco);
-    const esq = c3Face([[x0, 0, z0], [x0, 0, z1], [x0, h, z1], [x0, h, z0]], [-1, 0, 0], parede, ang, traco);
-    // faixas de janelas azuis nas paredes visíveis
-    trG.strokeStyle = "rgba(70, 120, 200, 0.75)";
-    trG.lineWidth = 1.2;
-    trG.beginPath();
-    const linhas = (a, b) => { for (let y = 10; y < h - 6; y += 12) { const p1 = trProj(a[0], y, a[1], ang), p2 = trProj(b[0], y, b[1], ang); trG.moveTo(p1[0], p1[1]); trG.lineTo(p2[0], p2[1]); } };
-    if (frente) linhas([x0 + 3, z1 + 0.3], [x1 - 3, z1 + 0.3]);
-    if (tras) linhas([x1 - 3, z0 - 0.3], [x0 + 3, z0 - 0.3]);
-    if (dir) linhas([x1 + 0.3, z1 - 3], [x1 + 0.3, z0 + 3]);
-    if (esq) linhas([x0 - 0.3, z0 + 3], [x0 - 0.3, z1 - 3]);
-    trG.stroke();
-    // teto colorido arredondado
-    const topo = [[x0, h, z0], [x1, h, z0], [x1, h, z1], [x0, h, z1]].map(q => trProj(q[0], q[1], q[2], ang));
-    trPoly(topo); trG.fillStyle = p.teto; trG.fill();
-    const c = trProj(x, h + 5, z, ang), k = c[3];
-    trG.fillStyle = spriteMixC3(p.teto, 0.25);
-    trG.beginPath(); trG.ellipse(c[0], c[1] + 3 * k, w * 0.42 * k, 4 * k, 0, 0, Math.PI * 2); trG.fill();
+    const { x, z, w, d, h } = p, x0 = x - w / 2, x1 = x + w / 2, z0 = z - d / 2, z1 = z + d / 2, o = 0.4;
+    const parede = "#f1f4f8", lado = "#d3dbe6", traco = "rgba(80, 100, 130, 0.5)";
+    if (c3Face([[x0, 0, z1], [x1, 0, z1], [x1, h, z1], [x0, h, z1]], [0, 0, 1], parede, ang, traco)) coJanelasParede([x0, z1 + o], [x1, z1 + o], h, ang);
+    if (c3Face([[x1, 0, z0], [x0, 0, z0], [x0, h, z0], [x1, h, z0]], [0, 0, -1], lado, ang, traco)) coJanelasParede([x1, z0 - o], [x0, z0 - o], h, ang);
+    if (c3Face([[x1, 0, z1], [x1, 0, z0], [x1, h, z0], [x1, h, z1]], [1, 0, 0], lado, ang, traco)) coJanelasParede([x1 + o, z1], [x1 + o, z0], h, ang);
+    if (c3Face([[x0, 0, z0], [x0, 0, z1], [x0, h, z1], [x0, h, z0]], [-1, 0, 0], parede, ang, traco)) coJanelasParede([x0 - o, z0], [x0 - o, z1], h, ang);
+    // teto colorido com mureta clara e uma caixa d'água redonda
+    trPoly([[x0, h, z0], [x1, h, z0], [x1, h, z1], [x0, h, z1]].map(q => trProj(q[0], q[1], q[2], ang)));
+    trG.fillStyle = "#f7f9fc"; trG.fill(); trG.strokeStyle = traco; trG.lineWidth = 1; trG.stroke();
+    trPoly([[x0 + 4, h, z0 + 4], [x1 - 4, h, z0 + 4], [x1 - 4, h, z1 - 4], [x0 + 4, h, z1 - 4]].map(q => trProj(q[0], q[1], q[2], ang)));
+    trG.fillStyle = p.teto; trG.fill();
+    c3Cilindro(x - w * 0.22, z - d * 0.18, h, h + 7, 6, "#e3e9f1", ang, "#f7f9fc");
 }
 function coCasa(p, ang) {
     c3Cilindro(p.x, p.z, 0, 4, p.r, "#dde3ec", ang, "#eef2f7");
-    const d = c3Domo(p.x, p.z, 4, p.r, p.r * 0.85, "#f4f6fa", ang);
+    c3Domo(p.x, p.z, 4, p.r, p.r * 0.85, "#f4f6fa", ang);
     const a = c3Anel(p.x, p.z, 4 + p.r * 0.35, p.r * 0.93, ang);
     trG.strokeStyle = p.faixa; trG.lineWidth = Math.max(1, 2.4 * a.k);
     trG.beginPath(); trG.ellipse(a.cx, a.cy, a.rx, a.ry, 0, 0.1, Math.PI - 0.1); trG.stroke();
-    return d;
-}
-function coTorre(p, ang) {
-    const b = trProj(p.x, 0, p.z, ang), t = trProj(p.x, p.h, p.z, ang), k = b[3];
-    trG.strokeStyle = "#e5e7eb"; trG.lineWidth = Math.max(1.5, 5 * k);
-    trG.beginPath(); trG.moveTo(b[0], b[1]); trG.lineTo(t[0], t[1]); trG.stroke();
-    const r = 16 * t[3];
-    const gr = trG.createRadialGradient(t[0] - r * 0.4, t[1] - r * 0.4, r * 0.1, t[0], t[1], r);
-    gr.addColorStop(0, "#ffffff"); gr.addColorStop(1, "#b9c3d1");
-    trG.fillStyle = gr; trG.beginPath(); trG.arc(t[0], t[1], r, 0, Math.PI * 2); trG.fill();
-    trG.fillStyle = p.cor; trG.beginPath(); trG.arc(t[0], t[1], r, Math.PI * 1.05, Math.PI * 1.95); trG.closePath(); trG.fill();
-    trG.strokeStyle = "#5b8ed0"; trG.lineWidth = Math.max(1, 2 * k); trG.beginPath(); trG.ellipse(t[0], t[1] + r * 0.2, r, r * 0.25, 0, 0, Math.PI); trG.stroke();
-}
-function coCorporacao(ang) {
-    // base branca, o domo amarelo grande, janelas e o letreiro CAPSULE na frente; domo branco anexo do lado
-    const anexo = () => { c3Cilindro(-95, 60, 0, 8, 42, "#e3e8f0", ang, "#f2f5f9"); c3Domo(-95, 60, 8, 40, 34, "#f6f8fb", ang); };
-    const principal = () => {
-        c3Cilindro(0, 0, 0, 10, 118, "#e9edf3", ang, "#f6f8fb", "rgba(90, 100, 120, 0.4)");
-        const d = c3Domo(0, 0, 10, 112, 86, "#ffd75a", ang);
-        // faixas de janelas azuis no domo (só a metade virada para a câmera)
-        [[26, 0.95], [50, 0.78]].forEach(([y, f]) => {
-            const a = c3Anel(0, 0, y, 112 * f, ang);
-            for (let i = -5; i <= 5; i++) {
-                const u = i / 6, px = a.cx + u * a.rx, py = a.cy + a.ry * Math.sqrt(1 - u * u);
-                trG.fillStyle = "#4f7fbf"; trG.beginPath(); trG.ellipse(px, py, 5 * a.k * Math.sqrt(1 - u * u) + 1, 3.2 * a.k, 0, 0, Math.PI * 2); trG.fill();
-            }
-        });
-        // letreiro CAPSULE pintado no lado +z do domo (aparece quando esse lado está virado para a câmera)
-        const vira = trRot(0, 1, ang)[1];
-        if (vira > 0.25) {
-            const p = trProj(0, 38, 96, ang), q = trProj(10, 38, 96, ang), k = p[3];
-            trG.save();
-            trG.translate(p[0], p[1]);
-            trG.scale(Math.max(0.2, (q[0] - p[0]) / (10 * k)), 1);
-            trG.font = `bold ${Math.round(15 * k)}px 'Trebuchet MS', sans-serif`;
-            trG.textAlign = "center";
-            trG.fillStyle = "#1e3a8a";
-            trG.fillText("CAPSULE", 0, 0);
-            trG.restore();
-        }
-        return d;
-    };
-    const partes = [{ z: trRot(0, 0, ang)[1], d: principal }, { z: trRot(-95, 60, ang)[1], d: anexo }];
-    partes.sort((a, b) => a.z - b.z).forEach(p => p.d());
-}
-function coMonotrilho(ang, perto) {
-    // tubo azul elevado em anel; as metades longe/perto vêm em chamadas diferentes (antes/depois dos prédios)
-    const R = 560, Y = 48, pts = [];
-    for (let i = 0; i <= 96; i++) {
-        const a = i / 96 * Math.PI * 2, x = Math.sin(a) * R, z = Math.cos(a) * R, dz = trRot(x, z, ang)[1];
-        pts.push({ p: trProj(x, Y, z, ang), dz, chao: trProj(x, 0, z, ang), i });
+    // janelinha redonda e a porta, viradas para o domo principal
+    const dir = Math.atan2(-p.x, -p.z), jx = p.x + Math.sin(dir) * p.r * 0.8, jz = p.z + Math.cos(dir) * p.r * 0.8;
+    if (trRot(jx - p.x, jz - p.z, ang)[1] > 0) {
+        const j = trProj(jx, 4 + p.r * 0.55, jz, ang), q = trProj(jx, 4, jz, ang);
+        trG.fillStyle = "#3a6cbf"; trG.beginPath(); trG.ellipse(j[0], j[1], 2.4 * j[3], 2.2 * j[3], 0, 0, Math.PI * 2); trG.fill();
+        trG.fillStyle = "#6b7a90"; trG.fillRect(q[0] - 2.2 * q[3], q[1] - 7 * q[3], 4.4 * q[3], 7 * q[3]);
     }
-    const vale = (o) => perto ? o.dz > 0 && o.dz < CO_CORTE : o.dz <= 0;
-    trG.lineCap = "round";
-    for (let i = 1; i < pts.length; i++) {
-        const a = pts[i - 1], b = pts[i];
-        if (!vale(a) || !vale(b)) continue;
-        const k = a.p[3];
-        trG.strokeStyle = "#2f4fb8"; trG.lineWidth = Math.max(2, 12 * k);
-        trG.beginPath(); trG.moveTo(a.p[0], a.p[1]); trG.lineTo(b.p[0], b.p[1]); trG.stroke();
-        trG.strokeStyle = "#9db8f2"; trG.lineWidth = Math.max(1, 3 * k);
-        trG.beginPath(); trG.moveTo(a.p[0], a.p[1] - 3 * k); trG.lineTo(b.p[0], b.p[1] - 3 * k); trG.stroke();
-        if (i % 6 === 0) {
-            trG.strokeStyle = "#cbd5e1"; trG.lineWidth = Math.max(1, 3 * k);
-            trG.beginPath(); trG.moveTo(b.chao[0], b.chao[1]); trG.lineTo(b.p[0], b.p[1]); trG.stroke();
-        }
-    }
-    trG.lineCap = "butt";
+}
+function coAnexo(p, ang) {
+    c3Cilindro(p.x, p.z, 0, 8, p.r + 2, "#e3e8f0", ang, "#f2f5f9", "rgba(90, 100, 125, 0.35)");
+    c3Domo(p.x, p.z, 8, p.r, p.h, "#f6f8fb", ang);
+    const a = c3Anel(p.x, p.z, 8 + p.h * 0.3, p.r * 0.95, ang);
+    trG.strokeStyle = "#3d6fc2"; trG.lineWidth = Math.max(1, 3 * a.k);
+    trG.setLineDash([4 * a.k, 4 * a.k]);
+    trG.beginPath(); trG.ellipse(a.cx, a.cy, a.rx, a.ry, 0, 0.2, Math.PI - 0.2); trG.stroke();
+    trG.setLineDash([]);
+}
+function coArvore(t, ang) {
+    const p = trProj(t.x, 0, t.z, ang), k = p[3];
+    trG.fillStyle = "rgba(30, 70, 30, 0.25)"; trG.beginPath(); trG.ellipse(p[0], p[1], t.t * k, t.t * 0.35 * k, 0, 0, Math.PI * 2); trG.fill();
+    trG.fillStyle = "#7a5230"; trG.fillRect(p[0] - 1.2 * k, p[1] - t.t * 0.9 * k, 2.4 * k, t.t * 0.9 * k);
+    trG.fillStyle = "#2f7a32"; trG.beginPath(); trG.arc(p[0], p[1] - t.t * 1.4 * k, t.t * k, 0, Math.PI * 2); trG.fill();
+    trG.fillStyle = "#5cb24e"; trG.beginPath(); trG.arc(p[0] - t.t * 0.3 * k, p[1] - t.t * 1.7 * k, t.t * 0.45 * k, 0, Math.PI * 2); trG.fill();
+}
+// faixa clara de trilha no gramado (retângulo da planta)
+function coTrilha(x0, z0, x1, z1, ang) {
+    trPoly([[x0, z0], [x1, z0], [x1, z1], [x0, z1]].map(c => trProj(c[0], 0.5, c[1], ang)));
+    trG.fill();
 }
 function drawCapitalScene(ang) {
-    // jardim redondo da Corporação Cápsula (o resto do chão e as ruas são do chão desenhado a cada quadro)
-    const jardim = []; for (let i = 0; i < 48; i++) { const a = i / 48 * Math.PI * 2; jardim.push(trProj(Math.sin(a) * 165, 0.5, Math.cos(a) * 165, ang)); }
-    trPoly(jardim); trG.fillStyle = "#6fc04e"; trG.fill();
-    const trilha = []; for (let i = 0; i < 48; i++) { const a = i / 48 * Math.PI * 2; trilha.push(trProj(Math.sin(a) * 140, 0.6, Math.cos(a) * 140, ang)); }
-    trPoly(trilha); trG.strokeStyle = "#f2e8c8"; trG.lineWidth = 2; trG.stroke();
-    coMonotrilho(ang, false);
+    // trilhas claras: anel em volta do domo, caminho da porta até a rua e o da esquerda
+    trG.fillStyle = "#efe4c2";
+    const fora = [], dentro = [];
+    for (let i = 0; i <= 48; i++) {
+        const a = i / 48 * Math.PI * 2;
+        fora.push(trProj(Math.sin(a) * 178, 0.5, Math.cos(a) * 140, ang));
+        dentro.push(trProj(Math.sin(a) * 160, 0.5, Math.cos(a) * 122, ang));
+    }
+    trG.beginPath(); fora.forEach((p, i) => i ? trG.lineTo(p[0], p[1]) : trG.moveTo(p[0], p[1]));
+    for (let i = dentro.length - 1; i >= 0; i--) trG.lineTo(dentro[i][0], dentro[i][1]);
+    trG.closePath(); trG.fill();
+    coTrilha(-11, 126, 11, CO_QUARTEIRAO, ang);
+    coTrilha(-CO_QUARTEIRAO, 2, -164, 18, ang);
     const prof = (x, z) => trRot(x, z, ang)[1];
     const objetos = [{ z: prof(0, 0), d: () => coCorporacao(ang) }];
-    CO_PREDIOS.forEach(p => {
+    CO_OBJETOS.forEach(p => {
         const z = prof(p.x, p.z);
         if (z > CO_CORTE) return;   // corte: não tampa a luta
-        objetos.push({ z, d: () => (p.tipo === "predio" ? coPredio(p, ang) : p.tipo === "casa" ? coCasa(p, ang) : coTorre(p, ang)) });
+        objetos.push({ z, d: () => (p.tipo === "predio" ? coPredio(p, ang) : p.tipo === "anexo" ? coAnexo(p, ang) : coCasa(p, ang)) });
     });
+    CO_ARVORES_JARDIM.forEach(t => { const z = prof(t.x, t.z); if (z <= CO_CORTE + 120) objetos.push({ z, d: () => coArvore(t, ang) }); });
     objetos.sort((a, b) => a.z - b.z).forEach(o => o.d());
-    coMonotrilho(ang, true);
 }
 
 // céu, campo e morros ao fundo (360°)
@@ -1807,18 +1911,19 @@ function getCapitalPanorama() {
             g.beginPath(); g.moveTo(xx - larg / 2, base); g.quadraticCurveTo(xx, base - alt * 2, xx + larg / 2, base); g.closePath(); g.fill();
         });
     }
-    // silhuetas de prédios distantes
+    // o resto da cidade, bem longe
     for (let i = 0; i < 40; i++) {
-        const x = (i * 97.7 + 13) % W, w = 8 + (i * 5) % 10, h = 10 + (i * 13) % 26;
-        c3NaVolta(W, x, w, xx => { g.fillStyle = "rgba(225, 232, 245, 0.85)"; g.fillRect(xx, base - h, w, h); g.fillStyle = ["#f9a8d4", "#fde68a", "#93c5fd"][i % 3]; g.fillRect(xx, base - h, w, 2); });
+        const x = (i * 97.7 + 13) % W, w = 8 + (i * 5) % 10, h = 6 + (i * 13) % 16;
+        c3NaVolta(W, x, w, xx => { g.fillStyle = "rgba(225, 232, 245, 0.8)"; g.fillRect(xx, base - h, w, h); g.fillStyle = ["#f9a8d4", "#fde68a", "#93c5fd"][i % 3]; g.fillRect(xx, base - h, w, 2); });
     }
     coPanorama = c;
     return c;
 }
+// árvores soltas no campo fora do quarteirão
 const CO_ARVORES = (() => {
     const l = [];
-    for (let i = 0; i < 70; i++) {
-        const a = c3Hash(i * 1.9) * Math.PI * 2, r = 175 + c3Hash(i * 4.3) * 900;
+    for (let i = 0; i < 36; i++) {
+        const a = c3Hash(i * 1.9) * Math.PI * 2, r = 470 + c3Hash(i * 4.3) * 700;
         l.push({ x: Math.sin(a) * r, z: Math.cos(a) * r, t: 6 + c3Hash(i * 3.1) * 5 });
     }
     return l;
@@ -1830,27 +1935,24 @@ function drawCapitalChao(ang) {
     chao.addColorStop(0, "#9ccf7a"); chao.addColorStop(1, "#4f9a3a");
     ctx.fillStyle = chao;
     ctx.fillRect(0, CO_CAM.HY + 2, canvas.width, canvas.height - CO_CAM.HY);
-    const lim = CO_CAM.D - CO_CAM.PERTO * 2;
-    // ruas: anel em volta do jardim, um anel maior e avenidas saindo em cruz
-    const anelRua = (r0, r1) => {
-        const fora = [], dentro = [];
-        for (let i = 0; i <= 56; i++) { const a = i / 56 * Math.PI * 2; fora.push(trProj(Math.sin(a) * r1, 0, Math.cos(a) * r1, ang)); dentro.push(trProj(Math.sin(a) * r0, 0, Math.cos(a) * r0, ang)); }
-        ctx.beginPath(); fora.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
-        for (let i = dentro.length - 1; i >= 0; i--) ctx.lineTo(dentro[i][0], dentro[i][1]);
-        ctx.closePath(); ctx.fill();
-    };
+    const lim = CO_CAM.D - CO_CAM.PERTO * 2, Q = CO_QUARTEIRAO, R = Q + 30;
+    const quadrado = (m, y) => { const q = [[-m, -m], [m, -m], [m, m], [-m, m]].map(c => trProj(c[0], y, c[1], ang)); ctx.beginPath(); q.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.closePath(); };
+    // ruas saindo do quarteirão (recortadas antes da câmera)
     ctx.fillStyle = "#8d96a3";
-    anelRua(168, 192);
-    anelRua(388, 410);
-    [[1, 0], [-1, 0], [0, 1], [0, -1], [0.7071, 0.7071], [-0.7071, -0.7071]].forEach(([dx, dz]) => {
-        const nx = -dz * 12, nz = dx * 12;
-        const seg = c3RecorteChao([dx * 192, dz * 192], [dx * 1600, dz * 1600], ang, lim);
+    [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dx, dz]) => {
+        const nx = -dz * 13, nz = dx * 13;
+        const seg = c3RecorteChao([dx * R, dz * R], [dx * 1600, dz * 1600], ang, lim);
         if (!seg) return;
         const [a, b] = seg;
         const q = [[a[0] + nx, a[1] + nz], [b[0] + nx, b[1] + nz], [b[0] - nx, b[1] - nz], [a[0] - nx, a[1] - nz]].map(c => trProj(c[0], 0, c[1], ang));
         ctx.beginPath(); q.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.closePath(); ctx.fill();
     });
-    // árvores redondinhas espalhadas (fixas no mundo)
+    // rua em volta do quarteirão, calçada e o gramado
+    quadrado(R, 0); ctx.fillStyle = "#8d96a3"; ctx.fill();
+    ctx.setLineDash([10, 9]); quadrado(Q + 17, 0.2); ctx.strokeStyle = "rgba(255, 255, 255, 0.75)"; ctx.lineWidth = 1.2; ctx.stroke(); ctx.setLineDash([]);
+    quadrado(Q + 6, 0.3); ctx.fillStyle = "#d9dde3"; ctx.fill();
+    quadrado(Q, 0.4); ctx.fillStyle = "#74c454"; ctx.fill();
+    // árvores do campo (fixas no mundo)
     CO_ARVORES.forEach(t => {
         if (trRot(t.x, t.z, ang)[1] > lim) return;
         const p = trProj(t.x, 0, t.z, ang), k = p[3];
