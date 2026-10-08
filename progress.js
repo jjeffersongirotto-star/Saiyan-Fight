@@ -217,7 +217,10 @@ function triggerAchievementPopup(title) {
 }
 
 // extra (v0.88): { tempo (segundos de partida), golpes (golpes sofridos) } — mostrados no ranking, a ordem é a pontuação
+// Luta de teste do EDITOR DE ARENAS: nada dela entra no ranking nem no progresso das fases.
+function lutaDeTeste() { return typeof arenaEmTeste === "function" && arenaEmTeste(); }
 function saveRankingScore(newScore, extra) {
+    if (lutaDeTeste()) return;
     try {
         let ranking = readJsonStorage("saiyan_ranking", []);
         if (!Array.isArray(ranking)) ranking = [];
@@ -234,7 +237,7 @@ function saveRankingScore(newScore, extra) {
 // Top 5 de cada arena separadamente (saiyan_stage_ranking: { [idDaArena]: [{score,date}, ...] }). O recorde
 // individual de uma arena é sempre o 1º item dessa lista — não precisa guardar em outro lugar.
 function saveStageRankingScore(stageId, newScore, extra) {
-    if (!stageId) return;
+    if (!stageId || lutaDeTeste()) return;
     try {
         let all = readJsonStorage("saiyan_stage_ranking", {});
         if (!all || typeof all !== "object" || Array.isArray(all)) all = {};
@@ -298,6 +301,7 @@ function saveStageProgress() {
 // Registra que o modo `mode` ("normal" ou "hard") de `stageId` foi completado (sem morrer). Devolve o objeto
 // de progresso atualizado dessa fase, já persistido.
 function registerStageModeComplete(stageId, mode) {
+    if (lutaDeTeste()) return { normalDone: false, hardDone: false };
     const current = stageProgress[stageId] || { normalDone: false, hardDone: false };
     if (mode === "hard") current.hardDone = true;
     else current.normalDone = true;
@@ -334,6 +338,7 @@ function getStageWaveRecordFor(stageId) {
 // Atualiza o recorde de `stageId` se `wave` for maior que o que já estava salvo. Devolve o recorde atual (já
 // persistido), tenha mudado ou não.
 function registerStageWaveRecord(stageId, wave) {
+    if (lutaDeTeste()) return 0;
     if (wave > (stageWaveRecord[stageId] || 0)) {
         stageWaveRecord[stageId] = wave;
         saveStageWaveRecord();

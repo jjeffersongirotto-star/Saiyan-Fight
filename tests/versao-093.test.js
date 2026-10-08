@@ -87,7 +87,7 @@ check("planície desconhecida no arquivo dá erro claro", /PLANÍCIE DESCONHECID
 run("arenaMostrarBaixo('peca')");
 check("embaixo: DADOS DA ARENA e PEÇA ESCOLHIDA (abas no celular)", run("document.getElementById('arena-baixo').attributes['data-vista']") === "peca");
 run("fecharEditorArenas(); trocarIdioma('en')");
-check("textos novos traduzidos", run("T('COLUNA DE LAVA')") === "LAVA COLUMN" && run("T('Toque na planta para colocar: PRÉDIO. Peça vermelha = lugar ocupado.')") === "Tap the map to place: BUILDING. Red piece = space taken.");
+check("textos novos traduzidos", run("T('COLUNA DE LAVA')") === "LAVA COLUMN" && run("T('Toque na planta ou na tela grande para colocar: PRÉDIO. Peça vermelha = lugar ocupado.')") === "Tap the map or the big view to place: BUILDING. Red piece = space taken.");
 run("trocarIdioma('pt')");
 
 process.exit(summary());
