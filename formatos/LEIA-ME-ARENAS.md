@@ -44,6 +44,8 @@ Toda arena feita no **EDITOR DE ARENAS** (esfera de 4 estrelas no menu) pode vir
 | `ceu` | não | Cores do céu: `topo` (em cima) e `horizonte`. |
 | `chao` | não | `tipo` do chão (lista abaixo) e `cor`. |
 | `pecas` | não | Lista de peças (até 80). |
+| `hora` | não | `dia`, `tarde` (céu alaranjado) ou `noite` (céu escuro com estrelas; lampiões, luzes e lava brilham). |
+| `clima` | não | `nenhum`, `chuva`, `neve`, `neblina` ou `vento` (vento com folhas). |
 | `capa` | não | Vista da foto do card em ARENAS e do começo da luta (USAR COMO CAPA): `ang` (giro da câmera em radianos, 0 a 6.283) e `andado` (caminho andado no modo `seguir`). |
 
 ## Peças
@@ -58,6 +60,7 @@ Cada peça tem `t` (o tipo), `e` (tamanho, 0.3 a 3; 1 = normal) e `c` (cor `#rrg
 - **Placa e símbolo:** `txt` é o texto escrito (até 16 letras; no símbolo aparecem as 2 primeiras).
 - **Empilhada:** `b` é a altura da base (o topo da peça de baixo). Construções soltas em cima de `bloco`, `pilar`, `predio` ou `ringue` encaixam alinhadas no topo; aí `al` = `[x, z, largura]` do centro e da largura da peça de baixo e `d` = DESALINHAR, de -0.9 a 0.9 (fração da largura, de 10 em 10%, para fazer escadas). Peças em alturas diferentes não se chocam.
 - **Fundidas (FUNDIR):** peças com o mesmo `g` (número do grupo) podem se sobrepor; a que tem `fv: true` dá a aparência da parte fundida (é desenhada por cima das outras do grupo).
+- **Pincelada** (`t: "pincel"`, aba PINCEL): `m` é o chão (`grama`, `areia`, `lava`, `agua`, `terra`, `neve`), `w` a largura (6 a 80) e `pts` a lista de pontos `[x, z]` relativos a `x`/`z` (até 60). É chão plano: não ocupa espaço.
 - **Editor:** `oc: true` esconde a peça só no editor (na luta ela aparece) e `tr: true` trava a peça (não dá para tocar nem arrastar).
 
 ### CONSTRUÇÃO
@@ -118,6 +121,12 @@ Cada peça tem `t` (o tipo), `e` (tamanho, 0.3 a 3; 1 = normal) e `c` (cor `#rrg
 | `piso` | PISO DE LADRILHOS | `#d9d4c7` |
 | `estrada` | ESTRADA | `#8d96a3` |
 | `trilha` | TRILHA | `#efe4c2` |
+
+### PINCEL
+
+| `t` | Peça | Cor padrão |
+|---|---|---|
+| `pincel` | PINCELADA | `#6fc04e` |
 
 ### CÉU
 

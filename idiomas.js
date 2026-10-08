@@ -837,11 +837,28 @@ GRADE § GRID § REJILLA
 TESTAR § TEST § PROBAR
 COMEÇAR LIMPO § START CLEAN § EMPEZAR LIMPIO
 FUNDIR § MERGE § FUSIONAR
+PINCEL § BRUSH § PINCEL
+PINCELADA § BRUSH STROKE § PINCELADA
+DIA § DAY § DÍA
+TARDE § AFTERNOON § TARDE
+NOITE § NIGHT § NOCHE
+SEM CLIMA § NO WEATHER § SIN CLIMA
+CHUVA § RAIN § LLUVIA
+NEBLINA § FOG § NIEBLA
+VENTO COM FOLHAS § WIND WITH LEAVES § VIENTO CON HOJAS
+ÁGUA § WATER § AGUA
+Hora do dia § Time of day § Hora del día
+Clima § Weather § Clima
+Largura § Width § Ancho
+HORA DO DIA DESCONHECIDA § UNKNOWN TIME OF DAY § HORA DEL DÍA DESCONOCIDA
+CLIMA DESCONHECIDO § UNKNOWN WEATHER § CLIMA DESCONOCIDO
+PINCEL: escolha o chão e pinte arrastando na planta ou na tela grande. Cada pincelada conta como 1 peça. § BRUSH: pick a ground and paint by dragging on the map or the big view. Each stroke counts as 1 piece. § PINCEL: elige un suelo y pinta arrastrando en el plano o en la vista grande. Cada pincelada cuenta como 1 pieza.
 CONJUNTOS § SETS § CONJUNTOS
 NA ARENA § IN THE ARENA § EN LA ARENA
 USAR COMO CAPA § USE AS COVER § USAR COMO PORTADA
 Desalinhar § Offset § Desalinear
 GIRAR 15° § ROTATE 15° § GIRAR 15°
+GIRAR -15° § ROTATE -15° § GIRAR -15°
 SALVAR CONJUNTO § SAVE SET § GUARDAR CONJUNTO
 ESPELHAR: § MIRROR: § ESPEJAR:
 ↔ LADOS § ↔ SIDES § ↔ LADOS
