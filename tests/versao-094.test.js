@@ -68,7 +68,7 @@ run("arenaAlternarMaximizar()");
 check("MINIMIZAR volta a tela dividida", run("arenaEd.maximizado") === false);
 
 // ---------- escolher, colocar e arrastar peças na tela grande ----------
-run("arenaEd.tipo = 'predio'");
+run("arenaEd.tipo = 'mesa_pedra'");
 pintar();
 const centro = tela(0, 0, 0);
 run(`arenaPreviaToque({ clientX: ${centro[0]}, clientY: ${centro[1]}, pointerId: 1, target: {} }); arenaPreviaSolta({ pointerId: 1 })`);
@@ -89,7 +89,7 @@ check("arrastar na tela grande leva a peça para onde o dedo está", Math.abs(ru
 run("arenaPreviaSolta({ pointerId: 1 })");
 check("soltar destrava a vista", run("arenaEd.congelar") === false && run("arenaEd.arrasto") === null);
 // mesma regra de espaço da planta: em cima de outra peça fica vermelha e volta
-run("arenaEd.arena.pecas.push(normalizarPecaArena({ t: 'predio', x: -200, z: 0, c: '#888888' }))");
+run("arenaEd.arena.pecas.push(normalizarPecaArena({ t: 'mesa_pedra', x: -200, z: 0, c: '#888888' }))");
 pintar();
 const dois = tela(240, 0, 60);
 run(`arenaPreviaToque({ clientX: ${dois[0]}, clientY: ${dois[1]}, pointerId: 1, target: {} })`);

@@ -836,6 +836,28 @@ MINIMIZAR § MINIMIZE § MINIMIZAR
 GRADE § GRID § REJILLA
 TESTAR § TEST § PROBAR
 COMEÇAR LIMPO § START CLEAN § EMPEZAR LIMPIO
+FUNDIR § MERGE § FUSIONAR
+CONJUNTOS § SETS § CONJUNTOS
+NA ARENA § IN THE ARENA § EN LA ARENA
+USAR COMO CAPA § USE AS COVER § USAR COMO PORTADA
+Desalinhar § Offset § Desalinear
+GIRAR 15° § ROTATE 15° § GIRAR 15°
+SALVAR CONJUNTO § SAVE SET § GUARDAR CONJUNTO
+ESPELHAR: § MIRROR: § ESPEJAR:
+↔ LADOS § ↔ SIDES § ↔ LADOS
+↕ FRENTE/TRÁS § ↕ FRONT/BACK § ↕ FRENTE/ATRÁS
+✣ OS DOIS § ✣ BOTH § ✣ LOS DOS
+Escolha várias peças (arraste um retângulo na planta) e toque em SALVAR CONJUNTO. § Select several pieces (drag a rectangle on the map) and tap SAVE SET. § Elige varias piezas (arrastra un rectángulo en el plano) y toca GUARDAR CONJUNTO.
+NA ARENA: todas as peças. 👁 esconde a peça só no editor; 🔒 trava (não dá para tocar nem arrastar). § IN THE ARENA: every piece. 👁 hides the piece only in the editor; 🔒 locks it (it can't be tapped or dragged). § EN LA ARENA: todas las piezas. 👁 oculta la pieza solo en el editor; 🔒 la bloquea (no se puede tocar ni arrastrar).
+Toque na planta ou na tela grande para colocar o conjunto. § Tap the map or the big view to place the set. § Toca el plano o la vista grande para colocar el conjunto.
+CONJUNTOS: peças guardadas juntas. Escolha um, veja na tela grande e confirme. § SETS: pieces saved together. Pick one, check it on the big view and confirm. § CONJUNTOS: piezas guardadas juntas. Elige uno, míralo en la vista grande y confirma.
+FUNDIR LIGADO: peças podem se sobrepor e as partes sobrepostas se fundem. § MERGE ON: pieces can overlap and the overlapping parts merge. § FUSIONAR ACTIVADO: las piezas pueden superponerse y las partes superpuestas se fusionan.
+CAPA ESCOLHIDA: o card da arena mostra esta vista (salve a arena). § COVER CHOSEN: the arena card shows this view (save the arena). § PORTADA ELEGIDA: la tarjeta de la arena muestra esta vista (guarda la arena).
+LUGAR OCUPADO: já tem uma peça em cima. § SPACE TAKEN: there is already a piece on top. § LUGAR OCUPADO: ya hay una pieza encima.
+LUGAR OCUPADO: escolha um espaço livre para o conjunto. § SPACE TAKEN: pick a free spot for the set. § LUGAR OCUPADO: elige un espacio libre para el conjunto.
+NOME DO CONJUNTO: § SET NAME: § NOMBRE DEL CONJUNTO:
+LIMITE DE 20 CONJUNTOS. APAGUE UM NA ABA CONJUNTOS. § LIMIT OF 20 SETS. DELETE ONE IN THE SETS TAB. § LÍMITE DE 20 CONJUNTOS. BORRA UNO EN LA PESTAÑA CONJUNTOS.
+QUAL PEÇA DÁ A APARÊNCIA DA PARTE FUNDIDA? (OS NÚMEROS ESTÃO NA PLANTA) § WHICH PIECE GIVES ITS LOOK TO THE MERGED PART? (THE NUMBERS ARE ON THE MAP) § ¿QUÉ PIEZA DA SU APARIENCIA A LA PARTE FUSIONADA? (LOS NÚMEROS ESTÁN EN EL PLANO)
 DADOS DA ARENA § ARENA INFO § DATOS DE LA ARENA
 PEÇA ESCOLHIDA § SELECTED PIECE § PIEZA ELEGIDA
 Toque numa peça da planta para ajustar tamanho, giro e cor. § Tap a piece on the map to adjust size, rotation and colour. § Toca una pieza del plano para ajustar tamaño, giro y color.
@@ -1099,6 +1121,12 @@ const IDIOMA_REGRAS = [
     [/^Toque na planta ou na tela grande para colocar: (.+)\. Peça vermelha = lugar ocupado\.$/, (m, T) => `Tap the map or the big view to place: ${T(m[1])}. Red piece = space taken.`, (m, T) => `Toca el plano o la vista grande para colocar: ${T(m[1])}. Pieza roja = lugar ocupado.`],
     [/^ARENA (.+) IMPORTADA!$/, "ARENA $1 IMPORTED!", "¡ARENA $1 IMPORTADA!"],
     [/^EXCLUIR A ARENA (.+)\?$/, "DELETE THE ARENA $1?", "¿BORRAR LA ARENA $1?"],
+    [/^(\d+) PEÇAS ESCOLHIDAS$/, "$1 PIECES SELECTED", "$1 PIEZAS ELEGIDAS"],
+    [/^(\d+)\. (.+)$/, (m, T) => `${m[1]}. ${T(m[2])}`, (m, T) => `${m[1]}. ${T(m[2])}`],
+    [/^ESPELHO: (\d+) PEÇA\(S\) COPIADA\(S\), (\d+) SEM ESPAÇO\.$/, "MIRROR: $1 PIECE(S) COPIED, $2 WITHOUT ROOM.", "ESPEJO: $1 PIEZA(S) COPIADA(S), $2 SIN ESPACIO."],
+    [/^ESPELHO: (\d+) PEÇA\(S\) COPIADA\(S\)\.$/, "MIRROR: $1 PIECE(S) COPIED.", "ESPEJO: $1 PIEZA(S) COPIADA(S)."],
+    [/^CONJUNTO (.+) SALVO NA ABA CONJUNTOS\.$/, "SET $1 SAVED IN THE SETS TAB.", "CONJUNTO $1 GUARDADO EN LA PESTAÑA CONJUNTOS."],
+    [/^APAGAR O CONJUNTO (.+)\?$/, "DELETE THE SET $1?", "¿BORRAR EL CONJUNTO $1?"],
     [/^CONTINUAR O RASCUNHO DA ARENA (.+)\?$/, "CONTINUE THE DRAFT OF THE ARENA $1?", "¿CONTINUAR EL BORRADOR DE LA ARENA $1?"],
     [/^PEÇAS: (\d+) \/ (\d+)$/, "PIECES: $1 / $2", "PIEZAS: $1 / $2"],
     // erros dos arquivos (arquivos.js): o texto fixo traduz, o detalhe entre colchetes (campo/arquivo) fica

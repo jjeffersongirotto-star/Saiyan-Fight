@@ -402,9 +402,19 @@
         .ar-campo input[type="color"] { padding: 1px 2px; }
         .ar-campo input[type="range"] { padding: 0; border: none; background: transparent; }
         .ar-peca-caixa { flex: 2 1 0; }
-        .ar-peca-botoes { display: flex; gap: 6px; margin-top: 8px; }
-        .ar-peca-botoes .btn { flex: 1; padding: 6px; font-size: 11px; }
+        .ar-peca-botoes { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+        .ar-peca-botoes .btn { flex: 1; padding: 6px; font-size: 11px; white-space: nowrap; }
+        #modal-arena .ar-peca-caixa { overflow-y: auto; }
         .ar-vazia { font-size: 12px; color: #94a3b8; margin: 0; }
+        #arena-capa { padding: 4px 6px; font-size: 11px; min-height: 26px; }
+        .ar-rotulo { font-size: 10px; color: #94a3b8; align-self: center; white-space: nowrap; }
+        .ar-linha { display: flex; gap: 2px; border-radius: 4px; }
+        .ar-linha.ar-linha-sel { outline: 2px solid #ffd23f; }
+        .ar-pecas .btn.ar-icone { padding: 2px 5px; min-width: 24px; }
+        .ar-pecas .btn.ar-desligado { opacity: 0.35; }
+        .ar-pecas .btn.ar-oculta { text-decoration: line-through; opacity: 0.6; }
+        .ar-pecas .btn.ar-apagar { padding: 2px 5px; border-color: #ff0055; color: #ff0055; background: transparent; }
+        .ar-ferramentas .btn.ar-armada#arena-fundir { background: #7c3aed; border-color: #c4b5fd; }
         /* telas baixas ou estreitas (celular): DADOS e PEÇA dividem o espaço de baixo com duas abas, tudo menor */
         @media (max-height: 560px), (max-width: 760px) {
             #modal-arena .ar-grade { --ar-dir: clamp(230px, 36vw, 300px); }
@@ -1565,12 +1575,18 @@
                 Novidades e correções do jogo.
             </p>
             <ul id="lista-updates" style="margin: 0 0 18px; color: #ddd; line-height: 1.5; padding: 0 4px 0 0; list-style: none; overflow-y: auto;">
-                <li class="upd-versao"><h3>Versão 0.94 (ATUAL)</h3><p>Editor de Arenas mais fácil de usar</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Zoom e tela cheia na visualização</strong><p>Barra de zoom ao lado de EM MOVIMENTO (que ficou mais baixinha), roda do mouse no PC e dois dedos no celular (afastar aumenta, juntar diminui). Com zoom, arraste o fundo para ver outras partes da arena. MAXIMIZAR deixa a visualização na tela toda e MINIMIZAR volta.</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Mexer nas peças direto na tela grande</strong><p>Toque numa peça na visualização 3D para escolher e arraste para mover, com a mesma regra da planta (fica vermelha e volta se o lugar estiver ocupado). Com uma peça escolhida na lista, tocar no chão da tela grande coloca ela ali.</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Desfazer, refazer e grade</strong><p>↶ DESFAZER e ↷ REFAZER guardam os últimos 50 passos (Ctrl+Z e Ctrl+Y no PC). GRADE prende as peças de 20 em 20 e o giro de 15 em 15 graus, para alinhar tudo fácil.</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>TESTAR e rascunho</strong><p>TESTAR começa uma luta rápida na arena que está sendo editada, sem salvar e sem contar no ranking; ao sair da luta o editor volta como estava. Se o editor fechar sem salvar, a arena fica guardada como rascunho e o jogo pergunta se quer continuar.</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Atalhos no PC</strong><p>Delete apaga a peça escolhida, R gira (Shift+R para o outro lado), D duplica, G liga a grade e as setas movem a peça (Shift = passo maior).</p></li>
+                <li class="upd-versao"><h3>Versão 0.95 (ATUAL)</h3><p>Editor de Arenas: empilhar, fundir, várias peças e conjuntos</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Empilhar e desalinhar</strong><p>Uma construção solta em cima de bloco, pilar, prédio ou ringue encaixa sozinha alinhada no topo, sem ficar torta. No quadro da peça, DESALINHAR anda de 10 em 10% (10%, 20%, 30%...) para fazer escadas. Arrastar a peça de baixo leva a pilha junto; tocar de novo na peça de cima escolhe a de baixo.</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>FUNDIR (recorte)</strong><p>Com FUNDIR ligado, as peças podem se sobrepor e as partes sobrepostas se fundem: você escolhe qual peça dá a cor e a aparência da parte fundida (os números aparecem na planta). Uma peça nova que só encosta na parte fundida segue a escolha; se pegar parte não fundida, o jogo pergunta de novo entre todas.</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Várias peças de uma vez</strong><p>Arraste um retângulo no vazio da planta para escolher várias peças: arraste para mover todas, GIRAR 15°, DUPLICAR, APAGAR e SALVAR CONJUNTO. ESPELHAR copia a peça ou as escolhidas para o outro lado da arena (↔ lados, ↕ frente/trás ou os dois).</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Conjuntos e lista de peças</strong><p>Aba CONJUNTOS com os grupos de peças salvos, para usar de novo em qualquer arena. Aba NA ARENA com todas as peças: 👁 esconde a peça no editor (na luta ela aparece) e 🔒 trava para não mexer sem querer.</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Capa da arena</strong><p>USAR COMO CAPA guarda a vista atual: a foto do card em ARENAS e o começo da luta mostram a arena desse ângulo.</p></li>
+                <li class="upd-versao"><h3>Versão 0.94</h3><p>Editor de Arenas mais fácil de usar</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Zoom e tela cheia na visualização</strong><p>Barra de zoom ao lado de EM MOVIMENTO (que ficou mais baixinha), roda do mouse no PC e dois dedos no celular (afastar aumenta, juntar diminui). Com zoom, arraste o fundo para ver outras partes da arena. MAXIMIZAR deixa a visualização na tela toda e MINIMIZAR volta.</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Mexer nas peças direto na tela grande</strong><p>Toque numa peça na visualização 3D para escolher e arraste para mover, com a mesma regra da planta (fica vermelha e volta se o lugar estiver ocupado). Com uma peça escolhida na lista, tocar no chão da tela grande coloca ela ali.</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Desfazer, refazer e grade</strong><p>↶ DESFAZER e ↷ REFAZER guardam os últimos 50 passos (Ctrl+Z e Ctrl+Y no PC). GRADE prende as peças de 20 em 20 e o giro de 15 em 15 graus, para alinhar tudo fácil.</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>TESTAR e rascunho</strong><p>TESTAR começa uma luta rápida na arena que está sendo editada, sem salvar e sem contar no ranking; ao sair da luta o editor volta como estava. Se o editor fechar sem salvar, a arena fica guardada como rascunho e o jogo pergunta se quer continuar.</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Atalhos no PC</strong><p>Delete apaga a peça escolhida, R gira (Shift+R para o outro lado), D duplica, G liga a grade e as setas movem a peça (Shift = passo maior).</p></li>
                 <li class="upd-item upd-corrigido"><span class="upd-tag">CORRIGIDO</span><strong>Editor de Arenas no celular em pé</strong><p>Com o jogo girado para deitado, o editor usa o layout deitado e os toques na planta e na tela grande caem no lugar certo.</p></li>
                 <li class="upd-versao"><h3>Versão 0.93</h3><p>Editor de Arenas em tela inteira, planícies, montes e efeitos</p></li>
                 <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>Editor de Arenas em tela inteira</strong><p>A arena aparece grande no canto superior esquerdo; à direita ficam as abas, as peças e a planta; embaixo, os dados da arena e a peça escolhida. No celular cabe tudo na tela, sem barra de rolagem. A caixinha EM MOVIMENTO liga ou para a visualização, e dá para escolher se a arena GIRA ou SEGUE para a frente (também na luta).</p></li>
@@ -1925,6 +1941,7 @@
                     <button type="button" id="arena-desfazer" class="btn" onclick="arenaDesfazer()">↶ DESFAZER</button>
                     <button type="button" id="arena-refazer" class="btn" onclick="arenaRefazer()">↷ REFAZER</button>
                     <button type="button" id="arena-grade" class="btn" onclick="arenaAlternarGrade()">GRADE</button>
+                    <button type="button" id="arena-fundir" class="btn" onclick="arenaAlternarFundir()">FUNDIR</button>
                     <button type="button" id="arena-testar" class="btn" onclick="arenaTestarArena()">TESTAR</button>
                 </div>
                 <div class="ar-abas">
@@ -1936,6 +1953,8 @@
                     <button type="button" id="arena-aba-ceu" class="ar-aba" onclick="arenaMostrarAba('ceu')">CÉU</button>
                     <button type="button" id="arena-aba-efeitos" class="ar-aba" onclick="arenaMostrarAba('efeitos')">EFEITOS</button>
                     <button type="button" id="arena-aba-enfeites" class="ar-aba" onclick="arenaMostrarAba('enfeites')">ENFEITES</button>
+                    <button type="button" id="arena-aba-conjuntos" class="ar-aba" onclick="arenaMostrarAba('conjuntos')">CONJUNTOS</button>
+                    <button type="button" id="arena-aba-lista" class="ar-aba" onclick="arenaMostrarAba('lista')">NA ARENA</button>
                 </div>
                 <div id="arena-pecas" class="ar-pecas"></div>
                 <p id="arena-dica" class="ar-dica"></p>
@@ -1964,6 +1983,7 @@
                         <div class="ar-campo"><label for="arena-ceu-horizonte">Céu (horizonte)</label><input type="color" id="arena-ceu-horizonte" oninput="arenaLerCampos()"></div>
                         <div class="ar-campo"><label for="arena-chao-tipo">Chão</label><select id="arena-chao-tipo" onchange="arenaLerCampos()"></select></div>
                         <div class="ar-campo"><label for="arena-chao-cor">Cor do Chão</label><input type="color" id="arena-chao-cor" oninput="arenaLerCampos()"></div>
+                        <div class="ar-campo"><label>&nbsp;</label><button type="button" id="arena-capa" class="btn" onclick="arenaUsarComoCapa()">USAR COMO CAPA</button></div>
                     </div>
                 </div>
                 <div id="arena-selecao" class="ar-caixa ar-peca-caixa">
@@ -1978,11 +1998,27 @@
                             <div class="ar-campo" id="arena-sel-forma-grupo"><label for="arena-sel-forma">Formato</label><select id="arena-sel-forma" onchange="arenaMudarSelecao()"></select></div>
                             <div class="ar-campo"><label for="arena-sel-cor">Cor</label><input type="color" id="arena-sel-cor" oninput="arenaMudarSelecao()"></div>
                             <div class="ar-campo" id="arena-sel-texto-grupo"><label for="arena-sel-texto">Texto</label><input type="text" id="arena-sel-texto" maxlength="16" oninput="arenaMudarSelecao()"></div>
+                            <div class="ar-campo" id="arena-sel-desalinho-grupo" style="display: none;"><label for="arena-sel-desalinho">Desalinhar <span id="arena-sel-desalinho-valor">0%</span></label><input type="range" id="arena-sel-desalinho" min="-90" max="90" step="10" value="0" oninput="arenaMudarSelecao()"></div>
                         </div>
                         <div class="ar-peca-botoes">
                             <button type="button" class="btn" onclick="arenaDuplicarSelecao()">DUPLICAR</button>
                             <button type="button" class="btn" style="border-color:#ff0055; color:#ff0055;" onclick="arenaApagarSelecao()">APAGAR PEÇA</button>
                         </div>
+                    </div>
+                    <div id="arena-selecao-multi" style="display: none;">
+                        <strong id="arena-multi-nome" style="color: #ffd23f; font-size: 12px;"></strong>
+                        <div class="ar-peca-botoes">
+                            <button type="button" class="btn" onclick="arenaGirarSelecao(15)">GIRAR 15°</button>
+                            <button type="button" class="btn" onclick="arenaDuplicarSelecao()">DUPLICAR</button>
+                            <button type="button" class="btn" onclick="arenaSalvarConjunto()">SALVAR CONJUNTO</button>
+                            <button type="button" class="btn" style="border-color:#ff0055; color:#ff0055;" onclick="arenaApagarSelecao()">APAGAR</button>
+                        </div>
+                    </div>
+                    <div id="arena-sel-espelho" class="ar-peca-botoes" style="display: none;">
+                        <span class="ar-rotulo">ESPELHAR:</span>
+                        <button type="button" class="btn" onclick="arenaEspelhar('lado')">↔ LADOS</button>
+                        <button type="button" class="btn" onclick="arenaEspelhar('frente')">↕ FRENTE/TRÁS</button>
+                        <button type="button" class="btn" onclick="arenaEspelhar('os_dois')">✣ OS DOIS</button>
                     </div>
                 </div>
             </section>
