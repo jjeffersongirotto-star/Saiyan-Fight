@@ -19,7 +19,10 @@ const ARENA_CHAOS = {
     ladrilho: { nome: "PISO DE LADRILHOS", cor: "#cfd6df" }, terra: { nome: "TERRA", cor: "#a0703f" }, nuvens: { nome: "NUVENS", cor: "#e8f1fb" },
     espaco: { nome: "ESPAÇO", cor: "#1b1638" }, lava: { nome: "LAVA", cor: "#7a1d0c" }, neve: { nome: "NEVE", cor: "#eef4fb" }
 };
-const ARENA_ABAS = [["construcao", "CONSTRUÇÃO"], ["nave", "NAVE"], ["natureza", "NATUREZA"], ["chao", "CHÃO"], ["ceu", "CÉU"], ["enfeites", "ENFEITES"]];
+const ARENA_ABAS = [["construcao", "CONSTRUÇÃO"], ["nave", "NAVE"], ["natureza", "NATUREZA"], ["chao", "CHÃO"], ["planicies", "PLANÍCIES"], ["ceu", "CÉU"], ["efeitos", "EFEITOS"], ["enfeites", "ENFEITES"]];
+const ARENA_ANIMADAS_MAX = 10;   // peças que se mexem (desenhadas a cada quadro)
+// formatos das peças do chão (gramado, lago, lava...): o mesmo contorno serve de piso ou, com ALTURA, de monte
+const ARENA_FORMATOS = [["circulo", "CÍRCULO"], ["oval", "OVAL"], ["feijao", "FEIJÃO"], ["irregular", "IRREGULAR"], ["rio", "RIO RETO"], ["rio_curvo", "RIO EM CURVA"]];
 
 // ---------------- ajudantes de peça (coordenadas locais da peça -> mundo) ----------------
 function arEsc(p) { return p.e || 1; }
@@ -95,6 +98,54 @@ function arLinhaChao(p, a, b, cor, larg, ang) {
     const A = arProj(p, a[0], a[1], a[2], ang), B = arProj(p, b[0], b[1], b[2], ang);
     trG.strokeStyle = cor; trG.lineWidth = Math.max(0.6, larg * A[3]);
     trG.beginPath(); trG.moveTo(A[0], A[1]); trG.lineTo(B[0], B[1]); trG.stroke();
+}
+// semente fixa de cada peça (a mesma mesmo quando a vista anda ou centra nela)
+function arSemente(p) { return p._s !== undefined ? p._s : (p.x || 0) * 0.01 + (p.z || 0) * 0.02; }
+// relógio dos efeitos: o da luta durante a partida; nos menus e no editor, o relógio do navegador
+function arRelogio() { return typeof gameState !== "undefined" && gameState === "playing" && typeof gameplayClock === "number" ? gameplayClock : performance.now() / 1000; }
+// contorno (pontos locais [x, z]) de um formato com raio R; s = semente para o irregular
+function arFormaPontos(f, R, s) {
+    const pts = [];
+    if (f === "rio" || f === "rio_curvo") {
+        // faixa comprida com margens onduladas (reta ou em arco)
+        const N = 16, L = R * 2.6, W = R * 0.42, curva = f === "rio_curvo";
+        const centro = (u) => curva ? [Math.sin(u * 1.1) * R * 1.9, (1 - Math.cos(u * 1.1)) * R * 1.9 - R * 0.6] : [u * L / 2, 0];
+        const lado = (u, sinal) => {
+            const [cx, cz] = centro(u), e = 0.01, [ax, az] = centro(u + e), dx = ax - cx, dz = az - cz, m = Math.hypot(dx, dz) || 1;
+            const w = W * (1 + 0.18 * Math.sin(u * 7 + s) * sinal);
+            return [cx - dz / m * w * sinal, cz + dx / m * w * sinal];
+        };
+        for (let i = 0; i <= N; i++) pts.push(lado(-1 + 2 * i / N, 1));
+        for (let i = N; i >= 0; i--) pts.push(lado(-1 + 2 * i / N, -1));
+        return pts;
+    }
+    for (let i = 0; i < 32; i++) {
+        const a = i / 32 * Math.PI * 2;
+        let rx = R, rz = R;
+        if (f === "oval") { rx = R * 1.45; rz = R * 0.7; }
+        else if (f === "feijao") { const k = 1 + 0.22 * Math.cos(2 * a) - 0.38 * Math.pow(Math.max(0, Math.sin(a)), 3); rx = R * 1.25 * k; rz = R * 0.8 * k; }
+        else if (f === "irregular") { const k = 1 + 0.2 * Math.sin(3 * a + s) + 0.12 * Math.sin(5 * a + s * 2.3); rx = R * k; rz = R * k; }
+        else { const k = 1 + 0.05 * Math.sin(a * 3 + s); rx = R * k; rz = R * k; }
+        pts.push([Math.cos(a) * rx, Math.sin(a) * rz]);
+    }
+    return pts;
+}
+function arRaioForma(p, R) { return arFormaPontos(p.f, R, 1).reduce((m, q) => Math.max(m, Math.hypot(q[0], q[1])), 0); }
+// peça do chão com formato: piso plano ou, com altura (p.v), um monte em camadas (base larga embaixo, topo claro)
+function arChaoForma(p, R, cor, ang, deco) {
+    const pts = arFormaPontos(p.f, R, arSemente(p));
+    const alt = Math.max(0, Math.min(3, p.v || 0)) * 22;
+    if (!alt) {
+        arPoli(p, pts.map(q => [q[0], 0.5, q[1]]), cor, ang);
+        if (deco) deco(pts, 0.6);
+        return;
+    }
+    const N = 8;
+    for (let i = 0; i <= N; i++) {
+        const f = i / N, k = Math.sqrt(1 - f * f * 0.92), y = alt * (1 - (1 - f) * (1 - f)) + 0.5;
+        arPoli(p, pts.map(q => [q[0] * k, y, q[1] * k]), arMix(cor, -0.28 + f * 0.4), ang);
+    }
+    if (deco) deco(pts.map(q => [q[0] * 0.3, q[1] * 0.3]), alt + 0.8);
 }
 // figura plana virada para a câmera (estátua, placa...): ponto da base na tela + escala
 function arBase(p, ang, y) { return trProj(p.x, (y || 0) * arEsc(p), p.z, ang); }
@@ -290,13 +341,17 @@ const ARENA_PECAS = {
             });
         } },
     // ---- CHÃO (planas) ----
-    gramado: { aba: "chao", chao: true, nome: "GRAMADO", cor: "#6fc04e", planta: { circ: 70 }, desenha: (p, ang) => arDisco(p, 70, p.c, ang) },
-    lago: { aba: "chao", chao: true, nome: "LAGO", cor: "#4aa3df", planta: { circ: 60 },
-        desenha: (p, ang) => { arDisco(p, 60, p.c, ang); arDisco(p, 40, arMix(p.c, 0.18), ang, 0.6); arDisco(p, 18, arMix(p.c, 0.32), ang, 0.7); } },
-    areia: { aba: "chao", chao: true, nome: "AREIA", cor: "#e8d39a", planta: { circ: 70 }, desenha: (p, ang) => arDisco(p, 70, p.c, ang) },
-    terra: { aba: "chao", chao: true, nome: "TERRA", cor: "#9c6b3f", planta: { circ: 70 }, desenha: (p, ang) => arDisco(p, 70, p.c, ang) },
-    lava: { aba: "chao", chao: true, nome: "LAVA", cor: "#ff5a1f", planta: { circ: 60 },
-        desenha: (p, ang) => { arDisco(p, 60, p.c, ang); arDisco(p, 34, "#ffc04d", ang, 0.6); } },
+    gramado: { aba: "chao", chao: true, forma: 70, nome: "GRAMADO", cor: "#6fc04e", planta: { circ: 70 }, desenha: (p, ang) => arChaoForma(p, 70, p.c, ang) },
+    lago: { aba: "chao", chao: true, forma: 60, nome: "LAGO", cor: "#4aa3df", planta: { circ: 60 },
+        desenha: (p, ang) => arChaoForma(p, 60, p.c, ang, (pts, y) => {
+            arPoli(p, pts.map(q => [q[0] * 0.66, y, q[1] * 0.66]), arMix(p.c, 0.18), ang);
+            arPoli(p, pts.map(q => [q[0] * 0.3, y + 0.1, q[1] * 0.3]), arMix(p.c, 0.32), ang);
+        }) },
+    areia: { aba: "chao", chao: true, forma: 70, nome: "AREIA", cor: "#e8d39a", planta: { circ: 70 }, desenha: (p, ang) => arChaoForma(p, 70, p.c, ang) },
+    terra: { aba: "chao", chao: true, forma: 70, nome: "TERRA", cor: "#9c6b3f", planta: { circ: 70 }, desenha: (p, ang) => arChaoForma(p, 70, p.c, ang) },
+    lava: { aba: "chao", chao: true, forma: 60, nome: "LAVA", cor: "#ff5a1f", planta: { circ: 60 },
+        desenha: (p, ang) => arChaoForma(p, 60, p.c, ang, (pts, y) => arPoli(p, pts.map(q => [q[0] * 0.55, y, q[1] * 0.55]), "#ffc04d", ang)) },
+    neve: { aba: "chao", chao: true, forma: 70, nome: "NEVE", cor: "#eef4fb", planta: { circ: 70 }, desenha: (p, ang) => arChaoForma(p, 70, p.c, ang) },
     piso: { aba: "chao", chao: true, nome: "PISO DE LADRILHOS", cor: "#d9d4c7", planta: { ret: [80, 80] },
         desenha: (p, ang) => {
             arRetChao(p, 80, 80, p.c, ang);
@@ -355,6 +410,89 @@ const ARENA_PECAS = {
                 g.fillStyle = p.c; g.fillRect(bx, base - h, w, h);
                 g.fillStyle = ["#f9a8d4", "#fde68a", "#93c5fd"][i % 3]; g.fillRect(bx, base - h, w, Math.max(1, r * 0.12));
             }
+        } },
+    ilha_pedra: { aba: "natureza", nome: "ILHA DE PEDRA RACHADA", cor: "#5b86a8", planta: { circ: 50 },
+        desenha: (p, ang) => {
+            const e = arEsc(p);
+            c3Cilindro(p.x, p.z, 0, 16 * e, 50 * e, "#3a2c44", ang, p.c);
+            const a = c3Anel(p.x, p.z, 16 * e, 50 * e, ang);
+            trG.fillStyle = "rgba(255, 255, 255, 0.18)"; trG.beginPath(); trG.ellipse(a.cx - a.rx * 0.25, a.cy - a.ry * 0.2, a.rx * 0.45, a.ry * 0.4, 0, 0, Math.PI * 2); trG.fill();
+            trG.strokeStyle = "#ff8a1e"; trG.lineWidth = Math.max(1, 2 * a.k * e);
+            trG.beginPath(); trG.moveTo(a.cx - a.rx * 0.6, a.cy); trG.lineTo(a.cx - a.rx * 0.1, a.cy + a.ry * 0.3); trG.lineTo(a.cx + a.rx * 0.2, a.cy - a.ry * 0.2); trG.lineTo(a.cx + a.rx * 0.6, a.cy + a.ry * 0.1); trG.stroke();
+        } },
+    // ---- EFEITOS (se mexem: desenhados a cada quadro, por cima do cenário guardado) ----
+    coluna_lava: { aba: "efeitos", anim: true, nome: "COLUNA DE LAVA", cor: "#ffb020", planta: { circ: 14 },
+        desenha: (p, ang, t) => {
+            const b = arBase(p, ang), topo = arBase(p, ang, 260), k = b[3] * arEsc(p), L = 26 * k, x = b[0], y = b[1], fase = arSemente(p);
+            const brilho = 0.75 + Math.sin(t * 3 + fase) * 0.25;
+            trG.fillStyle = "rgba(40, 26, 24, 0.85)";
+            for (let i = 0; i < 7; i++) { const fy = topo[1] + (y - topo[1]) * (i / 9), fx = x + Math.sin(i * 1.7 + fase + t * 0.5) * L * 1.2; trG.beginPath(); trG.arc(fx, fy, L * (1.6 + (6 - i) * 0.35), 0, Math.PI * 2); trG.fill(); }
+            trG.fillStyle = "rgba(70, 50, 55, 0.7)";
+            for (let i = 0; i < 5; i++) { trG.beginPath(); trG.arc(x + (i - 2) * L * 1.4, topo[1] - L * (1 + (i % 2)), L * 1.8, 0, Math.PI * 2); trG.fill(); }
+            const lava = trG.createLinearGradient(x - L, 0, x + L, 0);
+            lava.addColorStop(0, "#b3160d"); lava.addColorStop(0.5, `rgba(255, ${Math.round(150 * brilho)}, 40, 1)`); lava.addColorStop(1, "#b3160d");
+            trG.fillStyle = lava; trG.fillRect(x - L / 2, topo[1], L, y - topo[1]);
+            const altura = y - topo[1];
+            trG.fillStyle = p.c;
+            for (let i = 0; i < 5; i++) { const f = ((i / 5 - t * 0.9 + fase) % 1 + 1) % 1; trG.fillRect(x - L * 0.12 + Math.sin(i * 2 + t * 3) * L * 0.18, topo[1] + altura * f, L * 0.2, altura * 0.1); }
+            trG.fillStyle = "#ff9a2e";
+            for (let i = 0; i < 6; i++) { const u = ((t * 0.8 + i / 6 + fase) % 1 + 1) % 1, lado = i % 2 ? 1 : -1; trG.beginPath(); trG.arc(x + lado * L * (0.3 + u * 2.2), topo[1] - L * 2.2 * u * (1 - u) * 4 + altura * u * u * 0.25, Math.max(1, L * 0.16 * (1 - u * 0.5)), 0, Math.PI * 2); trG.fill(); }
+            trG.fillStyle = "#d4260f"; trG.beginPath(); trG.ellipse(x, y, L * 2.2, L * 0.4, 0, 0, Math.PI * 2); trG.fill();
+        } },
+    arco_lava: { aba: "efeitos", anim: true, nome: "ARCO DE LAVA", cor: "#ffd36b", planta: { ret: [70, 6] },
+        desenha: (p, ang, t) => {
+            const a = arProj(p, -70, 0, 0, ang), b = arProj(p, 70, 0, 0, ang), cima = arProj(p, 0, 190, 0, ang), k = a[3] * arEsc(p);
+            trG.lineCap = "round";
+            trG.strokeStyle = "rgba(255, 90, 20, 0.55)"; trG.lineWidth = Math.max(2, 9 * k);
+            trG.beginPath(); trG.moveTo(a[0], a[1]); trG.quadraticCurveTo(cima[0], cima[1], b[0], b[1]); trG.stroke();
+            trG.strokeStyle = p.c; trG.lineWidth = Math.max(1, 3 * k); trG.stroke();
+            trG.lineCap = "butt";
+            trG.fillStyle = "#fff1b0";
+            for (let i = 0; i < 4; i++) {
+                const u = ((t * 0.45 + i / 4) % 1 + 1) % 1, v = 1 - u;
+                trG.beginPath(); trG.arc(v * v * a[0] + 2 * u * v * cima[0] + u * u * b[0], v * v * a[1] + 2 * u * v * cima[1] + u * u * b[1], Math.max(1.2, 5 * k), 0, Math.PI * 2); trG.fill();
+            }
+        } },
+    brasas: { aba: "efeitos", anim: true, nome: "BRASAS SUBINDO", cor: "#ffb43b", planta: { circ: 30 },
+        desenha: (p, ang, t) => {
+            for (let i = 0; i < 16; i++) {
+                const s = c3Hash(i * 3.3 + arSemente(p) * 10), u = ((t * (0.25 + s * 0.3) + s) % 1 + 1) % 1;
+                const q = arProj(p, (c3Hash(i * 5.1) - 0.5) * 60 + Math.sin(t * 2 + i) * 6, u * 110, (c3Hash(i * 7.7) - 0.5) * 60, ang);
+                trG.globalAlpha = 1 - u; trG.fillStyle = i % 2 ? p.c : "#ff7a1e";
+                trG.fillRect(q[0], q[1], Math.max(1, 2.2 * q[3]), Math.max(1, 4 * q[3]));
+            }
+            trG.globalAlpha = 1;
+        } },
+    fumaca: { aba: "efeitos", anim: true, nome: "FUMAÇA", cor: "#4b4246", planta: { circ: 20 },
+        desenha: (p, ang, t) => {
+            for (let i = 0; i < 8; i++) {
+                const u = ((t * 0.18 + i / 8) % 1 + 1) % 1, q = arProj(p, Math.sin(u * 5 + i) * 12, u * 160, 0, ang), r = (10 + u * 30) * q[3] * arEsc(p);
+                trG.globalAlpha = 0.55 * (1 - u); trG.fillStyle = p.c;
+                trG.beginPath(); trG.arc(q[0], q[1], r, 0, Math.PI * 2); trG.fill();
+            }
+            trG.globalAlpha = 1;
+        } },
+    nuvens_passando: { aba: "efeitos", anim: true, nome: "NUVENS PASSANDO", cor: "#ffffff", planta: { ret: [90, 20] },
+        desenha: (p, ang, t) => {
+            for (let i = 0; i < 4; i++) {
+                const u = ((t * 0.05 + i / 4) % 1 + 1) % 1, q = arProj(p, -90 + u * 180, 14 + (i % 2) * 8, (i - 1.5) * 10, ang), k = q[3] * arEsc(p);
+                trG.globalAlpha = Math.sin(u * Math.PI) * 0.85; trG.fillStyle = p.c;
+                [[-14, 0, 12], [0, -5, 15], [14, 0, 11], [4, 4, 12]].forEach(([dx, dy, r]) => { trG.beginPath(); trG.arc(q[0] + dx * k, q[1] + dy * k, r * k, 0, Math.PI * 2); trG.fill(); });
+            }
+            trG.globalAlpha = 1;
+        } },
+    raio: { aba: "efeitos", anim: true, nome: "RAIO", cor: "#fffbe6", planta: { circ: 10 },
+        desenha: (p, ang, t) => {
+            const fase = arModulo(arSemente(p) * 7, 3.2), ciclo = ((t + fase) % 3.2 + 3.2) % 3.2;
+            if (ciclo > 0.22) return;
+            const b = arBase(p, ang), semente = Math.floor((t + fase) / 3.2);
+            trG.strokeStyle = p.c; trG.lineWidth = 2.2;
+            trG.beginPath();
+            let rx = b[0] + (c3Hash(semente) - 0.5) * 80, ry = 0;
+            trG.moveTo(rx, ry);
+            for (let i = 1; i <= 8; i++) { rx += (c3Hash(semente * 7 + i) - 0.5) * 40; ry = b[1] * i / 8; trG.lineTo(i === 8 ? b[0] : rx, ry); }
+            trG.stroke();
+            trG.fillStyle = `rgba(230, 255, 210, ${0.16 * (1 - ciclo / 0.22)})`; trG.fillRect(0, 0, canvas.width, canvas.height);
         } },
     // ---- ENFEITES ----
     estatua: { aba: "enfeites", nome: "ESTÁTUA", cor: "#b8b2a6", planta: { ret: [10, 10] },
@@ -421,6 +559,34 @@ const ARENA_PECAS = {
         } }
 };
 
+// ---------------- planícies (o chão completo de cada fase) ----------------
+// Escolher uma planície troca o chão base e o céu pelos da fase e coloca embaixo de tudo as peças de chão dela
+// (ilha de areia, lagos, ringue, ruas...). As peças da planície não contam no limite nem no espaço das outras.
+const ARENA_PLANICIES = {
+    kame: { nome: "ILHA DO MESTRE KAME", ceu: { topo: "#4da3e8", horizonte: "#d6efff" }, chao: { tipo: "mar", cor: "#2f86c9" },
+        pecas: [{ t: "areia", x: 0, z: 0, e: 3.6, f: "irregular", c: "#ecd9a0" }, { t: "gramado", x: -30, z: -40, e: 2.2, f: "irregular", c: "#6fbf4a" }] },
+    terra: { nome: "TORNEIO ARTES MARCIAIS", ceu: { topo: "#5aa6e8", horizonte: "#e3f1fb" }, chao: { tipo: "grama", cor: "#6fbf4a" },
+        pecas: [{ t: "piso", x: 0, z: 0, e: 2.2, c: "#e2ddd2" }, { t: "trilha", x: 0, z: -260, e: 1.6, r: 90, c: "#efe4c2" }] },
+    kaio: { nome: "PLANETA DO SR. KAIOH", ceu: { topo: "#f2c94c", horizonte: "#fff3c4" }, chao: { tipo: "grama", cor: "#6ccf5a" },
+        pecas: [0, 1, 2, 3, 4, 5, 6, 7].map(i => { const a = i / 8 * Math.PI * 2; return { t: "estrada", x: Math.cos(a) * 270, z: Math.sin(a) * 270, e: 1.1, r: (a * 180 / Math.PI + 90) % 360, c: "#f1efe6" }; }) },
+    namek: { nome: "PLANETA NAMEK", ceu: { topo: "#3fa58a", horizonte: "#bfe8c9" }, chao: { tipo: "grama", cor: "#5fa36a" },
+        pecas: [{ t: "lago", x: -260, z: -180, e: 1.6, f: "irregular", c: "#4fb3c9" }, { t: "lago", x: 240, z: 120, e: 1.2, f: "oval", c: "#4fb3c9" }, { t: "lago", x: 60, z: -330, e: 2, f: "feijao", c: "#4fb3c9" }] },
+    freeza_ship: { nome: "NAVE DE FREEZA", ceu: { topo: "#4fae8c", horizonte: "#cfeedd" }, chao: { tipo: "grama", cor: "#4f9d6c" },
+        pecas: [{ t: "lago", x: 230, z: -200, e: 2.2, f: "irregular", c: "#5cbad0" }, { t: "lago", x: -280, z: 160, e: 1.4, f: "oval", c: "#5cbad0" }, { t: "terra", x: 0, z: 0, e: 2.4, f: "circulo", c: "#8a9a6a" }] },
+    namek_explosao: { nome: "NAMEK PRESTES A EXPLODIR", ceu: { topo: "#14361f", horizonte: "#d6c070" }, chao: { tipo: "mar", cor: "#14424f" },
+        pecas: [{ t: "lava", x: -220, z: -160, e: 1.4, f: "irregular", c: "#ff5a1f" }, { t: "terra", x: 0, z: 0, e: 2.6, f: "irregular", c: "#5b86a8" }, { t: "lava", x: 260, z: 200, e: 1.1, f: "rio_curvo", c: "#ff5a1f" }] },
+    time_room: { nome: "SALA DO TEMPO", ceu: { topo: "#ffffff", horizonte: "#f2f2ee" }, chao: { tipo: "ladrilho", cor: "#f4f4f2" }, pecas: [] },
+    cell_games: { nome: "TORNEIO DE CELL", ceu: { topo: "#5aa6e8", horizonte: "#e9e0c4" }, chao: { tipo: "terra", cor: "#b99a6a" },
+        pecas: [{ t: "terra", x: -260, z: -200, e: 1.8, f: "irregular", c: "#a5865a" }, { t: "estrada", x: 0, z: 300, e: 2.6, c: "#c8a978" }, { t: "piso", x: 0, z: 0, e: 1.4, c: "#d8d4cc" }] },
+    kaioshin: { nome: "PLANETA SUPREMO KAIOH", ceu: { topo: "#7ec8e3", horizonte: "#f7e1b5" }, chao: { tipo: "grama", cor: "#8fd06b" },
+        pecas: [{ t: "lago", x: 220, z: -220, e: 1.8, f: "oval", c: "#7fd0e8" }, { t: "gramado", x: -200, z: 120, e: 2, f: "irregular", c: "#a6dc7c" }] },
+    plataforma_celestial: { nome: "PLATAFORMA CELESTIAL", ceu: { topo: "#5fb0ea", horizonte: "#e6f4fd" }, chao: { tipo: "nuvens", cor: "#e8f1fb" },
+        pecas: [{ t: "gramado", x: 0, z: 0, e: 4.3, f: "circulo", c: "#a9c9e6" }, { t: "piso", x: 0, z: 0, e: 2.2, c: "#cfe3f2" }] },
+    capital_oeste: { nome: "CAPITAL DO OESTE", ceu: { topo: "#5aa6e8", horizonte: "#cfe8fa" }, chao: { tipo: "grama", cor: "#9ccf7a" },
+        pecas: [{ t: "piso", x: 0, z: 0, e: 4.4, c: "#8d96a3" }, { t: "gramado", x: 0, z: 0, e: 4.6, f: "circulo", c: "#74c454" },
+            { t: "estrada", x: 0, z: -420, e: 4.4, c: "#8d96a3" }, { t: "estrada", x: 0, z: 420, e: 4.4, c: "#8d96a3" }] }
+};
+
 // ---------------- arena: validar / guardar ----------------
 function arenaCorValida(c, padrao) { return typeof c === "string" && /^#[0-9a-f]{6}$/i.test(c) ? c.toLowerCase() : padrao; }
 function arenaNum(v, min, max, padrao) { const n = Number(v); return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : padrao; }
@@ -433,10 +599,14 @@ function normalizarPecaArena(q) {
     if (def.ceu) { p.a = Math.round(arenaNum(q.a, 0, 360, 0)) % 360; p.h = Math.round(arenaNum(q.h, 0, 1, 0.5) * 100) / 100; }
     else { p.x = Math.round(arenaNum(q.x, -ARENA_RAIO, ARENA_RAIO, 0)); p.z = Math.round(arenaNum(q.z, -ARENA_RAIO, ARENA_RAIO, 0)); p.r = ((Math.round(arenaNum(q.r, -3600, 3600, 0)) % 360) + 360) % 360; }
     if (def.texto !== undefined) p.txt = typeof q.txt === "string" ? q.txt.slice(0, 16) : def.texto;
+    if (def.forma) {
+        p.f = ARENA_FORMATOS.some(f => f[0] === q.f) ? q.f : "circulo";
+        p.v = Math.round(arenaNum(q.v, 0, 3, 0) * 10) / 10;
+    }
     return p;
 }
 function arenaPadrao() {
-    return { id: "", nome: "MINHA ARENA", cor: "#22d3ee", musica: "classico", minion: "saibaman", camera: "media",
+    return { id: "", nome: "MINHA ARENA", cor: "#22d3ee", musica: "classico", minion: "saibaman", camera: "media", movimento: "girar", planicie: "",
         ceu: { topo: "#4f9be0", horizonte: "#cfe8fa" }, chao: { tipo: "grama", cor: ARENA_CHAOS.grama.cor }, pecas: [] };
 }
 function normalizarArena(a) {
@@ -451,6 +621,8 @@ function normalizarArena(a) {
         musica: typeof a.musica === "string" && typeof BGM_THEMES === "object" && BGM_THEMES[a.musica] ? a.musica : d.musica,
         minion: typeof a.minion === "string" && a.minion ? a.minion : d.minion,
         camera: ARENA_CAMERAS[a.camera] ? a.camera : "media",
+        movimento: a.movimento === "seguir" ? "seguir" : "girar",
+        planicie: ARENA_PLANICIES[a.planicie] ? a.planicie : "",
         ceu: { topo: arenaCorValida(a.ceu && a.ceu.topo, d.ceu.topo), horizonte: arenaCorValida(a.ceu && a.ceu.horizonte, d.ceu.horizonte) },
         chao: { tipo: chaoTipo, cor: arenaCorValida(a.chao && a.chao.cor, ARENA_CHAOS[chaoTipo].cor) },
         pecas: (Array.isArray(a.pecas) ? a.pecas : []).map(normalizarPecaArena).filter(Boolean).slice(0, ARENA_PECAS_MAX)
@@ -471,19 +643,61 @@ function registrarArenasCriadas() {
     for (let i = FASES_PADRAO.length - 1; i >= 0; i--) if (FASES_PADRAO[i].criada) FASES_PADRAO.splice(i, 1);
     getArenasCriadas().forEach((a, i) => {
         FASES_PADRAO.push({ id: a.id, nome: a.nome, posicao: 1000 + i, cor: a.cor, musica: a.musica, cenario: "criada",
-            camera: { tipo: "orbita", volta: 10800 }, fundoClaro: arenaCeuClaro(a), minion: a.minion, conquista: null, criada: true, arena: a });
+            camera: { tipo: a.movimento === "seguir" ? "anda" : "orbita", volta: 10800 }, fundoClaro: arenaCeuClaro(a), minion: a.minion, conquista: null, criada: true, arena: a });
     });
     aplicarOrdemDasFases(typeof getOrdemFasesSalva === "function" ? getOrdemFasesSalva() : null);
     if (typeof atualizarCoresDasFases === "function") atualizarCoresDasFases();
     if (typeof selectedStage !== "undefined" && !getFaseDef(selectedStage)) selectedStage = STAGE_PROGRESSION[0].id;
 }
 
+// ---------------- espaço de cada peça (para duas não ocuparem o mesmo lugar) ----------------
+// Peças de pé, efeitos e montes (chão com altura) ocupam espaço; pisos planos e o céu não.
+function arenaPegada(p) {
+    const def = ARENA_PECAS[p.t];
+    if (!def || def.ceu || (def.chao && !(p.v > 0))) return null;
+    const e = p.e || 1;
+    if (def.forma) return { r: arRaioForma(p, def.forma) * e * 0.92, x: p.x, z: p.z };
+    if (def.planta && def.planta.ret) return { x: p.x, z: p.z, hw: def.planta.ret[0] * e, hd: def.planta.ret[1] * e, a: (p.r || 0) * Math.PI / 180 };
+    return { r: ((def.planta && def.planta.circ) || 8) * e, x: p.x, z: p.z };
+}
+function arPontoNoRet(px, pz, q) {   // ponto do retângulo q mais perto de (px, pz)
+    const c = Math.cos(q.a), s = Math.sin(q.a), dx = px - q.x, dz = pz - q.z;
+    const lx = Math.max(-q.hw, Math.min(q.hw, dx * c + dz * s)), lz = Math.max(-q.hd, Math.min(q.hd, -dx * s + dz * c));
+    return [q.x + lx * c - lz * s, q.z + lx * s + lz * c];
+}
+function arRetCantos(q) {
+    const c = Math.cos(q.a), s = Math.sin(q.a);
+    return [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([u, v]) => [q.x + u * q.hw * c - v * q.hd * s, q.z + u * q.hw * s + v * q.hd * c]);
+}
+function arenaPegadasSeTocam(a, b) {
+    const folga = 1;
+    if (a.r !== undefined && b.r !== undefined) return Math.hypot(a.x - b.x, a.z - b.z) < a.r + b.r - folga;
+    if (a.r !== undefined || b.r !== undefined) {
+        const c = a.r !== undefined ? a : b, q = a.r !== undefined ? b : a, [nx, nz] = arPontoNoRet(c.x, c.z, q);
+        return Math.hypot(c.x - nx, c.z - nz) < c.r - folga;
+    }
+    // dois retângulos: eixos separadores
+    const A = arRetCantos(a), B = arRetCantos(b);
+    for (const q of [a, b]) for (const ang of [q.a, q.a + Math.PI / 2]) {
+        const ax = Math.cos(ang), az = Math.sin(ang), proj = (pts) => pts.map(p => p[0] * ax + p[1] * az);
+        const pa = proj(A), pb = proj(B);
+        if (Math.max(...pa) - folga <= Math.min(...pb) || Math.max(...pb) - folga <= Math.min(...pa)) return false;
+    }
+    return true;
+}
+// a peça i (ou uma peça p fora da lista) invade o espaço de outra?
+function arenaPecaColide(pecas, p, ignorar) {
+    const g = arenaPegada(p);
+    if (!g) return false;
+    return pecas.some((q, j) => { if (j === ignorar || q === p) return false; const h = arenaPegada(q); return !!h && arenaPegadasSeTocam(g, h); });
+}
+
 // ---------------- desenho da arena (luta, ARENAS, prévia do editor) ----------------
-const arCenas = new Map();   // id -> { passo, canvas, pano, chave }
-function arCenaDe(a) {
-    let c = arCenas.get(a.id || "_previa");
+const arCenas = new Map();   // chave -> { passo, canvas, pano, chave }
+function arCenaDe(id, a) {
+    let c = arCenas.get(id);
     const chave = JSON.stringify(a);
-    if (!c || c.chave !== chave) { c = { passo: null, canvas: c ? c.canvas : null, pano: null, chave }; arCenas.set(a.id || "_previa", c); }
+    if (!c || c.chave !== chave) { c = { passo: null, canvas: c ? c.canvas : null, pano: null, chave }; arCenas.set(id, c); }
     return c;
 }
 function arPanorama(a, cena, cam) {
@@ -509,16 +723,19 @@ const AR_DETALHES = (() => {
     for (let i = 0; i < 90; i++) { const ang = c3Hash(i * 3.1) * Math.PI * 2, r = 60 + c3Hash(i * 7.7) * 1300; l.push({ x: Math.sin(ang) * r, z: Math.cos(ang) * r, s: c3Hash(i * 5.3) }); }
     return l;
 })();
-function arDesenharChao(a, ang, cam) {
+const AR_PERIODO = ARENA_RAIO * 2 + 80;   // no modo SEGUIR a planta se repete para os lados
+function arModulo(v, m) { return ((v % m) + m) % m; }
+function arDesenharChao(a, ang, cam, desl) {
     const ch = a.chao, base = ch.cor;
     const gr = ctx.createLinearGradient(0, cam.HY, 0, canvas.height);
     gr.addColorStop(0, arMix(base, 0.22)); gr.addColorStop(1, arMix(base, -0.22));
     ctx.fillStyle = gr; ctx.fillRect(0, cam.HY + 2, canvas.width, canvas.height - cam.HY);
-    const lim = cam.D - cam.PERTO * 2, t = typeof gameplayClock === "number" ? gameplayClock : 0;
+    const lim = cam.D - cam.PERTO * 2, t = arRelogio();
     if (ch.tipo === "ladrilho") {
+        const ox = arModulo(desl.x, 80), oz = arModulo(desl.z, 80);
         ctx.strokeStyle = "rgba(90, 95, 110, 0.35)"; ctx.lineWidth = 1; ctx.beginPath();
         for (let i = -1200; i <= 1200; i += 80) {
-            [[[i, -1200], [i, 1200]], [[-1200, i], [1200, i]]].forEach(([p0, p1]) => {
+            [[[i - ox, -1200], [i - ox, 1200]], [[-1200, i - oz], [1200, i - oz]]].forEach(([p0, p1]) => {
                 const seg = c3RecorteChao(p0, p1, ang, lim);
                 if (!seg) return;
                 const A = trProj(seg[0][0], 0, seg[0][1], ang), B = trProj(seg[1][0], 0, seg[1][1], ang);
@@ -529,8 +746,9 @@ function arDesenharChao(a, ang, cam) {
         return;
     }
     AR_DETALHES.forEach(d => {
-        if (trRot(d.x, d.z, ang)[1] > lim) return;
-        const p = trProj(d.x, 0, d.z, ang), k = p[3];
+        const dx = arModulo(d.x - desl.x + 1300, 2600) - 1300, dz = d.z - desl.z;
+        if (trRot(dx, dz, ang)[1] > lim) return;
+        const p = trProj(dx, 0, dz, ang), k = p[3];
         if (p[1] < cam.HY) return;
         if (ch.tipo === "grama") { ctx.strokeStyle = arMix(base, -0.3); ctx.lineWidth = Math.max(0.6, 1.2 * k); ctx.beginPath(); ctx.moveTo(p[0] - 3 * k, p[1]); ctx.lineTo(p[0] - 1 * k, p[1] - 6 * k); ctx.moveTo(p[0] + 2 * k, p[1]); ctx.lineTo(p[0] + 3 * k, p[1] - 5 * k); ctx.stroke(); }
         else if (ch.tipo === "mar") { ctx.strokeStyle = "rgba(255, 255, 255, 0.45)"; ctx.lineWidth = Math.max(0.6, 1.4 * k); const o = Math.sin(t * 1.5 + d.s * 6) * 3 * k; ctx.beginPath(); ctx.arc(p[0] + o, p[1], 6 * k, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke(); }
@@ -540,34 +758,94 @@ function arDesenharChao(a, ang, cam) {
         else { ctx.fillStyle = arMix(base, d.s > 0.5 ? -0.25 : 0.2); ctx.beginPath(); ctx.ellipse(p[0], p[1], 3 * k, 1.4 * k, 0, 0, Math.PI * 2); ctx.fill(); }
     });
 }
-function arDesenharCena(a, ang, cam) {
-    a.pecas.forEach(p => { const d = ARENA_PECAS[p.t]; if (d.chao) d.desenha(p, ang); });
+// posições de uma peça na tela: o centro da vista (desl) vira a origem; no modo SEGUIR a planta se repete de lado
+function arCopiasDaPeca(p, desl, repete) {
+    const z = p.z - desl.z;
+    if (!repete) return [{ x: p.x - desl.x, z }];
+    const x0 = arModulo(p.x - desl.x + AR_PERIODO / 2, AR_PERIODO) - AR_PERIODO / 2;
+    return [x0 - AR_PERIODO, x0, x0 + AR_PERIODO].filter(x => Math.abs(x) < 1350).map(x => ({ x, z }));
+}
+// opts: desl {x, z} (centro da vista), repete (modo SEGUIR), vermelha (índice da peça que invade outra), anima (desenha
+// os efeitos agora: false = deixa para a passada de cada quadro)
+function arDesenharCena(a, ang, cam, opts) {
+    const desl = opts.desl, repete = !!opts.repete;
+    const comPos = (p, pos) => Object.assign({ _s: arSemente(p) }, p, pos);
+    const plan = ARENA_PLANICIES[a.planicie];
+    if (plan) plan.pecas.forEach(p => arCopiasDaPeca(p, desl, repete).forEach(pos => ARENA_PECAS[p.t].desenha(comPos(Object.assign({ r: 0, f: "circulo", v: 0 }, p), pos), ang)));
+    const objs = [];
+    a.pecas.forEach((p, i) => {
+        const d = ARENA_PECAS[p.t];
+        if (d.ceu || (d.anim && !opts.anima)) return;
+        const q = i === opts.vermelha ? Object.assign({}, p, { c: "#ff3030" }) : p;
+        arCopiasDaPeca(p, desl, repete).forEach(pos => {
+            if (d.chao && !(p.v > 0)) { d.desenha(comPos(q, pos), ang); return; }   // piso plano: embaixo de tudo, na ordem
+            const z = trRot(pos.x, pos.z, ang)[1];
+            if (z > cam.CORTE) return;   // perto da câmera demais: tamparia a luta
+            objs.push({ z, p: comPos(q, pos), d, i });
+        });
+    });
+    const t = arRelogio();
+    objs.sort((u, v) => u.z - v.z).forEach(o => {
+        try { o.d.desenha(o.p, ang, t); } catch (e) { /* peça com erro não derruba o cenário */ }
+        if (o.i === opts.vermelha) arDesenharPegadaVermelha(o.p, ang);
+    });
+}
+// área da peça pintada de vermelho no chão (invadindo outra peça)
+function arDesenharPegadaVermelha(p, ang) {
+    const g = arenaPegada(p);
+    if (!g) return;
+    const pts = g.r !== undefined
+        ? Array.from({ length: 24 }, (_, i) => { const a = i / 24 * Math.PI * 2; return [g.x + Math.cos(a) * g.r, g.z + Math.sin(a) * g.r]; })
+        : arRetCantos(g);
+    trPoly(pts.map(q => trProj(q[0], 1, q[1], ang)));
+    trG.fillStyle = "rgba(255, 30, 30, 0.35)"; trG.fill();
+    trG.strokeStyle = "#ff2a2a"; trG.lineWidth = 2; trG.stroke();
+}
+// efeitos (peças que se mexem): a cada quadro, por cima da camada guardada
+function arDesenharAnimadas(a, ang, cam, opts) {
+    const t = arRelogio();
     const objs = [];
     a.pecas.forEach(p => {
         const d = ARENA_PECAS[p.t];
-        if (d.chao || d.ceu) return;
-        const z = trRot(p.x, p.z, ang)[1];
-        if (z > cam.CORTE) return;   // perto da câmera demais: tamparia a luta
-        objs.push({ z, p, d });
+        if (!d.anim) return;
+        arCopiasDaPeca(p, opts.desl, !!opts.repete).forEach(pos => {
+            const z = trRot(pos.x, pos.z, ang)[1];
+            if (z <= cam.CORTE) objs.push({ z, p: Object.assign({ _s: arSemente(p) }, p, pos), d });
+        });
     });
-    objs.sort((u, v) => u.z - v.z).forEach(o => { try { o.d.desenha(o.p, ang); } catch (e) { /* peça com erro não derruba o cenário */ } });
+    objs.sort((u, v) => u.z - v.z).forEach(o => { try { o.d.desenha(o.p, ang, t); } catch (e) { /* ignora */ } });
 }
-function drawArenaCriada(a, ang) {
-    const cam = ARENA_CAMERAS[a.camera] || ARENA_CAMERAS.media, cena = arCenaDe(a), anterior = trCam;
+// desenha a arena no ctx do jogo. opts: cam (outra câmera), chave (cache), desl, andado (modo SEGUIR), vermelha
+function drawArenaCriada(a, ang, opts) {
+    opts = opts || {};
+    const cam = opts.cam || ARENA_CAMERAS[a.camera] || ARENA_CAMERAS.media, anterior = trCam;
+    const seguir = opts.andado !== undefined;
+    const desl = { x: (opts.desl ? opts.desl.x : 0) + (seguir ? opts.andado : 0), z: opts.desl ? opts.desl.z : 0 };
+    const cena = arCenaDe(opts.chave || a.id || "_previa", a);
     trCam = cam;
     try {
         const pano = arPanorama(a, cena, cam);
-        if (!pano || !c3BlitPanorama(pano, ang, cam.F, cam.CX)) { ctx.fillStyle = a.ceu.topo; ctx.fillRect(0, 0, canvas.width, cam.HY + 2); }
-        arDesenharChao(a, ang, cam);
-        drawCachedOrbitLayer(cena, ang, (g) => arDesenharCena(a, g, cam));
+        if (!pano || !c3BlitPanorama(pano, seguir ? 0 : ang, cam.F, cam.CX)) { ctx.fillStyle = a.ceu.topo; ctx.fillRect(0, 0, canvas.width, cam.HY + 2); }
+        arDesenharChao(a, ang, cam, desl);
+        const o = { desl, repete: seguir, vermelha: opts.vermelha };
+        if (seguir || opts.desl) {
+            // a vista anda (SEGUIR) ou está centrada numa peça: desenha direto, sem a camada guardada
+            trG = ctx;
+            arDesenharCena(a, ang, cam, Object.assign({ anima: true }, o));
+        } else {
+            drawCachedOrbitLayer(cena, ang, (g) => arDesenharCena(a, g, cam, o));
+            arDesenharAnimadas(a, ang, cam, o);
+        }
     } finally {
         trCam = anterior;
+        trG = ctx;
     }
 }
 function drawArenaCriadaStage(id, scroll) {
     const f = getFaseDef(id);
     if (!f || !f.arena) return;
-    drawArenaCriada(f.arena, getStageLapAngle(scroll, f.camera.volta || 10800));
+    if (f.arena.movimento === "seguir") drawArenaCriada(f.arena, 0, { andado: getForwardTravel(scroll) });
+    else drawArenaCriada(f.arena, getStageLapAngle(scroll, f.camera.volta || 10800));
 }
 
 // ---------------- arquivo .arena.json ----------------
@@ -584,6 +862,8 @@ function validarArquivoArena(dados) {
     if (typeof a.nome !== "string" || !a.nome.trim()) return { erro: "FALTA O NOME DA ARENA (nome)." };
     if (a.chao !== undefined && (!a.chao || !ARENA_CHAOS[a.chao.tipo])) return { erro: arqErro("TIPO DE CHÃO DESCONHECIDO", a.chao && a.chao.tipo) };
     if (a.camera !== undefined && !ARENA_CAMERAS[a.camera]) return { erro: arqErro("CÂMERA DESCONHECIDA", a.camera) };
+    if (a.movimento !== undefined && a.movimento !== "girar" && a.movimento !== "seguir") return { erro: arqErro("MOVIMENTO DESCONHECIDO", a.movimento) };
+    if (a.planicie !== undefined && a.planicie !== "" && !ARENA_PLANICIES[a.planicie]) return { erro: arqErro("PLANÍCIE DESCONHECIDA", a.planicie) };
     if (a.pecas !== undefined && !Array.isArray(a.pecas)) return { erro: "LISTA DE PEÇAS INVÁLIDA (pecas)." };
     const pecas = a.pecas || [];
     if (pecas.length > ARENA_PECAS_MAX) return { erro: arqErro("PEÇAS DEMAIS (MÁXIMO 80)", pecas.length) };
@@ -594,18 +874,23 @@ function validarArquivoArena(dados) {
     return { arena: n };
 }
 
-// ---------------- EDITOR DE ARENAS (janela #modal-arena) ----------------
-let arenaEd = null;   // { arena (cópia em edição), aba, tipo (peça armada para colocar), sel (índice), angulo, girar, arrasto }
+// ---------------- EDITOR DE ARENAS (tela #modal-arena) ----------------
+// Visualização grande no canto superior esquerdo (a arena girando/andando, a prévia de uma peça antes de confirmar,
+// ou a câmera perto da peça escolhida enquanto ela é ajustada); à direita as abas, as peças e a planta; embaixo os
+// dados da arena e o quadro da peça escolhida.
+let arenaEd = null;
 function arenaEditorAberto() { const m = document.getElementById("modal-arena"); return !!m && m.style.display === "flex"; }
 function abrirEditorArenas(id) {
     const lista = getArenasCriadas();
     const a = (id && lista.find(x => x.id === id)) || lista[0] || null;
-    arenaEd = { arena: a ? JSON.parse(JSON.stringify(a)) : arenaPadrao(), aba: "construcao", tipo: null, sel: -1, angulo: 0, girar: true, arrasto: null };
+    arenaEd = { arena: a ? JSON.parse(JSON.stringify(a)) : arenaPadrao(), aba: "construcao", tipo: null, previa: null, sel: -1, vista: "arena",
+        mover: true, angulo: 0, andado: 0, arrasto: null, vermelhoAte: 0, baixo: "dados" };
     const m = document.getElementById("modal-arena");
     if (!m) return;
     arenaPreencherCampos();
     m.style.display = "flex";
     focusModal(m);
+    arenaAjustarPlanta();
 }
 function fecharEditorArenas() {
     const m = document.getElementById("modal-arena");
@@ -614,6 +899,8 @@ function fecharEditorArenas() {
     restoreFocusAfterModal();
 }
 function arenaValorDe(id) { const el = document.getElementById(id); return el ? el.value : ""; }
+function arenaDefinir(id, v) { const el = document.getElementById(id); if (el) el.value = v; }
+function arenaMostrar(id, sim) { const el = document.getElementById(id); if (el && el.style) el.style.display = sim ? "" : "none"; }
 function arenaPreencherCampos() {
     const a = arenaEd.arena;
     const sel = document.getElementById("arena-lista");
@@ -623,10 +910,9 @@ function arenaPreencherCampos() {
         const nova = document.createElement("option"); nova.value = ""; nova.textContent = "+ NOVA ARENA"; sel.appendChild(nova);
         sel.value = a.id || "";
     }
-    const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
-    set("arena-nome", a.nome); set("arena-cor", a.cor); set("arena-camera", a.camera);
-    set("arena-ceu-topo", a.ceu.topo); set("arena-ceu-horizonte", a.ceu.horizonte);
-    set("arena-chao-tipo", a.chao.tipo); set("arena-chao-cor", a.chao.cor);
+    arenaDefinir("arena-nome", a.nome); arenaDefinir("arena-cor", a.cor); arenaDefinir("arena-camera", a.camera);
+    arenaDefinir("arena-movimento", a.movimento);
+    arenaDefinir("arena-ceu-topo", a.ceu.topo); arenaDefinir("arena-ceu-horizonte", a.ceu.horizonte);
     const mus = document.getElementById("arena-musica");
     if (mus) {
         mus.innerHTML = "";
@@ -641,13 +927,16 @@ function arenaPreencherCampos() {
     }
     const chao = document.getElementById("arena-chao-tipo");
     if (chao && !chao.options.length) Object.keys(ARENA_CHAOS).forEach(k => { const o = document.createElement("option"); o.value = k; o.textContent = ARENA_CHAOS[k].nome; chao.appendChild(o); });
-    if (chao) chao.value = a.chao.tipo;
-    const girar = document.getElementById("arena-girar");
-    if (girar) girar.checked = arenaEd.girar;
+    arenaDefinir("arena-chao-tipo", a.chao.tipo); arenaDefinir("arena-chao-cor", a.chao.cor);
+    const forma = document.getElementById("arena-sel-forma");
+    if (forma && !forma.options.length) ARENA_FORMATOS.forEach(([k, nome]) => { const o = document.createElement("option"); o.value = k; o.textContent = nome; forma.appendChild(o); });
+    const mover = document.getElementById("arena-girar");
+    if (mover) mover.checked = arenaEd.mover;
     arenaMostrarAba(arenaEd.aba);
     arenaAtualizarSelecao();
+    arenaAtualizarVista();
 }
-// campos gerais -> arena em edição
+// campos da arena -> arena em edição
 function arenaLerCampos() {
     if (!arenaEd) return;
     const a = arenaEd.arena, tipoAntes = a.chao.tipo;
@@ -656,78 +945,186 @@ function arenaLerCampos() {
     a.musica = BGM_THEMES[arenaValorDe("arena-musica")] ? arenaValorDe("arena-musica") : a.musica;
     a.minion = arenaValorDe("arena-minion") || a.minion;
     a.camera = ARENA_CAMERAS[arenaValorDe("arena-camera")] ? arenaValorDe("arena-camera") : a.camera;
+    a.movimento = arenaValorDe("arena-movimento") === "seguir" ? "seguir" : "girar";
     a.ceu.topo = arenaCorValida(arenaValorDe("arena-ceu-topo"), a.ceu.topo);
     a.ceu.horizonte = arenaCorValida(arenaValorDe("arena-ceu-horizonte"), a.ceu.horizonte);
     const tipo = ARENA_CHAOS[arenaValorDe("arena-chao-tipo")] ? arenaValorDe("arena-chao-tipo") : a.chao.tipo;
     if (tipo !== tipoAntes) {   // trocou o tipo de chão: já põe a cor dele
         a.chao = { tipo, cor: ARENA_CHAOS[tipo].cor };
-        const el = document.getElementById("arena-chao-cor"); if (el) el.value = a.chao.cor;
+        arenaDefinir("arena-chao-cor", a.chao.cor);
     } else a.chao.cor = arenaCorValida(arenaValorDe("arena-chao-cor"), a.chao.cor);
     const g = document.getElementById("arena-girar");
-    arenaEd.girar = !g || g.checked;
+    arenaEd.mover = !g || g.checked;
+    arenaDesenharPlanta();
 }
+// ---- abas e botões das peças ----
 function arenaMostrarAba(aba) {
     if (!arenaEd) return;
     arenaEd.aba = aba;
-    ARENA_ABAS.forEach(([k]) => { const b = document.getElementById("arena-aba-" + k); if (b) b.classList.toggle("active", k === aba); });
+    ARENA_ABAS.forEach(([k]) => { const b = document.getElementById("arena-aba-" + k); if (b && b.classList) b.classList.toggle("active", k === aba); });
     const lista = document.getElementById("arena-pecas");
     if (lista) {
         lista.innerHTML = "";
-        Object.keys(ARENA_PECAS).filter(k => ARENA_PECAS[k].aba === aba).forEach(k => {
+        const botao = (texto, ativo, acao) => {
             const b = document.createElement("button");
             b.type = "button";
-            b.className = "btn ar-peca" + (arenaEd.tipo === k ? " ar-armada" : "");
-            b.textContent = ARENA_PECAS[k].nome;
-            b.onclick = () => { arenaEd.tipo = arenaEd.tipo === k ? null : k; arenaMostrarAba(arenaEd.aba); };
+            b.className = "btn ar-peca" + (ativo ? " ar-armada" : "");
+            b.textContent = texto;
+            b.onclick = acao;
             lista.appendChild(b);
-        });
+        };
+        if (aba === "planicies") {
+            botao("SEM PLANÍCIE", !arenaEd.arena.planicie, () => { arenaEd.arena.planicie = ""; arenaMostrarAba("planicies"); arenaDesenharPlanta(); });
+            Object.keys(ARENA_PLANICIES).forEach(k => botao(ARENA_PLANICIES[k].nome, arenaEd.arena.planicie === k, () => arenaVerPeca("planicie:" + k)));
+        } else {
+            Object.keys(ARENA_PECAS).filter(k => ARENA_PECAS[k].aba === aba).forEach(k => botao(ARENA_PECAS[k].nome, arenaEd.tipo === k, () => arenaVerPeca(k)));
+        }
     }
-    const dica = document.getElementById("arena-dica");
-    if (dica) dica.textContent = aba === "ceu"
-        ? "CÉU: escolha uma peça e toque na faixa do céu (esquerda/direita = em volta, altura = mais alto ou mais baixo)."
-        : "Escolha uma peça e toque na planta para colocar. Toque numa peça para escolher e arraste para mover. O centro é onde a luta acontece.";
+    arenaDica();
     arenaDesenharPlanta();
 }
+function arenaDica(texto) {
+    const dica = document.getElementById("arena-dica");
+    if (!dica || !arenaEd) return;
+    dica.classList && dica.classList.toggle("ar-dica-erro", !!texto);
+    dica.textContent = texto || (arenaEd.aba === "planicies"
+        ? "PLANÍCIES: o chão completo de uma fase. Escolha, veja na tela grande e confirme."
+        : arenaEd.aba === "ceu"
+            ? "CÉU: escolha uma peça e toque na faixa do céu (esquerda/direita = em volta, altura = mais alto ou mais baixo)."
+            : arenaEd.tipo
+                ? `Toque na planta para colocar: ${T(ARENA_PECAS[arenaEd.tipo].nome)}. Peça vermelha = lugar ocupado.`
+                : "Escolha uma peça e toque na planta para colocar. Toque numa peça para escolher e arraste para mover. O centro é onde a luta acontece.");
+}
+// tocar numa peça da lista: mostra só ela na tela grande, com CONFIRMAR PEÇA / CANCELAR
+function arenaVerPeca(k) {
+    if (!arenaEd) return;
+    arenaEd.previa = k;
+    arenaEd.vista = "previa";
+    arenaAtualizarVista();
+}
+function arenaConfirmarPeca() {
+    if (!arenaEd || !arenaEd.previa) return;
+    const k = arenaEd.previa;
+    if (k.startsWith("planicie:")) {
+        const id = k.slice(9), pl = ARENA_PLANICIES[id];
+        arenaEd.arena.planicie = id;
+        arenaEd.arena.ceu = Object.assign({}, pl.ceu);
+        arenaEd.arena.chao = Object.assign({}, pl.chao);
+        arenaPreencherCampos();
+    } else {
+        if (ARENA_PECAS[k].anim && arenaEd.arena.pecas.filter(p => ARENA_PECAS[p.t].anim).length >= ARENA_ANIMADAS_MAX)
+            return showSystemAlert("EDITOR DE ARENAS", "LIMITE DE 10 EFEITOS POR ARENA.");
+        arenaEd.tipo = k;
+        if (ARENA_PECAS[k].aba !== arenaEd.aba) arenaMostrarAba(ARENA_PECAS[k].aba); else arenaMostrarAba(arenaEd.aba);
+    }
+    arenaEd.previa = null;
+    arenaEd.vista = "arena";
+    arenaAtualizarVista();
+}
+function arenaCancelarPeca() {
+    if (!arenaEd) return;
+    arenaEd.previa = null;
+    arenaEd.vista = arenaEd.sel >= 0 ? "foco" : "arena";
+    arenaAtualizarVista();
+}
+function arenaVerArena() {
+    if (!arenaEd) return;
+    arenaEd.vista = "arena";
+    arenaAtualizarVista();
+}
+// botões e título por cima da tela grande conforme a vista
+function arenaAtualizarVista() {
+    if (!arenaEd) return;
+    const v = arenaEd.vista, tit = document.getElementById("arena-vista-titulo");
+    arenaMostrar("arena-confirmar", v === "previa");
+    arenaMostrar("arena-cancelar", v === "previa");
+    arenaMostrar("arena-ver-arena", v === "foco");
+    if (tit) {
+        const p = arenaEd.arena.pecas[arenaEd.sel];
+        tit.textContent = v === "previa"
+            ? (arenaEd.previa.startsWith("planicie:") ? ARENA_PLANICIES[arenaEd.previa.slice(9)].nome : ARENA_PECAS[arenaEd.previa].nome)
+            : v === "foco" && p ? ARENA_PECAS[p.t].nome : arenaEd.arena.nome;
+    }
+}
+// ---- quadro da peça escolhida ----
 function arenaAtualizarSelecao() {
     const box = document.getElementById("arena-selecao");
     if (!box || !arenaEd) return;
     const p = arenaEd.arena.pecas[arenaEd.sel];
-    box.style.display = p ? "" : "none";
+    arenaMostrar("arena-selecao-vazia", !p);
+    arenaMostrar("arena-selecao-campos", !!p);
     if (!p) return;
     const def = ARENA_PECAS[p.t];
     const nome = document.getElementById("arena-sel-nome"); if (nome) nome.textContent = def.nome;
-    const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
-    set("arena-sel-tam", p.e); set("arena-sel-cor", p.c);
-    const giro = document.getElementById("arena-sel-giro-grupo"); if (giro) giro.style.display = def.ceu ? "none" : "";
-    set("arena-sel-giro", def.ceu ? 0 : p.r);
-    const txt = document.getElementById("arena-sel-texto-grupo"); if (txt) txt.style.display = def.texto !== undefined ? "" : "none";
-    set("arena-sel-texto", p.txt || "");
+    arenaDefinir("arena-sel-tam", p.e); arenaDefinir("arena-sel-cor", p.c);
+    arenaMostrar("arena-sel-giro-grupo", !def.ceu);
+    arenaDefinir("arena-sel-giro", def.ceu ? 0 : p.r);
+    arenaMostrar("arena-sel-texto-grupo", def.texto !== undefined);
+    arenaDefinir("arena-sel-texto", p.txt || "");
+    arenaMostrar("arena-sel-forma-grupo", !!def.forma);
+    arenaMostrar("arena-sel-altura-grupo", !!def.forma);
+    if (def.forma) { arenaDefinir("arena-sel-forma", p.f || "circulo"); arenaDefinir("arena-sel-altura", p.v || 0); }
 }
 function arenaMudarSelecao() {
     const p = arenaEd && arenaEd.arena.pecas[arenaEd.sel];
     if (!p) return;
-    const def = ARENA_PECAS[p.t];
+    const def = ARENA_PECAS[p.t], antes = Object.assign({}, p);
     p.e = Math.round(arenaNum(arenaValorDe("arena-sel-tam"), 0.3, 3, p.e) * 100) / 100;
     p.c = arenaCorValida(arenaValorDe("arena-sel-cor"), p.c);
     if (!def.ceu) p.r = Math.round(arenaNum(arenaValorDe("arena-sel-giro"), 0, 359, p.r));
     if (def.texto !== undefined) p.txt = String(arenaValorDe("arena-sel-texto") || "").slice(0, 16);
+    if (def.forma) {
+        const f = arenaValorDe("arena-sel-forma");
+        if (ARENA_FORMATOS.some(x => x[0] === f)) p.f = f;
+        p.v = Math.round(arenaNum(arenaValorDe("arena-sel-altura"), 0, 3, p.v || 0) * 10) / 10;
+    }
+    // maior ou girada, invadiria outra peça: volta como estava e pisca vermelho
+    if (arenaPecaColide(arenaEd.arena.pecas, p, arenaEd.sel)) {
+        Object.assign(p, antes);
+        arenaAtualizarSelecao();
+        arenaEd.vermelhoAte = performance.now() + 700;
+        arenaDica("LUGAR OCUPADO: a peça invadiria o espaço de outra.");
+    }
+    arenaEd.vista = "foco";
+    arenaAtualizarVista();
     arenaDesenharPlanta();
 }
 function arenaApagarSelecao() {
     if (!arenaEd || arenaEd.sel < 0) return;
     arenaEd.arena.pecas.splice(arenaEd.sel, 1);
     arenaEd.sel = -1;
-    arenaAtualizarSelecao(); arenaDesenharPlanta();
+    arenaEd.vista = "arena";
+    arenaAtualizarSelecao(); arenaAtualizarVista(); arenaDesenharPlanta();
 }
 function arenaDuplicarSelecao() {
     const p = arenaEd && arenaEd.arena.pecas[arenaEd.sel];
     if (!p) return;
     if (arenaEd.arena.pecas.length >= ARENA_PECAS_MAX) return showSystemAlert("EDITOR DE ARENAS", "LIMITE DE 80 PEÇAS POR ARENA.");
+    if (ARENA_PECAS[p.t].anim && arenaEd.arena.pecas.filter(q => ARENA_PECAS[q.t].anim).length >= ARENA_ANIMADAS_MAX) return showSystemAlert("EDITOR DE ARENAS", "LIMITE DE 10 EFEITOS POR ARENA.");
     const q = Object.assign({}, p);
-    if (ARENA_PECAS[p.t].ceu) q.a = (q.a + 20) % 360; else { q.x = Math.min(ARENA_RAIO, q.x + 30); q.z = Math.min(ARENA_RAIO, q.z + 30); }
+    if (ARENA_PECAS[p.t].ceu) q.a = (q.a + 20) % 360;
+    else {
+        // procura um lugar livre ao lado, em voltas cada vez maiores
+        let achou = false;
+        for (let r = 30; r <= 600 && !achou; r += 30) for (let i = 0; i < 12 && !achou; i++) {
+            const a = i / 12 * Math.PI * 2;
+            q.x = Math.round(Math.max(-ARENA_RAIO, Math.min(ARENA_RAIO, p.x + Math.cos(a) * r)));
+            q.z = Math.round(Math.max(-ARENA_RAIO, Math.min(ARENA_RAIO, p.z + Math.sin(a) * r)));
+            achou = !arenaPecaColide(arenaEd.arena.pecas, q, -1);
+        }
+        if (!achou) return arenaDica("LUGAR OCUPADO: não há espaço livre para duplicar.");
+    }
     arenaEd.arena.pecas.push(q);
     arenaEd.sel = arenaEd.arena.pecas.length - 1;
-    arenaAtualizarSelecao(); arenaDesenharPlanta();
+    arenaEd.vista = "foco";
+    arenaAtualizarSelecao(); arenaAtualizarVista(); arenaDesenharPlanta();
+}
+function arenaMostrarBaixo(qual) {
+    if (!arenaEd) return;
+    arenaEd.baixo = qual;
+    const b = document.getElementById("arena-baixo");
+    if (b && b.setAttribute) b.setAttribute("data-vista", qual);
+    ["dados", "peca"].forEach(k => { const t = document.getElementById("arena-baixo-" + k); if (t && t.classList) t.classList.toggle("active", k === qual); });
 }
 // ---- planta (vista de cima) e faixa do céu ----
 const AR_PLANTA = 320;
@@ -735,6 +1132,19 @@ function arenaPlantaParaMundo(px, py) { const s = AR_PLANTA / (ARENA_RAIO * 2); 
 function arenaMundoParaPlanta(x, z) { const s = AR_PLANTA / (ARENA_RAIO * 2); return [(x + ARENA_RAIO) * s, (z + ARENA_RAIO) * s]; }
 function arenaCeuParaPlanta(p) { return [p.a / 360 * AR_PLANTA, 20 + (1 - p.h) * (AR_PLANTA * 0.45 - 30)]; }
 function arenaModoCeu() { return !!arenaEd && arenaEd.aba === "ceu"; }
+// a planta ocupa o maior quadrado que cabe no espaço que sobra (sem barra de rolagem)
+function arenaAjustarPlanta() {
+    const cv = document.getElementById("arena-planta"), caixa = cv && cv.parentElement;
+    if (!cv || !caixa || !cv.style || !(caixa.clientWidth > 0)) return;
+    const lado = Math.max(120, Math.floor(Math.min(caixa.clientWidth, caixa.clientHeight || caixa.clientWidth)));
+    cv.style.width = cv.style.height = lado + "px";
+}
+function arenaDesenharPlantaForma(g, p, def, s) {
+    const pts = arFormaPontos(p.f, def.forma, arSemente(p));
+    g.beginPath();
+    pts.forEach((q, i) => { const x = q[0] * s * p.e, y = q[1] * s * p.e; i ? g.lineTo(x, y) : g.moveTo(x, y); });
+    g.closePath();
+}
 function arenaDesenharPlanta() {
     const cv = document.getElementById("arena-planta");
     const g = cv && cv.getContext && cv.getContext("2d");
@@ -758,24 +1168,37 @@ function arenaDesenharPlanta() {
         });
     } else {
         g.fillStyle = a.chao.cor; g.fillRect(0, 0, S, S);
+        const s = S / (ARENA_RAIO * 2);
+        // planície embaixo de tudo (mais clara: não dá para escolher)
+        const plan = ARENA_PLANICIES[a.planicie];
+        if (plan) plan.pecas.forEach(p0 => {
+            const p = Object.assign({ r: 0, f: "circulo" }, p0), def = ARENA_PECAS[p.t], [px, py] = arenaMundoParaPlanta(p.x, p.z);
+            g.save(); g.translate(px, py); g.rotate((p.r || 0) * Math.PI / 180); g.globalAlpha = 0.6; g.fillStyle = p.c;
+            if (def.forma) { arenaDesenharPlantaForma(g, p, def, s); g.fill(); }
+            else if (def.planta && def.planta.ret) { const [w, d] = def.planta.ret; g.fillRect(-w * s * p.e, -d * s * p.e, w * 2 * s * p.e, d * 2 * s * p.e); }
+            g.restore();
+        });
         g.strokeStyle = "rgba(0, 0, 0, 0.12)"; g.lineWidth = 1;
         for (let i = 0; i <= 8; i++) { const v = i / 8 * S; g.beginPath(); g.moveTo(v, 0); g.lineTo(v, S); g.moveTo(0, v); g.lineTo(S, v); g.stroke(); }
         // centro (onde a luta acontece)
         g.strokeStyle = "rgba(255, 210, 63, 0.9)"; g.setLineDash([5, 4]);
         g.beginPath(); g.arc(S / 2, S / 2, 26, 0, Math.PI * 2); g.stroke(); g.setLineDash([]);
         g.fillStyle = "rgba(255, 210, 63, 0.95)"; g.font = "bold 9px sans-serif"; g.textAlign = "center"; g.fillText(T("LUTA"), S / 2, S / 2 + 3);
-        const s = S / (ARENA_RAIO * 2);
-        const ordem = a.pecas.map((p, i) => i).filter(i => !ARENA_PECAS[a.pecas[i].t].ceu).sort((i, j) => (ARENA_PECAS[a.pecas[j].t].chao ? 1 : 0) - (ARENA_PECAS[a.pecas[i].t].chao ? 1 : 0));
+        const vermelha = arenaPecaVermelha();
+        const ordem = a.pecas.map((p, i) => i).filter(i => !ARENA_PECAS[a.pecas[i].t].ceu)
+            .sort((i, j) => (ARENA_PECAS[a.pecas[j].t].chao && !(a.pecas[j].v > 0) ? 1 : 0) - (ARENA_PECAS[a.pecas[i].t].chao && !(a.pecas[i].v > 0) ? 1 : 0));
         ordem.forEach(i => {
             const p = a.pecas[i], def = ARENA_PECAS[p.t], [px, py] = arenaMundoParaPlanta(p.x, p.z);
             g.save(); g.translate(px, py); g.rotate((p.r || 0) * Math.PI / 180);
-            g.fillStyle = p.c; g.globalAlpha = def.chao ? 0.85 : 1;
-            if (def.planta && def.planta.ret) { const [w, d] = def.planta.ret; g.fillRect(-w * s * p.e, -d * s * p.e, w * 2 * s * p.e, d * 2 * s * p.e); }
+            g.fillStyle = i === vermelha ? "#ff3030" : p.c; g.globalAlpha = def.chao && !(p.v > 0) ? 0.85 : 1;
+            if (def.forma) { arenaDesenharPlantaForma(g, p, def, s); g.fill(); if (p.v > 0) { g.strokeStyle = "rgba(0, 0, 0, 0.5)"; g.lineWidth = 1.5; g.stroke(); } }
+            else if (def.planta && def.planta.ret) { const [w, d] = def.planta.ret; g.fillRect(-w * s * p.e, -d * s * p.e, w * 2 * s * p.e, d * 2 * s * p.e); }
             else { const r = Math.max(3, ((def.planta && def.planta.circ) || 8) * s * p.e); g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.fill(); }
             g.globalAlpha = 1;
-            if (i === arenaEd.sel) {
-                g.strokeStyle = "#ffd23f"; g.lineWidth = 2.5;
-                const r = Math.max(6, ((def.planta && (def.planta.circ || Math.max(...def.planta.ret))) || 8) * s * p.e + 3);
+            if (def.anim) { g.fillStyle = "#ffffff"; g.font = "bold 9px sans-serif"; g.textAlign = "center"; g.fillText("✦", 0, 3); }
+            if (i === arenaEd.sel || i === vermelha) {
+                g.strokeStyle = i === vermelha ? "#ff2a2a" : "#ffd23f"; g.lineWidth = 2.5;
+                const r = Math.max(6, (def.forma ? arRaioForma(p, def.forma) : ((def.planta && (def.planta.circ || Math.max(...def.planta.ret))) || 8)) * s * p.e + 3);
                 g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.stroke();
             }
             g.restore();
@@ -785,16 +1208,27 @@ function arenaDesenharPlanta() {
     const cont = document.getElementById("arena-contagem");
     if (cont) cont.textContent = `PEÇAS: ${a.pecas.length} / ${ARENA_PECAS_MAX}`;
 }
+// peça marcada de vermelho (arrastada para um lugar ocupado, ou acabou de tentar invadir outra)
+function arenaPecaVermelha() {
+    if (!arenaEd) return -1;
+    if (arenaEd.arrasto && arenaEd.arrasto.invalido) return arenaEd.arrasto.i;
+    if (arenaEd.vermelhoAte > performance.now()) return arenaEd.sel;
+    return -1;
+}
 function arenaPecaNoPonto(px, py) {
     const a = arenaEd.arena, s = AR_PLANTA / (ARENA_RAIO * 2);
     // peças de pé têm prioridade sobre os pisos (desenhados embaixo)
-    const ordem = a.pecas.map((p, i) => i).reverse().sort((i, j) => (ARENA_PECAS[a.pecas[i].t].chao ? 1 : 0) - (ARENA_PECAS[a.pecas[j].t].chao ? 1 : 0));
+    const plano = (q) => ARENA_PECAS[q.t].chao && !(q.v > 0) ? 1 : 0;
+    const ordem = a.pecas.map((p, i) => i).reverse().sort((i, j) => plano(a.pecas[i]) - plano(a.pecas[j]));
     for (const i of ordem) {
         const p = a.pecas[i], def = ARENA_PECAS[p.t];
         if (arenaModoCeu() !== !!def.ceu) continue;
         let x, y, r;
         if (def.ceu) { [x, y] = arenaCeuParaPlanta(p); r = 8 + 4 * p.e; }
-        else { [x, y] = arenaMundoParaPlanta(p.x, p.z); r = Math.max(8, ((def.planta && (def.planta.circ || Math.max(...def.planta.ret))) || 8) * s * p.e); }
+        else {
+            [x, y] = arenaMundoParaPlanta(p.x, p.z);
+            r = Math.max(8, (def.forma ? arRaioForma(p, def.forma) : ((def.planta && (def.planta.circ || Math.max(...def.planta.ret))) || 8)) * s * p.e);
+        }
         if (Math.hypot(px - x, py - y) <= r) return i;
     }
     return -1;
@@ -817,55 +1251,112 @@ function arenaPlantaToque(e) {
     if (!arenaEd) return;
     const [px, py] = arenaPontoDoEvento(e);
     const i = arenaPecaNoPonto(px, py);
+    arenaDica();
     if (i >= 0) {
+        const p = arenaEd.arena.pecas[i];
         arenaEd.sel = i;
-        arenaEd.arrasto = { i };
+        arenaEd.arrasto = { i, x: p.x, z: p.z, a: p.a, h: p.h, invalido: false };
+        arenaEd.vista = "foco";
+        arenaMostrarBaixo("peca");
     } else if (arenaEd.tipo && (!!ARENA_PECAS[arenaEd.tipo].ceu === arenaModoCeu())) {
         if (arenaEd.arena.pecas.length >= ARENA_PECAS_MAX) return showSystemAlert("EDITOR DE ARENAS", "LIMITE DE 80 PEÇAS POR ARENA.");
         const def = ARENA_PECAS[arenaEd.tipo];
+        if (def.anim && arenaEd.arena.pecas.filter(q => ARENA_PECAS[q.t].anim).length >= ARENA_ANIMADAS_MAX) return showSystemAlert("EDITOR DE ARENAS", "LIMITE DE 10 EFEITOS POR ARENA.");
         const p = normalizarPecaArena({ t: arenaEd.tipo, c: def.cor, e: 1, txt: def.texto });
         arenaMoverPara(p, px, py);
+        if (arenaPecaColide(arenaEd.arena.pecas, p, -1)) {
+            arenaDica("LUGAR OCUPADO: escolha um espaço livre para a peça.");
+            arenaEd.vermelhoAte = performance.now() + 700;
+            arenaDesenharPlanta();
+            return;
+        }
         arenaEd.arena.pecas.push(p);
         arenaEd.sel = arenaEd.arena.pecas.length - 1;
-        arenaEd.arrasto = { i: arenaEd.sel };
+        arenaEd.arrasto = { i: arenaEd.sel, x: p.x, z: p.z, a: p.a, h: p.h, invalido: false };
+        arenaEd.vista = "foco";
+        arenaMostrarBaixo("peca");
     } else {
         arenaEd.sel = -1;
+        arenaEd.vista = "arena";
     }
     try { e.target.setPointerCapture && e.target.setPointerCapture(e.pointerId); } catch (er) {}
-    arenaAtualizarSelecao(); arenaDesenharPlanta();
+    arenaAtualizarSelecao(); arenaAtualizarVista(); arenaDesenharPlanta();
 }
 function arenaPlantaArrasto(e) {
     if (!arenaEd || !arenaEd.arrasto) return;
-    const p = arenaEd.arena.pecas[arenaEd.arrasto.i];
+    const ar = arenaEd.arrasto, p = arenaEd.arena.pecas[ar.i];
     if (!p) return;
     const [px, py] = arenaPontoDoEvento(e);
     arenaMoverPara(p, px, py);
+    ar.invalido = arenaPecaColide(arenaEd.arena.pecas, p, ar.i);
+    arenaEd.vista = "arena";   // arrastando: vê a arena inteira (e a peça vermelha se o lugar estiver ocupado)
     arenaDesenharPlanta();
 }
-function arenaPlantaSolta() { if (arenaEd) arenaEd.arrasto = null; }
-// prévia 3D: desenhada no canvas do jogo (escondido atrás da janela) e copiada para a janela
-let arenaPreviaUltima = 0;
+function arenaPlantaSolta() {
+    if (!arenaEd || !arenaEd.arrasto) return;
+    const ar = arenaEd.arrasto, p = arenaEd.arena.pecas[ar.i];
+    if (p && ar.invalido) {   // lugar ocupado: volta para o último lugar bom
+        if (ARENA_PECAS[p.t].ceu) { p.a = ar.a; p.h = ar.h; } else { p.x = ar.x; p.z = ar.z; }
+        arenaDica("LUGAR OCUPADO: a peça voltou para onde estava.");
+    }
+    arenaEd.arrasto = null;
+    if (arenaEd.sel >= 0) arenaEd.vista = "foco";
+    arenaAtualizarVista();
+    arenaDesenharPlanta();
+}
+// ---- tela grande: desenhada no canvas do jogo (escondido atrás da tela do editor) e copiada para cá ----
+// câmera perto de uma peça (prévia ou peça escolhida), afastada conforme o tamanho dela
+function arenaCameraPerto(p) {
+    const def = ARENA_PECAS[p.t], e = p.e || 1;
+    const raio = (def.forma ? arRaioForma(p, def.forma) : def.planta ? (def.planta.circ || Math.max(...def.planta.ret)) : 30) * e;
+    const alto = { coluna_lava: 260, arco_lava: 190, predio: 72, torre: 100, torre_mirante: 90, montanha: 140, mesa_pedra: 90, fumaca: 160, antena: 70, coqueiro: 80, brasas: 110 }[p.t] || 40;
+    const D = Math.max(170, Math.min(900, Math.max(raio * 3.4, alto * e * 2.4) + 110));
+    return { CX: 400, HY: 70, D, H: Math.max(60, D * 0.36), F: 560, PERTO: 20, CORTE: D * 0.5 };
+}
+function arenaVistaAtual() {
+    const a = arenaEd.arena;
+    if (arenaEd.vista === "previa" && arenaEd.previa) {
+        if (arenaEd.previa.startsWith("planicie:")) {
+            const pl = ARENA_PLANICIES[arenaEd.previa.slice(9)];
+            return { a: Object.assign({}, a, { planicie: arenaEd.previa.slice(9), ceu: pl.ceu, chao: pl.chao, pecas: [] }), opts: { chave: "_vista_planicie" } };
+        }
+        const def = ARENA_PECAS[arenaEd.previa];
+        const p = normalizarPecaArena({ t: arenaEd.previa, x: 0, z: 0, a: 180, h: 0.55, e: 1, c: def.cor, txt: def.texto });
+        if (def.ceu) return { a: Object.assign({}, a, { pecas: [p] }), opts: { chave: "_vista_peca", cam: ARENA_CAMERAS.baixa }, angFixo: 0 };
+        return { a: Object.assign({}, a, { planicie: "", pecas: [p] }), opts: { chave: "_vista_peca", cam: arenaCameraPerto(p) } };
+    }
+    const sel = a.pecas[arenaEd.sel];
+    if (arenaEd.vista === "foco" && sel && !ARENA_PECAS[sel.t].ceu)
+        return { a, opts: { chave: "_vista_foco", cam: arenaCameraPerto(sel), desl: { x: sel.x, z: sel.z }, vermelha: arenaPecaVermelha() } };
+    return { a, opts: { chave: "_vista", vermelha: arenaPecaVermelha() } };
+}
 function desenharPreviaArena(dt) {
     if (!arenaEd) return;
     const cv = document.getElementById("arena-previa");
     const g = cv && cv.getContext && cv.getContext("2d");
     if (!g) return;
-    if (arenaEd.girar) arenaEd.angulo = (arenaEd.angulo + (dt || 0) * 0.35) % (Math.PI * 2);
+    const vista = arenaVistaAtual(), seguir = vista.a.movimento === "seguir" && arenaEd.vista === "arena";
+    if (arenaEd.mover) {
+        if (seguir) arenaEd.andado += (dt || 0) * 70;
+        else arenaEd.angulo = (arenaEd.angulo + (dt || 0) * 0.35) % (Math.PI * 2);
+    }
     const ang = document.getElementById("arena-angulo");
-    if (ang && !arenaEd.girar) arenaEd.angulo = Number(ang.value) / 360 * Math.PI * 2;
+    if (ang && !arenaEd.mover) arenaEd.angulo = Number(ang.value) / 360 * Math.PI * 2;
     else if (ang) ang.value = Math.round(arenaEd.angulo / (Math.PI * 2) * 360);
     applyRenderTransform();
     ctx.save();
-    drawArenaCriada(arenaEd.arena, arenaEd.angulo);
+    const opts = Object.assign({}, vista.opts);
+    if (seguir) opts.andado = arenaEd.andado;
+    drawArenaCriada(vista.a, seguir ? 0 : (vista.angFixo !== undefined ? vista.angFixo : arenaEd.angulo), opts);
     ctx.restore();
     g.drawImage(canvasEl, 0, 0, canvasEl.width, canvasEl.height, 0, 0, cv.width, cv.height);
 }
-// ---- botões da janela ----
+// ---- botões da tela ----
 function arenaTrocarDaLista() {
     const id = arenaValorDe("arena-lista");
     const a = getArenasCriadas().find(x => x.id === id);
     arenaEd.arena = a ? JSON.parse(JSON.stringify(a)) : arenaPadrao();
-    arenaEd.sel = -1; arenaEd.tipo = null;
+    arenaEd.sel = -1; arenaEd.tipo = null; arenaEd.previa = null; arenaEd.vista = "arena";
     arenaPreencherCampos();
 }
 function salvarArenaDoEditor() {
@@ -892,7 +1383,7 @@ function excluirArenaDoEditor() {
         registrarArenasCriadas();
         arCenas.delete(id);
         arenaEd.arena = getArenasCriadas()[0] ? JSON.parse(JSON.stringify(getArenasCriadas()[0])) : arenaPadrao();
-        arenaEd.sel = -1;
+        arenaEd.sel = -1; arenaEd.vista = "arena";
         arenaPreencherCampos();
     }, "EXCLUIR");
 }
@@ -924,16 +1415,17 @@ async function anexarArquivoArena(input) {
     const r = importarArenaDeTexto(await lerArquivoArq(f, false) || "");
     if (r.erro) return showSystemAlert("ARQUIVO COM ERRO", r.erro);
     const a = getArenasCriadas().find(x => x.id === r.id);
-    if (arenaEd) { arenaEd.arena = JSON.parse(JSON.stringify(a)); arenaEd.sel = -1; arenaPreencherCampos(); }
+    if (arenaEd) { arenaEd.arena = JSON.parse(JSON.stringify(a)); arenaEd.sel = -1; arenaEd.vista = "arena"; arenaPreencherCampos(); }
     showSystemAlert("SUCESSO", `ARENA ${a.nome} IMPORTADA!`);
 }
 
 registrarArenasCriadas();
-// planta: tocar coloca/escolhe, arrastar move (mouse, toque e caneta)
+// planta: tocar coloca/escolhe, arrastar move (mouse, toque e caneta); a planta acompanha o tamanho da tela
 (() => {
     const cv = document.getElementById("arena-planta");
     if (!cv || !cv.addEventListener) return;
     cv.addEventListener("pointerdown", arenaPlantaToque);
     cv.addEventListener("pointermove", arenaPlantaArrasto);
-    ["pointerup", "pointercancel", "pointerleave"].forEach(t => cv.addEventListener(t, arenaPlantaSolta));
+    ["pointerup", "pointercancel"].forEach(t => cv.addEventListener(t, arenaPlantaSolta));
+    if (typeof window !== "undefined" && window.addEventListener) window.addEventListener("resize", () => { if (arenaEditorAberto()) arenaAjustarPlanta(); });
 })();

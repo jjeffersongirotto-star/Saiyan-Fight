@@ -14,7 +14,7 @@ run("deltaTime = 1/60");
 
 // ---------- peças ----------
 const tipos = run("Object.keys(ARENA_PECAS)");
-check("tem peças em todas as abas", run("ARENA_ABAS.every(([k]) => Object.values(ARENA_PECAS).some(p => p.aba === k))") && tipos.length >= 40, String(tipos.length));
+check("tem peças em todas as abas (PLANÍCIES tem as planícies)", run("ARENA_ABAS.every(([k]) => k === 'planicies' ? Object.keys(ARENA_PLANICIES).length > 5 : Object.values(ARENA_PECAS).some(p => p.aba === k))") && tipos.length >= 40, String(tipos.length));
 const erro = run(`(() => {
     const pecas = Object.keys(ARENA_PECAS).map((t, i) => normalizarPecaArena({ t, x: (i % 9) * 80 - 320, z: Math.floor(i / 9) * 80 - 320, a: i * 7, h: 0.5, e: 1, r: i * 10 }));
     for (const cam of Object.keys(ARENA_CAMERAS)) for (let k = 0; k < pecas.length; k += 40) {

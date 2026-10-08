@@ -5,7 +5,7 @@ Toda arena feita no **EDITOR DE ARENAS** (esfera de 4 estrelas no menu) pode vir
 - **Exportar:** no editor, escolha a arena e toque em **EXPORTAR ARQUIVO**. O jogo baixa `nome-da-arena.arena.json`.
 - **Anexar:** no editor, toque em **ANEXAR ARQUIVO** e escolha o `.arena.json`. Se estiver tudo certo, a arena entra no jogo como qualquer outra fase: aparece em ARENAS, no mapa e no ranking, sempre liberada. Se tiver algum erro, o jogo mostra qual é e não muda nada.
 
-É um arquivo de **dados** (JSON, texto), não de programação: nada dele é executado. Dá para escrever num editor de texto qualquer. Limites: 7 arenas criadas e 80 peças por arena. Exemplo completo: [`exemplo-arena.arena.json`](exemplo-arena.arena.json).
+É um arquivo de **dados** (JSON, texto), não de programação: nada dele é executado. Dá para escrever num editor de texto qualquer. Limites: 7 arenas criadas, 80 peças por arena e 10 efeitos (peças que se mexem). Exemplo completo: [`exemplo-arena.arena.json`](exemplo-arena.arena.json).
 
 ## Estrutura
 
@@ -19,10 +19,13 @@ Toda arena feita no **EDITOR DE ARENAS** (esfera de 4 estrelas no menu) pode vir
     "musica": "kami",
     "minion": "saibaman",
     "camera": "media",
+    "movimento": "girar",
+    "planicie": "",
     "ceu": { "topo": "#3d7fd6", "horizonte": "#d8ecfb" },
     "chao": { "tipo": "nuvens", "cor": "#e8f1fb" },
     "pecas": [
       { "t": "ringue", "x": 0, "z": 0, "r": 0, "e": 1, "c": "#e9e2d0" },
+      { "t": "lava", "x": 300, "z": 250, "r": 0, "e": 0.8, "c": "#ff5a1f", "f": "irregular", "v": 1.5 },
       { "t": "sol", "a": 40, "h": 0.7, "e": 1, "c": "#fff3b0" }
     ]
   }
@@ -35,7 +38,9 @@ Toda arena feita no **EDITOR DE ARENAS** (esfera de 4 estrelas no menu) pode vir
 | `cor` | não | Cor da arena nos menus e no mapa, `#rrggbb`. |
 | `musica` | não | Trilha sonora (veja a lista abaixo). |
 | `minion` | não | `saibaman`, `celljr` ou a chave de um minion criado no editor. |
-| `camera` | não | `baixa`, `media` ou `alta` (altura da câmera que dá a volta). |
+| `camera` | não | `baixa`, `media` ou `alta` (altura da câmera). |
+| `movimento` | não | `girar` (a câmera dá a volta na arena) ou `seguir` (a fase anda para a frente, como Namek: a planta se repete para os lados). |
+| `planicie` | não | Chão completo de uma fase (lista abaixo) ou `""` para nenhum. |
 | `ceu` | não | Cores do céu: `topo` (em cima) e `horizonte`. |
 | `chao` | não | `tipo` do chão (lista abaixo) e `cor`. |
 | `pecas` | não | Lista de peças (até 80). |
@@ -45,7 +50,10 @@ Toda arena feita no **EDITOR DE ARENAS** (esfera de 4 estrelas no menu) pode vir
 Cada peça tem `t` (o tipo), `e` (tamanho, 0.3 a 3; 1 = normal) e `c` (cor `#rrggbb`).
 
 - **Peças do chão e de pé:** `x` e `z` dizem onde ela fica na planta, de -420 a 420. O centro (0, 0) é onde a luta acontece; `z` positivo é a frente. `r` é o giro em graus (0 a 359). Peças muito perto da câmera somem enquanto ela passa, para não tampar a luta.
+- **Espaço:** peças de pé, efeitos e montes não podem ocupar o mesmo lugar (no editor a peça fica vermelha e não é colocada). Pisos planos e o céu podem se sobrepor.
+- **Peças de chão** (gramado, lago, areia, terra, lava, neve): `f` é o formato (`circulo` círculo, `oval` oval, `feijao` feijão, `irregular` irregular, `rio` rio reto, `rio_curvo` rio em curva) e `v` a altura de 0 a 3: 0 = piso plano; acima de 0 vira um monte e passa a ocupar espaço.
 - **Peças do céu** (aba CÉU): `a` é a posição em volta, em graus (0 a 359), e `h` a altura no céu (0 = horizonte, 1 = no alto).
+- **Efeitos** (aba EFEITOS): se mexem durante a luta. No máximo 10 por arena.
 - **Placa e símbolo:** `txt` é o texto escrito (até 16 letras; no símbolo aparecem as 2 primeiras).
 
 ### CONSTRUÇÃO
@@ -91,16 +99,18 @@ Cada peça tem `t` (o tipo), `e` (tamanho, 0.3 a 3; 1 = normal) e `c` (cor `#rrg
 | `mesa_pedra` | MESA DE PEDRA | `#b8875a` |
 | `montanha` | MONTANHA | `#7b8794` |
 | `cristal` | CRISTAL | `#7dd3fc` |
+| `ilha_pedra` | ILHA DE PEDRA RACHADA | `#5b86a8` |
 
 ### CHÃO
 
 | `t` | Peça | Cor padrão |
 |---|---|---|
-| `gramado` | GRAMADO | `#6fc04e` |
-| `lago` | LAGO | `#4aa3df` |
-| `areia` | AREIA | `#e8d39a` |
-| `terra` | TERRA | `#9c6b3f` |
-| `lava` | LAVA | `#ff5a1f` |
+| `gramado` | GRAMADO (usa `f` e `v`) | `#6fc04e` |
+| `lago` | LAGO (usa `f` e `v`) | `#4aa3df` |
+| `areia` | AREIA (usa `f` e `v`) | `#e8d39a` |
+| `terra` | TERRA (usa `f` e `v`) | `#9c6b3f` |
+| `lava` | LAVA (usa `f` e `v`) | `#ff5a1f` |
+| `neve` | NEVE (usa `f` e `v`) | `#eef4fb` |
 | `piso` | PISO DE LADRILHOS | `#d9d4c7` |
 | `estrada` | ESTRADA | `#8d96a3` |
 | `trilha` | TRILHA | `#efe4c2` |
@@ -120,6 +130,17 @@ Cada peça tem `t` (o tipo), `e` (tamanho, 0.3 a 3; 1 = normal) e `c` (cor `#rrg
 | `montanhas_neve` | MONTANHAS COM NEVE | `#7b8794` |
 | `cidade_longe` | CIDADE AO LONGE | `#e1e8f5` |
 
+### EFEITOS
+
+| `t` | Peça | Cor padrão |
+|---|---|---|
+| `coluna_lava` | COLUNA DE LAVA | `#ffb020` |
+| `arco_lava` | ARCO DE LAVA | `#ffd36b` |
+| `brasas` | BRASAS SUBINDO | `#ffb43b` |
+| `fumaca` | FUMAÇA | `#4b4246` |
+| `nuvens_passando` | NUVENS PASSANDO | `#ffffff` |
+| `raio` | RAIO | `#fffbe6` |
+
 ### ENFEITES
 
 | `t` | Peça | Cor padrão |
@@ -131,6 +152,24 @@ Cada peça tem `t` (o tipo), `e` (tamanho, 0.3 a 3; 1 = normal) e `c` (cor `#rrg
 | `lampiao` | LAMPIÃO | `#ffe08a` |
 | `ampulheta` | AMPULHETA | `#d4a52a` |
 | `esfera_dragao` | ESFERA DO DRAGÃO | `#ffb52e` |
+
+## Planícies (`planicie`)
+
+O chão completo de uma fase: troca o chão e coloca embaixo de tudo as peças de chão dela (ilha de areia, lagos, ringue, ruas...). Não contam no limite de peças.
+
+| Chave | Planície |
+|---|---|
+| `kame` | ILHA DO MESTRE KAME |
+| `terra` | TORNEIO ARTES MARCIAIS |
+| `kaio` | PLANETA DO SR. KAIOH |
+| `namek` | PLANETA NAMEK |
+| `freeza_ship` | NAVE DE FREEZA |
+| `namek_explosao` | NAMEK PRESTES A EXPLODIR |
+| `time_room` | SALA DO TEMPO |
+| `cell_games` | TORNEIO DE CELL |
+| `kaioshin` | PLANETA SUPREMO KAIOH |
+| `plataforma_celestial` | PLATAFORMA CELESTIAL |
+| `capital_oeste` | CAPITAL DO OESTE |
 
 ## Tipos de chão (`chao.tipo`)
 
@@ -165,6 +204,6 @@ Cada peça tem `t` (o tipo), `e` (tamanho, 0.3 a 3; 1 = normal) e `c` (cor `#rrg
 ## Erros comuns
 
 - "PEÇA DESCONHECIDA": o `t` está escrito diferente da tabela.
-- "TIPO DE CHÃO DESCONHECIDO" / "CÂMERA DESCONHECIDA": confira as listas acima.
+- "TIPO DE CHÃO DESCONHECIDO", "CÂMERA DESCONHECIDA", "MOVIMENTO DESCONHECIDO", "PLANÍCIE DESCONHECIDA": confira as listas acima.
 - "LIMITE DE 7 ARENAS CRIADAS": exclua uma arena no editor antes de anexar outra.
-- Valores fora dos limites (posição, tamanho, giro) são ajustados para o mais próximo permitido.
+- Valores fora dos limites (posição, tamanho, giro, altura) são ajustados para o mais próximo permitido. Peças que se sobrepõem num arquivo continuam no lugar; o editor só não deixa colocar ou mover uma peça para um lugar ocupado.
