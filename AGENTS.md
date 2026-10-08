@@ -47,6 +47,7 @@ The active animation states are `idle`, `flyRight`, `flyLeft`, `flyUp`, `flyDown
 ## Working conventions
 - Scale verification effort to the change: a one-line constant, string, comment, or CSS-only color/spacing tweak needs a syntax check and a quick sanity look, not a full browser/responsive pass. Logic, state, or rendering changes still need real verification — see below.
 - All responses and communication with the user must be in Portuguese.
+- **Every change must exist in the 3 languages (PT/EN/ES).** Any new or changed visible text (canvas, buttons, alerts, editor, achievements, stage/track names, hints) needs its line in `IDIOMA_LINHAS` (or a rule in `IDIOMA_REGRAS`) in [idiomas.js](idiomas.js) in the same PR; when a Portuguese text changes, update its line too (the PT key must match exactly). Only character and attack names stay untranslated, and the `#lista-updates` notes stay in Portuguese. `tests/idiomas.test.js` must pass.
 - Keep changes small and localized to the file that owns the behavior. Do not move logic across files without a clear reason.
 - Respect the existing naming style in Portuguese and the project’s custom state variables (`gameState`, `selectedCharacter`, `touchHudLayout`, `world`, etc.).
 - The game is intentionally static; avoid introducing frameworks, bundlers, or package dependencies unless the task explicitly requires them.
@@ -113,4 +114,5 @@ Quick checklist, gathered from the rules above — skip any line whose condition
 - Do not hand the user downloadable copies of the files or a single-file HTML bundle; commit and push the changes to the GitHub branch instead.
 - Touched wave params, movement-direction logic, hitbox math, or boss attack patterns in `game-logic-core.js`? Run `node --test tests/game-logic-core.test.js`.
 - Touched gameplay/input/menu/state logic (not just text/color/comments)? Verify it — `node tests/harness.js .` for input/state, a real browser for anything visual.
+- Added or changed any visible text? Add/update its PT § EN § ES line in `idiomas.js` (all 3 languages).
 - Touched layout-wide CSS (`#game-container`, the modal shell) rather than one isolated area? Do the full responsive pass (desktop, `375x667`, fullscreen). Otherwise just check the specific area you touched.
