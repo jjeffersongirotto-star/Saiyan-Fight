@@ -80,14 +80,15 @@ const ordem = run(`(() => { const a = normalizarArena(arenaEd.arena); a.id = 'ar
     ARENA_PECAS.bloco.desenha = (p, g) => vistos.push('bloco'); ARENA_PECAS.mesa_pedra.desenha = (p, g) => vistos.push('mesa');
     try { drawArenaCriada(a, 0, { desl: { x: 0, z: 0 } }); drawArenaCriada(a, Math.PI, { desl: { x: 0, z: 0 } }); } finally { ARENA_PECAS.bloco.desenha = antes; ARENA_PECAS.mesa_pedra.desenha = antes2; }
     return vistos; })()`);
-check("de qualquer lado a peça escolhida no grupo é desenhada por último", JSON.stringify(ordem) === JSON.stringify(["bloco", "mesa", "bloco", "mesa"]));
+// v0.97: cada uma na sua profundidade e, por último, a escolhida de novo só na parte sobreposta (recorte)
+check("de qualquer lado a peça escolhida é redesenhada por último (só na parte fundida)", ordem.length === 6 && ordem[2] === "mesa" && ordem[5] === "mesa" && ordem.filter(x => x === "mesa").length === 4);
 // terceira peça só na parte fundida: segue a aparência, sem perguntar
 fechaAlerta();
 run("document.getElementById('modal-alert-msg').innerText = ''");
 const fundidaSo = run("(() => { const q = normalizarPecaArena({ t: 'pedra', x: 6, z: 0, e: 0.3 }); return arenaTocaParteSolta(arenaEd.arena.pecas, q, [0, 1]); })()");
 check("um ponto dentro das duas é parte fundida", fundidaSo === false);
-run("arenaEd.tipo = 'pedra'; arenaEd.sel = -1");
-run("arenaPlantaToque({ clientX: arenaMundoParaPlanta(6, 0)[0], clientY: arenaMundoParaPlanta(6, 0)[1], target: {} }); arenaEd.arena.pecas[arenaEd.arena.pecas.length - 1].e = 0.3; arenaPlantaSolta()");
+run("arenaEd.tipo = 'pedra'; arenaEd.modelo = normalizarPecaArena({ t: 'pedra', e: 0.3 }); arenaEd.sel = -1");
+run("arenaPlantaToque({ clientX: arenaMundoParaPlanta(6, 0)[0], clientY: arenaMundoParaPlanta(6, 0)[1], target: {} }); arenaPlantaSolta()");
 check("terceira peça só na parte fundida entra no grupo sem perguntar e mantém a aparência", pecas().length === 3 && pecas()[2].g === pecas()[0].g && pecas()[1].fv === true && !/APARÊNCIA/.test(run("document.getElementById('modal-alert-msg').innerText")));
 // terceira peça pegando parte não fundida: pergunta entre as 3
 run("arenaEd.arena.pecas.pop(); arenaEd.tipo = 'arbusto'");

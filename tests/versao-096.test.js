@@ -66,7 +66,7 @@ run("document.getElementById('arena-hora').value = 'tarde'; arenaLerCampos()");
 check("de tarde o céu fica alaranjado", run("arCeuDaHora(arenaEd.arena).horizonte") !== run("arenaEd.arena.ceu.horizonte"));
 
 // ---------- clima ----------
-check("climas: sem clima, chuva, neve, neblina e vento com folhas", JSON.stringify(run("ARENA_CLIMAS.map(x => x[0])")) === JSON.stringify(["nenhum", "chuva", "neve", "neblina", "vento"]));
+check("climas: sem clima, chuva, neve, neblina, vento com folhas (e lava, v0.97)", JSON.stringify(run("ARENA_CLIMAS.map(x => x[0])")) === JSON.stringify(["nenhum", "chuva", "neve", "neblina", "vento", "lava"]));
 for (const c of ["chuva", "neve", "neblina", "vento"]) {
     run(`document.getElementById('arena-clima').value = '${c}'; arenaLerCampos()`);
     h.calls.length = 0;

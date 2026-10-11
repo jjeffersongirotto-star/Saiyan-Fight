@@ -45,7 +45,7 @@ Toda arena feita no **EDITOR DE ARENAS** (esfera de 4 estrelas no menu) pode vir
 | `chao` | não | `tipo` do chão (lista abaixo) e `cor`. |
 | `pecas` | não | Lista de peças (até 80). |
 | `hora` | não | `dia`, `tarde` (céu alaranjado) ou `noite` (céu escuro com estrelas; lampiões, luzes e lava brilham). |
-| `clima` | não | `nenhum`, `chuva`, `neve`, `neblina` ou `vento` (vento com folhas). |
+| `clima` | não | `nenhum`, `chuva`, `neve`, `neblina`, `vento` (vento com folhas) ou `lava` (céu avermelhado, brasas e lava caindo). |
 | `capa` | não | Vista da foto do card em ARENAS e do começo da luta (USAR COMO CAPA): `ang` (giro da câmera em radianos, 0 a 6.283) e `andado` (caminho andado no modo `seguir`). |
 
 ## Peças
