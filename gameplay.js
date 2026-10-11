@@ -194,7 +194,7 @@ function advanceTutorialStep() {
 // controle do jogo normal, então o que o jogador aprende aqui funciona igual na partida de verdade.
 function updateTutorial(dt) {
     if (gameState !== "tutorial") return;
-    player.animTimer += dt;
+    avancarAnimacao(player, dt);
     if (player.parryHighlightTimer > 0) player.parryHighlightTimer -= dt * 60;
     if (player.parryCooldown > 0) player.parryCooldown = Math.max(0, player.parryCooldown - dt * 60);
     if (player.actionTimer > 0) player.actionTimer -= dt * 60;
@@ -1042,9 +1042,18 @@ function advanceWave() {
 
 // ==================== TRANSFORMAÇÕES ====================
 function setActionState(target, state, duration = 18) {
+    // ATAQUE: cada tiro continua a sequência de onde o anterior parou (os sprites alternam as mãos). Começar do
+    // zero a cada tiro mostrava sempre só os primeiros quadros (a pose dura menos que a sequência inteira).
+    const ataque = state === "attackKi";
+    if (ataque && target.actionState === "attackKi" && target.actionTimer > 0) { target.actionTimer = Math.max(target.actionTimer, duration); return; }
     target.actionState = state;
     target.actionTimer = Math.max(target.actionTimer || 0, duration);
-    target.animTimer = 0;
+    target.animTimer = ataque ? (target.ataqueTempo || 0) : 0;
+}
+// guarda até onde a sequência de ataque andou (o próximo tiro continua dali)
+function avancarAnimacao(p, dt) {
+    p.animTimer += dt;
+    if (p.actionState === "attackKi") p.ataqueTempo = p.animTimer;
 }
 
 // getDominantMoveAction (escolhe animação de voo pela direção real do movimento)
@@ -1689,8 +1698,8 @@ function update(dt) {
 
     world.stageScrollX += 1.5 * (dt * 60);
 
-    player.animTimer += dt;
-    player2.animTimer += dt;
+    avancarAnimacao(player, dt);
+    avancarAnimacao(player2, dt);
 
     if (player.invulnerableTimer > 0) player.invulnerableTimer = Math.max(0, player.invulnerableTimer - dt * 60);
     if (player.speedBuffTimer > 0) player.speedBuffTimer = Math.max(0, player.speedBuffTimer - dt * 60);

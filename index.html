@@ -387,11 +387,12 @@
         .ar-pecas .btn.ar-armada { background: #e85d04; color: #fff; border-color: #ffd23f; }
         .ar-dica { font-size: 11px; color: #94a3b8; margin: 0; line-height: 1.3; }
         .ar-dica.ar-dica-erro { color: #ff6b6b; font-weight: bold; }
-        .ar-planta-caixa { flex: 1 1 auto; min-height: 120px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .ar-planta-caixa { flex: 1 1 auto; min-height: 120px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
+        .ar-planta-zoom { position: absolute; right: 4px; top: 4px; display: flex; flex-direction: column; gap: 3px; }
+        .ar-planta-zoom .btn { width: 26px; height: 24px; padding: 0; font-size: 14px; line-height: 1; opacity: 0.88; }
         #arena-planta { width: 300px; height: 300px; border: 1px solid var(--border-color); border-radius: 6px; touch-action: none; display: block; cursor: crosshair; }
         #arena-contagem { font-size: 10px; color: #94a3b8; text-align: center; }
         .ar-baixo { grid-area: baixo; display: flex; gap: 10px; padding: 8px; min-height: 0; overflow: hidden; border-top: 1px solid #1f2937; }
-        .ar-baixo-abas { display: none; }
         .ar-caixa { border: 1px solid #1f2937; border-radius: 8px; padding: 8px 10px; background: rgba(15, 23, 42, 0.6); min-width: 0; overflow: hidden; }
         .ar-caixa h3 { margin: 0 0 6px; font-size: 12px; color: #ffd23f; letter-spacing: 0.5px; }
         .ar-dados { flex: 3 1 0; }
@@ -401,10 +402,20 @@
         .ar-campo input, .ar-campo select { font-size: 12px; padding: 3px 5px; min-height: 26px; background: #0b1226; color: #fff; border: 1px solid #334155; border-radius: 4px; width: 100%; box-sizing: border-box; }
         .ar-campo input[type="color"] { padding: 1px 2px; }
         .ar-campo input[type="range"] { padding: 0; border: none; background: transparent; }
-        .ar-peca-caixa { flex: 2 1 0; }
-        .ar-peca-botoes { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
-        .ar-peca-botoes .btn { flex: 1; padding: 6px; font-size: 11px; white-space: nowrap; }
-        #modal-arena .ar-peca-caixa { overflow-y: auto; }
+        /* barra da peça escolhida, por cima da tela grande (sai o quadro PEÇA ESCOLHIDA) */
+        .ar-peca-barra { position: absolute; left: 6px; right: 6px; top: 30px; line-height: 1.2; display: flex; flex-direction: column; gap: 3px;
+            background: rgba(5, 10, 25, 0.78); border: 1px solid #334155; border-radius: 6px; padding: 4px 6px; font-size: 11px; color: #e5e7eb;
+            max-height: 48%; overflow-y: auto; }
+        .ar-barra-linha { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .ar-barra-nome { color: #ffd23f; font-size: 11px; white-space: nowrap; }
+        .ar-mini { display: inline-flex; gap: 4px; align-items: center; white-space: nowrap; font-size: 10px; color: #cbd5e1; }
+        .ar-mini input[type="range"] { width: 78px; }
+        .ar-mini input[type="color"] { width: 30px; height: 20px; padding: 0; border: 1px solid #334155; background: transparent; }
+        .ar-mini input[type="text"] { width: 90px; font-size: 11px; padding: 1px 4px; background: #0b1226; color: #fff; border: 1px solid #334155; border-radius: 3px; }
+        .ar-mini select { font-size: 10px; padding: 1px 2px; background: #0b1226; color: #fff; border: 1px solid #334155; border-radius: 3px; }
+        .ar-barra-botoes { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+        .ar-barra-botoes .btn { padding: 3px 7px; font-size: 10px; white-space: nowrap; }
+        .ar-btn-perigo { border-color: #ff0055 !important; color: #ff0055 !important; }
         .ar-vazia { font-size: 12px; color: #94a3b8; margin: 0; }
         #arena-capa { padding: 4px 6px; font-size: 11px; min-height: 26px; }
         .ar-rotulo { font-size: 10px; color: #94a3b8; align-self: center; white-space: nowrap; }
@@ -429,15 +440,17 @@
             .ar-acoes select { flex: 1 1 auto; }
             .ar-acoes .btn { padding: 3px 5px; font-size: 9px; }
             .ar-baixo { flex-direction: column; gap: 4px; padding: 4px 6px; }
-            .ar-baixo-abas { display: flex; gap: 4px; }
-            .ar-baixo-abas .ar-aba { flex: 1; }
-            .ar-baixo[data-vista="dados"] .ar-peca-caixa, .ar-baixo[data-vista="peca"] .ar-dados { display: none; }
+            .ar-peca-barra { top: 22px; left: 3px; right: 3px; padding: 2px 4px; font-size: 9px; max-height: 58%; }
+            .ar-barra-linha { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 6px; }
+            .ar-barra-linha::-webkit-scrollbar { display: none; }
+            .ar-mini input[type="range"] { width: 56px; }
+            .ar-barra-botoes { flex-wrap: nowrap; }
+            .ar-barra-botoes .btn { padding: 2px 5px; font-size: 9px; }
             .ar-caixa { padding: 4px 6px; flex: 1 1 auto; }
             .ar-caixa h3 { display: none; }
             .ar-dados-grade { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px 6px; }
             .ar-campo input, .ar-campo select { min-height: 22px; font-size: 11px; padding: 1px 3px; }
             .ar-campo label { font-size: 9px; }
-            .ar-peca-botoes { margin-top: 4px; }
             /* barra da tela grande numa linha só, baixinha, para não tampar a arena */
             .ar-vista-barra { flex-wrap: nowrap; gap: 3px; left: 3px; right: 3px; bottom: 3px; font-size: 9px; }
             .ar-vista-barra .ar-mover, .ar-vista-barra .ar-zoom { padding: 1px 4px; gap: 3px; }
@@ -1575,10 +1588,18 @@
                 Novidades e correções do jogo.
             </p>
             <ul id="lista-updates" style="margin: 0 0 18px; color: #ddd; line-height: 1.5; padding: 0 4px 0 0; list-style: none; overflow-y: auto;">
-                <li class="upd-versao"><h3>Versão 0.96 (ATUAL)</h3><p>Editor de Arenas: pincel de chão, hora do dia e clima</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Pincel de chão</strong><p>Aba PINCEL: escolha grama, areia, lava, água, terra ou neve e pinte arrastando na planta ou na tela grande. Cada pincelada conta como 1 peça e pode ter a largura, a cor e o tamanho ajustados, ser espelhada ou desfeita.</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Hora do dia</strong><p>Em DADOS DA ARENA: DIA, TARDE (céu alaranjado) ou NOITE (céu escuro com estrelas; lampiões, luzes de pista, cristais e lava brilham).</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Clima</strong><p>Chuva, neve, neblina ou vento com folhas, na prévia e na luta, com poucas partículas para não pesar no celular.</p></li>
+                <li class="upd-versao"><h3>Versão 0.97 (ATUAL)</h3><p>Editor de Arenas: maquete, sombra da peça, fundir de verdade e clima lava</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Planta virou maquete</strong><p>O mapa pequeno mostra cada peça vista de cima com o formato e a cor dela, o chão do tipo da arena, as peças do céu (planetas, sol, nuvens...) num anel em volta, na direção em que aparecem, e para onde a câmera está olhando. Tem zoom: roda do mouse, dois dedos no celular e os botões + − ⟲ (com zoom, arraste com o botão direito ou Shift).</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Sombra do espaço da peça</strong><p>Com uma peça pronta para colocar, a sombra do espaço exato que ela vai ocupar segue o mouse (no celular, o dedo) e fica verde se o lugar estiver livre ou vermelha se estiver ocupado; a peça entra ao soltar. A peça escolhida mostra o contorno real dela, não mais um círculo.</p></li>
+                <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>Peça pronta sem confirmar</strong><p>Tocar numa peça da lista já deixa ela pronta para colocar (saiu o CONFIRMAR PEÇA); dá para girar e ajustar tamanho e cor antes de colocar. CANCELAR desliga. O quadro PEÇA ESCOLHIDA saiu: os ajustes ficam numa barra por cima da tela grande e DADOS DA ARENA ocupa a parte de baixo inteira.</p></li>
+                <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>FUNDIR com recorte de verdade</strong><p>Só a parte sobreposta das peças fundidas usa a aparência escolhida; o resto de cada peça continua no lugar certo na frente ou atrás.</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Clima LAVA</strong><p>Céu avermelhado, brasas subindo e gotas de lava caindo, como em Namek prestes a explodir.</p></li>
+                <li class="upd-item upd-corrigido"><span class="upd-tag">CORRIGIDO</span><strong>Chão, cores e seletor de cor</strong><p>O chão some no horizonte como planície (sem a faixa que parecia um muro e tampava os planetas baixos), as cores do chão e do céu ficam iguais às escolhidas, e mexer no seletor de cores não trava mais a tela.</p></li>
+                <li class="upd-item upd-corrigido"><span class="upd-tag">CORRIGIDO</span><strong>Ataque com as duas mãos</strong><p>Na luta, cada ataque continua a sequência de quadros de onde o anterior parou: o Vegeta (e quem tiver ataque alternado nos quadros) volta a atacar com a mão direita e a esquerda.</p></li>
+                <li class="upd-versao"><h3>Versão 0.96</h3><p>Editor de Arenas: pincel de chão, hora do dia e clima</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Pincel de chão</strong><p>Aba PINCEL: escolha grama, areia, lava, água, terra ou neve e pinte arrastando na planta ou na tela grande. Cada pincelada conta como 1 peça e pode ter a largura, a cor e o tamanho ajustados, ser espelhada ou desfeita.</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Hora do dia</strong><p>Em DADOS DA ARENA: DIA, TARDE (céu alaranjado) ou NOITE (céu escuro com estrelas; lampiões, luzes de pista, cristais e lava brilham).</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Clima</strong><p>Chuva, neve, neblina ou vento com folhas, na prévia e na luta, com poucas partículas para não pesar no celular.</p></li>
                 <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>Tudo também no celular</strong><p>Conferido com toques de verdade no celular em pé: escolher várias com o dedo, mover, pintar, arrastar na tela grande e zoom com dois dedos. Os atalhos do PC têm botões equivalentes (inclusive GIRAR -15°).</p></li>
                 <li class="upd-versao"><h3>Versão 0.95</h3><p>Editor de Arenas: empilhar, fundir, várias peças e conjuntos</p></li>
                 <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Empilhar e desalinhar</strong><p>Uma construção solta em cima de bloco, pilar, prédio ou ringue encaixa sozinha alinhada no topo, sem ficar torta. No quadro da peça, DESALINHAR anda de 10 em 10% (10%, 20%, 30%...) para fazer escadas. Arrastar a peça de baixo leva a pilha junto; tocar de novo na peça de cima escolhe a de baixo.</p></li>
@@ -1910,6 +1931,42 @@
             <section class="ar-vista">
                 <canvas id="arena-previa" width="800" height="350"></canvas>
                 <div id="arena-vista-titulo" class="ar-vista-titulo"></div>
+                <!-- ajustes da peça escolhida (ou da peça pronta para colocar): barra compacta por cima da tela grande -->
+                <div id="arena-selecao" class="ar-peca-barra" style="display: none;">
+                    <div id="arena-selecao-campos" class="ar-barra-linha">
+                        <strong id="arena-sel-nome" class="ar-barra-nome"></strong>
+                        <label class="ar-mini">Tamanho <input type="range" id="arena-sel-tam" min="0.3" max="3" step="0.1" oninput="arenaMudarSelecao(true)" onchange="arenaMudarSelecao()"></label>
+                        <label class="ar-mini" id="arena-sel-giro-grupo">Girar <input type="range" id="arena-sel-giro" min="0" max="359" step="1" oninput="arenaMudarSelecao(true)" onchange="arenaMudarSelecao()"></label>
+                        <label class="ar-mini" id="arena-sel-altura-grupo">Altura (monte) <input type="range" id="arena-sel-altura" min="0" max="3" step="0.1" oninput="arenaMudarSelecao(true)" onchange="arenaMudarSelecao()"></label>
+                        <label class="ar-mini" id="arena-sel-forma-grupo">Formato <select id="arena-sel-forma" onchange="arenaMudarSelecao()"></select></label>
+                        <label class="ar-mini">Cor <input type="color" id="arena-sel-cor" oninput="arenaMudarSelecao(true)" onchange="arenaMudarSelecao()"></label>
+                        <label class="ar-mini" id="arena-sel-texto-grupo">Texto <input type="text" id="arena-sel-texto" maxlength="16" oninput="arenaMudarSelecao()"></label>
+                        <label class="ar-mini" id="arena-sel-largura-grupo" style="display: none;">Largura <input type="range" id="arena-sel-largura" min="6" max="80" step="2" oninput="arenaMudarSelecao(true)" onchange="arenaMudarSelecao()"></label>
+                        <label class="ar-mini" id="arena-sel-desalinho-grupo" style="display: none;">Desalinhar <span id="arena-sel-desalinho-valor">0%</span> <input type="range" id="arena-sel-desalinho" min="-90" max="90" step="10" value="0" oninput="arenaMudarSelecao(true)" onchange="arenaMudarSelecao()"></label>
+                        <span id="arena-sel-acoes" class="ar-barra-botoes">
+                            <button type="button" class="btn" onclick="arenaDuplicarSelecao()">DUPLICAR</button>
+                            <button type="button" class="btn ar-btn-perigo" onclick="arenaApagarSelecao()">APAGAR PEÇA</button>
+                        </span>
+                    </div>
+                    <div id="arena-selecao-multi" class="ar-barra-linha" style="display: none;">
+                        <strong id="arena-multi-nome" class="ar-barra-nome"></strong>
+                        <span class="ar-barra-botoes">
+                            <button type="button" class="btn" onclick="arenaGirarSelecao(-15)">GIRAR -15°</button>
+                            <button type="button" class="btn" onclick="arenaGirarSelecao(15)">GIRAR 15°</button>
+                            <button type="button" class="btn" onclick="arenaDuplicarSelecao()">DUPLICAR</button>
+                            <button type="button" class="btn" onclick="arenaSalvarConjunto()">SALVAR CONJUNTO</button>
+                            <button type="button" class="btn ar-btn-perigo" onclick="arenaApagarSelecao()">APAGAR</button>
+                        </span>
+                    </div>
+                    <div id="arena-sel-espelho" class="ar-barra-linha" style="display: none;">
+                        <span class="ar-rotulo">ESPELHAR:</span>
+                        <span class="ar-barra-botoes">
+                            <button type="button" class="btn" onclick="arenaEspelhar('lado')">↔ LADOS</button>
+                            <button type="button" class="btn" onclick="arenaEspelhar('frente')">↕ FRENTE/TRÁS</button>
+                            <button type="button" class="btn" onclick="arenaEspelhar('os_dois')">✣ OS DOIS</button>
+                        </span>
+                    </div>
+                </div>
                 <div class="ar-vista-barra">
                     <div class="ar-mover">
                         <label><input type="checkbox" id="arena-girar" checked onchange="arenaLerCampos()"> EM MOVIMENTO</label>
@@ -1924,7 +1981,6 @@
                         <input type="range" id="arena-zoom" min="100" max="400" step="5" value="100" aria-label="Zoom" oninput="arenaZoomDaBarra()">
                     </div>
                     <button type="button" id="arena-maximizar" class="btn" onclick="arenaAlternarMaximizar()">MAXIMIZAR</button>
-                    <button type="button" id="arena-confirmar" class="btn" style="display: none;" onclick="arenaConfirmarPeca()">CONFIRMAR PEÇA</button>
                     <button type="button" id="arena-cancelar" class="btn" style="display: none; border-color:#ff0055; color:#ff0055;" onclick="arenaCancelarPeca()">CANCELAR</button>
                     <button type="button" id="arena-ver-arena" class="btn" style="display: none;" onclick="arenaVerArena()">VER ARENA</button>
                 </div>
@@ -1964,19 +2020,21 @@
                 </div>
                 <div id="arena-pecas" class="ar-pecas"></div>
                 <p id="arena-dica" class="ar-dica"></p>
-                <div class="ar-planta-caixa"><canvas id="arena-planta" width="320" height="320"></canvas></div>
+                <div class="ar-planta-caixa"><canvas id="arena-planta" width="320" height="320"></canvas>
+                    <div class="ar-planta-zoom">
+                        <button type="button" class="btn" onclick="arenaZoomPlantaBotao(1)" aria-label="Aproximar">+</button>
+                        <button type="button" class="btn" onclick="arenaZoomPlantaBotao(-1)" aria-label="Afastar">−</button>
+                        <button type="button" class="btn" onclick="arenaZoomPlantaBotao(0)" aria-label="Planta inteira">⟲</button>
+                    </div>
+                </div>
                 <div id="arena-contagem"></div>
             </section>
             <section id="arena-baixo" class="ar-baixo" data-vista="dados">
-                <div class="ar-baixo-abas">
-                    <button type="button" id="arena-baixo-dados" class="ar-aba active" onclick="arenaMostrarBaixo('dados')">DADOS DA ARENA</button>
-                    <button type="button" id="arena-baixo-peca" class="ar-aba" onclick="arenaMostrarBaixo('peca')">PEÇA ESCOLHIDA</button>
-                </div>
                 <div class="ar-caixa ar-dados">
                     <h3>DADOS DA ARENA</h3>
                     <div class="ar-dados-grade">
                         <div class="ar-campo"><label for="arena-nome">Nome da Arena</label><input type="text" id="arena-nome" maxlength="24" oninput="arenaLerCampos()"></div>
-                        <div class="ar-campo"><label for="arena-cor">Cor da Arena</label><input type="color" id="arena-cor" oninput="arenaLerCampos()"></div>
+                        <div class="ar-campo"><label for="arena-cor">Cor da Arena</label><input type="color" id="arena-cor" oninput="arenaLerCampos(true)" onchange="arenaLerCampos()"></div>
                         <div class="ar-campo"><label for="arena-musica">Música</label><select id="arena-musica" onchange="arenaLerCampos()"></select></div>
                         <div class="ar-campo"><label for="arena-minion">Minion</label><select id="arena-minion" onchange="arenaLerCampos()"></select></div>
                         <div class="ar-campo"><label for="arena-camera">Câmera</label>
@@ -1985,50 +2043,13 @@
                                 <option value="media">Média</option>
                                 <option value="alta">Alta</option>
                             </select></div>
-                        <div class="ar-campo"><label for="arena-ceu-topo">Céu (em cima)</label><input type="color" id="arena-ceu-topo" oninput="arenaLerCampos()"></div>
-                        <div class="ar-campo"><label for="arena-ceu-horizonte">Céu (horizonte)</label><input type="color" id="arena-ceu-horizonte" oninput="arenaLerCampos()"></div>
+                        <div class="ar-campo"><label for="arena-ceu-topo">Céu (em cima)</label><input type="color" id="arena-ceu-topo" oninput="arenaLerCampos(true)" onchange="arenaLerCampos()"></div>
+                        <div class="ar-campo"><label for="arena-ceu-horizonte">Céu (horizonte)</label><input type="color" id="arena-ceu-horizonte" oninput="arenaLerCampos(true)" onchange="arenaLerCampos()"></div>
                         <div class="ar-campo"><label for="arena-chao-tipo">Chão</label><select id="arena-chao-tipo" onchange="arenaLerCampos()"></select></div>
-                        <div class="ar-campo"><label for="arena-chao-cor">Cor do Chão</label><input type="color" id="arena-chao-cor" oninput="arenaLerCampos()"></div>
+                        <div class="ar-campo"><label for="arena-chao-cor">Cor do Chão</label><input type="color" id="arena-chao-cor" oninput="arenaLerCampos(true)" onchange="arenaLerCampos()"></div>
                         <div class="ar-campo"><label for="arena-hora">Hora do dia</label><select id="arena-hora" onchange="arenaLerCampos()"></select></div>
                         <div class="ar-campo"><label for="arena-clima">Clima</label><select id="arena-clima" onchange="arenaLerCampos()"></select></div>
                         <div class="ar-campo"><label>&nbsp;</label><button type="button" id="arena-capa" class="btn" onclick="arenaUsarComoCapa()">USAR COMO CAPA</button></div>
-                    </div>
-                </div>
-                <div id="arena-selecao" class="ar-caixa ar-peca-caixa">
-                    <h3>PEÇA ESCOLHIDA</h3>
-                    <p id="arena-selecao-vazia" class="ar-vazia">Toque numa peça da planta para ajustar tamanho, giro e cor.</p>
-                    <div id="arena-selecao-campos" style="display: none;">
-                        <strong id="arena-sel-nome" style="color: #ffd23f; font-size: 12px;"></strong>
-                        <div class="ar-dados-grade" style="margin-top: 4px;">
-                            <div class="ar-campo"><label for="arena-sel-tam">Tamanho</label><input type="range" id="arena-sel-tam" min="0.3" max="3" step="0.1" oninput="arenaMudarSelecao()"></div>
-                            <div class="ar-campo" id="arena-sel-giro-grupo"><label for="arena-sel-giro">Girar</label><input type="range" id="arena-sel-giro" min="0" max="359" step="1" oninput="arenaMudarSelecao()"></div>
-                            <div class="ar-campo" id="arena-sel-altura-grupo"><label for="arena-sel-altura">Altura (monte)</label><input type="range" id="arena-sel-altura" min="0" max="3" step="0.1" oninput="arenaMudarSelecao()"></div>
-                            <div class="ar-campo" id="arena-sel-forma-grupo"><label for="arena-sel-forma">Formato</label><select id="arena-sel-forma" onchange="arenaMudarSelecao()"></select></div>
-                            <div class="ar-campo"><label for="arena-sel-cor">Cor</label><input type="color" id="arena-sel-cor" oninput="arenaMudarSelecao()"></div>
-                            <div class="ar-campo" id="arena-sel-texto-grupo"><label for="arena-sel-texto">Texto</label><input type="text" id="arena-sel-texto" maxlength="16" oninput="arenaMudarSelecao()"></div>
-                            <div class="ar-campo" id="arena-sel-largura-grupo" style="display: none;"><label for="arena-sel-largura">Largura</label><input type="range" id="arena-sel-largura" min="6" max="80" step="2" oninput="arenaMudarSelecao()"></div>
-                            <div class="ar-campo" id="arena-sel-desalinho-grupo" style="display: none;"><label for="arena-sel-desalinho">Desalinhar <span id="arena-sel-desalinho-valor">0%</span></label><input type="range" id="arena-sel-desalinho" min="-90" max="90" step="10" value="0" oninput="arenaMudarSelecao()"></div>
-                        </div>
-                        <div class="ar-peca-botoes">
-                            <button type="button" class="btn" onclick="arenaDuplicarSelecao()">DUPLICAR</button>
-                            <button type="button" class="btn" style="border-color:#ff0055; color:#ff0055;" onclick="arenaApagarSelecao()">APAGAR PEÇA</button>
-                        </div>
-                    </div>
-                    <div id="arena-selecao-multi" style="display: none;">
-                        <strong id="arena-multi-nome" style="color: #ffd23f; font-size: 12px;"></strong>
-                        <div class="ar-peca-botoes">
-                            <button type="button" class="btn" onclick="arenaGirarSelecao(-15)">GIRAR -15°</button>
-                            <button type="button" class="btn" onclick="arenaGirarSelecao(15)">GIRAR 15°</button>
-                            <button type="button" class="btn" onclick="arenaDuplicarSelecao()">DUPLICAR</button>
-                            <button type="button" class="btn" onclick="arenaSalvarConjunto()">SALVAR CONJUNTO</button>
-                            <button type="button" class="btn" style="border-color:#ff0055; color:#ff0055;" onclick="arenaApagarSelecao()">APAGAR</button>
-                        </div>
-                    </div>
-                    <div id="arena-sel-espelho" class="ar-peca-botoes" style="display: none;">
-                        <span class="ar-rotulo">ESPELHAR:</span>
-                        <button type="button" class="btn" onclick="arenaEspelhar('lado')">↔ LADOS</button>
-                        <button type="button" class="btn" onclick="arenaEspelhar('frente')">↕ FRENTE/TRÁS</button>
-                        <button type="button" class="btn" onclick="arenaEspelhar('os_dois')">✣ OS DOIS</button>
                     </div>
                 </div>
             </section>

@@ -50,11 +50,12 @@ check("EDITOR DE ARENAS abre com a arena salva", run("arenaEditorAberto()") && r
 run("arenaMostrarAba('nave')");
 check("a aba mostra as peças dela", run("document.getElementById('arena-pecas').children.map(b => b.textContent)").includes("CASCO DE NAVE"));
 const planta = run("(() => { const cv = document.getElementById('arena-planta'); cv.width = 320; cv.height = 320; return 1; })()");
-const toque = (x, y) => run(`arenaPlantaToque({ clientX: ${x}, clientY: ${y}, target: {} })`);
+// v0.97: a peça entra ao soltar (antes aparece a sombra do espaço que ela vai ocupar)
+const toque = (x, y) => run(`arenaPlantaToque({ clientX: ${x}, clientY: ${y}, target: {} }); arenaPlantaSolta()`);
 run("arenaEd.arena.pecas = []; arenaEd.tipo = 'perna_aco'");
 toque(240, 80);
-check("tocar na planta coloca a peça escolhida no lugar tocado", run("arenaEd.arena.pecas.length") === 1 && run("arenaEd.arena.pecas[0].t") === "perna_aco" && run("arenaEd.arena.pecas[0].x") === 210 && run("arenaEd.arena.pecas[0].z") === -210 && run("arenaEd.sel") === 0);
-run("arenaPlantaArrasto({ clientX: 160, clientY: 160 }); arenaPlantaSolta()");
+check("tocar na planta coloca a peça escolhida no lugar tocado", run("arenaEd.arena.pecas.length") === 1 && run("arenaEd.arena.pecas[0].t") === "perna_aco" && run("arenaEd.arena.pecas[0].x") === run("Math.round(arenaPlantaParaMundo(240, 80)[0])") && run("arenaEd.arena.pecas[0].z") === run("Math.round(arenaPlantaParaMundo(240, 80)[1])") && run("arenaEd.sel") === 0);
+run("arenaPlantaToque({ clientX: 240, clientY: 80, target: {} }); arenaPlantaArrasto({ clientX: 160, clientY: 160 }); arenaPlantaSolta()");
 check("arrastar move a peça", run("arenaEd.arena.pecas[0].x") === 0 && run("arenaEd.arena.pecas[0].z") === 0);
 run("document.getElementById('arena-sel-tam').value = '2'; document.getElementById('arena-sel-giro').value = '90'; document.getElementById('arena-sel-cor').value = '#ff0000'; arenaMudarSelecao()");
 check("tamanho, giro e cor da peça escolhida", JSON.stringify(run("[arenaEd.arena.pecas[0].e, arenaEd.arena.pecas[0].r, arenaEd.arena.pecas[0].c]")) === JSON.stringify([2, 90, "#ff0000"]));

@@ -31,11 +31,12 @@ check("peças de chão planas e do céu não ocupam espaço", colide({ t: "predi
 // ---------- editor: prévia, confirmar, colocar, foco, vermelho ----------
 run("abrirEditorArenas(); arenaEd.arena.pecas = []; const cv = document.getElementById('arena-planta'); cv.width = 320; cv.height = 320; arenaDesenharPlanta()");
 run("arenaVerPeca('mesa_pedra')");
-check("tocar numa peça da lista mostra só ela na tela grande, com CONFIRMAR PEÇA e CANCELAR", run("arenaEd.vista") === "previa" && run("document.getElementById('arena-confirmar').style.display") === "" && run("arenaVistaAtual().a.pecas.length") === 1);
+// v0.97: sem CONFIRMAR PEÇA — tocar já deixa a peça pronta (CANCELAR desliga)
+check("tocar numa peça da lista mostra só ela na tela grande, já pronta, com CANCELAR", run("arenaEd.vista") === "previa" && run("arenaEd.tipo") === "mesa_pedra" && run("document.getElementById('arena-cancelar').style.display") === "" && run("arenaVistaAtual().a.pecas.length") === 1);
 run("arenaCancelarPeca()");
 check("CANCELAR volta para a arena sem escolher", run("arenaEd.vista") === "arena" && run("arenaEd.tipo") === null);
 run("arenaVerPeca('mesa_pedra'); arenaConfirmarPeca()");
-check("CONFIRMAR PEÇA volta para a arena com a peça pronta para colocar", run("arenaEd.vista") === "arena" && run("arenaEd.tipo") === "mesa_pedra" && run("document.getElementById('arena-confirmar').style.display") === "none");
+check("VER ARENA volta para a arena com a peça pronta para colocar", run("arenaEd.vista") === "arena" && run("arenaEd.tipo") === "mesa_pedra");
 const toque = (x, y) => run(`arenaPlantaToque({ clientX: ${x}, clientY: ${y}, target: {} }); arenaPlantaSolta()`);
 toque(160, 160);
 check("tocar na planta coloca e já mostra a peça de perto (tela grande)", run("arenaEd.arena.pecas.length") === 1 && run("arenaEd.vista") === "foco" && run("arenaVistaAtual().opts.desl.x") === 0);
@@ -85,7 +86,7 @@ const r = run(`importarArenaDeTexto(${JSON.stringify(exp)})`);
 check("o arquivo leva movimento, planície, formato e altura", !!r.id && run(`JSON.stringify([getFaseDef('${r.id}').arena.movimento, getFaseDef('${r.id}').arena.planicie, getFaseDef('${r.id}').arena.pecas[0].f, getFaseDef('${r.id}').arena.pecas[0].v])`) === JSON.stringify(["seguir", "namek", "rio_curvo", 1.5]));
 check("planície desconhecida no arquivo dá erro claro", /PLANÍCIE DESCONHECIDA \[lua\]/.test(run(`importarArenaDeTexto(${JSON.stringify(JSON.stringify({ formato: "saiyan-fight-arena", versao: 1, arena: { nome: "X", planicie: "lua" } }))}).erro`)));
 run("arenaMostrarBaixo('peca')");
-check("embaixo: DADOS DA ARENA e PEÇA ESCOLHIDA (abas no celular)", run("document.getElementById('arena-baixo').attributes['data-vista']") === "peca");
+check("embaixo fica só DADOS DA ARENA (v0.97: os ajustes da peça foram para a barra da tela grande)", run("document.getElementById('arena-baixo').attributes['data-vista']") !== "peca");
 run("fecharEditorArenas(); trocarIdioma('en')");
 check("textos novos traduzidos", run("T('COLUNA DE LAVA')") === "LAVA COLUMN" && run("T('Toque na planta ou na tela grande para colocar: PRÉDIO. Peça vermelha = lugar ocupado.')") === "Tap the map or the big view to place: BUILDING. Red piece = space taken.");
 run("trocarIdioma('pt')");
