@@ -1427,6 +1427,7 @@ function triggerSpecialAttack(isP2 = false) {
     // vai devagar até o adversário: dura mais e o dano só entra quando a bola chega (world.especialPendente)
     world.especialEfeito = getEfeitoDoPersonagem(isP2 ? selectedBoss : selectedCharacter, "efeitoEspecial");
     const sol = world.especialEfeito === "sol_freeza";
+    world.solDedo = sol ? getPontaDoDedoNoEspecial(isP2 ? selectedBoss : selectedCharacter, getTransformLevel(caster)) : null;
     world.beamActive = sol ? SOL_DURACAO : 40;
     world.beamDuracao = world.beamActive;
     world.beamOwner = requestedOwner;
@@ -1448,6 +1449,14 @@ function triggerSpecialAttack(isP2 = false) {
     world.obstacles = [];
     if (sol) { world.especialPendente = { isP2, damage }; return; }
     aplicarDanoDoEspecial(isP2, damage);
+}
+
+// Ponta do dedo levantado no 1º quadro do especial (fração do desenho), na forma atual; null sem dedo levantado
+function getPontaDoDedoNoEspecial(key, nivel) {
+    const c = characterDB[key], ap = c && c.builderAppearance;
+    if (!ap || typeof spritePontaDoDedo !== "function") return null;
+    const t = nivel > 0 ? getCharacterTransformations(key)[nivel - 1] : null;
+    return spritePontaDoDedo(t ? spriteTransformAppearance(ap, t) : ap, "special", 0);
 }
 
 // Sol do Freeza: quadros (de world.beamActive) que a bola leva crescendo, sendo empurrada e voando até o alvo

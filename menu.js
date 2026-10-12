@@ -5074,6 +5074,7 @@ function drawPlayerEntity(p, charData, isBoss = false) {
         artX = drawX + (drawW - artW) / 2;
         artY = feetY - artH * (103 / 112);
     }
+    p.arte = { x: artX, y: artY, w: artW, h: artH, espelhar };   // onde o desenho ficou (a bola do sol do Freeza usa)
     drawKiAura(p, charData, artX + artW / 2, artY + artH * (103 / 112), artW, artH * 0.9);
     if (espelhar) {
         const eixo = Math.round((artX + artW / 2) * renderScale) / renderScale;
@@ -5905,7 +5906,11 @@ function drawSpecialBeams() {
 // explode. `passou` = quadros desde o disparo.
 function drawSolDoFreeza(src, alvo, fromP2, passou) {
     const lado = fromP2 ? -1 : 1;
-    const dedoX = src.x + src.w / 2 + lado * src.w * 0.28, dedoY = src.y - src.h * 0.12;
+    // ponta do dedo levantado no desenho de verdade (world.solDedo = fração do quadro, calculada no disparo); a bola
+    // fica inteira ACIMA do dedo, sem cobrir o corpo
+    const arte = src.arte, pd = world.solDedo;
+    const dedoX = arte && pd ? arte.x + arte.w * (arte.espelhar ? 1 - pd[0] : pd[0]) : src.x + src.w / 2 + lado * src.w * 0.28;
+    const dedoY = arte && pd ? arte.y + arte.h * pd[1] : src.y - src.h * 0.3;
     const frenteX = fromP2 ? src.x - 12 : src.x + src.w + 12, frenteY = src.y + src.h * TIRO_DEDO_ALTURA;
     const alvoX = alvo.x + alvo.w / 2, alvoY = alvo.y + alvo.h / 2;
     const RMAX = 34;
@@ -5913,14 +5918,15 @@ function drawSolDoFreeza(src, alvo, fromP2, passou) {
     if (passou < SOL_CRESCE) {
         const k = passou / SOL_CRESCE;
         r = 5 + (RMAX - 5) * (1 - (1 - k) * (1 - k));
-        x = dedoX; y = dedoY - r * 0.8;
+        x = dedoX; y = dedoY - r - 2;
     } else if (passou < SOL_EMPURRA) {
         const k = (passou - SOL_CRESCE) / (SOL_EMPURRA - SOL_CRESCE);
         r = RMAX;
-        x = dedoX + (frenteX + lado * RMAX * 0.8 - dedoX) * k; y = (dedoY - RMAX * 0.8) + (frenteY - (dedoY - RMAX * 0.8)) * k;
+        // vai para a frente primeiro e só depois desce (não passa por cima do corpo)
+        x = dedoX + (frenteX + lado * (RMAX + 6) - dedoX) * Math.min(1, k * 1.6); y = (dedoY - RMAX - 2) + (frenteY - (dedoY - RMAX - 2)) * k * k;
     } else if (passou < SOL_CHEGA) {
         const k = (passou - SOL_EMPURRA) / (SOL_CHEGA - SOL_EMPURRA), ke = k * k * (3 - 2 * k);
-        const x0 = frenteX + lado * RMAX * 0.8;
+        const x0 = frenteX + lado * (RMAX + 6);
         r = RMAX; x = x0 + (alvoX - x0) * ke; y = frenteY + (alvoY - frenteY) * ke;
     } else {
         // explosão no adversário
