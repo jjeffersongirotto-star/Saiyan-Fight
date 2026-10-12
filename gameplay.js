@@ -1560,8 +1560,9 @@ function fireKiBarrage(p, isP2 = false, withPose = true) {
     let dir = isP2 ? -1 : 1;
     let startX = isP2 ? p.x - 10 : p.x + p.w + 10;
     const efeito = getEfeitoDoTiro(isP2 ? selectedBoss : selectedCharacter);
-    // tiro do dedo (Freeza): sai da ponta do dedo, na altura do ombro, sem espalhar
-    const dedo = efeito === "tiro_freeza";
+    // quem ataca com o dedo (POSIÇÃO DOS BRAÇOS "dedo", o Freeza): o tiro sai da ponta do dedo, na altura do ombro
+    const quem = characterDB[isP2 ? selectedBoss : selectedCharacter], ap = quem && quem.builderAppearance;
+    const dedo = efeito === "tiro_freeza" || !!(ap && ap.armPose === "dedo");
     
     if (world.obstacles.length < MAX_OBSTACLES) {
         world.obstacles.push({
