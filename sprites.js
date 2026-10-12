@@ -2370,10 +2370,32 @@ function spriteRenderFigure(a, pose, opts) {
     const bob = (pose.bob || 0) + (pose.crouch || 0);
     const t = `translate(${_n2(48 + (pose.shiftX || 0))} ${_n2(SPRITE_FEET_Y + bob)}) scale(${_n2(scale)}) translate(-48 -${SPRITE_FEET_Y_LOCAL})`;
     const rot = `rotate(${_n2(pose.lean || 0)} 48 70)`;
-    return { R, body: `<g transform="${t}"><g transform="${rot}">${behind}${fig}${front}</g></g>` };
+    // ponta do dedo (mão "dedo") no viewBox, com a inclinação e a escala do desenho (a bola do especial nasce nela)
+    let ponta = null;
+    if (armR.ponta && pose.handR === "dedo") {
+        const ang = (pose.lean || 0) * Math.PI / 180, dx = armR.ponta[0] - 48, dy = armR.ponta[1] - 70;
+        const qx = 48 + dx * Math.cos(ang) - dy * Math.sin(ang), qy = 70 + dx * Math.sin(ang) + dy * Math.cos(ang);
+        ponta = [48 + (pose.shiftX || 0) + scale * (qx - 48), SPRITE_FEET_Y + bob + scale * (qy - SPRITE_FEET_Y_LOCAL)];
+    }
+    return { R, ponta, body: `<g transform="${t}"><g transform="${rot}">${behind}${fig}${front}</g></g>` };
 }
 const SPRITE_FEET_Y = 103;          // linha do chão no viewBox
 const SPRITE_FEET_Y_LOCAL = 106;    // onde ficam os pés no desenho local (antes da escala)
+
+// Ponta do dedo levantado (POSIÇÃO DOS BRAÇOS "dedo") no quadro, como fração do desenho [x 0..1, y 0..1]; null se
+// a pose não aponta o dedo. Usada para pôr a bola do especial do Freeza em cima do dedo.
+const _spritePontaCache = new Map();
+function spritePontaDoDedo(appearance, state, frameIndex) {
+    const chave = JSON.stringify(appearance) + "|" + state + "|" + frameIndex;
+    if (_spritePontaCache.has(chave)) return _spritePontaCache.get(chave);
+    const a = normalizeAppearance(appearance);
+    const n = SPRITE_FRAME_COUNTS[state] || 1, idx = ((frameIndex % n) + n) % n;
+    const { ponta } = spriteRenderFigure(a, spritePoseFor(state, idx, n, a), { seed: idx });
+    const r = ponta ? [ponta[0] / SPRITE_VIEW.w, ponta[1] / SPRITE_VIEW.h] : null;
+    if (_spritePontaCache.size > 50) _spritePontaCache.clear();
+    _spritePontaCache.set(chave, r);
+    return r;
+}
 
 function generateSpriteFrameSvg(appearance, state, frameIndex, opts) {
     const a = normalizeAppearance(appearance);
@@ -2441,7 +2463,7 @@ const SPRITE_PRESETS = {
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
         SPRITE_VIEW, SPRITE_STATES, SPRITE_FRAME_COUNTS, SPRITE_PRESETS, SPRITE_DEFAULT_APPEARANCE,
-        normalizeAppearance, spriteTransformAppearance, spriteAppearanceDiff, spriteSsjColor, SPRITE_DEFAULT_TRANSFORMATION, SPRITE_SAIYAN_HAIR, spritePoseFor, generateSpriteFrameSvg, generateSpriteFrameUrl, getProceduralFrameUrls, spriteSvgToUrl,
+        normalizeAppearance, spriteTransformAppearance, spriteAppearanceDiff, spriteSsjColor, SPRITE_DEFAULT_TRANSFORMATION, SPRITE_SAIYAN_HAIR, spritePoseFor, spritePontaDoDedo, generateSpriteFrameSvg, generateSpriteFrameUrl, getProceduralFrameUrls, spriteSvgToUrl,
         spriteMix, spriteShade
     };
 }

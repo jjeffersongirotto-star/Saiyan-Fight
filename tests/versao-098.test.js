@@ -76,6 +76,7 @@ check("o ataque e o especial com o dedo mudam o desenho (e o resto fica igual)",
     sp.generateSpriteFrameSvg(fz, "attackKi", 2) !== sp.generateSpriteFrameSvg(Object.assign({}, fz, { armPose: "guarda" }), "attackKi", 2) &&
     sp.generateSpriteFrameSvg(fz, "special", 0) !== sp.generateSpriteFrameSvg(Object.assign({}, fz, { armPose: "guarda" }), "special", 0) &&
     sp.generateSpriteFrameSvg(fz, "idle", 0) === sp.generateSpriteFrameSvg(Object.assign({}, fz, { armPose: "guarda" }), "idle", 0));
+check("a bola do sol nasce na ponta do dedo levantado (acima da cabeça)", (() => { const pd = sp.spritePontaDoDedo(fz, "special", 0); return pd && pd[1] < 0.25 && pd[0] > 0.5; })());
 check("no especial o braço começa levantado com o dedo para cima", sp.spritePoseFor("special", 0, 5, fz).armR[0] > 140 && sp.spritePoseFor("special", 4, 5, fz).armR[0] < 100);
 run("characterDB.freeza_1.builderAppearance.armPose = 'guarda'; writeStorage('saiyan_freeza_dedo_098', '0'); atualizarFreezaSalvo()");
 check("o Freeza salvo antes passa a atacar com o dedo (uma vez)", run("characterDB.freeza_1.builderAppearance.armPose") === "dedo");
