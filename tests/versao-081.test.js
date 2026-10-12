@@ -122,7 +122,7 @@ check("auraCaixa existe e nunca é menor que a forma usada no parry", caixa && M
 run("setGameState('menu')");
 
 // ---------- aura roxa e cadeados do Vegeta ----------
-check("aura roxa (Freeza) volta à labareda desenhada", run("!AURA_EFEITOS.roxo") === true && !fs.existsSync(__dirname + "/../efeitos/aura_roxa.png"));
+check("aura roxa: v0.98 trocou a labareda pela aura roxa nova", run("AURA_EFEITOS.roxo[0]") === "aura_roxa" && fs.existsSync(__dirname + "/../efeitos/aura_roxa.png"));
 const pacote = JSON.parse(fs.readFileSync(__dirname + "/../conjuntos/vegeta.json", "utf8"));
 h.context.__pacote = pacote;
 run("conjRegistrarPacote('vegeta', __pacote)");

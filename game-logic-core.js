@@ -415,13 +415,14 @@ function ordenarFases(fases, ordemSalva) {
     porPosicao.forEach(f => { if (!lista.includes(f)) lista.push(f); });
     return lista;
 }
-// Coloca a fase `id` na posição `novaPos` (1 = primeira) TROCANDO de lugar com a que estava lá: as outras ficam
-// onde estão. Devolve a nova lista de ids.
+// Coloca a fase `id` na posição `novaPos` (1 = primeira): ela sai do lugar dela e entra na nova posição, e as fases
+// entre os dois lugares andam uma posição (da 10 para a 8: a 8 vira 9 e a 9 vira 10). Devolve a nova lista de ids.
 function trocarPosicaoFase(ordemIds, id, novaPos) {
     const lista = ordemIds.slice();
     const de = lista.indexOf(id), para = Math.max(0, Math.min(lista.length - 1, (novaPos | 0) - 1));
     if (de < 0 || de === para) return lista;
-    [lista[de], lista[para]] = [lista[para], lista[de]];
+    lista.splice(de, 1);
+    lista.splice(para, 0, id);
     return lista;
 }
 

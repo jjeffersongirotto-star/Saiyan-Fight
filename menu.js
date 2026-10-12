@@ -852,7 +852,7 @@ function drawPainelArena() {
         const outra = faseNaPosicao(p.pos);
         ctx.fillStyle = "#fca5a5";
         ctx.font = "9px monospace";
-        ctx.fillText(`TROCA DE LUGAR COM: ${outra ? T(outra.name) : ""} (VAI PARA A FASE ${atual})`, canvas.width / 2, L.faseMenos.y + L.faseMenos.h + 14, P.w - 30);
+        ctx.fillText(`OCUPA O LUGAR DE: ${outra ? T(outra.name) : ""} (AS OUTRAS ANDAM UMA POSIÇÃO)`, canvas.width / 2, L.faseMenos.y + L.faseMenos.h + 14, P.w - 30);
     }
 
     // PERSONAGEM
@@ -3533,6 +3533,7 @@ function getTutorialUiLayout() {
 function drawTutorialScreen() {
     drawStageBackground();
     drawPlayerEntity(player, characterDB[selectedCharacter], false);
+    drawParryOnda(player, false);
     drawObstacles();      // tiros de ki (e o projétil de treino do passo PARRY), igual à luta
     drawSpecialBeams();   // o feixe do ESPECIAL
 
@@ -5134,6 +5135,7 @@ const KI_AURA_PALETTES = {
     amarelo: ["#ff8a00", "#ffd23f", "#fff8c8"],
     vermelho: ["#c21a1a", "#ff6a3d", "#ffd6be"],
     rosa: ["#d63c96", "#ff9ad6", "#ffe8f6"],
+    blue: ["#1c5fe0", "#38a8ff", "#e2f4ff"],
     azul: ["#1c5fe0", "#5cb8ff", "#e2f4ff"],
     verde: ["#1d9a2a", "#6cff6a", "#e8ffe2"],
     preto: ["#141418", "#3e3e4c", "#8c8c9c"],
@@ -5151,7 +5153,32 @@ const EFEITOS = {
     aura_azul: { n: 3, w: 166, h: 192, ms: 50 },
     aura_amarela: { n: 7, w: 174, h: 192, ms: 40 }, aura_amarela_forte: { n: 3, w: 155, h: 192, ms: 50 },
     aura_vermelha: { n: 4, w: 184, h: 192, ms: 50 }, aura_vermelha_forte: { n: 4, w: 181, h: 192, ms: 50 },
-    tiro_laranja: { n: 4, w: 74, h: 48, ms: 50 }, tiro_amarelo: { n: 4, w: 72, h: 48, ms: 80 }, tiro_vermelho: { n: 1, w: 90, h: 48, ms: 80 }
+    tiro_laranja: { n: 4, w: 74, h: 48, ms: 50 }, tiro_amarelo: { n: 4, w: 72, h: 48, ms: 80 },
+    // v0.98 (GIFs do jogador). cabeca = onde fica o centro do tiro na largura (0..1); tam = altura em raios do tiro;
+    // laco = depois da 1ª passada a animação repete a partir deste quadro
+    tiro_vermelho: { n: 2, w: 112, h: 48, ms: 90, cabeca: 0.6, tam: 1.9 },
+    tiro_pixel: { n: 4, w: 99, h: 48, ms: 70, cabeca: 0.8, tam: 2.4 },
+    tiro_freeza: { n: 4, w: 72, h: 32, ms: 60, cabeca: 0.82, tam: 2.2 },
+    cometa_azul: { n: 9, w: 87, h: 48, ms: 40, cabeca: 0.78, tam: 2.4 },
+    bola_azul: { n: 6, w: 57, h: 48, ms: 40, cabeca: 0.68, tam: 2.4 },
+    tiro_verde: { n: 4, w: 60, h: 47, ms: 50, cabeca: 0.7, tam: 2.4 },
+    esfera_roxa: { n: 2, w: 48, h: 48, ms: 80, cabeca: 0.5, tam: 2.6 },
+    esfera_rosa: { n: 7, w: 48, h: 48, ms: 50, cabeca: 0.5, tam: 2.4 },
+    bola_eletrica: { n: 6, w: 40, h: 64, ms: 60, cabeca: 0.5, tam: 3 },
+    cometa_fogo: { n: 4, w: 38, h: 38, ms: 80, cabeca: 0.5, tam: 2.4 },
+    esfera_fogo: { n: 20, w: 65, h: 64, ms: 40, cabeca: 0.5, tam: 2.4 },
+    kamehameha: { n: 6, w: 225, h: 96, ms: 60 },
+    raio_azul: { n: 12, w: 134, h: 64, ms: 50 },
+    raio_verde: { n: 8, w: 74, h: 64, ms: 50 },
+    raio_vermelho: { n: 12, w: 163, h: 64, ms: 40, laco: 7 },
+    raio_pontas: { n: 3, w: 253, h: 64, ms: 60 },
+    sol_freeza: { n: 16, w: 129, h: 128, ms: 60 },
+    explosao: { n: 14, w: 92, h: 96, ms: 50 },
+    parry_onda: { n: 6, w: 66, h: 132, ms: 30 },
+    aura_chama_amarela: { n: 3, w: 151, h: 192, ms: 70 },
+    aura_roxa: { n: 14, w: 186, h: 192, ms: 60 },
+    aura_azul_chama: { n: 4, w: 80, h: 111, ms: 70, alfa: 0.72 },
+    aura_azul_escura: { n: 4, w: 80, h: 111, ms: 70, alfa: 0.72 }
 };
 const efeitoImagens = {};
 const ESCUDO_FRACAO_VISIVEL = 0.91;   // a esfera de escudo_azul.png ocupa 91% do quadro
@@ -5165,7 +5192,21 @@ function efeitoPronto(nome) {
 // Quadro da animação no tempo t (segundos)
 function efeitoQuadro(nome, t) {
     const e = EFEITOS[nome];
-    return e ? Math.floor(Math.max(0, t) * 1000 / e.ms) % e.n : 0;
+    if (!e) return 0;
+    const q = Math.floor(Math.max(0, t) * 1000 / e.ms);
+    if (e.laco !== undefined && q >= e.n) return e.laco + (q - e.n) % (e.n - e.laco);
+    return q % e.n;
+}
+// Efeito que toca uma vez só (explosão, onda do parry): quadro pelo progresso 0..1; null quando acabou
+function efeitoQuadroUnico(nome, prog) {
+    const e = EFEITOS[nome];
+    return e && prog >= 0 && prog < 1 ? Math.floor(prog * e.n) : null;
+}
+function desenharEfeitoQuadro(nome, q, dx, dy, dw, dh) {
+    const e = EFEITOS[nome], im = efeitoPronto(nome);
+    if (!e || !im || q === null) return false;
+    ctx.drawImage(im, q * e.w, 0, e.w, e.h, dx, dy, dw, dh);
+    return true;
 }
 function desenharEfeito(nome, t, dx, dy, dw, dh) {
     const e = EFEITOS[nome], im = efeitoPronto(nome);
@@ -5176,8 +5217,9 @@ function desenharEfeito(nome, t, dx, dy, dw, dh) {
 // Cor da aura -> animação (normal e forte: carregando ki ou com o poder da transformação)
 const AURA_EFEITOS = {
     verde: ["aura_verde", "aura_verde_forte"], azul: ["aura_azul", "aura_azul"], amarelo: ["aura_amarela", "aura_amarela_forte"],
-    vermelho: ["aura_vermelha", "aura_vermelha_forte"]
-};   // roxo (Freeza, Raditz) voltou à labareda desenhada: a animação roxa não ficou boa
+    vermelho: ["aura_vermelha", "aura_vermelha_forte"], roxo: ["aura_roxa", "aura_roxa"],
+    blue: ["aura_azul_chama", "aura_azul_chama"], azul_escuro: ["aura_azul_escura", "aura_azul_escura"]
+};   // v0.98: roxo volta com a aura roxa nova (vídeo do jogador sem fundo); blue/azul_escuro = formas Blue
 // Cor do tiro -> animação (pelo matiz: vermelho/rosa, laranja, amarelo); outras cores ficam com a bola desenhada
 const tiroEfeitoCache = {};
 function getTiroEfeito(cor) {
@@ -5278,12 +5320,14 @@ function drawKiAura(entity, charData, cx, bottomY, bodyW, bodyH) {
     // a energia sobe mais rápido quando carregando/transformado
     entity.kiAuraPhase = ((entity.kiAuraPhase || 0) + deltaTime * (0.55 + 0.35 * k)) % 1;
     // cores com animação enviada pelo jogador: usa a imagem (a forte carregando/transformado)
-    const anim = AURA_EFEITOS[auraType];
+    // animação escolhida no editor (vale na forma normal; as transformações seguem a cor delas)
+    const auraEscolhida = !transformed && charData ? charData.efeitoAura : "";
+    const anim = auraEscolhida && EFEITOS[auraEscolhida] ? [auraEscolhida, auraEscolhida] : AURA_EFEITOS[auraType];
     const nomeAnim = anim ? anim[k > 0.5 ? 1 : 0] : null;
     if (nomeAnim && efeitoPronto(nomeAnim)) {
         const e = EFEITOS[nomeAnim], dh = h * 1.22, dw = dh * e.w / e.h;
         ctx.save();
-        ctx.globalAlpha *= 0.72 + 0.25 * k;
+        ctx.globalAlpha *= (0.72 + 0.25 * k) * (e.alfa || 1);
         desenharEfeito(nomeAnim, gameplayClock + seed, Math.round(cx - dw / 2), Math.round(bottomY + h * 0.08 - dh), Math.round(dw), Math.round(dh));
         ctx.restore();
         // área que a imagem da aura ocupa na tela (o escudo fica em volta dela)
@@ -5576,6 +5620,13 @@ function drawSaibamanBlasts() {
     // explosões dos abraços
     world.blasts.forEach(b => {
         const a = Math.max(0, b.life);
+        // v0.98: explosão animada (GIF do jogador, sem o círculo amarelo do começo); desenho antigo enquanto não carrega
+        const q = efeitoQuadroUnico("explosao", 1 - a);
+        if (q !== null && efeitoPronto("explosao")) {
+            const tam = (b.maxR || 46) * 2.4;
+            desenharEfeitoQuadro("explosao", q, b.x - tam / 2, b.y - tam * 0.55, tam, tam * EFEITOS.explosao.h / EFEITOS.explosao.w);
+            return;
+        }
         ctx.save();
         ctx.globalAlpha = a * 0.85;
         ctx.fillStyle = "#ff8a1e";
@@ -5728,14 +5779,14 @@ function drawObstacles() {
     world.obstacles.forEach(o => {
         // tiros vermelho/laranja/amarelo: animação enviada pelo jogador, apontada na direção do voo (a cabeça do
         // tiro fica no lugar da bola; o rastro vai para trás)
-        const nomeTiro = getTiroEfeito(o.color || "#00ffff");
+        // (v0.98: cada tiro leva a animação do personagem que atirou, o.efeito; "cor" = pela cor, como antes)
+        const nomeTiro = o.efeito && o.efeito !== "cor" && EFEITOS[o.efeito] ? o.efeito : getTiroEfeito(o.color || "#00ffff");
         if (nomeTiro && efeitoPronto(nomeTiro)) {
-            const verm = nomeTiro === "tiro_vermelho";
-            const e = EFEITOS[nomeTiro], dh = o.radius * (verm ? 1.9 : 2.0), dw = dh * e.w / e.h;
+            const e = EFEITOS[nomeTiro], dh = o.radius * (e.tam || 2.0), dw = dh * e.w / e.h;
             ctx.save();
             ctx.translate(o.x, o.y);
             ctx.rotate(Math.atan2(o.vy || 0, o.vx || 1));
-            desenharEfeito(nomeTiro, gameplayClock + (o.x * 0.013), -dw * (verm ? 0.6 : 0.82), -dh / 2, dw, dh);
+            desenharEfeito(nomeTiro, gameplayClock + (o.x * 0.013), -dw * (e.cabeca || 0.82), -dh / 2, dw, dh);
             ctx.restore();
             return;
         }
@@ -5763,10 +5814,16 @@ function drawSpecialBeams() {
             const push = world.beamClashPush || 0;
             const midX = canvas.width / 2 + push * (canvas.width / 2 - 60);
             const py = (player.y + player.h / 2 + player2.y + player2.h / 2) / 2;
-            ctx.fillStyle = "#00ffff";
-            ctx.fillRect(0, py - 22, midX, 44);
-            ctx.fillStyle = "#ff0055";
-            ctx.fillRect(midX, py - 22, canvas.width - midX, 44);
+            if (efeitoPronto("raio_pontas")) {
+                // v0.98: o raio de duas pontas liga as mãos dos dois lutadores
+                const x1 = Math.min(player.x + player.w, midX - 40), x2 = Math.max(player2.x, midX + 40);
+                desenharEfeito("raio_pontas", gameplayClock, x1 - 20, py - 30, x2 - x1 + 40, 60);
+            } else {
+                ctx.fillStyle = "#00ffff";
+                ctx.fillRect(0, py - 22, midX, 44);
+                ctx.fillStyle = "#ff0055";
+                ctx.fillRect(midX, py - 22, canvas.width - midX, 44);
+            }
             ctx.fillStyle = "#ffffff";
             ctx.fillRect(Math.max(0, midX - 10), py - 12, 20, 24);
             const burst = 30 + Math.sin(world.beamActive * 0.9) * 10;
@@ -5799,6 +5856,24 @@ function drawSpecialBeams() {
         const py = src.y + src.h / 2;
         const beamX = fromP2 ? 0 : src.x + src.w;
         const beamW = fromP2 ? src.x : canvas.width - beamX;
+        const passou = (world.beamDuracao || 40) - world.beamActive;   // quadros desde o disparo
+        if (world.especialEfeito === "sol_freeza" && efeitoPronto("sol_freeza")) {
+            drawSolDoFreeza(src, fromP2 ? player : player2, fromP2, passou);
+            ctx.restore();
+            return;
+        }
+        const efEsp = world.especialEfeito;
+        if (efEsp && efEsp !== "cor" && EFEITOS[efEsp] && efeitoPronto(efEsp)) {
+            // v0.98: raio animado (Kamehameha etc.): sai da mão e cresce até a borda da tela; a cabeça do desenho
+            // (lado esquerdo da imagem) fica na mão de quem atira; o rival atira para a esquerda (espelhado)
+            const dh = (world.beamIsSuper ? 34 : 25) * 2 * 1.45;
+            const total = beamW + dh * 0.2, len = total * Math.min(1, passou / 9);
+            ctx.translate(fromP2 ? src.x : beamX, py);
+            if (fromP2) ctx.scale(-1, 1);
+            desenharEfeito(efEsp, passou / 60, -dh * 0.2, -dh / 2, Math.max(dh * 0.5, len), dh);
+            ctx.restore();
+            return;
+        }
 
         let beamColor = world.beamIsSuper ? "#ffcf3f" : "#00ffff";
         let coreColor = "#ffffff";
@@ -5823,6 +5898,56 @@ function drawSpecialBeams() {
         }
         ctx.restore();
     }
+}
+
+// Sol do Freeza (especial sol_freeza): a bola nasce pequena em cima do dedo levantado e cresce (SOL_CRESCE), o
+// braço vai para a frente empurrando a bola (SOL_EMPURRA) e ela voa devagar até o adversário (SOL_CHEGA), onde
+// explode. `passou` = quadros desde o disparo.
+function drawSolDoFreeza(src, alvo, fromP2, passou) {
+    const lado = fromP2 ? -1 : 1;
+    const dedoX = src.x + src.w / 2 + lado * src.w * 0.28, dedoY = src.y - src.h * 0.12;
+    const frenteX = fromP2 ? src.x - 12 : src.x + src.w + 12, frenteY = src.y + src.h * TIRO_DEDO_ALTURA;
+    const alvoX = alvo.x + alvo.w / 2, alvoY = alvo.y + alvo.h / 2;
+    const RMAX = 34;
+    let r, x, y;
+    if (passou < SOL_CRESCE) {
+        const k = passou / SOL_CRESCE;
+        r = 5 + (RMAX - 5) * (1 - (1 - k) * (1 - k));
+        x = dedoX; y = dedoY - r * 0.8;
+    } else if (passou < SOL_EMPURRA) {
+        const k = (passou - SOL_CRESCE) / (SOL_EMPURRA - SOL_CRESCE);
+        r = RMAX;
+        x = dedoX + (frenteX + lado * RMAX * 0.8 - dedoX) * k; y = (dedoY - RMAX * 0.8) + (frenteY - (dedoY - RMAX * 0.8)) * k;
+    } else if (passou < SOL_CHEGA) {
+        const k = (passou - SOL_EMPURRA) / (SOL_CHEGA - SOL_EMPURRA), ke = k * k * (3 - 2 * k);
+        const x0 = frenteX + lado * RMAX * 0.8;
+        r = RMAX; x = x0 + (alvoX - x0) * ke; y = frenteY + (alvoY - frenteY) * ke;
+    } else {
+        // explosão no adversário
+        const prog = (passou - SOL_CHEGA) / Math.max(1, SOL_DURACAO - SOL_CHEGA);
+        const q = efeitoQuadroUnico("explosao", Math.min(0.999, prog * 0.7 + 0.05));
+        desenharEfeitoQuadro("explosao", q, alvoX - 70, alvoY - 74, 140, 146);
+        ctx.globalAlpha = Math.max(0, 1 - prog * 2);
+        r = RMAX * (1 + prog); x = alvoX; y = alvoY;
+    }
+    const d = r * 2 * 129 / 112;   // a esfera ocupa ~87% do quadro
+    desenharEfeito("sol_freeza", gameplayClock, x - d / 2, y - d / 2, d, d);
+    ctx.globalAlpha = 1;
+}
+
+// Brilho do PARRY (onda azul "(" de quem rebate, virada para o adversário) — toca uma vez enquanto dura o parry
+function drawParryOnda(p, paraEsquerda) {
+    if (!(p.parryHighlightTimer > 0) || !efeitoPronto("parry_onda")) return;
+    const prog = 1 - p.parryHighlightTimer / 10;
+    const q = efeitoQuadroUnico("parry_onda", prog);
+    if (q === null) return;
+    const area = typeof getParryCircle === "function" ? getParryCircle(p) : { x: p.x + p.w / 2, y: p.y + p.h / 2, r: 56 };
+    const dh = area.r * 2.1, dw = dh * EFEITOS.parry_onda.w / EFEITOS.parry_onda.h;
+    ctx.save();
+    ctx.translate(area.x + (paraEsquerda ? -1 : 1) * area.r * 0.45, area.y);
+    if (paraEsquerda) ctx.scale(-1, 1);
+    desenharEfeitoQuadro("parry_onda", q, -dw / 2, -dh / 2, dw, dh);
+    ctx.restore();
 }
 
 // Flash de tela (triggerScreenFlash, em gameplay.js): cobre tudo com uma cor sólida que esmaece rápido.
@@ -6341,6 +6466,8 @@ function render() {
         drawGrabbingSaibamans();
         drawSaibamanBlasts();   // explosão por cima do herói
         drawPlayerEntity(player2, characterDB[selectedBoss], true);
+        drawParryOnda(player, false);
+        drawParryOnda(player2, true);
 
         drawObstacles();
         drawSpecialBeams();

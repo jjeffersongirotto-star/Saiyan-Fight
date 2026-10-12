@@ -13,7 +13,7 @@ const ARQ_FORMATO_PERSONAGEM = "saiyan-fight-personagem";
 const ARQ_VERSAO = 1;
 const ARQ_TAMANHO_MAX = 4 * 1024 * 1024;   // 4 MB (o armazenamento do navegador é pequeno)
 const ARQ_ALINHAMENTOS = ["HERÓI", "ANTI-HERÓI", "VILÃO", "MINION"];
-const ARQ_AURAS = ["gelo", "amarelo", "vermelho", "rosa", "azul", "verde", "preto", "roxo"];
+const ARQ_AURAS = ["gelo", "amarelo", "vermelho", "rosa", "azul", "verde", "preto", "roxo", "blue", "azul_escuro"];
 const ARQ_TIROS = ["small", "normal", "large"];
 const ARQ_IMAGEM_DADOS = /^data:image\/(png|jpeg|gif|webp|svg\+xml)[;,]/i;
 
@@ -28,6 +28,8 @@ function dadosDoPersonagemParaArquivo(key) {
     const p = {
         name: c.name, alignment: c.alignment || "HERÓI", aura: c.aura || "gelo", special: c.special || "",
         projColor: c.projColor || "#00ffff", projSize: c.projSize || "normal",
+        // animações escolhidas (ou as do personagem inicial: o Kamehameha do Goku, o sol do Freeza...)
+        ...Object.fromEntries(["efeitoTiro", "efeitoEspecial", "efeitoAura"].map(k => [k, getEfeitoDoPersonagem(key, k)]).filter(([, v]) => v)),
         altura: typeof getAlturaPersonagem === "function" ? getAlturaPersonagem(key, 0) : (c.altura || 175)
     };
     if (c.minionClassico) p.minionClassico = normalizarMinionClassico(c.minionClassico);
@@ -84,6 +86,12 @@ function validarArquivoPersonagem(dados) {
         projSize: ARQ_TIROS.includes(d.projSize) ? d.projSize : "normal",
         altura: Math.max(50, Math.min(500, Math.round(Number(d.altura)) || 175))
     };
+    // animações do tiro / especial / aura (opcionais; vazio = padrão)
+    for (const [campo, lista] of [["efeitoTiro", EFEITOS_DO_TIRO], ["efeitoEspecial", EFEITOS_DO_ESPECIAL], ["efeitoAura", EFEITOS_DA_AURA]]) {
+        if (d[campo] === undefined || d[campo] === "") continue;
+        if (!lista.includes(d[campo])) return { erro: arqErro("ANIMAÇÃO DESCONHECIDA", campo + ": " + d[campo]) };
+        p[campo] = d[campo];
+    }
     const fontes = ["builderAppearance", "minionClassico", "animations", "folha"].filter(k => d[k] !== undefined && d[k] !== null);
     if (!fontes.length) return { erro: "FALTA O DESENHO: builderAppearance, minionClassico, animations OU folha." };
     if (fontes.length > 1) return { erro: arqErro("USE SÓ UM DESENHO POR ARQUIVO", fontes.join(", ")) };
@@ -185,6 +193,7 @@ async function montarPersonagemDoArquivo(p, imagens) {
     const c = {
         name: p.name, imageObj: null, alignment: p.alignment, aura: p.aura, special: p.special,
         projColor: p.projColor, projSize: p.projSize, scale: 1, altura: p.altura,
+        efeitoTiro: p.efeitoTiro || "", efeitoEspecial: p.efeitoEspecial || "", efeitoAura: p.efeitoAura || "",
         frameWidth: 32, frameHeight: 32, totalFrames: 1, bgRemoval: { mode: "none" }
     };
     if (p.transformations) c.transformations = p.transformations;

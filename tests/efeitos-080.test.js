@@ -12,10 +12,10 @@ const ef = run("EFEITOS");
 const tam = (nome) => { const b = fs.readFileSync(__dirname + "/../efeitos/" + nome + ".png"); return [b.readUInt32BE(16), b.readUInt32BE(20)]; };
 check("cada efeito tem a imagem com os quadros lado a lado do tamanho anotado", Object.keys(ef).every(n => { const [w, hh] = tam(n); return w === ef[n].w * ef[n].n && hh === ef[n].h; }));
 const total = Object.keys(ef).reduce((s, n) => s + fs.statSync(__dirname + "/../efeitos/" + n + ".png").size, 0);
-check("as imagens dos efeitos são leves (menos de 1,2 MB juntas)", total < 1.2 * 1024 * 1024);
+check("as imagens dos efeitos são leves (menos de 3 MB juntas; v0.98 trouxe 23 efeitos novos)", total < 3 * 1024 * 1024, String(total));
 check("cores de aura com animação: verde, azul, amarela e vermelha (normal e forte)",
     ["verde", "azul", "amarelo", "vermelho"].every(c => run(`AURA_EFEITOS['${c}'].every(n => !!EFEITOS[n])`)));
-check("0.81: a aura roxa (Freeza) voltou à labareda desenhada", run("!AURA_EFEITOS.roxo && !EFEITOS.aura_roxa") === true);
+check("0.98: a aura roxa voltou animada (vídeo do jogador sem o fundo preto)", run("AURA_EFEITOS.roxo[0]") === "aura_roxa" && !!run("EFEITOS.aura_roxa"));
 check("tiro vermelho/rosa, laranja e amarelo usam a animação; ciano continua desenhado",
     run("getTiroEfeito('#ff0055')") === "tiro_vermelho" && run("getTiroEfeito('#ff8800')") === "tiro_laranja" &&
     run("getTiroEfeito('#ffd000')") === "tiro_amarelo" && run("getTiroEfeito('#00ffff')") === null);

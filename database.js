@@ -2077,6 +2077,10 @@ function openModal(key = null) {
     if (modalTitle) modalTitle.innerText = key ? "EDITAR PERSONAGEM" : "CRIAR PERSONAGEM";
     if (charName) charName.value = char.name;
     if (charAura) charAura.value = char.aura;
+    [["char-efeito-tiro", "efeitoTiro"], ["char-efeito-especial", "efeitoEspecial"], ["char-efeito-aura", "efeitoAura"]].forEach(([id, campo]) => {
+        const sel = document.getElementById(id);
+        if (sel) sel.value = char[campo] || "";
+    });
     if (charAlign) charAlign.value = char.alignment;
     if (charSpec) charSpec.value = char.special || "KAMEHAMEHA";
     if (charProjColor) charProjColor.value = char.projColor || "#00ffff";
@@ -2234,6 +2238,9 @@ function saveCharacterFromModal() {
                 special: charSpec ? charSpec.value : "KAMEHAMEHA",
                 projColor: charProjColor ? charProjColor.value : "#00ffff",
                 projSize: charProjSize ? charProjSize.value : "normal",
+                efeitoTiro: (document.getElementById("char-efeito-tiro") || {}).value || "",
+                efeitoEspecial: (document.getElementById("char-efeito-especial") || {}).value || "",
+                efeitoAura: (document.getElementById("char-efeito-aura") || {}).value || "",
                 scale: 1,   // o tamanho agora vem da ALTURA
                 altura: (charScale && normalizarAltura(charScale.value)) || ALTURA_PADRAO_CM,
                 frameWidth: charFw ? parseInt(charFw.value, 10) || img.naturalWidth || 32 : 32,
@@ -2317,6 +2324,7 @@ function loadCharacterData() {
             if (validCount > 0) {
                 seedNewDefaultCharacters();
                 atualizarFreezaSalvo();
+                transformacoesBlue098();
                 atualizarCellSalvo();
                 atualizarHeroisSalvos();
                 atualizarPersonagens075();
@@ -2370,22 +2378,31 @@ const CELL_TRANSFORMACOES = [
     { name: "Perfeito", diff: { build: "musculoso", headFeature: "capacete_cell3", bodyMarks: "cell_perfeito", skinColor: "#e6e4ee", shoes: "sapato_ponta", tail: "none", irisColor: "#7a3fa0", wings: "cell_capa" }, ssj: false, aura: "verde" }
 ];
 
+// v0.98: formas Blue (aura de chama azul) do Goku e do Vegeta, e a nova forma do Vegeta com a aura azul escura
+const GOKU_BLUE = { name: "Super Saiyajin Blue", diff: { hairStyle: "blue_goku", hairColor: "#38a8ff", irisColor: "#2a7ad8" }, ssj: true, aura: "blue" };
+const VEGETA_TRANSFORMACOES = [
+    { name: "Super Saiyajin", diff: {}, ssj: true, aura: "amarelo" },
+    { name: "Super Saiyajin Blue", diff: { hairStyle: "blue_vegeta", hairColor: "#38a8ff", irisColor: "#2a7ad8" }, ssj: true, aura: "blue" },
+    { name: "Super Saiyajin Blue Evolução", diff: { hairStyle: "blue_vegeta", hairColor: "#1f4fd0", irisColor: "#1a3a9a" }, ssj: true, aura: "azul_escuro" }
+];
+
 const DEFAULT_CHARACTERS = {
     // Goku já vem com a Transformação 2 (cabelo longo de Super Saiyajin), criada pela aba TRANSFORMAÇÃO do editor
     goku_adult: { name: "GOKU", presetKey: "goku", align: "HERÓI", aura: "gelo", spec: "KAMEHAMEHA",
         transformations: [
             { name: "Transformação 1", diff: {}, ssj: true, aura: "amarelo" },
-            { name: "Transformação 2", diff: { hairStyle: "ssj_longo", hairColor: "#ffe34d" }, ssj: false, aura: "amarelo" }
-        ] },
-    vegeta: { name: "VEGETA", presetKey: "vegeta", align: "ANTI-HERÓI", aura: "amarelo", spec: "FINAL FLASH" },
+            { name: "Transformação 2", diff: { hairStyle: "ssj_longo", hairColor: "#ffe34d" }, ssj: false, aura: "amarelo" },
+            GOKU_BLUE
+        ], efeitoEspecial: "kamehameha" },
+    vegeta: { name: "VEGETA", presetKey: "vegeta", align: "ANTI-HERÓI", aura: "amarelo", spec: "FINAL FLASH", transformations: VEGETA_TRANSFORMACOES },
     piccolo: { name: "PICCOLO", presetKey: "piccolo", align: "ANTI-HERÓI", aura: "verde", spec: "MAKAN KOSAPPO" },
     // Freeza: começa na 1ª forma (armadura do exército) e cada TRANSFORMAR sobe uma forma, até o ciborgue
     freeza_1: { name: "FREEZA", presetKey: "freeza", align: "VILÃO", aura: "roxo", spec: "DEATH BEAM",
-        transformations: FREEZA_TRANSFORMACOES },
+        transformations: FREEZA_TRANSFORMACOES, efeitoTiro: "tiro_freeza", efeitoEspecial: "sol_freeza" },
     trunks: { name: "TRUNKS", presetKey: "trunks", align: "HERÓI", aura: "azul", spec: "BURNING ATTACK" },
-    gohan: { name: "GOHAN", presetKey: "gohan", align: "HERÓI", aura: "gelo", spec: "MASENKO", transformations: GOHAN_TRANSFORMACOES },
+    gohan: { name: "GOHAN", presetKey: "gohan", align: "HERÓI", aura: "gelo", spec: "MASENKO", transformations: GOHAN_TRANSFORMACOES, efeitoEspecial: "kamehameha" },
     kaioshin: { name: "SUPREMO SR. KAIO", presetKey: "kaioshin", align: "HERÓI", aura: "rosa", spec: "KIAI SAGRADO" },
-    gogeta: { name: "VEGETTO", presetKey: "fusao", align: "HERÓI", aura: "amarelo", spec: "FINAL KAMEHAMEHA" },
+    gogeta: { name: "VEGETTO", presetKey: "fusao", align: "HERÓI", aura: "amarelo", spec: "FINAL KAMEHAMEHA", efeitoEspecial: "kamehameha" },
     bardock: { name: "BARDOCK", presetKey: "bardock", align: "ANTI-HERÓI", aura: "azul", spec: "RIOT JAVELIN" },
     android17: { name: "ANDROIDE 17", presetKey: "android17", align: "ANTI-HERÓI", aura: "verde", spec: "POWER BLITZ" },
     android18: { name: "ANDROIDE 18", presetKey: "android18", align: "ANTI-HERÓI", aura: "azul", spec: "DESTRUCTO DISC" },
@@ -2396,9 +2413,9 @@ const DEFAULT_CHARACTERS = {
     // arenas. São os desenhos clássicos de minions.js (minion = modelo de MINION_MODELOS), não modelos do construtor.
     saibaman: { name: "SAIBAMAN", minion: "saibaman", align: "MINION", aura: "verde", spec: "AUTODESTRUIÇÃO" },
     celljr: { name: "CELL JR.", minion: "celljr", align: "MINION", aura: "azul", spec: "KAMEHAMEHA JR." },
-    gotenks: { name: "GOTENKS", presetKey: "gotenks", align: "HERÓI", aura: "amarelo", spec: "SUPER GHOST KAMIKAZE" },
+    gotenks: { name: "GOTENKS", presetKey: "gotenks", align: "HERÓI", aura: "amarelo", spec: "SUPER GHOST KAMIKAZE", efeitoEspecial: "kamehameha" },
     // Cell: começa na 1ª forma (imperfeito) e transforma em semi-perfeito e perfeito
-    cell: { name: "CELL", presetKey: "cell", align: "VILÃO", aura: "verde", spec: "KAMEHAMEHA PERFEITO", transformations: CELL_TRANSFORMACOES }
+    cell: { name: "CELL", presetKey: "cell", align: "VILÃO", aura: "verde", spec: "KAMEHAMEHA PERFEITO", transformations: CELL_TRANSFORMACOES, efeitoEspecial: "kamehameha" }
 };
 // Alturas (cm) dos personagens iniciais, de guias e listas oficiais (Gohan é o criança da saga Cell; Gotenks não
 // tem valor oficial). "base" = forma normal; as transformações pelo nome, para valer também em saves antigos
@@ -2436,6 +2453,20 @@ function getCharacterTransformations(charKey) {
     const d = DEFAULT_CHARACTERS[charKey];
     if (d && Array.isArray(d.transformations) && d.transformations.length) return d.transformations;
     return [SPRITE_DEFAULT_TRANSFORMATION];
+}
+
+// Opções das animações no editor (DADOS: Animação do tiro / do especial / da aura; os mesmos valores do HTML e do
+// arquivo .saiyan.json). "cor" = o desenho antigo, pela cor do tiro/raio.
+const EFEITOS_DO_TIRO = ["cor", "tiro_pixel", "tiro_freeza", "tiro_vermelho", "tiro_laranja", "tiro_amarelo", "cometa_azul", "bola_azul", "tiro_verde", "esfera_roxa", "esfera_rosa", "bola_eletrica", "cometa_fogo", "esfera_fogo"];
+const EFEITOS_DO_ESPECIAL = ["cor", "kamehameha", "raio_azul", "raio_verde", "raio_vermelho", "sol_freeza"];
+const EFEITOS_DA_AURA = ["aura_amarela", "aura_amarela_forte", "aura_chama_amarela", "aura_azul", "aura_azul_chama", "aura_azul_escura", "aura_verde", "aura_verde_forte", "aura_vermelha", "aura_vermelha_forte", "aura_roxa"];
+// Animação escolhida no editor para o tiro / especial / aura (campos efeitoTiro, efeitoEspecial, efeitoAura).
+// Vazio = padrão do personagem: o do personagem inicial (DEFAULT_CHARACTERS) ou, sem nenhum, "" (o jogo decide).
+function getEfeitoDoPersonagem(charKey, campo) {
+    const c = characterDB[charKey];
+    if (c && c[campo]) return c[campo];
+    const d = DEFAULT_CHARACTERS[charKey];
+    return (d && d[campo]) || "";
 }
 
 // Cor da aura enquanto dura o poder extra da transformação (nível 1, 2...)
@@ -2503,7 +2534,29 @@ function piccoloAntiHeroi085() {
     if (c && c.alignment === "HERÓI") { c.alignment = "ANTI-HERÓI"; saveCharacterData(); }
 }
 
+// v0.98: o Goku ganha a forma Super Saiyajin Blue no fim da lista e o Vegeta (só com a transformação padrão)
+// passa a ter Super Saiyajin, Blue e Blue Evolução. Uma vez só; listas que o jogador mudou ficam como estão.
+function transformacoesBlue098() {
+    if (readStorage("saiyan_transf_blue_098") === "1") return;
+    writeStorage("saiyan_transf_blue_098", "1");
+    let mudou = false;
+    const g = characterDB.goku_adult;
+    if (g && Array.isArray(g.transformations) && g.transformations.length && !g.transformations.some(t => t && /blue/i.test(t.name || ""))) {
+        g.transformations.push(JSON.parse(JSON.stringify(GOKU_BLUE))); mudou = true;
+    }
+    const v = characterDB.vegeta;
+    const padrao = (l) => !Array.isArray(l) || !l.length || (l.length === 1 && l[0] && !Object.keys(l[0].diff || {}).length);
+    if (v && padrao(v.transformations)) { v.transformations = JSON.parse(JSON.stringify(VEGETA_TRANSFORMACOES)); mudou = true; }
+    if (mudou) saveCharacterData();
+}
+
 function atualizarFreezaSalvo() {
+    // v0.98: o Freeza ataca com o dedo (tiro da ponta do dedo e a bola do especial em cima dele), em todas as formas
+    if (readStorage("saiyan_freeza_dedo_098") !== "1") {
+        writeStorage("saiyan_freeza_dedo_098", "1");
+        const f = characterDB.freeza_1, ap = f && f.builderAppearance;
+        if (ap && (!ap.armPose || ap.armPose === "guarda")) { ap.armPose = "dedo"; saveCharacterData(); }
+    }
     // uma vez: o Freeza com transformações já salvas ganha também o Golden e o Black no fim da lista
     if (readStorage("saiyan_freeza_golden") !== "1") {
         writeStorage("saiyan_freeza_golden", "1");

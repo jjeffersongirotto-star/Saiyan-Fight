@@ -217,8 +217,6 @@ function updateTutorial(dt) {
         if (step && step.key !== "move") return;   // durante o efeito só o movimento continua livre
     }
 
-    if (tutorialPhase === "finished") return;
-
     // Movimento: mesma leitura do jogo normal (teclado, analógico virtual ou controle já traduzido em keysPressed).
     let moveX = 0, moveY = 0;
     if (keysPressed[keyBindings.p1.up]) moveY -= 1;
@@ -254,6 +252,10 @@ function updateTutorial(dt) {
     } else {
         tutorialAttackCooldown = 0;
     }
+
+    // tutorial concluído: o personagem continua livre (mover, atirar, especial) e a pose acompanha o que ele faz —
+    // antes a atualização parava aqui e a pose do especial ficava presa depois que o raio acabava
+    if (tutorialPhase === "finished") { setTutorialActionState(dx, dy); return; }
 
     if (tutorialPhase !== "waiting" || !step) { /* nada */ }
     else if (step.key === "move") {
@@ -804,6 +806,7 @@ function startGame() {
     world.pickups = [];
     world.floatingTexts = [];
     world.beamActive = 0;
+    world.especialPendente = null;
     world.beamOwner = "p1";
     world.beamClashPush = 0;
     world.clashMashP1 = 0;
@@ -995,6 +998,7 @@ function startNextVersusRound(lastRoundWinner) {
     world.saibamans = [];
     world.blasts = [];
     world.beamActive = 0;
+    world.especialPendente = null;
     world.beamOwner = "p1";
     world.beamClashPush = 0;
     world.clashMashP1 = 0;
@@ -1419,10 +1423,15 @@ function triggerSpecialAttack(isP2 = false) {
     const hasPowerBuff = !isP2 && player.powerBuffTimer > 0;
     const damage = getSuperAttackDamage(getSpecialDamage(), hasPowerBuff);
     caster.ki = 0;
-    world.beamActive = 40;
+    // animação do especial do personagem (editor: Animação do especial). O sol do Freeza cresce em cima do dedo e
+    // vai devagar até o adversário: dura mais e o dano só entra quando a bola chega (world.especialPendente)
+    world.especialEfeito = getEfeitoDoPersonagem(isP2 ? selectedBoss : selectedCharacter, "efeitoEspecial");
+    const sol = world.especialEfeito === "sol_freeza";
+    world.beamActive = sol ? SOL_DURACAO : 40;
+    world.beamDuracao = world.beamActive;
     world.beamOwner = requestedOwner;
     world.beamIsSuper = hasPowerBuff;
-    setActionState(caster, "special", 40);
+    setActionState(caster, "special", sol ? 50 : 40);
     if (hasPowerBuff) {
         triggerScreenFlash("#fff3b0", 26);
         bumpStat("superAttacksTotal", 1);
@@ -1437,7 +1446,14 @@ function triggerSpecialAttack(isP2 = false) {
     triggerScreenShake(12, 30);
     vibrate([80, 40, 160]);
     world.obstacles = [];
+    if (sol) { world.especialPendente = { isP2, damage }; return; }
+    aplicarDanoDoEspecial(isP2, damage);
+}
 
+// Sol do Freeza: quadros (de world.beamActive) que a bola leva crescendo, sendo empurrada e voando até o alvo
+const SOL_DURACAO = 72, SOL_CRESCE = 22, SOL_EMPURRA = 32, SOL_CHEGA = 62;
+
+function aplicarDanoDoEspecial(isP2, damage) {
     if (!isP2) {
         player2.hp -= damage;
         player2.hitTimer = 25;
@@ -1534,11 +1550,15 @@ function fireKiBarrage(p, isP2 = false, withPose = true) {
     let color = isP2 ? "#ff0055" : "#00ffff";
     let dir = isP2 ? -1 : 1;
     let startX = isP2 ? p.x - 10 : p.x + p.w + 10;
+    const efeito = getEfeitoDoTiro(isP2 ? selectedBoss : selectedCharacter);
+    // tiro do dedo (Freeza): sai da ponta do dedo, na altura do ombro, sem espalhar
+    const dedo = efeito === "tiro_freeza";
     
     if (world.obstacles.length < MAX_OBSTACLES) {
         world.obstacles.push({
+            efeito,
             x: startX,
-            y: p.y + p.h / 2 + (Math.random() - 0.5) * 20,
+            y: dedo ? p.y + p.h * TIRO_DEDO_ALTURA + (Math.random() - 0.5) * 4 : p.y + p.h / 2 + (Math.random() - 0.5) * 20,
             radius: 8,
             vx: dir * 7,
             vy: (Math.random() - 0.5) * 2,
@@ -1570,7 +1590,21 @@ function getNextBossPattern(wave) {
     return bossPatternBag.pop();
 }
 
+// Animação do tiro do personagem (editor: Animação do tiro); sem escolha = tiro pixel azul/laranja
+const TIRO_DEDO_ALTURA = 0.3;
+function getEfeitoDoTiro(charKey) {
+    return getEfeitoDoPersonagem(charKey, "efeitoTiro") || "tiro_pixel";
+}
+
+// Ataques do vilão: os tiros criados levam a animação do tiro dele
 function spawnBossAttack() {
+    const antes = world.obstacles.length;
+    spawnBossAttackPadrao();
+    const efeito = getEfeitoDoTiro(selectedBoss);
+    for (let i = antes; i < world.obstacles.length; i++) if (!world.obstacles[i].efeito) world.obstacles[i].efeito = efeito;
+}
+
+function spawnBossAttackPadrao() {
     if (player2.isDying || world.obstacles.length >= MAX_OBSTACLES) return;
     let waveParams = getWaveParams(waveNumber);
     let bChar = characterDB[selectedBoss];
@@ -1721,6 +1755,12 @@ function update(dt) {
     if (world.beamActive > 0) {
         world.beamActive = Math.max(0, world.beamActive - dt * 60);
         if (world.beamActive === 0 && world.beamOwner === "clash") resolveClashDamage();
+        // sol do Freeza: o dano entra quando a bola chega no adversário
+        if (world.especialPendente && (world.beamDuracao || 0) - world.beamActive >= SOL_CHEGA) {
+            const pend = world.especialPendente;
+            world.especialPendente = null;
+            aplicarDanoDoEspecial(pend.isP2, pend.damage);
+        }
     }
     player.actionTimer = Math.max(0, (player.actionTimer || 0) - dt * 60);
     player2.actionTimer = Math.max(0, (player2.actionTimer || 0) - dt * 60);
@@ -1948,7 +1988,7 @@ function update(dt) {
 
     for (let i = world.blasts.length - 1; i >= 0; i--) {
         const b = world.blasts[i];
-        b.life -= 0.06 * dt * 60;
+        b.life -= 0.035 * dt * 60;   // a explosão animada (efeitos/explosao.png) precisa de ~0,5 s
         b.r += (b.maxR - b.r) * Math.min(1, 0.3 * dt * 60);
         if (b.life <= 0) world.blasts.splice(i, 1);
     }

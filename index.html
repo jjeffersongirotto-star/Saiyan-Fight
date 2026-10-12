@@ -1106,11 +1106,65 @@
                                     <option value="verde">Verde</option>
                                     <option value="preto">Preta</option>
                                     <option value="roxo">Roxa</option>
+                                    <option value="blue">Azul Blue (chama)</option>
+                                    <option value="azul_escuro">Azul escura</option>
                                 </select>
                             </div>
                             <div class="form-group">
                                 <label for="char-special">Ataque Especial</label>
                                 <input type="text" id="char-special" value="KAMEHAMEHA">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="char-efeito-tiro">Animação do tiro</label>
+                                <select id="char-efeito-tiro">
+                                    <option value="">Padrão do personagem</option>
+                                    <option value="cor">Pela cor do tiro</option>
+                                    <option value="tiro_pixel">Tiro pixel (azul e laranja)</option>
+                                    <option value="tiro_freeza">Tiro do dedo (rosa)</option>
+                                    <option value="tiro_vermelho">Bola vermelha</option>
+                                    <option value="tiro_laranja">Tiro laranja</option>
+                                    <option value="tiro_amarelo">Tiro amarelo</option>
+                                    <option value="cometa_azul">Cometa azul</option>
+                                    <option value="bola_azul">Bola azul-clara</option>
+                                    <option value="tiro_verde">Tiro verde e azul</option>
+                                    <option value="esfera_roxa">Esfera roxa</option>
+                                    <option value="esfera_rosa">Esfera rosa</option>
+                                    <option value="bola_eletrica">Bola elétrica</option>
+                                    <option value="cometa_fogo">Cometinha de fogo</option>
+                                    <option value="esfera_fogo">Esfera de fogo</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="char-efeito-especial">Animação do especial</label>
+                                <select id="char-efeito-especial">
+                                    <option value="">Padrão do personagem</option>
+                                    <option value="cor">Raio desenhado (pela cor)</option>
+                                    <option value="kamehameha">Kamehameha (raio azul largo)</option>
+                                    <option value="raio_azul">Raio azul com cabeça</option>
+                                    <option value="raio_verde">Raio verde</option>
+                                    <option value="raio_vermelho">Raio vermelho</option>
+                                    <option value="sol_freeza">Bola de energia (sol do Freeza)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="char-efeito-aura">Animação da aura</label>
+                                <select id="char-efeito-aura">
+                                    <option value="">Pela cor da aura</option>
+                                    <option value="aura_amarela">Aura amarela</option>
+                                    <option value="aura_amarela_forte">Aura amarela forte</option>
+                                    <option value="aura_chama_amarela">Chama amarela</option>
+                                    <option value="aura_azul">Aura azul</option>
+                                    <option value="aura_azul_chama">Chama azul (Blue)</option>
+                                    <option value="aura_azul_escura">Chama azul escura</option>
+                                    <option value="aura_verde">Aura verde</option>
+                                    <option value="aura_verde_forte">Aura verde forte</option>
+                                    <option value="aura_vermelha">Aura vermelha</option>
+                                    <option value="aura_vermelha_forte">Aura vermelha forte</option>
+                                    <option value="aura_roxa">Aura roxa</option>
+                                </select>
                             </div>
                         </div>
 
@@ -1355,7 +1409,7 @@
                         </select>
                     </div>
                     <div class="form-group"><label for="build-arm-pose">POSIÇÃO DOS BRAÇOS</label>
-                        <select id="build-arm-pose" onchange="refreshBuilderPreview()"><option value="guarda">Guarda de luta</option><option value="cruzados">Cruzados (parado e voando)</option></select>
+                        <select id="build-arm-pose" onchange="refreshBuilderPreview()"><option value="guarda">Guarda de luta</option><option value="cruzados">Cruzados (parado e voando)</option><option value="dedo">Dedo (ataque do Freeza)</option></select>
                     </div>
                     <div class="form-group"><label for="build-skin">COR DA PELE</label>
                         <input type="color" id="build-skin" value="#f3c29a" oninput="escolherCorDaPele()">
@@ -1588,12 +1642,19 @@
                 Novidades e correções do jogo.
             </p>
             <ul id="lista-updates" style="margin: 0 0 18px; color: #ddd; line-height: 1.5; padding: 0 4px 0 0; list-style: none; overflow-y: auto;">
-                <li class="upd-versao"><h3>Versão 0.97 (ATUAL)</h3><p>Editor de Arenas: maquete, sombra da peça, fundir de verdade e clima lava</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Planta virou maquete</strong><p>O mapa pequeno mostra cada peça vista de cima com o formato e a cor dela, o chão do tipo da arena, as peças do céu (planetas, sol, nuvens...) num anel em volta, na direção em que aparecem, e para onde a câmera está olhando. Tem zoom: roda do mouse, dois dedos no celular e os botões + − ⟲ (com zoom, arraste com o botão direito ou Shift).</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Sombra do espaço da peça</strong><p>Com uma peça pronta para colocar, a sombra do espaço exato que ela vai ocupar segue o mouse (no celular, o dedo) e fica verde se o lugar estiver livre ou vermelha se estiver ocupado; a peça entra ao soltar. A peça escolhida mostra o contorno real dela, não mais um círculo.</p></li>
+                <li class="upd-versao"><h3>Versão 0.98 (ATUAL)</h3><p>Poderes e auras novos, ataque do Freeza com o dedo e ordem das fases corrigida</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Poderes animados</strong><p>O tiro de ki de todos virou o tiro em pixel azul e laranja; Goku, Gohan, Gotenks, Vegetto e Cell soltam o Kamehameha animado; o PARRY mostra uma onda azul; os minions explodem com a explosão animada; e no choque de especiais do VERSUS um raio de duas pontas liga os dois lutadores.</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Freeza ataca com o dedo</strong><p>Em todas as formas, o tiro sai da ponta do dedo do braço esticado, com um brilho branco e rosa. No especial ele levanta o dedo, uma bola de energia parecida com um sol nasce pequena em cima dele e cresce, e ele empurra a bola com o dedo até o adversário; o dano entra quando ela chega. Nova opção POSIÇÃO DOS BRAÇOS: Dedo (ataque do Freeza).</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Auras Blue e aura roxa</strong><p>O Goku ganhou a forma Super Saiyajin Blue e o Vegeta passou a ter Super Saiyajin, Blue e Blue Evolução, com a aura de chama azul (e azul escura na forma nova do Vegeta). A aura roxa (Freeza, Raditz) voltou animada.</p></li>
+                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Escolha das animações no editor</strong><p>Na aba DADOS do editor de personagens dá para escolher a animação do tiro, do especial e da aura de cada personagem entre todas as do jogo (as novas e as que já existiam). Sem escolha, cada um usa o seu padrão. A escolha também vai no arquivo do personagem.</p></li>
+                <li class="upd-item upd-corrigido"><span class="upd-tag">CORRIGIDO</span><strong>Pose do especial presa depois do tutorial</strong><p>Depois de terminar o tutorial, soltar o especial deixava o personagem preso naquela pose; agora ele volta a se mexer normalmente.</p></li>
+                <li class="upd-item upd-corrigido"><span class="upd-tag">CORRIGIDO</span><strong>Mudar a fase de lugar</strong><p>Em ARENAS, levar uma fase da posição 10 para a 8 agora empurra as outras: a 8 vira 9 e a 9 vira 10 (antes só trocava a 8 com a 10).</p></li>
+                <li class="upd-versao"><h3>Versão 0.97</h3><p>Editor de Arenas: maquete, sombra da peça, fundir de verdade e clima lava</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Planta virou maquete</strong><p>O mapa pequeno mostra cada peça vista de cima com o formato e a cor dela, o chão do tipo da arena, as peças do céu (planetas, sol, nuvens...) num anel em volta, na direção em que aparecem, e para onde a câmera está olhando. Tem zoom: roda do mouse, dois dedos no celular e os botões + − ⟲ (com zoom, arraste com o botão direito ou Shift).</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Sombra do espaço da peça</strong><p>Com uma peça pronta para colocar, a sombra do espaço exato que ela vai ocupar segue o mouse (no celular, o dedo) e fica verde se o lugar estiver livre ou vermelha se estiver ocupado; a peça entra ao soltar. A peça escolhida mostra o contorno real dela, não mais um círculo.</p></li>
                 <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>Peça pronta sem confirmar</strong><p>Tocar numa peça da lista já deixa ela pronta para colocar (saiu o CONFIRMAR PEÇA); dá para girar e ajustar tamanho e cor antes de colocar. CANCELAR desliga. O quadro PEÇA ESCOLHIDA saiu: os ajustes ficam numa barra por cima da tela grande e DADOS DA ARENA ocupa a parte de baixo inteira.</p></li>
                 <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>FUNDIR com recorte de verdade</strong><p>Só a parte sobreposta das peças fundidas usa a aparência escolhida; o resto de cada peça continua no lugar certo na frente ou atrás.</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>Clima LAVA</strong><p>Céu avermelhado, brasas subindo e gotas de lava caindo, como em Namek prestes a explodir.</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>Clima LAVA</strong><p>Céu avermelhado, brasas subindo e gotas de lava caindo, como em Namek prestes a explodir.</p></li>
                 <li class="upd-item upd-corrigido"><span class="upd-tag">CORRIGIDO</span><strong>Chão, cores e seletor de cor</strong><p>O chão some no horizonte como planície (sem a faixa que parecia um muro e tampava os planetas baixos), as cores do chão e do céu ficam iguais às escolhidas, e mexer no seletor de cores não trava mais a tela.</p></li>
                 <li class="upd-item upd-corrigido"><span class="upd-tag">CORRIGIDO</span><strong>Ataque com as duas mãos</strong><p>Na luta, cada ataque continua a sequência de quadros de onde o anterior parou: o Vegeta (e quem tiver ataque alternado nos quadros) volta a atacar com a mão direita e a esquerda.</p></li>
                 <li class="upd-versao"><h3>Versão 0.96</h3><p>Editor de Arenas: pincel de chão, hora do dia e clima</p></li>
