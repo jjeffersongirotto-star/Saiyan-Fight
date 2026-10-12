@@ -2398,7 +2398,7 @@ const DEFAULT_CHARACTERS = {
     piccolo: { name: "PICCOLO", presetKey: "piccolo", align: "ANTI-HERÓI", aura: "verde", spec: "MAKAN KOSAPPO" },
     // Freeza: começa na 1ª forma (armadura do exército) e cada TRANSFORMAR sobe uma forma, até o ciborgue
     freeza_1: { name: "FREEZA", presetKey: "freeza", align: "VILÃO", aura: "roxo", spec: "DEATH BEAM",
-        transformations: FREEZA_TRANSFORMACOES, efeitoTiro: "tiro_freeza", efeitoEspecial: "sol_freeza" },
+        transformations: FREEZA_TRANSFORMACOES, efeitoTiro: "esfera_roxa", efeitoEspecial: "sol_freeza" },
     trunks: { name: "TRUNKS", presetKey: "trunks", align: "HERÓI", aura: "azul", spec: "BURNING ATTACK" },
     gohan: { name: "GOHAN", presetKey: "gohan", align: "HERÓI", aura: "gelo", spec: "MASENKO", transformations: GOHAN_TRANSFORMACOES, efeitoEspecial: "kamehameha" },
     kaioshin: { name: "SUPREMO SR. KAIO", presetKey: "kaioshin", align: "HERÓI", aura: "rosa", spec: "KIAI SAGRADO" },

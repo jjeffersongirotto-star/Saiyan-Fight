@@ -38,17 +38,17 @@ check("todas as imagens novas batem com n x w e h", Object.keys(run("EFEITOS")).
     return w === e.n * e.w && hh === e.h;
 }));
 check("raio vermelho: toca o começo uma vez e depois repete o fim", run("efeitoQuadro('raio_vermelho', 0)") === 0 && run("efeitoQuadro('raio_vermelho', 12 * 0.04 + 0.001)") === 7);
-check("tiro padrão de todos é o tiro pixel; o Freeza atira com o dedo", run("getEfeitoDoTiro('goku_adult')") === "tiro_pixel" && run("getEfeitoDoTiro('broly')") === "tiro_pixel" && run("getEfeitoDoTiro('freeza_1')") === "tiro_freeza");
+check("tiro padrão de todos é o tiro pixel; o do Freeza é a esfera roxa (v0.100)", run("getEfeitoDoTiro('goku_adult')") === "tiro_pixel" && run("getEfeitoDoTiro('broly')") === "tiro_pixel" && run("getEfeitoDoTiro('freeza_1')") === "esfera_roxa");
 check("Kamehameha é o especial do Goku, Gohan, Gotenks, Vegetto e Cell", ["goku_adult", "gohan", "gotenks", "gogeta", "cell"].every(k => run(`getEfeitoDoPersonagem('${k}', 'efeitoEspecial')`) === "kamehameha"));
 check("o especial do Freeza é o sol", run("getEfeitoDoPersonagem('freeza_1', 'efeitoEspecial')") === "sol_freeza");
 
 // luta
 run("selectedCharacter = 'goku_adult'; selectedBoss = 'freeza_1'; gameMode = 'coop'; startGame(); world.obstacles = []");
 run("fireKiBarrage(player, false); fireKiBarrage(player2, true)");
-check("cada tiro leva a animação de quem atirou", run("world.obstacles[0].efeito") === "tiro_pixel" && run("world.obstacles[1].efeito") === "tiro_freeza");
+check("cada tiro leva a animação de quem atirou", run("world.obstacles[0].efeito") === "tiro_pixel" && run("world.obstacles[1].efeito") === "esfera_roxa");
 check("o tiro do dedo sai na altura do ombro (sem espalhar)", Math.abs(run("world.obstacles[1].y - (player2.y + player2.h * TIRO_DEDO_ALTURA)")) <= 2);
 run("gameMode = 'singleplayer'; world.obstacles = []; spawnBossAttack()");
-check("os ataques do vilão também usam a animação dele", run("world.obstacles.length") > 0 && run("world.obstacles.every(o => o.efeito === 'tiro_freeza')"));
+check("os ataques do vilão também usam a animação dele", run("world.obstacles.length") > 0 && run("world.obstacles.every(o => o.efeito === 'esfera_roxa')"));
 h.calls.length = 0; run("drawObstacles()");
 check("os tiros desenham", h.calls.length > 0);
 run("gameMode = 'coop'; world.obstacles = []; player.invulnerableTimer = 0; player.shield = false; player.hp = player.maxHp; player2.ki = player2.maxKi; triggerSpecialAttack(true)");
