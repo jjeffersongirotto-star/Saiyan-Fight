@@ -23,11 +23,14 @@ Todo personagem do jogo pode virar um arquivo, e um arquivo pode virar um person
 |---|---|---|
 | `name` | sim | Nome (até 30 letras; vira MAIÚSCULAS). |
 | `alignment` | não | `HERÓI`, `ANTI-HERÓI`, `VILÃO` ou `MINION` (padrão `HERÓI`). |
-| `aura` | não | `gelo` (branca), `amarelo`, `vermelho`, `rosa`, `azul`, `verde`, `preto`, `roxo`. |
+| `aura` | não | `gelo` (branca), `amarelo`, `vermelho`, `rosa`, `azul`, `verde`, `preto`, `roxo`, `blue` (chama azul do Super Saiyajin Blue), `azul_escuro`. |
 | `special` | não | Nome do ataque especial. |
 | `projColor` | não | Cor do tiro, `#rrggbb`. |
 | `projSize` | não | `small`, `normal` ou `large`. |
 | `altura` | não | Altura em cm (50 a 500; 175 = tamanho normal). |
+| `efeitoTiro` | não | Animação do tiro: `cor` (desenho antigo pela cor), `tiro_pixel`, `tiro_freeza`, `tiro_vermelho`, `tiro_laranja`, `tiro_amarelo`, `cometa_azul`, `bola_azul`, `tiro_verde`, `esfera_roxa`, `esfera_rosa`, `bola_eletrica`, `cometa_fogo`, `esfera_fogo`. Sem o campo = padrão do personagem (`tiro_pixel`). |
+| `efeitoEspecial` | não | Animação do especial: `cor` (raio desenhado), `kamehameha`, `raio_azul`, `raio_verde`, `raio_vermelho`, `sol_freeza`. |
+| `efeitoAura` | não | Animação da aura: `aura_amarela`, `aura_amarela_forte`, `aura_chama_amarela`, `aura_azul`, `aura_azul_chama`, `aura_azul_escura`, `aura_verde`, `aura_verde_forte`, `aura_vermelha`, `aura_vermelha_forte`, `aura_roxa`. Sem o campo = pela cor da aura. |
 | `transformations` | não | Lista de transformações (veja abaixo). |
 | **desenho** | sim | **Um só** destes: `builderAppearance`, `minionClassico`, `animations` ou `folha`. |
 

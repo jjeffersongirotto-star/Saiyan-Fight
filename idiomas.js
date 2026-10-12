@@ -423,6 +423,47 @@ Azul § Blue § Azul
 Verde § Green § Verde
 Preta § Black § Negra
 Roxa § Purple § Morada
+Azul Blue (chama) § Blue (flame) § Azul Blue (llama)
+Azul escura § Dark blue § Azul oscura
+Animação do tiro § Shot animation § Animación del disparo
+Animação do especial § Special animation § Animación del especial
+Animação da aura § Aura animation § Animación del aura
+Padrão do personagem § Character default § Predeterminado del personaje
+Pela cor do tiro § By shot colour § Por el color del disparo
+Tiro pixel (azul e laranja) § Pixel shot (blue and orange) § Disparo pixel (azul y naranja)
+Tiro do dedo (rosa) § Finger shot (pink) § Disparo del dedo (rosa)
+Bola vermelha § Red ball § Bola roja
+Tiro laranja § Orange shot § Disparo naranja
+Tiro amarelo § Yellow shot § Disparo amarillo
+Cometa azul § Blue comet § Cometa azul
+Bola azul-clara § Light-blue ball § Bola azul claro
+Tiro verde e azul § Green and blue shot § Disparo verde y azul
+Esfera roxa § Purple sphere § Esfera morada
+Esfera rosa § Pink sphere § Esfera rosa
+Bola elétrica § Electric ball § Bola eléctrica
+Cometinha de fogo § Small fire comet § Cometita de fuego
+Esfera de fogo § Fire sphere § Esfera de fuego
+Raio desenhado (pela cor) § Drawn beam (by colour) § Rayo dibujado (por el color)
+Kamehameha (raio azul largo) § Kamehameha (wide blue beam) § Kamehameha (rayo azul ancho)
+Raio azul com cabeça § Blue beam with head § Rayo azul con cabeza
+Raio verde § Green beam § Rayo verde
+Raio vermelho § Red beam § Rayo rojo
+Bola de energia (sol do Freeza) § Energy ball (Freeza's sun) § Bola de energía (sol de Freeza)
+Pela cor da aura § By aura colour § Por el color del aura
+Aura amarela § Yellow aura § Aura amarilla
+Aura amarela forte § Strong yellow aura § Aura amarilla fuerte
+Chama amarela § Yellow flame § Llama amarilla
+Aura azul § Blue aura § Aura azul
+Chama azul (Blue) § Blue flame (Blue) § Llama azul (Blue)
+Chama azul escura § Dark blue flame § Llama azul oscura
+Aura verde § Green aura § Aura verde
+Aura verde forte § Strong green aura § Aura verde fuerte
+Aura vermelha § Red aura § Aura roja
+Aura vermelha forte § Strong red aura § Aura roja fuerte
+Aura roxa § Purple aura § Aura morada
+Super Saiyajin Blue § Super Saiyan Blue § Super Saiyajin Blue
+Super Saiyajin Blue Evolução § Super Saiyan Blue Evolution § Super Saiyajin Blue Evolución
+Super Saiyajin § Super Saiyan § Super Saiyajin
 Ataque Especial § Special Attack § Ataque Especial
 Cor do Projétil § Projectile Color § Color del Proyectil
 Tamanho Projétil § Projectile Size § Tamaño del Proyectil
@@ -496,6 +537,7 @@ Gordo § Chubby § Gordo
 POSIÇÃO DOS BRAÇOS § ARM POSE § POSICIÓN DE LOS BRAZOS
 Guarda de luta § Fighting stance § Guardia de pelea
 Cruzados (parado e voando) § Crossed (idle and flying) § Cruzados (quieto y volando)
+Dedo (ataque do Freeza) § Finger (Freeza's attack) § Dedo (ataque de Freeza)
 COR DA PELE § SKIN COLOR § COLOR DE PIEL
 usar cor padrão da raça § use the race's default color § usar el color de la raza
 CABEÇA E ROSTO § HEAD & FACE § CABEZA Y ROSTRO
@@ -1008,6 +1050,7 @@ ARQUIVO FEITO POR UMA VERSÃO MAIS NOVA DO JOGO. ATUALIZE O JOGO. § FILE MADE B
 FALTA O NOME DO PERSONAGEM (name). § THE CHARACTER NAME IS MISSING (name). § FALTA EL NOMBRE DEL PERSONAJE (name).
 ALINHAMENTO INVÁLIDO § INVALID ALIGNMENT § ALINEACIÓN NO VÁLIDA
 COR DA AURA INVÁLIDA § INVALID AURA COLOUR § COLOR DEL AURA NO VÁLIDO
+ANIMAÇÃO DESCONHECIDA § UNKNOWN ANIMATION § ANIMACIÓN DESCONOCIDA
 FALTA O DESENHO: builderAppearance, minionClassico, animations OU folha. § THE DRAWING IS MISSING: builderAppearance, minionClassico, animations OR folha. § FALTA EL DIBUJO: builderAppearance, minionClassico, animations O folha.
 USE SÓ UM DESENHO POR ARQUIVO § USE ONLY ONE DRAWING PER FILE § USA SOLO UN DIBUJO POR ARCHIVO
 DESENHO INVÁLIDO § INVALID DRAWING § DIBUJO NO VÁLIDO
@@ -1064,7 +1107,7 @@ Tamanho na luta: 175 cm = tamanho normal. Muito alto ou muito baixo tem limite, 
 const IDIOMA_REGRAS = [
     [/^Deseja selecionar (.+) para o (JOGADOR \d)\?$/, (m, T) => `Select ${m[1]} for ${T(m[2])}?`, (m, T) => `¿Seleccionar a ${m[1]} para el ${T(m[2])}?`],
     [/^Em qual forma (.+) aparece nesta fase\?$/, "Which form does $1 appear in on this stage?", "¿En qué forma aparece $1 en esta fase?"],
-    [/^TROCA DE LUGAR COM: (.*) \(VAI PARA A FASE (\d+)\)$/, "SWAPS PLACES WITH: $1 (GOES TO STAGE $2)", "CAMBIA DE LUGAR CON: $1 (VA A LA FASE $2)"],
+    [/^OCUPA O LUGAR DE: (.*) \(AS OUTRAS ANDAM UMA POSIÇÃO\)$/, "TAKES THE PLACE OF: $1 (THE OTHERS MOVE ONE POSITION)", "OCUPA EL LUGAR DE: $1 (LAS DEMÁS SE MUEVEN UNA POSICIÓN)"],
     [/^Deseja selecionar (.+) para o herói\?$/, "Select $1 as the hero?", "¿Seleccionar a $1 como héroe?"],
     [/^Deseja selecionar (.+) para:$/, "Select $1 as:", "¿Seleccionar a $1 como:"],
     [/^JOGADOR (\d)$/, "PLAYER $1", "JUGADOR $1"],

@@ -1672,6 +1672,16 @@ function spriteArm(R, a, B, spec, glove, skin, side, angles, handKind) {
         }
     }
     s += mao.fill;
+    let ponta = h;
+    if (handKind === "dedo") {
+        // dedo indicador esticado na direção do braço (ataque do Freeza): contorno por baixo e a cor da mão por cima
+        const r = w * 0.52, ux = Math.sin(dirA * Math.PI / 180), uy = -Math.cos(dirA * Math.PI / 180);
+        const b = [h[0] + ux * r * 0.4, h[1] + uy * r * 0.4];
+        ponta = [h[0] + ux * r * 2.1, h[1] + uy * r * 2.1];
+        const d = `M${_n2(b[0])} ${_n2(b[1])} L${_n2(ponta[0])} ${_n2(ponta[1])}`;
+        s += `<path d="${d}" stroke="${SPRITE_OUTLINE}" stroke-width="${_n2(w * 0.62)}" stroke-linecap="round" fill="none"/>`;
+        s += `<path d="${d}" stroke="${handColor}" stroke-width="${_n2(w * 0.36)}" stroke-linecap="round" fill="none"/>`;
+    }
     if (glove && glove.garras) {
         // garras de minion: três unhas curvas e compridas saindo da mão, na direção do braço
         const r = w * 0.52, ux = Math.sin(dirA * Math.PI / 180), uy = -Math.cos(dirA * Math.PI / 180);
@@ -1687,7 +1697,7 @@ function spriteArm(R, a, B, spec, glove, skin, side, angles, handKind) {
         const r = w * 0.52, ux = Math.sin(dirA * Math.PI / 180), uy = -Math.cos(dirA * Math.PI / 180);
         [-0.5, 0, 0.5].forEach(k => { s += `<circle cx="${_n2(h[0] + ux * r * 0.75 - uy * r * k)}" cy="${_n2(h[1] + uy * r * 0.75 + ux * r * k)}" r="${_n2(r * 0.2)}" fill="#141218"/>`; });
     }
-    return { svg: s, hand: h, elbow: e };
+    return { svg: s, hand: h, elbow: e, ponta };
 }
 
 // Marcas no braço à mostra: listras rosadas (Freeza 1–3), placas roxas (forma final), segmentos de metal
@@ -2130,7 +2140,7 @@ const SPRITE_FLY_DIRS = {
     flyUpRight: [1, -1], flyUpLeft: [-1, -1], flyDownRight: [1, 1], flyDownLeft: [-1, 1]
 };
 
-function spritePoseFor(state, i, n) {
+function spritePoseFor(state, i, n, a) {
     const ph = (i / n) * Math.PI * 2, sn = Math.sin(ph), cs = Math.cos(ph);
     const P = {
         bob: 0, shiftX: 0, lean: 0, crouch: 0, breath: 0,
@@ -2201,7 +2211,9 @@ function spritePoseFor(state, i, n) {
             legL: [-19, -10], legR: [17, 24], hairSway: -0.6, hairLift: 0.4, capeSway: -0.8, tailSwing: -0.6, lookX: 1.2,
             ki: { r: F.ki, follow: "R", ox: i >= 2 ? 9 : 4, flick: i, alpha: 1 }
         });
-    } else if (state === "chargeKi") {
+    }
+    if (a && a.armPose === "dedo" && (state === "attackKi" || state === "special")) Object.assign(P, spritePoseDedo(state, i));
+    if (state === "chargeKi") {
         Object.assign(P, {
             crouch: 4, shiftX: (i % 2 ? 1 : -1) * 0.9, armL: [-40, -16], armR: [40, 16], legL: [-27, -8], legR: [27, 8],
             eyes: i % 2 ? "angry" : "closed", mouth: i === 1 || i === 3 ? "shout" : "set", hairLift: 0.65 + 0.35 * sn, hairSway: 0.3 * sn, capeSway: 0.5 * sn,
@@ -2229,6 +2241,34 @@ function spritePoseFor(state, i, n) {
         Object.assign(P, F, { legL: [-20 + F.crouch, -8], legR: [20 - F.crouch, 8], shiftX: (i % 2 ? 0.8 : -0.8) * (F.sparks > 0.5 ? 1 : 0.3), hairSway: 0.25 * sn, capeSway: 0.4 * sn });
     }
     return P;
+}
+
+// POSIÇÃO DOS BRAÇOS "dedo" (Freeza): o tiro sai da ponta do dedo do braço esticado (brilho branco de borda rosa);
+// no especial o braço sobe com o dedo para cima (a bola do especial cresce em cima dele, desenhada pela luta) e
+// depois vai para a frente "empurrando" a bola com o dedo.
+const SPRITE_DEDO_KI = "#ff5fc8";
+function spritePoseDedo(state, i) {
+    const base = { handR: "dedo", handL: "fist", legL: [-14, -8], legR: [14, 14], hairSway: -0.3, capeSway: -0.4, tailSwing: -0.4, lookX: 1.2 };
+    if (state === "attackKi") {
+        const F = [
+            { lean: -2, armR: [70, 74], ki: 2.2, mouth: "set" },
+            { lean: 4, armR: [88, 90], ki: 3.4, mouth: "set" },
+            { lean: 5, armR: [90, 92], ki: 4.2, mouth: "shout" },
+            { lean: 4, armR: [89, 91], ki: 3.2, mouth: "set" },
+            { lean: 2, armR: [80, 84], ki: 1.8, mouth: "set" }
+        ][i % 5];
+        return Object.assign(base, { lean: F.lean, armR: F.armR, armL: [-20, -14], eyes: "angry", mouth: F.mouth, crouch: 0.5, shiftX: 0,
+            ki: { r: F.ki, ponta: true, cor: SPRITE_DEDO_KI, flick: i, alpha: 1 } });
+    }
+    const F = [
+        { lean: -6, armR: [150, 178], mouth: "risada" },
+        { lean: -6, armR: [152, 180], mouth: "risada" },
+        { lean: -5, armR: [151, 179], mouth: "risada" },
+        { lean: 2, armR: [118, 136], mouth: "set" },
+        { lean: 7, armR: [90, 92], mouth: "shout" }
+    ][i % 5];
+    return Object.assign(base, { lean: F.lean, armR: F.armR, armL: [-22, -16], eyes: "angry", mouth: F.mouth, crouch: 1, shiftX: 0,
+        ki: { r: 1.6, ponta: true, cor: SPRITE_DEDO_KI, flick: i, alpha: 1 } });
 }
 
 // ---------------------------------------------------------------------------
@@ -2305,8 +2345,8 @@ function spriteRenderFigure(a, pose, opts) {
 
     R.cel = false;   // efeitos (ki, escudo, brilho, aura) continuam com degradê suave
     if (pose.ki) {
-        const h = pose.ki.follow === "R" ? armR.hand : armL.hand;
-        fig += spriteKiBall(R, h[0] + (pose.ki.ox || 0), h[1], pose.ki.r, kiColor, pose.ki.flick || 0);
+        const braco = pose.ki.ponta || pose.ki.follow === "R" ? armR : armL, h = pose.ki.ponta ? braco.ponta : braco.hand;
+        fig += spriteKiBall(R, h[0] + (pose.ki.ox || 0), h[1], pose.ki.r, pose.ki.cor || kiColor, pose.ki.flick || 0);
     }
     if (pose.shield > 0) {
         // escudo do parry: envolve o corpo inteiro (é a área que rebate, PARRY_RADIUS em gameplay.js), menor que a aura
@@ -2339,7 +2379,7 @@ function generateSpriteFrameSvg(appearance, state, frameIndex, opts) {
     const a = normalizeAppearance(appearance);
     const n = SPRITE_FRAME_COUNTS[state] || 1;
     const idx = ((frameIndex % n) + n) % n;
-    const pose = spritePoseFor(SPRITE_STATES.includes(state) ? state : "idle", idx, n);
+    const pose = spritePoseFor(SPRITE_STATES.includes(state) ? state : "idle", idx, n, a);
     const { R, body } = spriteRenderFigure(a, pose, Object.assign({ seed: idx }, opts || {}));
     const W = Math.round(SPRITE_VIEW.w * SPRITE_RASTER_SCALE), H = Math.round(SPRITE_VIEW.h * SPRITE_RASTER_SCALE);
     // Estilo pixel art: sem suavização de bordas (cores chapadas, sem "borrado") e traços com pelo menos ~1 pixel
@@ -2381,7 +2421,7 @@ const SPRITE_PRESETS = {
     goku: { label: "Goku", appearance: { gender: "masculino", race: "Saiyajin", build: "musculoso", hairStyle: "goku", hairColor: "#16110f", eyeType: "normal", irisColor: "#1a1210", mouthType: "smile", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "none", outerShirt: "kimono", innerShirt: "camiseta", pants: "larga", shoes: "botas_artes", gloves: "pulseiras", primaryColor: "#f2680d", secondaryColor: "#3a46b8", accentColor: "#f7d23c", shirtColor: "#1e3a8a", pantsColor: "#f2680d", symbol: "go", kiColor: "#5be3ff" } },
     vegeta: { label: "Vegeta", appearance: { gender: "masculino", race: "Saiyajin", build: "normal", hairStyle: "vegeta", hairColor: "#14101a", eyeType: "serio", irisColor: "#161a24", mouthType: "serio", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "scouter_vermelho", outerShirt: "armadura_saiyajin", innerShirt: "malha", pants: "justa", shoes: "botas_saiyajin", gloves: "luvas_saiyajin", primaryColor: "#1b3fa0", secondaryColor: "#f4f4f8", accentColor: "#f0c050", shirtColor: "#1b3fa0", pantsColor: "#1b3fa0", tail: "cinto_saiyajin", kiColor: "#ffe45a" } },
     piccolo: { label: "Piccolo", appearance: { gender: "masculino", race: "Namekuseijin", build: "musculoso", hairStyle: "careca", eyeType: "bravo", irisColor: "#151515", mouthType: "serio", earType: "pontuda", headFeature: "antenas", bodyMarks: "namek", accessory: "none", hat: "turbante", outerShirt: "gi_piccolo", innerShirt: "nenhuma", pants: "larga", shoes: "botas_marrons", gloves: "nenhuma", primaryColor: "#5b2e91", secondaryColor: "#20336f", accentColor: "#f5f5f7", shirtColor: "#20336f", pantsColor: "#5b2e91", cape: "capa_ombreiras", capeColor: "#f6f6f8", kiColor: "#e9ff7a" } },
-    freeza: { label: "Freeza", appearance: { gender: "masculino", race: "Raça Freeza", build: "magro", skinColor: "#cdb8ea", hairStyle: "careca", eyeType: "freeza", irisColor: "#d81f3f", mouthType: "maligno", earType: "nenhuma", headFeature: "capacete_freeza", bodyMarks: "listras_freeza", accessory: "none", outerShirt: "armadura_exercito", innerShirt: "nenhuma", pants: "nenhuma", shoes: "caneleiras_freeza", gloves: "bracadeiras_freeza", primaryColor: "#8a3fc0", secondaryColor: "#17141c", accentColor: "#d0962e", shirtColor: "#17141c", pantsColor: "#17141c", tail: "freeza", kiColor: "#ff5be0" } },
+    freeza: { label: "Freeza", appearance: { gender: "masculino", race: "Raça Freeza", build: "magro", skinColor: "#cdb8ea", hairStyle: "careca", eyeType: "freeza", irisColor: "#d81f3f", mouthType: "maligno", earType: "nenhuma", headFeature: "capacete_freeza", bodyMarks: "listras_freeza", accessory: "none", outerShirt: "armadura_exercito", innerShirt: "nenhuma", pants: "nenhuma", shoes: "caneleiras_freeza", gloves: "bracadeiras_freeza", primaryColor: "#8a3fc0", secondaryColor: "#17141c", accentColor: "#d0962e", shirtColor: "#17141c", pantsColor: "#17141c", tail: "freeza", kiColor: "#ff5be0", armPose: "dedo" } },
     trunks: { label: "Trunks do Futuro", appearance: { gender: "masculino", race: "Saiyajin", build: "normal", hairStyle: "trunks_futuro", hairColor: "#c9b3ec", eyeType: "serio", irisColor: "#2a8ad8", mouthType: "serio", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "none", outerShirt: "jaqueta_trunks", innerShirt: "regata", pants: "larga", shoes: "botas_trunks", gloves: "nenhuma", primaryColor: "#5a4fd0", secondaryColor: "#20263a", accentColor: "#d7b25a", shirtColor: "#17161c", pantsColor: "#2c2c33", symbol: "none", backWeapon: "espada_trunks", kiColor: "#9fd0ff" } },
     gohan: { label: "Gohan (jovem)", appearance: { gender: "masculino", race: "Saiyajin", build: "normal", hairStyle: "gohan", hairColor: "#16110f", eyeType: "serio", irisColor: "#1a1210", mouthType: "serio", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "none", outerShirt: "gi_piccolo", innerShirt: "nenhuma", pants: "larga", shoes: "botas_dobradas", gloves: "pulseiras", primaryColor: "#7a1fb0", secondaryColor: "#4a66d8", accentColor: "#f5f5f7", shirtColor: "#20336f", pantsColor: "#7a1fb0", cape: "capa_ombreiras", capeColor: "#f6f6f8", kiColor: "#ffd45b" } },
     kaioshin: { label: "Supremo Sr. Kaio", appearance: { gender: "masculino", race: "Kaioshin", build: "magro", hairStyle: "kaioshin_moicano", hairColor: "#f4f4f4", eyeType: "gentil", irisColor: "#2a2a44", mouthType: "smile", earType: "pontuda", headFeature: "none", bodyMarks: "none", accessory: "potara", outerShirt: "roupa_kaioshin", innerShirt: "nenhuma", pants: "larga", shoes: "botas_kaioshin", gloves: "nenhuma", primaryColor: "#5648b8", secondaryColor: "#f3eedd", accentColor: "#f2c94c", shirtColor: "#f3eedd", pantsColor: "#f3eedd", kiColor: "#c9a0ff" } },

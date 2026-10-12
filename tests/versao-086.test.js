@@ -28,7 +28,10 @@ check("músicas dos arquivos existem", core.FASES_PADRAO.every(f => run(`!!BGM_T
 // ---------- ordem e troca de lugar (puro) ----------
 const ordem = core.FASES_PADRAO.map(f => f.id);
 const trocada = core.trocarPosicaoFase(ordem, "time_room", 2);
-check("pôr a fase 7 na posição 2 troca de lugar com a 2 (as outras ficam)", trocada[1] === "time_room" && trocada[6] === "terra" && trocada.filter((id, i) => id !== ordem[i]).length === 2);
+const idx = ordem.indexOf("time_room");
+check("pôr uma fase na posição 2 empurra as do meio uma posição (v0.98)", trocada[1] === "time_room" && ordem.slice(1, idx).every((id, i) => trocada[i + 2] === id) && trocada.slice(idx + 1).join() === ordem.slice(idx + 1).join() && trocada.length === ordem.length);
+const desce = core.trocarPosicaoFase(ordem, ordem[1], 4);
+check("descer a 2 para a 4: a 3 vira 2 e a 4 vira 3", desce[1] === ordem[2] && desce[2] === ordem[3] && desce[3] === ordem[1] && desce[0] === ordem[0]);
 check("ordem salva com id faltando/sobrando não quebra", core.ordenarFases(core.FASES_PADRAO, ["kaio", "nao_existe"]).map(f => f.id).join() === ["kaio"].concat(ordem.filter(id => id !== "kaio")).join());
 check("fase com NORMAL completo continua liberada em qualquer posição", core.isStageUnlockedByProgress("kaioshin", { kaioshin: { normalDone: true } }) === true);
 
@@ -59,7 +62,7 @@ run(`handleMenuClick(${card.x + 20}, ${card.y + 20})`);
 for (let i = 0; i < iTempo + 1 - 2; i++) clicar(L.faseMenos);
 clicar(L.minionMais);
 clicar(L.salvar);
-check("SALVAR: a Sala do Tempo vira a fase 2 e o Torneio vai para a posição dela", run("STAGE_PROGRESSION[1].id") === "time_room" && run(`STAGE_PROGRESSION[${iTempo}].id`) === "terra");
+check("SALVAR: a Sala do Tempo vira a fase 2 e as do meio andam uma posição", run("STAGE_PROGRESSION[1].id") === "time_room" && run("STAGE_PROGRESSION[2].id") === "terra");
 check("a ordem fica salva no aparelho", JSON.parse(h.store["saiyan_ordem_fases"])[1] === "time_room");
 check("o minion da fase fica salvo e é o usado na luta", run("getMinionDaFase('time_room')") === "celljr" && run("selectedStage = 'time_room', getMinionKind()") === "celljr");
 check("Torneio de Cell usa Cell Jr. por padrão; as outras, Saibaman", run("getMinionDaFase('cell_games')") === "celljr" && run("getMinionDaFase('namek')") === "saibaman");

@@ -28,7 +28,7 @@ check("o especial toca uma vez e fica no último quadro (o disparo)", quadro(0) 
 run("delete characterDB.__teste");
 
 // luta: a pose do especial
-check("soltar o especial usa a animação ESPECIAL", fs.readFileSync(__dirname + "/../gameplay.js", "utf8").includes('setActionState(caster, "special", 40)'));
+check("soltar o especial usa a animação ESPECIAL", fs.readFileSync(__dirname + "/../gameplay.js", "utf8").includes('setActionState(caster, "special", sol ? 50 : 40)'));
 run("player.ki = player.maxKi; world.beamActive = 0; gameState = 'playing'; triggerSpecialAttack(false)");
 check("jogador fica no ESPECIAL enquanto o raio sai", run("player.actionState") === "special");
 
