@@ -2399,16 +2399,16 @@ const DEFAULT_CHARACTERS = {
     // Freeza: começa na 1ª forma (armadura do exército) e cada TRANSFORMAR sobe uma forma, até o ciborgue
     freeza_1: { name: "FREEZA", presetKey: "freeza", align: "VILÃO", aura: "roxo", spec: "DEATH BEAM",
         transformations: FREEZA_TRANSFORMACOES, efeitoTiro: "esfera_roxa", efeitoEspecial: "sol_freeza" },
-    trunks: { name: "TRUNKS", presetKey: "trunks", align: "HERÓI", aura: "azul", spec: "BURNING ATTACK" },
+    trunks: { name: "TRUNKS", presetKey: "trunks", align: "HERÓI", aura: "azul", spec: "BURNING ATTACK", efeitoEspecial: "raio_azul" },
     gohan: { name: "GOHAN", presetKey: "gohan", align: "HERÓI", aura: "gelo", spec: "MASENKO", transformations: GOHAN_TRANSFORMACOES, efeitoEspecial: "kamehameha" },
     kaioshin: { name: "SUPREMO SR. KAIO", presetKey: "kaioshin", align: "HERÓI", aura: "rosa", spec: "KIAI SAGRADO" },
     gogeta: { name: "VEGETTO", presetKey: "fusao", align: "HERÓI", aura: "amarelo", spec: "FINAL KAMEHAMEHA", efeitoEspecial: "kamehameha" },
-    bardock: { name: "BARDOCK", presetKey: "bardock", align: "ANTI-HERÓI", aura: "azul", spec: "RIOT JAVELIN" },
-    android17: { name: "ANDROIDE 17", presetKey: "android17", align: "ANTI-HERÓI", aura: "verde", spec: "POWER BLITZ" },
+    bardock: { name: "BARDOCK", presetKey: "bardock", align: "ANTI-HERÓI", aura: "azul", spec: "RIOT JAVELIN", efeitoEspecial: "raio_vermelho" },
+    android17: { name: "ANDROIDE 17", presetKey: "android17", align: "ANTI-HERÓI", aura: "verde", spec: "POWER BLITZ", efeitoEspecial: "raio_azul" },
     android18: { name: "ANDROIDE 18", presetKey: "android18", align: "ANTI-HERÓI", aura: "azul", spec: "DESTRUCTO DISC" },
     majin_buu: { name: "MAJIN BUU", presetKey: "majin", align: "VILÃO", aura: "rosa", spec: "CHOCOLATE BEAM", transformations: BUU_TRANSFORMACOES },
-    raditz: { name: "RADITZ", presetKey: "raditz", align: "VILÃO", aura: "roxo", spec: "DOUBLE SUNDAY" },
-    broly: { name: "BROLY", presetKey: "broly", align: "VILÃO", aura: "verde", spec: "ERASER CANNON", transformations: BROLY_TRANSFORMACOES },
+    raditz: { name: "RADITZ", presetKey: "raditz", align: "VILÃO", aura: "roxo", spec: "DOUBLE SUNDAY", efeitoEspecial: "raio_vermelho" },
+    broly: { name: "BROLY", presetKey: "broly", align: "VILÃO", aura: "verde", spec: "ERASER CANNON", transformations: BROLY_TRANSFORMACOES, efeitoEspecial: "raio_verde" },
     // Minions (alinhamento MINION): ficam embaixo da divisão MINIONS no gerenciador e só aparecem no campo MINION das
     // arenas. São os desenhos clássicos de minions.js (minion = modelo de MINION_MODELOS), não modelos do construtor.
     saibaman: { name: "SAIBAMAN", minion: "saibaman", align: "MINION", aura: "verde", spec: "AUTODESTRUIÇÃO" },
