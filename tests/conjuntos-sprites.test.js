@@ -36,6 +36,7 @@ check("área CONJUNTOS DE SPRITES no rodapé do editor", html.includes('id="conj
 const confirmacoes = [], alertas = [];
 context.__conf = confirmacoes; context.__alertas = alertas;
 run("var __c0 = showSystemConfirm, __a0 = showSystemAlert; showSystemConfirm = (t, m, ok) => __conf.push({ t, m, ok }); showSystemAlert = (t, m) => __alertas.push(m)");
+run("characterDB.goku_adult.spriteActive = 'original'; characterDB.goku_adult.spriteForms = []; characterDB.goku_adult.spriteGroups = []");   // v0.102: o Goku vem com o conjunto do Gemini; aqui ele é o Goku do construtor
 run("openModal('goku_adult'); switchEditorTab('animacoes')");
 const linhaC = () => run("document.getElementById('conj-linha-conjuntos').innerHTML");
 check("botão dourado ORIGINAL em uso, com o desenho do lutador", /conj-dourado em-uso/.test(linhaC()) && linhaC().includes("<svg") && linhaC().includes("EM USO"));

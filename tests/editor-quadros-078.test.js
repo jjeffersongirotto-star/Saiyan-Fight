@@ -12,6 +12,7 @@ const { run, check, summary, context } = h;
 const alertas = [];
 context.__alertas = alertas;
 run("showSystemConfirm = (t, m, ok) => ok(); showSystemAlert = (t, m) => __alertas.push(m)");
+run("characterDB.goku_adult.spriteActive = 'original'; characterDB.goku_adult.spriteForms = []; characterDB.goku_adult.spriteGroups = []");   // v0.102: o Goku vem com o conjunto do Gemini; aqui ele é o Goku do construtor
 run("openModal('goku_adult'); switchEditorTab('animacoes'); conjNovaForma()");
 run("tempAnimations.idle = ['A','B','C']; tempAnimations.chargeKi = ['K1','K2']; tempAnimations.flyLeft = ['L1','L2','L3']; savedSpriteMotionPreviewFrames = {}");
 

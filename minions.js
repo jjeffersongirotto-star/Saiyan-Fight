@@ -273,7 +273,34 @@ function getMinionPaleta(mc) {
     minionPaletas.set(chave, p);
     return p;
 }
-function minionAssinaturaClassica(mc) { const n = normalizarMinionClassico(mc); return n ? n.modelo + JSON.stringify(n.cores) : ""; }
+function minionAssinaturaClassica(mc) {
+    const n = normalizarMinionClassico(mc);
+    return n ? n.modelo + JSON.stringify(n.cores) + (minionImagemPronta(n) ? "|img" : "") : "";
+}
+
+// v0.102: desenhos do jogador (gerados no Gemini) para o Saibaman e o Cell Jr. — uma tira com as poses, cada uma
+// numa célula do mesmo tamanho da tela do desenho clássico (144x168, centro do corpo no meio), virada para o herói.
+// Valem enquanto as cores não foram editadas no editor (com cores próprias, volta o desenho clássico).
+const MINION_IMAGENS = { saibaman: "minions/saibaman.webp", celljr: "minions/celljr.webp" };
+const MINION_IMAGEM_POSES = ["saltar", "voar0", "voar1", "voar2", "voar3", "investir", "agarrar", "arremessado"];
+const minionImagens = {};
+function minionImagemPronta(n) {
+    if (!n || !MINION_IMAGENS[n.modelo] || Object.keys(n.cores || {}).length) return null;
+    let im = minionImagens[n.modelo];
+    if (!im && typeof Image !== "undefined") {
+        im = minionImagens[n.modelo] = new Image();
+        im.onload = () => {
+            // a imagem chegou: refaz os desenhos guardados (luta, cards e quadros do editor)
+            saibamanSpriteCache.clear();
+            if (typeof minionAnimacoesCache !== "undefined") minionAnimacoesCache.clear();
+            if (typeof characterDB === "object" && typeof aplicarMinionClassico === "function") {
+                for (const k in characterDB) { const c = characterDB[k]; if (c && c.minionClassico) aplicarMinionClassico(c, c.minionClassico); }
+            }
+        };
+        im.src = MINION_IMAGENS[n.modelo];
+    }
+    return im && im.complete && im.naturalWidth ? im : null;
+}
 
 // Uma pose do minion clássico numa tela (escala SAIBAMAN_SPRITE_SCALE, com margem SAIBAMAN_SPRITE_PAD)
 function desenharMinionClassico(mc, pose, frame) {
@@ -282,10 +309,17 @@ function desenharMinionClassico(mc, pose, frame) {
     c.width = (32 + SAIBAMAN_SPRITE_PAD * 2) * SAIBAMAN_SPRITE_SCALE;
     c.height = (40 + SAIBAMAN_SPRITE_PAD * 2) * SAIBAMAN_SPRITE_SCALE;
     const g = c.getContext && c.getContext("2d");
-    if (g) {
+    const img = g ? minionImagemPronta(n) : null;
+    if (img) {
+        const i = Math.max(0, MINION_IMAGEM_POSES.indexOf(pose === "voar" ? "voar" + ((frame | 0) % 4) : pose));
+        const cw = img.naturalWidth / MINION_IMAGEM_POSES.length;
+        g.drawImage(img, i * cw, 0, cw, img.naturalHeight, 0, 0, c.width, c.height);
+    } else if (g) {
+        // o desenho clássico não tem investir/arremessado: usa agarrar/saltar (como antes)
+        const p = pose === "investir" ? "agarrar" : pose === "arremessado" ? "saltar" : pose;
         g.scale(SAIBAMAN_SPRITE_SCALE, SAIBAMAN_SPRITE_SCALE);
         g.translate(SAIBAMAN_SPRITE_PAD, SAIBAMAN_SPRITE_PAD + 1);
-        MINION_MODELOS[n.modelo].desenho(g, pose, frame, getMinionPaleta(n));
+        MINION_MODELOS[n.modelo].desenho(g, p, frame, getMinionPaleta(n));
     }
     return c;
 }

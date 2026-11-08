@@ -26,8 +26,16 @@ const CONJ_PACOTES = {
     // usar: movimento que reaproveita os quadros de outro. As diagonais para trás do Vegeta usam o voo para trás
     // (de frente para o inimigo, tronco para trás) — nas recortadas ele ficava de cabeça para baixo.
     vegeta: { arquivo: "conjuntos/vegeta.json", personagem: "vegeta", nome: "VEGETA SPRITES", marca: "saiyan_conjunto_vegeta",
-        usar: { flyUpLeft: "flyLeft", flyDownLeft: "flyLeft" } }
+        usar: { flyUpLeft: "flyLeft", flyDownLeft: "flyLeft" } },
+    // v0.102: desenhos do jogador (gerados no Gemini) para as 4 formas do Goku; já entra como o conjunto em uso.
+    // variantes = base + transformações em ordem (o jogo usa a forma do nível atual)
+    goku: { arquivo: "conjuntos/goku.json", personagem: "goku_adult", nome: "GOKU SPRITES", marca: "saiyan_conjunto_goku",
+        variantes: ["normal", "ssj", "ssj3", "blue"], ativar: true }
 };
+// variantes de um pacote (os pacotes antigos têm só normal + ssj)
+function conjVariantes(nome, d) {
+    return (d && d.variantes) || (CONJ_PACOTES[nome] && CONJ_PACOTES[nome].variantes) || ["normal", "ssj"];
+}
 const conjPacoteDados = {};        // nome -> { normal: { estado: [urls] }, ssj: {...}, fps }
 const conjPacoteCarregando = {};
 
@@ -44,13 +52,14 @@ function conjEmbrulharQuadro(d, q, st) {
     const n = (v) => Math.round(v * 100) / 100;
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="144" height="168" viewBox="0 0 96 112" shape-rendering="crispEdges">` +
         `<image x="${n(48 + (x - d.centroX) / k)}" y="${n(yBase + (y - apoioY) / k)}" width="${n(w / k)}" height="${n(h / k)}" preserveAspectRatio="none" ` +
-        `style="image-rendering:pixelated" href="data:image/png;base64,${b64}"/></svg>`;
+        `style="image-rendering:pixelated" href="data:${d.mime || "image/png"};base64,${b64}"/></svg>`;
     return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
 function conjRegistrarPacote(nome, d) {
-    const pronto = { fps: d.fps || 10, loop: d.loop || {} };   // loop: { variante: { movimento: quadro do cadeado } }
-    ["normal", "ssj"].forEach(v => {
+    // loop: { variante: { movimento: quadro do cadeado } }; fpsMov: quadros por segundo de cada movimento
+    const pronto = { fps: d.fps || 10, fpsMov: d.fpsMov || {}, loop: d.loop || {} };
+    conjVariantes(nome, d).forEach(v => {
         if (!d[v]) return;
         pronto[v] = {};
         const usar = (CONJ_PACOTES[nome] && CONJ_PACOTES[nome].usar) || {};
@@ -158,7 +167,10 @@ function conjuntoFps(charKey, st, nivel) {
     if (!g) return null;
     const f = conjFormaDoNivel(c, g, nivel | 0);
     if (!f) return null;
-    if (f.pacote) return (conjPacoteDados[f.pacote] && conjPacoteDados[f.pacote].fps) || 10;
+    if (f.pacote) {
+        const p = conjPacoteDados[f.pacote];
+        return (p && ((p.fpsMov && p.fpsMov[st]) || p.fps)) || 10;
+    }
     return (f.fps && f.fps[st]) || CONJ_FPS_PADRAO;
 }
 
@@ -227,12 +239,14 @@ function conjuntosAoCarregar() {
         if (!c || readStorage(p.marca) === "1") continue;
         writeStorage(p.marca, "1");
         c.spriteForms = (c.spriteForms || []).filter(f => f.pacote !== nome);
-        const base = { id: "pk_" + nome + "_base", tipo: "base", nivel: 0, pacote: nome, variante: "normal" };
-        const t1 = { id: "pk_" + nome + "_t1", tipo: "transf", nivel: 1, pacote: nome, variante: "ssj" };
-        c.spriteForms.push(base, t1);
+        const formas = conjVariantes(nome).map((v, i) => i === 0
+            ? { id: "pk_" + nome + "_base", tipo: "base", nivel: 0, pacote: nome, variante: v }
+            : { id: "pk_" + nome + "_t" + i, tipo: "transf", nivel: i, pacote: nome, variante: v });
+        c.spriteForms.push(...formas);
         c.spriteGroups = (c.spriteGroups || []).filter(g => g.id !== "g_" + nome);
-        c.spriteGroups.push({ id: "g_" + nome, nome: p.nome, base: base.id, transfs: [t1.id] });
-        if (!c.spriteActive) c.spriteActive = "original";
+        c.spriteGroups.push({ id: "g_" + nome, nome: p.nome, base: formas[0].id, transfs: formas.slice(1).map(f => f.id) });
+        if (p.ativar) c.spriteActive = "g_" + nome;   // desenhos novos já entram em uso (o ORIGINAL continua no editor)
+        else if (!c.spriteActive) c.spriteActive = "original";
         mudou = true;
     }
     if (mudou && typeof saveCharacterData === "function") saveCharacterData();
@@ -338,7 +352,10 @@ function conjEditarForma(id) {
     const anim = {};
     CONJ_ESTADOS.forEach(st => { anim[st] = Array.from(fonte[st] || []); });
     const fps = {};
-    CONJ_ESTADOS.forEach(st => { fps[st] = f.pacote ? ((conjPacoteDados[f.pacote] && conjPacoteDados[f.pacote].fps) || 10) : ((f.fps && f.fps[st]) || CONJ_FPS_PADRAO); });
+    CONJ_ESTADOS.forEach(st => {
+        const pk = f.pacote && conjPacoteDados[f.pacote];
+        fps[st] = f.pacote ? ((pk && ((pk.fpsMov && pk.fpsMov[st]) || pk.fps)) || 10) : ((f.fps && f.fps[st]) || CONJ_FPS_PADRAO);
+    });
     conjIniciarEdicao(f.id, { anim, fps, loop: f.pacote ? {} : Object.assign({}, f.loop || {}) });
     conjStatus("Editando " + conjNomeForma(f) + ". Toque em SALVAR FORMA para guardar.");
 }
