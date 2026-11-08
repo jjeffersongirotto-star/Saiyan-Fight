@@ -83,6 +83,7 @@ const lutar = run("MENU_LAYOUT.characters.fight");
 run(`handleMenuClick(${lutar.x + 5}, ${lutar.y + 5})`);
 check("LUTAR começa a partida na fase escolhida", run("gameState") === "playing" && run("selectedStage") === "kame" && run("selecaoLuta") === null);
 
+run("characterDB.goku_adult.spriteActive = 'original'; characterDB.goku_adult.spriteForms = []; characterDB.goku_adult.spriteGroups = []");   // v0.102: o Goku vem com o conjunto do Gemini; aqui ele é o Goku do construtor
 // ---------- vilão de sprites espelhado ----------
 check("Vegeta com o conjunto de sprites conta como personagem de sprites; Goku do construtor não",
     run("characterDB.vegeta.spriteActive = 'g_vegeta'; lutadorDeSprites('vegeta')") === true && run("lutadorDeSprites('goku_adult')") === false);

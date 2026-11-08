@@ -5490,7 +5490,7 @@ function drawSaibamans() {
             ctx.translate(cx, s.y + s.h / 2);
             ctx.rotate(s.phaseTime * 0.35);
             ctx.translate(-cx, -(s.y + s.h / 2));
-            drawSaibamanSprite(s, "saltar", 0);
+            drawSaibamanSprite(s, "arremessado", 0);
         } else if (s.phase === "agarrar") {
             // desenhado depois do herói (drawGrabbingSaibamans), para ficar na frente das pernas
         } else if (s.phase === "investir") {
@@ -5500,7 +5500,7 @@ function drawSaibamans() {
             ctx.moveTo(s.x + s.w + 2, s.y + 14); ctx.lineTo(s.x + s.w + 16, s.y + 14);
             ctx.moveTo(s.x + s.w + 2, s.y + 26); ctx.lineTo(s.x + s.w + 12, s.y + 26);
             ctx.stroke();
-            drawSaibamanSprite(s, "agarrar", 0);
+            drawSaibamanSprite(s, "investir", 0);
         } else {
             const frame = Math.floor((s.hoverTime || 0) * 2.4) % 4;
             drawSaibamanSprite(s, "voar", frame);
