@@ -102,7 +102,42 @@ async function lerListaUpdatesDoServidor() {
 
 // Botão ATUALIZAR: só recarrega (e fecha a janela) quando a lista de novidades do servidor é diferente da que
 // está aberta. Se nada mudou, a janela UPDATES continua aberta e o botão avisa que já está na versão mais nova.
+// v0.107: o mesmo botão também BAIXA o jogo como app. Fora do app (aberto no navegador) ele vira BAIXAR APP:
+// usa o pedido de instalação do navegador (beforeinstallprompt) ou explica como instalar pelo menu. Já instalado,
+// ATUALIZAR só baixa os arquivos que mudaram (não reinstala nada).
+let pedidoInstalarApp = null;
+function jogoEstaInstalado() {
+    try {
+        if (typeof navigator !== "undefined" && navigator.standalone) return true;
+        if (typeof matchMedia === "function") return ["fullscreen", "standalone", "minimal-ui"].some(m => matchMedia("(display-mode: " + m + ")").matches);
+    } catch (e) {}
+    return false;
+}
+function atualizarRotuloDoBotao() {
+    const rotulo = typeof document !== "undefined" ? document.getElementById("btn-atualizar-rotulo") : null;
+    if (rotulo && !atualizandoAgora) rotulo.textContent = jogoEstaInstalado() ? "ATUALIZAR" : "BAIXAR APP";
+}
+if (typeof window !== "undefined" && window.addEventListener) {
+    window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); pedidoInstalarApp = e; atualizarRotuloDoBotao(); });
+    window.addEventListener("appinstalled", () => { pedidoInstalarApp = null; atualizarRotuloDoBotao(); });
+    if (typeof document !== "undefined") { document.addEventListener("DOMContentLoaded", atualizarRotuloDoBotao); atualizarRotuloDoBotao(); }
+}
+async function baixarApp() {
+    if (pedidoInstalarApp) {
+        const pedido = pedidoInstalarApp;
+        pedidoInstalarApp = null;
+        try { pedido.prompt(); await pedido.userChoice; } catch (e) {}
+        atualizarRotuloDoBotao();
+        return;
+    }
+    const iphone = typeof navigator !== "undefined" && /iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+    if (typeof showSystemAlert === "function") showSystemAlert("BAIXAR APP", iphone
+        ? "No Safari, toque em Compartilhar e depois em Adicionar à Tela de Início."
+        : "No Chrome, toque no menu (⋮) e depois em Instalar app ou Adicionar à tela inicial. Se acabou de desinstalar, feche e abra o Chrome antes.");
+}
+
 async function atualizarJogoAgora() {
+    if (!jogoEstaInstalado()) return baixarApp();
     if (atualizandoAgora) return;
     atualizandoAgora = true;
     const botao = document.getElementById("btn-atualizar-jogo");
@@ -122,7 +157,7 @@ async function atualizarJogoAgora() {
     }
     if (botao) { botao.classList.remove("girando"); botao.disabled = false; }
     if (rotulo) rotulo.textContent = novaLista === null ? "SEM CONEXÃO" : "JÁ ESTÁ ATUALIZADO";
-    setTimeout(() => { if (rotulo && !atualizandoAgora) rotulo.textContent = "ATUALIZAR"; }, 3000);
+    setTimeout(atualizarRotuloDoBotao, 3000);
     atualizandoAgora = false;
 }
 

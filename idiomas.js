@@ -289,6 +289,9 @@ ATUALIZANDO... § UPDATING... § ACTUALIZANDO...
 SEM CONEXÃO § NO CONNECTION § SIN CONEXIÓN
 JÁ ESTÁ ATUALIZADO § ALREADY UP TO DATE § YA ESTÁ ACTUALIZADO
 ATUALIZAR § UPDATE § ACTUALIZAR
+BAIXAR APP § DOWNLOAD APP § DESCARGAR APP
+No Safari, toque em Compartilhar e depois em Adicionar à Tela de Início. § In Safari, tap Share and then Add to Home Screen. § En Safari, toca Compartir y luego Agregar a inicio.
+No Chrome, toque no menu (⋮) e depois em Instalar app ou Adicionar à tela inicial. Se acabou de desinstalar, feche e abra o Chrome antes. § In Chrome, tap the menu (⋮) and then Install app or Add to Home screen. If you just uninstalled it, close and reopen Chrome first. § En Chrome, toca el menú (⋮) y luego Instalar aplicación o Agregar a la pantalla principal. Si acabas de desinstalarla, cierra y vuelve a abrir Chrome antes.
 Devolve pro Remetente § Return to Sender § Devuelto al Remitente
 Rebata 10 bolas de Ki. Obrigado, não quero! § Deflect 10 Ki blasts. No thanks! § Desvía 10 bolas de Ki. ¡No, gracias!
 Escudo Impenetrável § Impenetrable Shield § Escudo Impenetrable
