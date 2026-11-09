@@ -42,10 +42,10 @@ check("altura salva no personagem vale mais que a padrão", run("(() => { charac
 check("save antigo com escala vira altura equivalente", run("(() => { characterDB.__teste = Object.assign({}, characterDB.goku_adult, { scale: 1.2 }); const a = getAlturaPersonagem('__teste', 0); delete characterDB.__teste; return a; })()") === 210);
 
 // ---------- Vegeta: diagonais para trás ----------
+// v0.103: o pacote do Vegeta foi refeito (desenhos do Gemini, em pé nas diagonais): cada diagonal tem os seus quadros
 const pacote = JSON.parse(fs.readFileSync(__dirname + "/../conjuntos/vegeta.json", "utf8"));
 h.context.__pacote = pacote;
 run("conjRegistrarPacote('vegeta', __pacote)");
-check("diagonais para trás do Vegeta usam o voo para trás (sem ficar de cabeça para baixo)",
-    run("['normal', 'ssj'].every(v => ['flyUpLeft', 'flyDownLeft'].every(st => JSON.stringify(conjPacoteDados.vegeta[v][st]) === JSON.stringify(conjPacoteDados.vegeta[v].flyLeft)))") === true);
+check("diagonais para trás do Vegeta têm quadros próprios", run("['normal', 'ssj'].every(v => ['flyUpLeft', 'flyDownLeft'].every(st => conjPacoteDados.vegeta[v][st].length > 0 && JSON.stringify(conjPacoteDados.vegeta[v][st]) !== JSON.stringify(conjPacoteDados.vegeta[v].flyLeft)))") === true);
 
 process.exit(summary());

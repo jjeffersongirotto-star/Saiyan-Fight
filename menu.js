@@ -5854,9 +5854,12 @@ function drawSpecialBeams() {
 
         const fromP2 = world.beamOwner === "p2";
         const src = fromP2 ? player2 : player;
-        const py = src.y + src.h / 2;
-        const beamX = fromP2 ? 0 : src.x + src.w;
-        const beamW = fromP2 ? src.x : canvas.width - beamX;
+        // v0.103: com desenho do pacote o raio sai da mão (ou do brilho) do último quadro do especial
+        const mao = world.especialMao, arteM = src.arte;
+        const maoX = mao && arteM ? arteM.x + arteM.w * (arteM.espelhar ? 1 - mao[0] : mao[0]) : null;
+        const py = maoX !== null ? arteM.y + arteM.h * mao[1] : src.y + src.h / 2;
+        const beamX = fromP2 ? 0 : (maoX !== null ? maoX : src.x + src.w);
+        const beamW = fromP2 ? (maoX !== null ? maoX : src.x) : canvas.width - beamX;
         const passou = (world.beamDuracao || 40) - world.beamActive;   // quadros desde o disparo
         if (world.especialEfeito === "sol_freeza" && efeitoPronto("sol_freeza")) {
             drawSolDoFreeza(src, fromP2 ? player : player2, fromP2, passou);
@@ -5869,7 +5872,7 @@ function drawSpecialBeams() {
             // (lado esquerdo da imagem) fica na mão de quem atira; o rival atira para a esquerda (espelhado)
             const dh = (world.beamIsSuper ? 34 : 25) * 2 * 1.45;
             const total = beamW + dh * 0.2, len = total * Math.min(1, passou / 9);
-            ctx.translate(fromP2 ? src.x : beamX, py);
+            ctx.translate(fromP2 ? beamW : beamX, py);
             if (fromP2) ctx.scale(-1, 1);
             desenharEfeito(efEsp, passou / 60, -dh * 0.2, -dh / 2, Math.max(dh * 0.5, len), dh);
             ctx.restore();

@@ -10,24 +10,25 @@ const h = createHarness(__dirname + "/..", 800);
 const { run, check, summary, context } = h;
 const html = fs.readFileSync(__dirname + "/../index.html", "utf8");
 
-// ---------- pacote do Vegeta ----------
+// ---------- pacote do Vegeta (v0.103: desenhos do Gemini, 4 formas, já em uso) ----------
 const pacote = JSON.parse(fs.readFileSync(__dirname + "/../conjuntos/vegeta.json", "utf8"));
 const estados = run("CONJ_ESTADOS");
-check("pacote do Vegeta tem os 14 movimentos, normal e Super Saiyajin (6 quadros; o especial Galick Ho, 5)",
-    ["normal", "ssj"].every(v => estados.every(st => Array.isArray(pacote[v][st]) && pacote[v][st].length === (st === "special" ? 5 : 6))));
-check("Vegeta já vem com o conjunto azul (base + Super Saiyajin), disponível e não ativo",
-    run("characterDB.vegeta.spriteGroups.some(g => g.id === 'g_vegeta' && g.transfs.length === 1)") && run("characterDB.vegeta.spriteActive") === "original");
-check("o conjunto do Vegeta entra uma vez só (apagado, não volta)", run("readStorage('saiyan_conjunto_vegeta')") === "1");
+check("pacote do Vegeta tem os 14 movimentos nas 4 formas",
+    ["normal", "ssj", "blue", "blue_evo"].every(v => estados.every(st => Array.isArray(pacote[v][st]) && pacote[v][st].length >= 5)));
+check("Vegeta já vem com o conjunto azul (base + 3 transformações) em uso",
+    run("characterDB.vegeta.spriteGroups.some(g => g.id === 'g_vegeta' && g.transfs.length === 3)") && run("characterDB.vegeta.spriteActive") === "g_vegeta");
+check("o conjunto do Vegeta entra uma vez só (apagado, não volta)", run("readStorage('saiyan_conjunto_vegeta_103')") === "1");
 context.__pacote = pacote;
 run("conjRegistrarPacote('vegeta', __pacote)");
 const q = run("conjQuadrosDaForma(conjFormaPorId(characterDB.vegeta.spriteForms, 'pk_vegeta_base'), 'idle')");
-check("cada quadro vira desenho em pixel art do tamanho dos lutadores (pés na linha 103)", q.length === 6 && decodeURIComponent(q[0]).includes("crispEdges") && decodeURIComponent(q[0]).includes('viewBox="0 0 96 112"'));
+check("cada quadro vira desenho em pixel art do tamanho dos lutadores (pés na linha 103)", q.length === pacote.normal.idle.length && decodeURIComponent(q[0]).includes("crispEdges") && decodeURIComponent(q[0]).includes('viewBox="0 0 96 112"'));
+run("characterDB.vegeta.spriteActive = 'original'");
 check("ORIGINAL em uso: a luta usa as animações de sempre", run("getCharacterAnimationFrames('vegeta', 'idle', 0)[0]") === run("characterDB.vegeta.animations.idle[0]"));
 run("characterDB.vegeta.spriteActive = 'g_vegeta'");
 check("conjunto do Vegeta em uso: parado com os sprites", run("getCharacterAnimationFrames('vegeta', 'idle', 0)[0]") === q[0]);
 const ssj = run("getCharacterAnimationFrames('vegeta', 'flyRight', 1)");
-check("transformado: quadros do Super Saiyajin", ssj.length === 6 && ssj[0] !== run("getCharacterAnimationFrames('vegeta', 'flyRight', 0)[0]"));
-check("transformando mais vezes do que o conjunto tem, fica na última", run("getCharacterAnimationFrames('vegeta', 'flyRight', 3)[0]") === ssj[0]);
+check("transformado: quadros do Super Saiyajin", ssj.length === pacote.ssj.flyRight.length && ssj[0] !== run("getCharacterAnimationFrames('vegeta', 'flyRight', 0)[0]"));
+check("transformando mais vezes do que o conjunto tem, fica na última", run("getCharacterAnimationFrames('vegeta', 'flyRight', 6)[0]") === run("getCharacterAnimationFrames('vegeta', 'flyRight', 3)[0]"));
 check("golpe do vilão (sem quadro próprio) usa o parado do conjunto", run("getCharacterAnimationFrames('vegeta', 'hit', 0)[0]") === q[0]);
 run("characterDB.vegeta.spriteActive = 'original'");
 
