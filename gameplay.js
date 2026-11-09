@@ -1427,7 +1427,11 @@ function triggerSpecialAttack(isP2 = false) {
     // vai devagar até o adversário: dura mais e o dano só entra quando a bola chega (world.especialPendente)
     world.especialEfeito = getEfeitoDoPersonagem(isP2 ? selectedBoss : selectedCharacter, "efeitoEspecial");
     const sol = world.especialEfeito === "sol_freeza";
-    world.solDedo = sol ? getPontaDoDedoNoEspecial(isP2 ? selectedBoss : selectedCharacter, getTransformLevel(caster)) : null;
+    const chaveEsp = isP2 ? selectedBoss : selectedCharacter, nivelEsp = getTransformLevel(caster);
+    // v0.103: personagem com desenhos do pacote — a ponta do dedo e a mão (de onde sai o raio) vêm do próprio desenho
+    const dedoPacote = typeof conjuntoPonto === "function" ? conjuntoPonto(chaveEsp, "dedo", nivelEsp) : null;
+    world.solDedo = sol ? (dedoPacote || getPontaDoDedoNoEspecial(chaveEsp, nivelEsp)) : null;
+    world.especialMao = typeof conjuntoPonto === "function" ? conjuntoPonto(chaveEsp, "mao", nivelEsp) : null;
     world.beamActive = sol ? SOL_DURACAO : 40;
     world.beamDuracao = world.beamActive;
     world.beamOwner = requestedOwner;

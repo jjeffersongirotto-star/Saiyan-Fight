@@ -23,14 +23,42 @@ const CONJ_FPS_PADRAO = 12;
 // (pés na linha 103 do quadro 96x112 e o centro em x=48, como os desenhos de sprites.js).
 // ---------------------------------------------------------------------------------------------------------------
 const CONJ_PACOTES = {
-    // usar: movimento que reaproveita os quadros de outro. As diagonais para trás do Vegeta usam o voo para trás
-    // (de frente para o inimigo, tronco para trás) — nas recortadas ele ficava de cabeça para baixo.
-    vegeta: { arquivo: "conjuntos/vegeta.json", personagem: "vegeta", nome: "VEGETA SPRITES", marca: "saiyan_conjunto_vegeta",
-        usar: { flyUpLeft: "flyLeft", flyDownLeft: "flyLeft" } },
     // v0.102: desenhos do jogador (gerados no Gemini) para as 4 formas do Goku; já entra como o conjunto em uso.
     // variantes = base + transformações em ordem (o jogo usa a forma do nível atual)
     goku: { arquivo: "conjuntos/goku.json", personagem: "goku_adult", nome: "GOKU SPRITES", marca: "saiyan_conjunto_goku",
-        variantes: ["normal", "ssj", "ssj3", "blue"], ativar: true }
+        variantes: ["normal", "ssj", "ssj3", "blue"], ativar: true },
+    // v0.103: todos os outros personagens com os desenhos do Gemini (o Vegeta troca os sprites recortados antigos;
+    // marca nova para entrar de novo em quem já tinha o pacote antigo)
+    vegeta: { arquivo: "conjuntos/vegeta.json", personagem: "vegeta", nome: "VEGETA SPRITES", marca: "saiyan_conjunto_vegeta_103",
+        variantes: ["normal", "ssj", "blue", "blue_evo"], ativar: true },
+    piccolo: { arquivo: "conjuntos/piccolo.json", personagem: "piccolo", nome: "PICCOLO SPRITES", marca: "saiyan_conjunto_piccolo",
+        variantes: ["normal"], ativar: true },
+    freeza: { arquivo: "conjuntos/freeza.json", personagem: "freeza_1", nome: "FREEZA SPRITES", marca: "saiyan_conjunto_freeza",
+        variantes: ["f1", "f2", "f3", "final", "ciborgue", "golden", "black"], ativar: true },
+    trunks: { arquivo: "conjuntos/trunks.json", personagem: "trunks", nome: "TRUNKS SPRITES", marca: "saiyan_conjunto_trunks",
+        variantes: ["normal", "ssj"], ativar: true },
+    gohan: { arquivo: "conjuntos/gohan.json", personagem: "gohan", nome: "GOHAN SPRITES", marca: "saiyan_conjunto_gohan",
+        variantes: ["normal", "ssj", "ssj2"], ativar: true },
+    kaioshin: { arquivo: "conjuntos/kaioshin.json", personagem: "kaioshin", nome: "SUPREMO SR. KAIO SPRITES", marca: "saiyan_conjunto_kaioshin",
+        variantes: ["normal"], ativar: true },
+    vegetto: { arquivo: "conjuntos/vegetto.json", personagem: "gogeta", nome: "VEGETTO SPRITES", marca: "saiyan_conjunto_vegetto",
+        variantes: ["normal"], ativar: true },
+    bardock: { arquivo: "conjuntos/bardock.json", personagem: "bardock", nome: "BARDOCK SPRITES", marca: "saiyan_conjunto_bardock",
+        variantes: ["normal"], ativar: true },
+    android17: { arquivo: "conjuntos/android17.json", personagem: "android17", nome: "ANDROIDE 17 SPRITES", marca: "saiyan_conjunto_android17",
+        variantes: ["normal"], ativar: true },
+    android18: { arquivo: "conjuntos/android18.json", personagem: "android18", nome: "ANDROIDE 18 SPRITES", marca: "saiyan_conjunto_android18",
+        variantes: ["normal"], ativar: true },
+    buu: { arquivo: "conjuntos/buu.json", personagem: "majin_buu", nome: "MAJIN BUU SPRITES", marca: "saiyan_conjunto_buu",
+        variantes: ["kid", "gordo"], ativar: true },
+    raditz: { arquivo: "conjuntos/raditz.json", personagem: "raditz", nome: "RADITZ SPRITES", marca: "saiyan_conjunto_raditz",
+        variantes: ["normal"], ativar: true },
+    broly: { arquivo: "conjuntos/broly.json", personagem: "broly", nome: "BROLY SPRITES", marca: "saiyan_conjunto_broly",
+        variantes: ["normal", "lssj"], ativar: true },
+    gotenks: { arquivo: "conjuntos/gotenks.json", personagem: "gotenks", nome: "GOTENKS SPRITES", marca: "saiyan_conjunto_gotenks",
+        variantes: ["normal", "ssj"], ativar: true },
+    cell: { arquivo: "conjuntos/cell.json", personagem: "cell", nome: "CELL SPRITES", marca: "saiyan_conjunto_cell",
+        variantes: ["f1", "semi", "perfeito"], ativar: true }
 };
 // variantes de um pacote (os pacotes antigos têm só normal + ssj)
 function conjVariantes(nome, d) {
@@ -58,7 +86,9 @@ function conjEmbrulharQuadro(d, q, st) {
 
 function conjRegistrarPacote(nome, d) {
     // loop: { variante: { movimento: quadro do cadeado } }; fpsMov: quadros por segundo de cada movimento
-    const pronto = { fps: d.fps || 10, fpsMov: d.fpsMov || {}, loop: d.loop || {} };
+    // mao/dedo: { variante: [x, y] } = ponto (fração do desenho 96x112) de onde sai o raio do especial (a mão ou o
+    // brilho no último quadro) e a ponta do dedo levantado (sol do Freeza), medidos ao montar o pacote
+    const pronto = { fps: d.fps || 10, fpsMov: d.fpsMov || {}, loop: d.loop || {}, mao: d.mao || {}, dedo: d.dedo || {} };
     conjVariantes(nome, d).forEach(v => {
         if (!d[v]) return;
         pronto[v] = {};
@@ -132,10 +162,27 @@ function conjuntoQuadros(charKey, st, nivel) {
 }
 
 // Retrato do personagem (cartões do DATABASE/SELEÇÃO): o 1º quadro parado da base do conjunto em uso
+// v0.103: os cartões não baixam os pacotes inteiros (vários MB cada): enquanto o pacote não chegou, usam o retrato
+// leve de conjuntos/retratos.json (1º quadro parado da base de cada pacote, no mesmo formato dos quadros)
+let conjRetratos = null, conjRetratosPedido = false;
 function conjRetratoUrl(c) {
     const g = conjGrupoAtivo(c);
     if (!g) return null;
-    const q = conjQuadrosDaForma(conjFormaDoNivel(c, g, 0), "idle");
+    const f = conjFormaDoNivel(c, g, 0);
+    if (f && f.pacote && !conjPacoteDados[f.pacote]) {
+        if (!conjRetratosPedido && typeof fetch === "function") {
+            conjRetratosPedido = true;
+            try {
+                fetch("conjuntos/retratos.json").then(r => r.json()).then(d => {
+                    conjRetratos = {};
+                    for (const nome in d) conjRetratos[nome] = conjEmbrulharQuadro(d[nome], d[nome].q, "idle");
+                    conjAoMudar();
+                }).catch(() => { conjRetratosPedido = false; });
+            } catch (e) { conjRetratosPedido = false; }
+        }
+        return conjRetratos && conjRetratos[f.pacote] || null;
+    }
+    const q = conjQuadrosDaForma(f, "idle");
     return q && q[0] ? q[0] : null;
 }
 
@@ -159,6 +206,17 @@ function conjuntoTrava(charKey, st, nivel) {
     const g = conjGrupoAtivo(c);
     if (!g) return -1;
     return conjTravaDaForma(conjFormaDoNivel(c, g, nivel | 0), st);
+}
+
+// Ponto do especial na forma do nível (tipo "mao" ou "dedo"), em frações do desenho; null sem pacote/ponto
+function conjuntoPonto(charKey, tipo, nivel) {
+    const c = typeof characterDB !== "undefined" ? characterDB[charKey] : null;
+    const g = conjGrupoAtivo(c);
+    if (!g) return null;
+    const f = conjFormaDoNivel(c, g, nivel | 0);
+    const p = f && f.pacote ? conjPacoteDados[f.pacote] : null;
+    const pt = p && p[tipo] ? p[tipo][f.variante] : null;
+    return Array.isArray(pt) && pt.length === 2 ? pt : null;
 }
 
 function conjuntoFps(charKey, st, nivel) {

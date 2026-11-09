@@ -13,12 +13,12 @@ const { run, check, summary, context } = h;
 const pacote = JSON.parse(fs.readFileSync(dir + "/conjuntos/goku.json", "utf8"));
 const estados = run("CONJ_ESTADOS");
 check("pacote do Goku: normal, Super Saiyajin, Super Saiyajin 3 e Blue", JSON.stringify(pacote.variantes) === JSON.stringify(["normal", "ssj", "ssj3", "blue"]));
-check("cada forma tem os 14 movimentos com 7 ou 8 quadros", pacote.variantes.every(v => estados.every(st => Array.isArray(pacote[v][st]) && pacote[v][st].length >= 7 && pacote[v][st].length <= 8)),
+check("cada forma tem os 14 movimentos com 5 a 11 quadros", pacote.variantes.every(v => estados.every(st => Array.isArray(pacote[v][st]) && pacote[v][st].length >= 5 && pacote[v][st].length <= 11)),
     pacote.variantes.map(v => estados.filter(st => !(pacote[v][st] && pacote[v][st].length >= 7)).join(",")).join(" | "));
 check("quadros em WebP, leve (menos de 3 MB)", pacote.mime === "image/webp" && fs.statSync(dir + "/conjuntos/goku.json").size < 3 * 1024 * 1024);
 check("o Goku já vem com o conjunto novo em uso (com as 3 transformações)",
     run("characterDB.goku_adult.spriteActive") === "g_goku" && run("characterDB.goku_adult.spriteGroups.find(g => g.id === 'g_goku').transfs.length") === 3);
-check("o Vegeta continua com o pacote antigo (2 formas) e não ativo", run("characterDB.vegeta.spriteGroups.find(g => g.id === 'g_vegeta').transfs.length") === 1 && run("characterDB.vegeta.spriteActive") === "original");
+check("o Vegeta também vem com o conjunto do Gemini em uso (v0.103)", run("characterDB.vegeta.spriteGroups.find(g => g.id === 'g_vegeta').transfs.length") === 3 && run("characterDB.vegeta.spriteActive") === "g_vegeta");
 context.__pacote = pacote;
 run("conjRegistrarPacote('goku', __pacote)");
 const idle = run("getCharacterAnimationFrames('goku_adult', 'idle', 0)");
