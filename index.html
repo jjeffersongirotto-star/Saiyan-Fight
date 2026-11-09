@@ -96,6 +96,13 @@
             box-shadow: none;
         }
 
+        /* v0.108: com o jogo girado, as janelas (UPDATES, editor, alertas) ficam presas ao jogo e não à tela: o
+           Chrome do celular cortava uma janela "fixed" pela largura da tela em pé antes de girar, e só metade
+           dela aparecia (a outra metade mostrava o menu por baixo). */
+        #game-container.forced-landscape .modal {
+            position: absolute;
+        }
+
 
         canvas#game {
             background-color: #000;
@@ -1642,8 +1649,10 @@
                 Novidades e correções do jogo.
             </p>
             <ul id="lista-updates" style="margin: 0 0 18px; color: #ddd; line-height: 1.5; padding: 0 4px 0 0; list-style: none; overflow-y: auto;">
-                <li class="upd-versao"><h3>Versão 0.107 (ATUAL)</h3><p>Baixar o app pelo botão</p></li>
-                <li class="upd-item upd-novo"><span class="upd-tag">NOVO</span><strong>BAIXAR APP</strong><p>Jogando pelo navegador, o botão de ATUALIZAR da janela UPDATES vira BAIXAR APP e instala o jogo no celular (ou mostra como instalar pelo menu do navegador). Com o app instalado, ele volta a ser ATUALIZAR e baixa só o que mudou, sem instalar de novo.</p></li>
+                <li class="upd-versao"><h3>Versão 0.108 (ATUAL)</h3><p>Janelas inteiras com o celular em pé</p></li>
+                <li class="upd-item upd-corrigido"><span class="upd-tag">CORRIGIDO</span><strong>Tela dividida no UPDATES</strong><p>Com o celular em pé (jogo girado), a janela de UPDATES e as outras janelas apareciam só pela metade, com o menu aparecendo na outra metade. Agora a janela ocupa a tela inteira do jogo.</p></li>
+                <li class="upd-versao"><h3>Versão 0.107</h3><p>Baixar o app pelo botão</p></li>
+                <li class="upd-item upd-criacao"><span class="upd-tag">CRIAÇÃO</span><strong>BAIXAR APP</strong><p>Jogando pelo navegador, o botão de ATUALIZAR da janela UPDATES vira BAIXAR APP e instala o jogo no celular (ou mostra como instalar pelo menu do navegador). Com o app instalado, ele volta a ser ATUALIZAR e baixa só o que mudou, sem instalar de novo.</p></li>
                 <li class="upd-versao"><h3>Versão 0.106</h3><p>Desenhos novos sempre atualizados</p></li>
                 <li class="upd-item upd-corrigido"><span class="upd-tag">CORRIGIDO</span><strong>Vegeta com o desenho antigo</strong><p>Em alguns aparelhos o Vegeta (e outros personagens) continuava com os desenhos antigos guardados no navegador. Agora o jogo sempre baixa a versão nova dos desenhos.</p></li>
                 <li class="upd-versao"><h3>Versão 0.105</h3><p>Androide 17 voando em pé</p></li>
