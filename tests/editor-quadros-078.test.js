@@ -89,10 +89,10 @@ run("closeModal()");
 // ---------- Vegeta: mesmo tamanho ----------
 const pacote = JSON.parse(fs.readFileSync(__dirname + "/../conjuntos/vegeta.json", "utf8"));
 context.__pacote = pacote;
-const largura = (st) => Number(decodeURIComponent(run(`conjEmbrulharQuadro(__pacote, __pacote.ssj['${st}'][5], '${st}')`)).match(/<image[^>]* width="([\d.]+)"/)[1]) / pacote.ssj[st][5][2];
-check("fim da transformação e voo na diagonal reduzidos para o tamanho do Vegeta parado", largura("transform") < largura("idle") * 0.92 && largura("flyUpRight") < largura("idle") * 0.92);
-check("parado, ataque e parry ficam como estavam", Math.abs(largura("attackKi") - largura("idle")) < 0.01 && Math.abs(largura("parry") - largura("idle")) < 0.01);
-const pes = (st) => { const m = decodeURIComponent(run(`conjEmbrulharQuadro(__pacote, __pacote.ssj['${st}'][5], '${st}')`)).match(/<image[^>]* y="([\d.-]+)"[^>]* height="([\d.]+)"/); return Number(m[1]) + Number(m[2]); };
-check("transformação reduzida continua com os pés no chão (linha 103)", Math.abs(pes("transform") - pes("idle")) < 2);
+// v0.103: pacote novo (desenhos do Gemini): cada tira já sai no tamanho do parado da forma ao montar o pacote,
+// então não há mais escala por movimento; os pés do parado ficam na linha 103
+check("pacote novo do Vegeta sem escala por movimento (tamanhos já acertados)", !pacote.escala);
+const pes = (st) => { const m = decodeURIComponent(run(`conjEmbrulharQuadro(__pacote, __pacote.ssj['${st}'][0], '${st}')`)).match(/<image[^>]* y="([\d.-]+)"[^>]* height="([\d.]+)"/); return Number(m[1]) + Number(m[2]); };
+check("parado com os pés no chão (linha 103)", Math.abs(pes("idle") - 103) < 4);
 
 process.exit(summary());

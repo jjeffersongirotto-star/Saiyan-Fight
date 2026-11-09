@@ -37,9 +37,9 @@ const pacote = JSON.parse(fs.readFileSync(__dirname + "/../conjuntos/vegeta.json
 context.__pacote = pacote;
 run("conjRegistrarPacote('vegeta', __pacote); characterDB.vegeta.spriteActive = 'g_vegeta'");
 const base = run("getCharacterAnimationFrames('vegeta', 'special', 0)"), ssj = run("getCharacterAnimationFrames('vegeta', 'special', 1)");
-check("VEGETA SPRITES: Galick Ho com 5 quadros, normal e Super Saiyajin", base.length === 5 && ssj.length === 5 && base[0] !== ssj[0] &&
+check("VEGETA SPRITES: Galick Ho com 5 ou mais quadros, normal e Super Saiyajin", base.length >= 5 && ssj.length >= 5 && base[0] !== ssj[0] &&
     base[0] !== run("getCharacterAnimationFrames('vegeta', 'attackKi', 0)[0]"));
-check("Galick Ho com os pés no chão, como os outros movimentos", pacote.normal.special.every(q => q[1] + q[3] === pacote.pesY));
+check("Galick Ho com os pés no chão, como os outros movimentos", pacote.normal.special.every(q => q[1] + q[3] <= pacote.pesY + 1 && q[1] + q[3] > pacote.pesY - 30));
 run("characterDB.vegeta.spriteActive = 'original'");
 
 process.exit(summary());

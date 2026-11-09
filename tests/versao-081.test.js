@@ -127,8 +127,7 @@ check("aura roxa: v0.98 trocou a labareda pela aura roxa nova", run("AURA_EFEITO
 const pacote = JSON.parse(fs.readFileSync(__dirname + "/../conjuntos/vegeta.json", "utf8"));
 h.context.__pacote = pacote;
 run("conjRegistrarPacote('vegeta', __pacote)");
-check("Vegeta: transformar tem cadeado no 1º quadro já transformado (3º)", run("conjTravaDaForma({ pacote: 'vegeta', variante: 'normal' }, 'transform')") === 2 && run("conjTravaDaForma({ pacote: 'vegeta', variante: 'ssj' }, 'transform')") === 2);
-check("Vegeta: carregar tem cadeado no antepenúltimo quadro (fazendo força)", run("conjTravaDaForma({ pacote: 'vegeta', variante: 'normal' }, 'chargeKi')") === 3 && run("conjTravaDaForma({ pacote: 'vegeta', variante: 'ssj' }, 'chargeKi')") === 3);
+check("Vegeta (pacote novo, v0.103): sem cadeado, transformar e carregar repetem a tira inteira", run("conjTravaDaForma({ pacote: 'vegeta', variante: 'normal' }, 'transform')") === -1 && run("conjTravaDaForma({ pacote: 'vegeta', variante: 'ssj' }, 'chargeKi')") === -1);
 check("depois da 1ª volta o carregar não volta ao quadro em pé do começo", [6, 7, 8, 9, 10, 11, 12].every(t => core.getLoopFrameIndex(t, 6, 3) >= 3));
 
 // ---------- Trunks de teste ----------
