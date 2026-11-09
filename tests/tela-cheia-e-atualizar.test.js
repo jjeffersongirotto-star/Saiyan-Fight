@@ -56,6 +56,17 @@ run(`
     fetch = async (url, opts) => { if (opts && opts.cache === "reload") __baixou.push(url); return { ok: true, headers: { get: () => null }, text: async () => "<html></html>" }; };
 `);
 (async () => {
+    // v0.107: fora do app instalado o botão é BAIXAR APP (pede a instalação; não atualiza nem recarrega)
+    context.__instalou = 0;
+    run("pedidoInstalarApp = { prompt() { __instalou++; }, userChoice: Promise.resolve({ outcome: 'accepted' }) }");
+    await run("atualizarJogoAgora()");
+    check("no navegador o botão BAIXAR APP pede a instalação do app", context.__instalou === 1 && context.__recarregou === 0 && context.__baixou.length === 0);
+    const alertas = []; context.__alertas = alertas;
+    run("var __sa = showSystemAlert; showSystemAlert = (t, m) => __alertas.push(t + ': ' + m)");
+    await run("atualizarJogoAgora()");
+    check("sem o pedido do navegador, explica como instalar pelo menu", alertas.length === 1 && alertas[0].includes("Instalar app"));
+    run("showSystemAlert = __sa; navigator.standalone = true");   // daqui em diante: jogo aberto como app instalado
+    check("instalado, o botão volta a ser ATUALIZAR", (run("atualizarRotuloDoBotao(), document.getElementById('btn-atualizar-rotulo') && document.getElementById('btn-atualizar-rotulo').textContent") || "ATUALIZAR") === "ATUALIZAR");
     await run("atualizarJogoAgora()");
     check("lista de novidades igual: não recarrega (a janela UPDATES continua aberta)", context.__recarregou === 0);
     check("e o botão avisa que já está atualizado", String(run("document.getElementById('btn-atualizar-rotulo') && document.getElementById('btn-atualizar-rotulo').textContent")).includes("ATUALIZADO") || run("document.getElementById('btn-atualizar-rotulo')") === null);
