@@ -1004,9 +1004,9 @@ function drawFormPortrait(src, cItem, x, y, w, h) {
         if (!databaseImageCache[src]) { const img = new Image(); img.src = src; databaseImageCache[src] = img; }
         const img = databaseImageCache[src];
         if (!isDrawableSource(img)) return;
-        const fh = h * 112 / 96, fw = fh * 96 / 112;   // a figura (linhas 10 a 106) ocupa a altura da coluna
+        const fh = h * 112 / 104, fw = fh * 96 / 112;   // linhas 2 a 106 do quadro ocupam a altura da coluna
         ctx.save();
-        ctx.beginPath(); ctx.rect(x - w, y - h * 0.08, w * 3, h * 1.08); ctx.clip();
+        ctx.beginPath(); ctx.rect(x - w, y, w * 3, h); ctx.clip();   // o cabelo alto não passa por cima do nome da forma
         ctx.drawImage(img, x + (w - fw) / 2, y + h - fh * 106 / 112, fw, fh);
         ctx.restore();
         return;
