@@ -22,6 +22,9 @@ const CONJ_FPS_PADRAO = 12;
 // Pacotes embutidos: quadros recortados prontos, com a geometria para ficarem do tamanho dos lutadores do jogo
 // (pés na linha 103 do quadro 96x112 e o centro em x=48, como os desenhos de sprites.js).
 // ---------------------------------------------------------------------------------------------------------------
+// v0.106: versão dos arquivos dos pacotes — vai no endereço (?v=) para o navegador não usar uma cópia antiga
+// guardada (o Vegeta continuava com os sprites recortados antigos). Suba o número sempre que trocar um pacote.
+const CONJ_VERSAO_ARQUIVOS = "106";
 const CONJ_PACOTES = {
     // v0.102: desenhos do jogador (gerados no Gemini) para as 4 formas do Goku; já entra como o conjunto em uso.
     // variantes = base + transformações em ordem (o jogo usa a forma do nível atual)
@@ -108,7 +111,7 @@ function conjCarregarPacote(nome) {
     if (!p || conjPacoteDados[nome] || conjPacoteCarregando[nome] || typeof fetch !== "function") return;
     conjPacoteCarregando[nome] = true;
     try {
-        fetch(p.arquivo).then(r => r.json()).then(d => conjRegistrarPacote(nome, d)).catch(() => { conjPacoteCarregando[nome] = false; });
+        fetch(p.arquivo + "?v=" + CONJ_VERSAO_ARQUIVOS).then(r => r.json()).then(d => conjRegistrarPacote(nome, d)).catch(() => { conjPacoteCarregando[nome] = false; });
     } catch (e) { conjPacoteCarregando[nome] = false; }
 }
 
@@ -173,7 +176,7 @@ function conjRetratoUrl(c) {
         if (!conjRetratosPedido && typeof fetch === "function") {
             conjRetratosPedido = true;
             try {
-                fetch("conjuntos/retratos.json").then(r => r.json()).then(d => {
+                fetch("conjuntos/retratos.json?v=" + CONJ_VERSAO_ARQUIVOS).then(r => r.json()).then(d => {
                     conjRetratos = {};
                     for (const nome in d) conjRetratos[nome] = conjEmbrulharQuadro(d[nome], d[nome].q, "idle");
                     conjAoMudar();
