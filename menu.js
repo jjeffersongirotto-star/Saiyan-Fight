@@ -992,8 +992,25 @@ function drawRetratoNaForma(key, nivel, x, y, w, h) {
     const frames = getCharacterAnimationFrames(key, "idle", nivel);
     drawFormPortrait(frames && frames[0], c, x, y, w, h);
 }
+function formaDePacote(src) {
+    return src.startsWith("data:image/svg") && src.length > 200 && src.includes("crispEdges") && src.includes("viewBox%3D%220%200%2096%20112%22");
+}
 function drawFormPortrait(src, cItem, x, y, w, h) {
     if (typeof src !== "string") { if (isDrawableSource(src)) ctx.drawImage(src, x, y, w, h); return; }
+    // v0.109: quadro de pacote de desenhos (todas as formas já na mesma escala, pés na linha 103): desenha o quadro
+    // inteiro, sem recortar as margens — recortado, a forma de cabelo alto (Super Saiyajin) encolhia o corpo e a
+    // forma base parecia muito maior
+    if (formaDePacote(src)) {
+        if (!databaseImageCache[src]) { const img = new Image(); img.src = src; databaseImageCache[src] = img; }
+        const img = databaseImageCache[src];
+        if (!isDrawableSource(img)) return;
+        const fh = h * 112 / 96, fw = fh * 96 / 112;   // a figura (linhas 10 a 106) ocupa a altura da coluna
+        ctx.save();
+        ctx.beginPath(); ctx.rect(x - w, y - h * 0.08, w * 3, h * 1.08); ctx.clip();
+        ctx.drawImage(img, x + (w - fw) / 2, y + h - fh * 106 / 112, fw, fh);
+        ctx.restore();
+        return;
+    }
     const retrato = getPortraitFromSrc(src, w, h);
     if (retrato) { ctx.drawImage(retrato, x, y, w, h); return; }
     if (src.startsWith("data:image/svg")) return;   // ainda montando o retrato
