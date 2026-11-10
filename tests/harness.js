@@ -94,7 +94,18 @@ function createHarness(dir, width = 800, height = 360) {
     // falha marca o processo como erro (o GitHub Actions fica vermelho mesmo que o teste não chame process.exit)
     const summary = () => { console.log(fails === 0 ? "\nTUDO OK" : `\n${fails} FALHA(S)`); if (fails) process.exitCode = 1; return fails; };
 
-    return { context, document, docL, els, store, run, canvas, touch, fire, check, step, summary, calls, MQ, scripts };
+    // pacotes de sprites (conjuntos/<nome>.json): no navegador chegam por fetch; aqui são lidos do disco quando o
+    // teste precisa dos quadros (sem pacote carregado o personagem aparece com o retrato/quadro vazio)
+    const carregarPacotes = (nomes) => {
+        const lista = nomes || Object.keys(run("CONJ_PACOTES"));
+        for (const n of lista) {
+            context.__pacote = JSON.parse(fs.readFileSync(path.join(dir, run(`CONJ_PACOTES[${JSON.stringify(n)}].arquivo`)), "utf8"));
+            run(`conjRegistrarPacote(${JSON.stringify(n)}, __pacote)`);
+        }
+        delete context.__pacote;
+    };
+
+    return { context, document, docL, els, store, run, canvas, touch, fire, check, step, summary, calls, MQ, scripts, carregarPacotes };
 }
 
 module.exports = { createHarness };

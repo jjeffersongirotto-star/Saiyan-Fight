@@ -226,9 +226,6 @@ let selectedBoss = "vegeta";
 let editingKey = null;
 // aba TRANSFORMAÇÃO do editor (ver "ABA TRANSFORMAÇÃO" mais abaixo)
 let tempTransformations = [];
-let editingTransformIndex = null;   // índice da transformação aberta no construtor (null = editando o personagem normal)
-let transformEditStash = null;
-let transformEditMexido = false;   // builderMexido de antes de abrir a transformação      // como estava o construtor (personagem normal) antes de abrir a transformação
 let currentTab = "HERÓIS";
 // Tela de personagens: null = PERSONAGENS do menu (só ver); "solo" = SELEÇÃO DE PERSONAGEM antes da luta;
 // "p1"/"p2" = VERSUS, primeiro o JOGADOR 1 escolhe e depois o JOGADOR 2
@@ -275,32 +272,6 @@ let pcInputMode = "keyboard";
 let controlSelectionMode = "auto";
 let manualControlMode = "pc";
 let vibrationEnabled = true;
-// FPS de cada movimento quando gerado pelo construtor (sprites.js). Único lugar que define isso —
-// loadDefaultCharacters, o construtor e a regeneração ao carregar do armazenamento usam o mesmo mapa.
-const PROCEDURAL_ANIM_FPS = {
-    idle: 8, flyRight: 10, flyLeft: 10, flyUp: 10, flyDown: 10, flyUpRight: 10, flyUpLeft: 10, flyDownRight: 10, flyDownLeft: 10,
-    parry: 11, attackKi: 13, chargeKi: 10, transform: 11, special: 10
-};
-
-// Regenera as animações completas de um personagem procedural a partir da aparência salva.
-// Um personagem do construtor guarda ~54 quadros de SVG por animação (centenas de KB a >1MB); persistir tudo
-// isso no localStorage estoura a cota do navegador (4-5 personagens já passam de 5-10MB). Por isso só a
-// aparência (poucas centenas de bytes) é salva, e as animações são recriadas aqui, na hora de carregar.
-// Os quadros de cada movimento só são gerados na primeira vez que alguém os lê (abrir o jogo gerava os ~800
-// quadros de todos os personagens de uma vez e demorava segundos no celular).
-function buildProceduralAnimations(appearance) {
-    const animations = {}, fpsSettings = {};
-    SUB_ANIM_KEYS.forEach(state => {
-        const fixa = (v) => Object.defineProperty(animations, state, { value: v, enumerable: true, configurable: true, writable: true });
-        Object.defineProperty(animations, state, {
-            enumerable: true, configurable: true,
-            get() { const v = getProceduralFrameUrls(appearance, state); fixa(v); return v; },
-            set(v) { fixa(v); }
-        });
-        fpsSettings[state] = PROCEDURAL_ANIM_FPS[state] || 12;
-    });
-    return { animations, fpsSettings };
-}
 let padSensitivity = PAD_SENSITIVITY_DEFAULT;   // analógico: 1 (pouca) a 5 (muita), em Opções > Controle Joystick
 let padBindings = normalizePadBindings(null); // botões do controle (padrão PS5) — remapeáveis em Opções > Controle PS5
 let touchAutoFire = true;          // atira sem parar enquanto o dedo estiver no analógico/tela
@@ -658,7 +629,7 @@ function executeSystemConfirm(result) {
 
 // Imagem reserva (usada quando um personagem ainda não tem quadros ou a imagem dele não carrega).
 function getFallbackSpriteSvg() {
-    return generateSpriteFrameUrl(SPRITE_DEFAULT_APPEARANCE, "idle", 0);
+    return CONJ_QUADRO_VAZIO;
 }
 
 function triggerScreenShake(intensity = 6, duration = 12) {
@@ -725,7 +696,7 @@ function loadImageSecure(src, callback) {
 }
 
 // ==================== CONTROLE DE ABAS DO EDITOR ====================
-const EDITOR_TAB_ORDER = ["basico", "animacoes", "construtor", "transformacao"];
+const EDITOR_TAB_ORDER = ["basico", "animacoes", "transformacao"];
 let currentEditorTab = "basico";
 
 function switchEditorTab(tabName) {
@@ -733,8 +704,6 @@ function switchEditorTab(tabName) {
         tabName = 'basico';
     }
 
-    // saiu do construtor no meio da edição de uma transformação: guarda o que foi feito nela
-    if (editingTransformIndex !== null && tabName !== "construtor") finishTransformationEdit(tabName);
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
 
@@ -743,7 +712,6 @@ function switchEditorTab(tabName) {
     if (selectedBtn) selectedBtn.classList.add('active');
     if (selectedContent) selectedContent.style.display = 'block';
     currentEditorTab = tabName;
-    if (tabName === "construtor") refreshBuilderPreview();
     if (tabName === "transformacao") renderTransformationList();
     const conjArea = document.getElementById("conj-area");
     if (conjArea) conjArea.style.display = tabName === "animacoes" ? "" : "none";
@@ -2099,20 +2067,10 @@ function openModal(key = null) {
     if (spriteTotal) spriteTotal.value = char.totalFrames || 1;
     
     setFormFromBgRemoval(char.bgRemoval);
-    populateBuilderPresetOptions();
-    builderLastAppearance = char.builderAppearance || null;
-    builderMexido = false;
     tempMinionClassico = key && char.minionClassico ? normalizarMinionClassico(char.minionClassico) : null;
-    atualizarPainelMinionClassico();
     // cópia das transformações: o editor só grava no personagem ao SALVAR
-    tempTransformations = JSON.parse(JSON.stringify(key ? getCharacterTransformations(key) : [SPRITE_DEFAULT_TRANSFORMATION]));
-    editingTransformIndex = null;
-    transformEditStash = null;
-    showTransformBanner(false);
-    setBuilderFormFromAppearance(char.builderAppearance || SPRITE_PRESETS.goku.appearance);
+    tempTransformations = JSON.parse(JSON.stringify(key ? getCharacterTransformations(key) : [TRANSFORMACAO_PADRAO]));
     conjAbrirEditor(key ? characterDB[key] : null);
-    const buildPresetSel = document.getElementById("build-preset");
-    if (buildPresetSel) buildPresetSel.value = "";
     switchEditorTab('basico');
 
     if (modal) modal.style.display = 'flex';
@@ -2126,10 +2084,6 @@ function openModal(key = null) {
 }
 
 function closeModal() {
-    stopBuilderPreview();
-    editingTransformIndex = null;
-    transformEditStash = null;
-    showTransformBanner(false);
     stopSpriteMotionPreview();
     conjFecharEditor();
     if (modal) modal.style.display = 'none';
@@ -2154,20 +2108,8 @@ function closeUpdatesModal() {
 
 // O jogador mexeu no CONSTRUTOR depois do último "USAR ESTE PERSONAGEM"? Então SALVAR já gera as animações com o que
 // está na prévia (antes salvava as animações antigas — num personagem novo, as do Goku padrão).
-let builderMexido = false;
-document.addEventListener("change", (e) => {
-    const id = e.target && e.target.id ? String(e.target.id) : "";
-    if (id.startsWith("build-") && id !== "build-pose") builderMexido = true;
-});
-document.addEventListener("input", (e) => {
-    const id = e.target && e.target.id ? String(e.target.id) : "";
-    if (id.startsWith("build-") && id !== "build-pose") builderMexido = true;
-});
-
 function saveCharacterFromModal() {
     if (conjEstaEditando()) return showSystemAlert("FORMA EM MONTAGEM", "TOQUE EM SALVAR FORMA OU CANCELAR FORMA ANTES DE SALVAR O PERSONAGEM.");
-    if (editingTransformIndex !== null) finishTransformationEdit(null);
-    if (builderMexido) applyBuilderToCharacter();
     const charName = document.getElementById('char-name');
     const name = charName ? charName.value.trim().toUpperCase() : "";
     if (!name) {
@@ -2183,12 +2125,17 @@ function saveCharacterFromModal() {
         const firstFrame = frameCount > 1 ? extractSpriteSheetFrame(0) : null;
         if (firstFrame) { idleFrames = [firstFrame]; usedFirstSheetFrame = true; }
     }
-    let finalUrl = idleFrames[0] || tempBase64 || getFallbackSpriteSvg();
+    // v0.113: sem quadros próprios o personagem usa o conjunto de sprites (grupo em uso); a imagem fica vazia
+    const usaConjunto = !idleFrames.length && !tempBase64 && conjTemp && conjTemp.grupos.some(g => g.id === conjTemp.ativo);
+    if (!idleFrames.length && !tempBase64 && !usaConjunto && !tempMinionClassico) {
+        return showSystemAlert("FALTAM OS SPRITES", "ESCOLHA OS QUADROS DO PERSONAGEM NA ABA ANIMAÇÕES OU USE UM CONJUNTO DE SPRITES.");
+    }
+    let finalUrl = idleFrames[0] || tempBase64 || CONJ_QUADRO_VAZIO;
 
     loadImageSecure(finalUrl, (img) => {
         if (img) {
             let animData = {
-                idle: idleFrames.length ? Array.from(idleFrames) : [finalUrl],
+                idle: idleFrames.length ? Array.from(idleFrames) : (usaConjunto ? [] : [finalUrl]),
                 flyUp: Array.from(tempAnimations.flyUp),
                 flyDown: Array.from(tempAnimations.flyDown),
                 flyRight: Array.from(tempAnimations.flyRight),
@@ -2218,12 +2165,6 @@ function saveCharacterFromModal() {
             const charFw = document.getElementById('char-fw');
             const charFh = document.getElementById('char-fh');
             const charFrames = document.getElementById('char-frames');
-            const isPureBuilderOutput = builderLastAppearance && SUB_ANIM_KEYS.every(state => {
-                const expected = getProceduralFrameUrls(builderLastAppearance, state);
-                const actual = animData[state] || [];
-                return actual.length === expected.length && actual.every((url, i) => url === expected[i]);
-            });
-
             const wasNewCharacter = !editingKey;
             const previousCharacter = characterDB[key];
             characterDB[key] = {
@@ -2232,7 +2173,6 @@ function saveCharacterFromModal() {
                 defaultUrl: animData.idle[0] || finalUrl,
                 animations: animData,
                 fpsSettings: fpsData,
-                builderAppearance: isPureBuilderOutput ? builderLastAppearance : null,
                 alignment: charAlign ? charAlign.value : "HERÓI",
                 aura: charAura ? charAura.value : "gelo",
                 special: charSpec ? charSpec.value : "KAMEHAMEHA",
@@ -2247,9 +2187,9 @@ function saveCharacterFromModal() {
                 frameHeight: charFh ? parseInt(charFh.value, 10) || img.naturalHeight || 32 : 32,
                 totalFrames: charFrames ? parseInt(charFrames.value, 10) || 1 : 1,
                 bgRemoval: getBgRemovalFromForm(),
-                transformations: JSON.parse(JSON.stringify(tempTransformations.length ? tempTransformations : [SPRITE_DEFAULT_TRANSFORMATION]))
+                transformations: JSON.parse(JSON.stringify(tempTransformations.length ? tempTransformations : [TRANSFORMACAO_PADRAO]))
             };
-            if (tempMinionClassico) aplicarMinionClassico(characterDB[key], tempMinionClassico);   // minion clássico: desenho do modelo com as cores
+            if (tempMinionClassico) aplicarMinionClassico(characterDB[key], tempMinionClassico);   // minion: imagens do modelo
             conjAplicarNoPersonagem(characterDB[key], previousCharacter && previousCharacter.spriteForms);
             if (!saveCharacterData()) {
                 // Não coube no armazenamento do navegador: desfaz na memória também, para o jogo não mostrar
@@ -2261,11 +2201,6 @@ function saveCharacterFromModal() {
             if (wasNewCharacter) {
                 bumpStat("customCharactersCreated", 1);
                 unlockAchievement("builder_first");
-                if (isPureBuilderOutput && builderLastAppearance) {
-                    if (builderLastAppearance.tail && builderLastAppearance.tail !== "none") unlockAchievement("builder_tail");
-                    if (builderLastAppearance.wings && builderLastAppearance.wings !== "none") unlockAchievement("builder_wings");
-                    if (builderLastAppearance.backWeapon && builderLastAppearance.backWeapon !== "none") unlockAchievement("builder_weapon");
-                }
             }
             closeModal();
             showSystemAlert("SUCESSO", usedFirstSheetFrame
@@ -2283,7 +2218,7 @@ function loadCharacterData() {
         let saved = readStorage("saiyan_db_v8_8bit");
         if (saved) {
             let data = JSON.parse(saved);
-            let validCount = 0;
+            let validCount = 0, limpouConstrutor = false;
 
             for (let k in data) {
                 let item = data[k];
@@ -2306,15 +2241,18 @@ function loadCharacterData() {
                 Object.keys(character).forEach(property => {
                     if (/^(animation|img)(zoom|offset)/i.test(property)) delete character[property];
                 });
-                // Personagem do construtor: as animações e a imagem são sempre refeitas com o desenho atual a partir
-                // da aparência guardada (não ficam salvas no localStorage, ver saveCharacterData; e um personagem salvo
-                // por versões antigas, no estilo antigo, passa a usar o desenho atual).
+                // v0.113: os bonecos desenhados do antigo CONSTRUTOR saíram do jogo. Um personagem inicial passa a
+                // usar só o pacote de sprites dele; um personagem feito no construtor (sem sprites) sai da lista.
                 if (character.minionClassico) aplicarMinionClassico(character, character.minionClassico);
                 else if (character.builderAppearance) {
-                    character.builderAppearance = normalizeAppearance(character.builderAppearance);
-                    Object.assign(character, buildProceduralAnimations(character.builderAppearance));
-                    character.defaultUrl = generateSpriteFrameUrl(character.builderAppearance, "idle", 0);
+                    delete character.builderAppearance;
+                    limpouConstrutor = true;
+                    if (!DEFAULT_CHARACTERS[k] || DEFAULT_CHARACTERS[k].minion) { validCount--; continue; }
+                    character.animations = {};
+                    character.fpsSettings = {};
+                    character.defaultUrl = CONJ_QUADRO_VAZIO;
                 }
+                (character.transformations || []).forEach(t => { if (t) { delete t.diff; delete t.ssj; } });
                 characterDB[k] = character;
                 loadImageSecure(character.defaultUrl, (img) => {
                     if (characterDB[k]) characterDB[k].imageObj = img;
@@ -2323,16 +2261,11 @@ function loadCharacterData() {
 
             if (validCount > 0) {
                 seedNewDefaultCharacters();
-                atualizarFreezaSalvo();
                 transformacoesBlue098();
                 formasNovas110();
-                atualizarCellSalvo();
-                atualizarHeroisSalvos();
-                atualizarPersonagens075();
-                apagarTrunksDeTeste081();
                 piccoloAntiHeroi085();
-                minionsClassicos090();
                 conjuntosAoCarregar();
+                if (limpouConstrutor) saveCharacterData();
                 return;
             }
         }
@@ -2344,95 +2277,94 @@ function loadCharacterData() {
     conjuntosAoCarregar();
 }
 
-// Personagens iniciais: um para cada modelo da lista "COMEÇAR A PARTIR DE..." do construtor (SPRITE_PRESETS em
-// sprites.js), montados com o próprio construtor — já nascem com animações fluidas (voo, ataque, parry, carregar,
-// transformar). O construtor continua funcionando igual para criar personagens novos a partir desses modelos.
+// Personagens iniciais: desenhados pelos pacotes de sprites (conjuntos/<nome>.json, CONJ_PACOTES) — v0.113: os
+// bonecos desenhados do antigo construtor saíram do jogo. As transformações guardam só nome, aura e altura.
+const TRANSFORMACAO_PADRAO = { name: "Transformação 1", aura: "amarelo" };
 const FREEZA_TRANSFORMACOES = [
-    { name: "Segunda forma", diff: { build: "gigante", headFeature: "capacete_chifres", bodyMarks: "carapaca_freeza", outerShirt: "none" }, ssj: false, aura: "roxo" },
-    { name: "Terceira forma", diff: { build: "musculoso", headFeature: "cabeca_longa", bodyMarks: "carapaca_freeza", outerShirt: "none", mouthType: "risada" }, ssj: false, aura: "roxo" },
-    { name: "Forma final", diff: { build: "normal", headFeature: "none", bodyMarks: "freeza", outerShirt: "armadura_freeza", gloves: "nenhuma", shoes: "pes_garras", skinColor: "" }, ssj: false, aura: "roxo" },
-    { name: "Freeza ciborgue", diff: { build: "normal", headFeature: "meia_cabeca_metal", bodyMarks: "metal_freeza", outerShirt: "armadura_freeza", gloves: "nenhuma", shoes: "pes_garras", skinColor: "" }, ssj: false, aura: "roxo" },
+    { name: "Segunda forma", aura: "roxo" },
+    { name: "Terceira forma", aura: "roxo" },
+    { name: "Forma final", aura: "roxo" },
+    { name: "Freeza ciborgue", aura: "roxo" },
     // Golden e Black (mangá): o corpo da forma final com as cores trocadas
-    { name: "Golden Freeza", diff: { build: "normal", headFeature: "none", bodyMarks: "freeza", outerShirt: "armadura_freeza", gloves: "nenhuma", shoes: "pes_garras", skinColor: "#f2c233", primaryColor: "#7b3ab8" }, ssj: false, aura: "amarelo" },
-    { name: "Black Freeza", diff: { build: "normal", headFeature: "none", bodyMarks: "freeza", outerShirt: "armadura_freeza", gloves: "nenhuma", shoes: "pes_garras", skinColor: "#25212c", primaryColor: "#b04ad8" }, ssj: false, aura: "roxo" }
+    { name: "Golden Freeza", aura: "amarelo" },
+    { name: "Black Freeza", aura: "roxo" }
 ];
 
 // Gohan (saga Cell): base com capa; 1 = Super Saiyajin sem capa; 2 = Super Saiyajin 2 sem capa (mechas finas, gi rasgado)
 const GOHAN_TRANSFORMACOES = [
-    { name: "Super Saiyajin", diff: { cape: "none", irisColor: "#2ab8b0" }, ssj: true, aura: "amarelo" },
-    { name: "Super Saiyajin 2", diff: { cape: "none", irisColor: "#2ab8b0", hairStyle: "gohan_ssj2", outerShirt: "gi_rasgado", build: "musculoso", primaryColor: "#7a3fc8", pantsColor: "#7a3fc8", secondaryColor: "#2a7ad8", shoes: "botas_dobradas" }, ssj: true, aura: "amarelo" }
+    { name: "Super Saiyajin", aura: "amarelo" },
+    { name: "Super Saiyajin 2", aura: "amarelo" }
 ];
 
 // Broly (Super): base de armadura; 1 = Super Saiyajin Lendário (cabelo verde-limão, olhos brancos, sem armadura,
 // ombreiras e coleira, músculos enormes e cicatrizes; mantém calça, manto, munhequeiras e botas)
 const BROLY_TRANSFORMACOES = [
-    { name: "Super Saiyajin Lendário", diff: { hairStyle: "broly_lssj", hairColor: "#b6ff3c", eyeType: "vazio", mouthType: "grito", outerShirt: "none", accessory: "none", build: "gigante", scar: "lendario" }, ssj: true, aura: "verde" }
+    { name: "Super Saiyajin Lendário", aura: "verde" }
 ];
 
 // Majin Buu: a base é o Kid Buu; 1 = Buu gordo (capa com nó, colete curto, luvas e botas douradas)
 const BUU_TRANSFORMACOES = [
-    { name: "Buu gordo", diff: { build: "gordo", headFeature: "majin_antena", eyeType: "fechado", mouthType: "alegre", outerShirt: "colete_buu", cape: "capa_no", gloves: "luvas_douradas", shoes: "botas_douradas", scleraColor: "#ffffff", irisColor: "#101010" }, ssj: false, aura: "rosa" }
+    { name: "Buu gordo", aura: "rosa" }
 ];
 
 const CELL_TRANSFORMACOES = [
-    { name: "Semi-perfeito", diff: { build: "gigante", headFeature: "capacete_cell2", bodyMarks: "cell_semi", skinColor: "#b5cf45", shoes: "sapato_cell", mouthType: "risada", wings: "cell" }, ssj: false, aura: "verde" },
-    { name: "Perfeito", diff: { build: "musculoso", headFeature: "capacete_cell3", bodyMarks: "cell_perfeito", skinColor: "#e6e4ee", shoes: "sapato_ponta", tail: "none", irisColor: "#7a3fa0", wings: "cell_capa" }, ssj: false, aura: "verde" }
+    { name: "Semi-perfeito", aura: "verde" },
+    { name: "Perfeito", aura: "verde" }
 ];
 
 // v0.98: formas Blue (aura de chama azul) do Goku e do Vegeta, e a nova forma do Vegeta com a aura azul escura
-const GOKU_BLUE = { name: "Super Saiyajin Blue", diff: { hairStyle: "blue_goku", hairColor: "#38a8ff", irisColor: "#2a7ad8" }, ssj: true, aura: "blue" };
+const GOKU_BLUE = { name: "Super Saiyajin Blue", aura: "blue" };
 // v0.110: formas novas (desenhos do Gemini): Super Saiyajin God (cabelo vermelho), Instinto Superior (prateado),
 // Ego Superior (roxo), e as formas do Vegetto, Gotenks e Bardock
-const GOKU_GOD = { name: "Super Saiyajin God", diff: { hairColor: "#d8234a", irisColor: "#c0203a", build: "normal" }, ssj: true, aura: "vermelho" };
-const GOKU_INSTINTO = { name: "Instinto Superior", diff: { hairStyle: "blue_goku", hairColor: "#dfe4ee", irisColor: "#b8c0cc" }, ssj: true, aura: "gelo" };
+const GOKU_GOD = { name: "Super Saiyajin God", aura: "vermelho" };
+const GOKU_INSTINTO = { name: "Instinto Superior", aura: "gelo" };
 const GOKU_TRANSFORMACOES = [
-    { name: "Super Saiyajin", diff: {}, ssj: true, aura: "amarelo" },
-    { name: "Super Saiyajin 3", diff: { hairStyle: "ssj_longo", hairColor: "#ffe34d" }, ssj: false, aura: "amarelo" },
+    { name: "Super Saiyajin", aura: "amarelo" },
+    { name: "Super Saiyajin 3", aura: "amarelo" },
     GOKU_GOD, GOKU_BLUE, GOKU_INSTINTO
 ];
 const VEGETA_TRANSFORMACOES = [
-    { name: "Super Saiyajin", diff: {}, ssj: true, aura: "amarelo" },
-    { name: "Super Saiyajin God", diff: { hairColor: "#d8234a", irisColor: "#c0203a" }, ssj: true, aura: "vermelho" },
-    { name: "Super Saiyajin Blue", diff: { hairStyle: "blue_vegeta", hairColor: "#38a8ff", irisColor: "#2a7ad8" }, ssj: true, aura: "blue" },
-    { name: "Super Saiyajin Blue Evolução", diff: { hairStyle: "blue_vegeta", hairColor: "#1f4fd0", irisColor: "#1a3a9a" }, ssj: true, aura: "azul_escuro" },
-    { name: "Ego Superior", diff: { hairColor: "#9a2a9e", irisColor: "#7a2a9a" }, ssj: true, aura: "roxo" }
+    { name: "Super Saiyajin", aura: "amarelo" },
+    { name: "Super Saiyajin God", aura: "vermelho" },
+    { name: "Super Saiyajin Blue", aura: "blue" },
+    { name: "Super Saiyajin Blue Evolução", aura: "azul_escuro" },
+    { name: "Ego Superior", aura: "roxo" }
 ];
 const VEGETTO_TRANSFORMACOES = [
-    { name: "Super Saiyajin", diff: {}, ssj: true, aura: "amarelo" },
-    { name: "Super Saiyajin Blue", diff: { hairColor: "#38a8ff", irisColor: "#2a7ad8" }, ssj: true, aura: "blue" }
+    { name: "Super Saiyajin", aura: "amarelo" },
+    { name: "Super Saiyajin Blue", aura: "blue" }
 ];
 const GOTENKS_TRANSFORMACOES = [
-    { name: "Super Saiyajin", diff: {}, ssj: true, aura: "amarelo" },
-    { name: "Super Saiyajin 3", diff: { hairStyle: "ssj_longo", hairColor: "#ffe34d" }, ssj: false, aura: "amarelo" }
+    { name: "Super Saiyajin", aura: "amarelo" },
+    { name: "Super Saiyajin 3", aura: "amarelo" }
 ];
-const BARDOCK_TRANSFORMACOES = [{ name: "Super Saiyajin", diff: {}, ssj: true, aura: "amarelo" }];
+const BARDOCK_TRANSFORMACOES = [{ name: "Super Saiyajin", aura: "amarelo" }];
 
 const DEFAULT_CHARACTERS = {
-    // Goku já vem com a Transformação 2 (cabelo longo de Super Saiyajin), criada pela aba TRANSFORMAÇÃO do editor
-    goku_adult: { name: "GOKU", presetKey: "goku", align: "HERÓI", aura: "gelo", spec: "KAMEHAMEHA",
+    goku_adult: { name: "GOKU", ki: "#5be3ff", align: "HERÓI", aura: "gelo", spec: "KAMEHAMEHA",
         transformations: GOKU_TRANSFORMACOES, efeitoEspecial: "kamehameha" },
-    vegeta: { name: "VEGETA", presetKey: "vegeta", align: "ANTI-HERÓI", aura: "amarelo", spec: "FINAL FLASH", transformations: VEGETA_TRANSFORMACOES },
-    piccolo: { name: "PICCOLO", presetKey: "piccolo", align: "ANTI-HERÓI", aura: "verde", spec: "MAKAN KOSAPPO" },
+    vegeta: { name: "VEGETA", ki: "#ffe45a", align: "ANTI-HERÓI", aura: "amarelo", spec: "FINAL FLASH", transformations: VEGETA_TRANSFORMACOES },
+    piccolo: { name: "PICCOLO", ki: "#e9ff7a", align: "ANTI-HERÓI", aura: "verde", spec: "MAKAN KOSAPPO" },
     // Freeza: começa na 1ª forma (armadura do exército) e cada TRANSFORMAR sobe uma forma, até o ciborgue
-    freeza_1: { name: "FREEZA", presetKey: "freeza", align: "VILÃO", aura: "roxo", spec: "DEATH BEAM",
+    freeza_1: { name: "FREEZA", ki: "#ff5be0", align: "VILÃO", aura: "roxo", spec: "DEATH BEAM",
         transformations: FREEZA_TRANSFORMACOES, efeitoTiro: "esfera_roxa", efeitoEspecial: "sol_freeza" },
-    trunks: { name: "TRUNKS", presetKey: "trunks", align: "HERÓI", aura: "azul", spec: "BURNING ATTACK", efeitoEspecial: "raio_azul" },
-    gohan: { name: "GOHAN", presetKey: "gohan", align: "HERÓI", aura: "gelo", spec: "MASENKO", transformations: GOHAN_TRANSFORMACOES, efeitoEspecial: "kamehameha" },
-    kaioshin: { name: "SUPREMO SR. KAIO", presetKey: "kaioshin", align: "HERÓI", aura: "rosa", spec: "KIAI SAGRADO" },
-    gogeta: { name: "VEGETTO", presetKey: "fusao", align: "HERÓI", aura: "amarelo", spec: "FINAL KAMEHAMEHA", transformations: VEGETTO_TRANSFORMACOES, efeitoEspecial: "kamehameha" },
-    bardock: { name: "BARDOCK", presetKey: "bardock", align: "ANTI-HERÓI", aura: "azul", spec: "RIOT JAVELIN", transformations: BARDOCK_TRANSFORMACOES, efeitoEspecial: "raio_vermelho" },
-    android17: { name: "ANDROIDE 17", presetKey: "android17", align: "ANTI-HERÓI", aura: "verde", spec: "POWER BLITZ", efeitoEspecial: "raio_azul" },
-    android18: { name: "ANDROIDE 18", presetKey: "android18", align: "ANTI-HERÓI", aura: "azul", spec: "DESTRUCTO DISC" },
-    majin_buu: { name: "MAJIN BUU", presetKey: "majin", align: "VILÃO", aura: "rosa", spec: "CHOCOLATE BEAM", transformations: BUU_TRANSFORMACOES },
-    raditz: { name: "RADITZ", presetKey: "raditz", align: "VILÃO", aura: "roxo", spec: "DOUBLE SUNDAY", efeitoEspecial: "raio_vermelho" },
-    broly: { name: "BROLY", presetKey: "broly", align: "VILÃO", aura: "verde", spec: "ERASER CANNON", transformations: BROLY_TRANSFORMACOES, efeitoEspecial: "raio_verde" },
+    trunks: { name: "TRUNKS", ki: "#9fd0ff", align: "HERÓI", aura: "azul", spec: "BURNING ATTACK", efeitoEspecial: "raio_azul" },
+    gohan: { name: "GOHAN", ki: "#ffd45b", align: "HERÓI", aura: "gelo", spec: "MASENKO", transformations: GOHAN_TRANSFORMACOES, efeitoEspecial: "kamehameha" },
+    kaioshin: { name: "SUPREMO SR. KAIO", ki: "#c9a0ff", align: "HERÓI", aura: "rosa", spec: "KIAI SAGRADO" },
+    gogeta: { name: "VEGETTO", ki: "#7fd8ff", align: "HERÓI", aura: "amarelo", spec: "FINAL KAMEHAMEHA", transformations: VEGETTO_TRANSFORMACOES, efeitoEspecial: "kamehameha" },
+    bardock: { name: "BARDOCK", ki: "#ff9a5b", align: "ANTI-HERÓI", aura: "azul", spec: "RIOT JAVELIN", transformations: BARDOCK_TRANSFORMACOES, efeitoEspecial: "raio_vermelho" },
+    android17: { name: "ANDROIDE 17", ki: "#ffe07a", align: "ANTI-HERÓI", aura: "verde", spec: "POWER BLITZ", efeitoEspecial: "raio_azul" },
+    android18: { name: "ANDROIDE 18", ki: "#a9e3ff", align: "ANTI-HERÓI", aura: "azul", spec: "DESTRUCTO DISC" },
+    majin_buu: { name: "MAJIN BUU", ki: "#ff9de0", align: "VILÃO", aura: "rosa", spec: "CHOCOLATE BEAM", transformations: BUU_TRANSFORMACOES },
+    raditz: { name: "RADITZ", ki: "#ff7ad9", align: "VILÃO", aura: "roxo", spec: "DOUBLE SUNDAY", efeitoEspecial: "raio_vermelho" },
+    broly: { name: "BROLY", ki: "#7dff7a", align: "VILÃO", aura: "verde", spec: "ERASER CANNON", transformations: BROLY_TRANSFORMACOES, efeitoEspecial: "raio_verde" },
     // Minions (alinhamento MINION): ficam embaixo da divisão MINIONS no gerenciador e só aparecem no campo MINION das
-    // arenas. São os desenhos clássicos de minions.js (minion = modelo de MINION_MODELOS), não modelos do construtor.
+    // arenas. Desenhados pelas imagens de minions.js (minion = modelo de MINION_MODELOS).
     saibaman: { name: "SAIBAMAN", minion: "saibaman", align: "MINION", aura: "verde", spec: "AUTODESTRUIÇÃO" },
     celljr: { name: "CELL JR.", minion: "celljr", align: "MINION", aura: "azul", spec: "KAMEHAMEHA JR." },
-    gotenks: { name: "GOTENKS", presetKey: "gotenks", align: "HERÓI", aura: "amarelo", spec: "SUPER GHOST KAMIKAZE", transformations: GOTENKS_TRANSFORMACOES, efeitoEspecial: "kamehameha" },
+    gotenks: { name: "GOTENKS", ki: "#ffe45a", align: "HERÓI", aura: "amarelo", spec: "SUPER GHOST KAMIKAZE", transformations: GOTENKS_TRANSFORMACOES, efeitoEspecial: "kamehameha" },
     // Cell: começa na 1ª forma (imperfeito) e transforma em semi-perfeito e perfeito
-    cell: { name: "CELL", presetKey: "cell", align: "VILÃO", aura: "verde", spec: "KAMEHAMEHA PERFEITO", transformations: CELL_TRANSFORMACOES, efeitoEspecial: "kamehameha" }
+    cell: { name: "CELL", ki: "#7dff7a", align: "VILÃO", aura: "verde", spec: "KAMEHAMEHA PERFEITO", transformations: CELL_TRANSFORMACOES, efeitoEspecial: "kamehameha" }
 };
 // Alturas (cm) dos personagens iniciais, de guias e listas oficiais (Gohan é o criança da saga Cell; Gotenks não
 // tem valor oficial). "base" = forma normal; as transformações pelo nome, para valer também em saves antigos
@@ -2469,7 +2401,7 @@ function getCharacterTransformations(charKey) {
     if (c && Array.isArray(c.transformations) && c.transformations.length) return c.transformations;
     const d = DEFAULT_CHARACTERS[charKey];
     if (d && Array.isArray(d.transformations) && d.transformations.length) return d.transformations;
-    return [SPRITE_DEFAULT_TRANSFORMATION];
+    return [TRANSFORMACAO_PADRAO];
 }
 
 // Opções das animações no editor (DADOS: Animação do tiro / do especial / da aura; os mesmos valores do HTML e do
@@ -2498,7 +2430,7 @@ const ORIGINAL_DEFAULT_CHARACTER_KEYS = ["goku_adult", "vegeta", "piccolo", "fre
 function createDefaultCharacter(k) {
     const d = DEFAULT_CHARACTERS[k];
     if (d.minion) {
-        // minion clássico: o desenho original, sem nenhuma adaptação (minions.js)
+        // minion: as imagens do modelo (minions.js)
         characterDB[k] = aplicarMinionClassico({
             name: d.name, imageObj: null, alignment: d.align, aura: d.aura, special: d.spec, scale: 1,
             frameWidth: 32, frameHeight: 32, totalFrames: 1, projColor: "#00ffff", projSize: "normal", bgRemoval: { mode: "none" }
@@ -2506,15 +2438,13 @@ function createDefaultCharacter(k) {
         loadImageSecure(characterDB[k].defaultUrl, (img) => { if (characterDB[k]) characterDB[k].imageObj = img; });
         return;
     }
-    const appearance = SPRITE_PRESETS[d.presetKey].appearance;
-    const svg = generateSpriteFrameUrl(appearance, "idle", 0);
-    const { animations, fpsSettings } = buildProceduralAnimations(appearance);
+    // desenhado pelo pacote de sprites (conjuntosAoCarregar põe o grupo em uso)
     characterDB[k] = {
         name: d.name,
         imageObj: null,
-        defaultUrl: svg,
-        animations,
-        fpsSettings,
+        defaultUrl: CONJ_QUADRO_VAZIO,
+        animations: {},
+        fpsSettings: {},
         alignment: d.align,
         aura: d.aura,
         special: d.spec,
@@ -2522,14 +2452,10 @@ function createDefaultCharacter(k) {
         frameWidth: 32,
         frameHeight: 32,
         totalFrames: 1,
-        projColor: appearance.kiColor || "#00ffff",   // o tiro sai na cor de ki do modelo
+        projColor: d.ki || "#00ffff",   // o tiro sai na cor de ki do personagem
         projSize: "normal",
-        builderAppearance: appearance,
         bgRemoval: { mode: "none" }
     };
-    loadImageSecure(svg, (img) => {
-        if (characterDB[k]) characterDB[k].imageObj = img;
-    });
 }
 
 function loadDefaultCharacters() {
@@ -2586,142 +2512,6 @@ function formasNovas110() {
     if (mudou) saveCharacterData();
 }
 
-function atualizarFreezaSalvo() {
-    // v0.98: o Freeza ataca com o dedo (tiro da ponta do dedo e a bola do especial em cima dele), em todas as formas
-    if (readStorage("saiyan_freeza_dedo_098") !== "1") {
-        writeStorage("saiyan_freeza_dedo_098", "1");
-        const f = characterDB.freeza_1, ap = f && f.builderAppearance;
-        if (ap && (!ap.armPose || ap.armPose === "guarda")) { ap.armPose = "dedo"; saveCharacterData(); }
-    }
-    // uma vez: o Freeza com transformações já salvas ganha também o Golden e o Black no fim da lista
-    if (readStorage("saiyan_freeza_golden") !== "1") {
-        writeStorage("saiyan_freeza_golden", "1");
-        const f = characterDB.freeza_1;
-        if (f && Array.isArray(f.transformations) && f.transformations.length && !f.transformations.some(t => t && /golden|black/i.test(t.name || ""))) {
-            f.transformations.push(...JSON.parse(JSON.stringify(FREEZA_TRANSFORMACOES.slice(-2))));
-            saveCharacterData();
-        }
-    }
-    if (readStorage("saiyan_freeza_formas") === "1") return;
-    writeStorage("saiyan_freeza_formas", "1");
-    const c = characterDB.freeza_1;
-    const ap = c && c.builderAppearance;
-    if (!ap || ap.outerShirt !== "armadura_freeza" || ap.bodyMarks !== "freeza") return;
-    if (Array.isArray(c.transformations) && c.transformations.some(t => t && t.diff && Object.keys(t.diff).length)) return;
-    createDefaultCharacter("freeza_1");
-    saveCharacterData();
-}
-
-// Perfil com o Cell antigo (forma perfeita de armadura, sem transformações próprias): passa uma vez para o Cell
-// novo (1ª forma + semi-perfeito + perfeito). Um Cell que o jogador editou fica como está.
-function atualizarCellSalvo() {
-    if (readStorage("saiyan_cell_formas") === "1") return;
-    writeStorage("saiyan_cell_formas", "1");
-    const c = characterDB.cell;
-    const ap = c && c.builderAppearance;
-    if (!ap || ap.outerShirt !== "armadura_cell" || ap.hairStyle !== "cell_crista") return;
-    if (Array.isArray(c.transformations) && c.transformations.some(t => t && t.diff && Object.keys(t.diff).length)) return;
-    createDefaultCharacter("cell");
-    saveCharacterData();
-}
-
-// Uma vez (versão 0.74): Goku, Vegeta, Trunks e Gohan salvos com a aparência antiga (sem edição do jogador)
-// passam para o visual novo, fiel às referências; o Gohan com a transformação padrão ganha as 2 novas (SSJ e SSJ2).
-const HEROIS_ANTIGOS = {
-    goku_adult: { preset: "goku", era: (ap) => ap.symbol === "kai" && ap.shirtColor === "#1c45b0" && ap.hairStyle === "goku" },
-    vegeta: { preset: "vegeta", era: (ap) => ap.outerShirt === "armadura_saiyajin" && ap.accessory === "none" && ap.tail === "none" && ap.hairStyle === "vegeta" },
-    trunks: { preset: "trunks", era: (ap) => ap.primaryColor === "#3f66c8" && ap.hairStyle === "trunks_futuro" },
-    gohan: { preset: "gohan", era: (ap) => ap.secondaryColor === "#20336f" && ap.shoes === "botas_marrons" && ap.hairStyle === "gohan" }
-};
-function atualizarHeroisSalvos() {
-    if (readStorage("saiyan_herois_074") === "1") return;
-    writeStorage("saiyan_herois_074", "1");
-    let mudou = false;
-    for (const k in HEROIS_ANTIGOS) {
-        const c = characterDB[k], info = HEROIS_ANTIGOS[k];
-        if (!c || !c.builderAppearance || !info.era(c.builderAppearance)) continue;
-        c.builderAppearance = normalizeAppearance(SPRITE_PRESETS[info.preset].appearance);
-        Object.assign(c, buildProceduralAnimations(c.builderAppearance));
-        c.defaultUrl = generateSpriteFrameUrl(c.builderAppearance, "idle", 0);
-        c.imageObj = null;
-        loadImageSecure(c.defaultUrl, (img) => { if (characterDB[k]) characterDB[k].imageObj = img; });
-        mudou = true;
-    }
-    const g = characterDB.gohan;
-    if (g && Array.isArray(g.transformations) && g.transformations.length === 1 && !Object.keys(g.transformations[0].diff || {}).length) {
-        delete g.transformations;   // volta a usar as transformações padrão do Gohan (DEFAULT_CHARACTERS)
-        mudou = true;
-    }
-    if (mudou) saveCharacterData();
-}
-
-// Uma vez (versão 0.75): GOGETA vira VEGETTO; Vegetto, Majin Buu (agora Kid Buu, com o Buu gordo de transformação) e
-// Broly (Super, com o Lendário) salvos com a aparência antiga, sem edição do jogador, passam para o visual novo.
-const PERSONAGENS_ANTIGOS_075 = {
-    gogeta: { preset: "fusao", antiga: { gender: "masculino", race: "Saiyajin", build: "musculoso", hairStyle: "goku", hairColor: "#111018", eyeType: "serio", irisColor: "#161a24", mouthType: "maligno", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "potara", outerShirt: "colete_fusao", innerShirt: "regata", pants: "larga", shoes: "botas_saiyajin", gloves: "pulseiras", primaryColor: "#1c3fb0", secondaryColor: "#2a2f45", accentColor: "#f5c518", shirtColor: "#262a3e", pantsColor: "#f4f1e8", kiColor: "#7fd8ff" } },
-    majin_buu: { preset: "majin", antiga: { gender: "masculino", race: "Majin", build: "gordo", hairStyle: "careca", eyeType: "normal", irisColor: "#101010", mouthType: "smile", earType: "majin", headFeature: "majin_antena", bodyMarks: "none", accessory: "none", outerShirt: "colete_buu", innerShirt: "nenhuma", pants: "larga", shoes: "botas_kaioshin", gloves: "luvas_saiyajin", primaryColor: "#f4f1e8", secondaryColor: "#7a3f8f", accentColor: "#d7a23a", shirtColor: "#7a3f8f", pantsColor: "#f4f1e8", cape: "capa", capeColor: "#5a2f7a", kiColor: "#ff9de0" } },
-    broly: { preset: "broly", antiga: { gender: "masculino", race: "Saiyajin", build: "gigante", hairStyle: "broly", hairColor: "#213018", eyeType: "bravo", irisColor: "#1a2a1a", mouthType: "serio", earType: "normal", headFeature: "none", bodyMarks: "none", accessory: "none", outerShirt: "none", innerShirt: "nenhuma", pants: "larga", shoes: "descalco", gloves: "pulseiras", primaryColor: "#8a6a2a", secondaryColor: "#c9a13a", accentColor: "#e8c04a", shirtColor: "#c9a13a", pantsColor: "#8a6a2a", kiColor: "#7dff7a" } }
-};
-function atualizarPersonagens075() {
-    if (readStorage("saiyan_personagens_075") === "1") return;
-    writeStorage("saiyan_personagens_075", "1");
-    let mudou = false;
-    const g = characterDB.gogeta;
-    if (g && g.name === "GOGETA") { g.name = "VEGETTO"; mudou = true; }
-    if (g && g.special === "BIG BANG KAMEHAMEHA") { g.special = "FINAL KAMEHAMEHA"; mudou = true; }
-    const igual = (x, y) => { const a = normalizeAppearance(x), b = normalizeAppearance(y); return Object.keys(Object.assign({}, a, b)).every(k => a[k] === b[k]); };
-    for (const k in PERSONAGENS_ANTIGOS_075) {
-        const c = characterDB[k], info = PERSONAGENS_ANTIGOS_075[k];
-        if (!c || !c.builderAppearance || !igual(c.builderAppearance, info.antiga)) continue;
-        c.builderAppearance = normalizeAppearance(SPRITE_PRESETS[info.preset].appearance);
-        Object.assign(c, buildProceduralAnimations(c.builderAppearance));
-        c.defaultUrl = generateSpriteFrameUrl(c.builderAppearance, "idle", 0);
-        c.imageObj = null;
-        loadImageSecure(c.defaultUrl, (img) => { if (characterDB[k]) characterDB[k].imageObj = img; });
-        // com a transformação padrão (sem mudança de visual), passa a usar as transformações novas do personagem
-        if (Array.isArray(c.transformations) && c.transformations.length === 1 && !Object.keys(c.transformations[0].diff || {}).length) delete c.transformations;
-        mudou = true;
-    }
-    if (mudou) saveCharacterData();
-}
-
-// 0.81: o "TRUNKS DO FUTURO" com o visual do Goku foi um teste do jogador — sai do jogo uma vez. Se o teste era
-// o próprio Trunks padrão renomeado, ele volta a ser o Trunks de sempre.
-function apagarTrunksDeTeste081() {
-    if (readStorage("saiyan_trunks_teste_081") === "1") return;
-    writeStorage("saiyan_trunks_teste_081", "1");
-    let mudou = false;
-    for (const k of Object.keys(characterDB)) {
-        const c = characterDB[k];
-        const nome = String((c && c.name) || "").trim().toUpperCase();
-        if (nome !== "TRUNKS DO FUTURO") continue;
-        if (c.builderAppearance && c.builderAppearance.hairStyle === "trunks_futuro") continue;   // é o Trunks de verdade
-        delete characterDB[k];
-        if (DEFAULT_CHARACTERS[k]) createDefaultCharacter(k);
-        if (selectedCharacter === k && !characterDB[k]) selectedCharacter = "goku_adult";
-        if (selectedBoss === k && !characterDB[k]) selectedBoss = "freeza_1";
-        mudou = true;
-    }
-    if (mudou) { saveCharacterData(); if (typeof saveSelectedCharacters === "function") saveSelectedCharacters(); }
-}
-
-// 0.90: o Saibaman e o Cell Jr. tinham virado modelos do construtor (0.87/0.88). Uma vez: voltam a ser os
-// desenhos clássicos originais (minions.js), com o mesmo nome, aura e especial que o jogador tinha.
-function minionsClassicos090() {
-    if (readStorage("saiyan_minions_classicos_090") === "1") return;
-    writeStorage("saiyan_minions_classicos_090", "1");
-    let mudou = false;
-    ["saibaman", "celljr"].forEach(k => {
-        const c = characterDB[k];
-        if (!c || c.minionClassico) return;
-        const antigo = { name: c.name, aura: c.aura, special: c.special, alignment: c.alignment };
-        createDefaultCharacter(k);
-        Object.keys(antigo).forEach(p => { if (antigo[p]) characterDB[k][p] = antigo[p]; });
-        mudou = true;
-    });
-    if (mudou) saveCharacterData();
-}
-
 function seedNewDefaultCharacters() {
     let seeded = readJsonStorage("saiyan_defaults_seeded", null);
     if (!Array.isArray(seeded)) seeded = ORIGINAL_DEFAULT_CHARACTER_KEYS.slice();
@@ -2742,10 +2532,7 @@ function saveCharacterData() {
             let item = characterDB[k];
             let rest = Object.assign({}, item);
             delete rest.imageObj;
-            // builderAppearance só é gravado no personagem quando as animações batem exatamente com o que o
-            // construtor geraria (ver saveCharacterFromModal) — nesse caso não precisa duplicar ~1MB de SVGs
-            // no armazenamento; loadCharacterData recria tudo a partir da aparência ao carregar.
-            if (rest.builderAppearance || rest.minionClassico) delete rest.animations;   // minion clássico: refeito pelo modelo
+            if (rest.minionClassico) delete rest.animations;   // minion: refeito pelas imagens do modelo
             if (Array.isArray(rest.spriteForms)) rest.spriteForms = rest.spriteForms.map(conjFormaParaSalvar);   // imagens das formas vão para o IndexedDB
             exportData[k] = rest;
         }
@@ -2772,273 +2559,22 @@ initSettings();
 // ==================== CONSTRUTOR DE PERSONAGEM (aba 3 do editor) ====================
 // Monta uma aparência combinando partes (cabelo, roupa, cauda, asas, arma nas costas, acessórios — ver sprites.js)
 // e gera as animações do personagem na hora, sem precisar de nenhuma imagem enviada.
-let builderPreviewTimer = null;
-let builderPreviewFrame = 0;
-
-const BUILDER_FIELD_IDS = {
-    gender: "build-gender", race: "build-race", build: "build-build", hairStyle: "build-hair-style", hairColor: "build-hair-color", hairColor2: "build-hair-color2",
-    eyeType: "build-eye-type", irisColor: "build-iris-color", scleraColor: "build-sclera-color",
-    earType: "build-ear-type", headFeature: "build-head-feature", bodyMarks: "build-body-marks",
-    mouthType: "build-mouth-type", scar: "build-scar", accessory: "build-accessory",
-    hat: "build-hat", symbol: "build-symbol", outerShirt: "build-outer-shirt", innerShirt: "build-inner-shirt",
-    pants: "build-pants", shoes: "build-shoes", gloves: "build-gloves", cape: "build-cape", capeColor: "build-cape-color",
-    tail: "build-tail", wings: "build-wings", backWeapon: "build-back-weapon", primaryColor: "build-primary-color",
-    secondaryColor: "build-secondary-color", accentColor: "build-accent-color", kiColor: "build-ki-color",
-    shirtColor: "build-shirt-color", pantsColor: "build-pants-color", armPose: "build-arm-pose",
-    minionColor: "build-minion-color", clawColor: "build-claw-color"
-};
-
-function populateBuilderPresetOptions() {
-    const sel = document.getElementById("build-preset");
-    if (!sel || sel.dataset.filled === "1") return;
-    Object.keys(SPRITE_PRESETS).forEach(key => {
-        const opt = document.createElement("option");
-        opt.value = key;
-        opt.textContent = SPRITE_PRESETS[key].label;
-        sel.appendChild(opt);
-    });
-    // minions clássicos: o desenho e os movimentos originais (minions.js), editáveis só nas cores
-    Object.keys(MINION_MODELOS).forEach(m => {
-        const opt = document.createElement("option");
-        opt.value = "minion:" + m;
-        opt.textContent = MINION_MODELOS[m].rotulo;
-        sel.appendChild(opt);
-    });
-    sel.dataset.filled = "1";
-}
-
-function getBuilderAppearanceFromForm() {
-    const app = {};
-    for (const key in BUILDER_FIELD_IDS) {
-        const el = document.getElementById(BUILDER_FIELD_IDS[key]);
-        if (el) app[key] = el.value;
-    }
-    const autoSkin = document.getElementById("build-skin-auto");
-    const skinInput = document.getElementById("build-skin");
-    app.skinColor = (autoSkin && autoSkin.checked) ? "" : (skinInput ? skinInput.value : "");
-    const final = normalizeAppearance(app);
-    // com a cor padrão marcada, a amostra mostra a cor da raça escolhida (antes ficava a da raça anterior)
-    if (autoSkin && autoSkin.checked && skinInput) skinInput.value = spriteSkin(final);
-    return final;
-}
-
-function setBuilderFormFromAppearance(appearance) {
-    const app = normalizeAppearance(appearance);
-    for (const key in BUILDER_FIELD_IDS) {
-        const el = document.getElementById(BUILDER_FIELD_IDS[key]);
-        if (el) el.value = app[key];
-    }
-    const autoSkin = document.getElementById("build-skin-auto");
-    const skinInput = document.getElementById("build-skin");
-    if (autoSkin) autoSkin.checked = !app.skinColor;
-    if (skinInput) skinInput.value = app.skinColor || spriteSkin(app);
-}
-
-// Trocar a raça mostra na hora a pele dela: volta para "usar cor padrão da raça" (a raça só muda a cor da pele;
-// com uma cor própria marcada, trocar a raça não mudava nada na prévia).
-function escolherRaca() {
-    const autoSkin = document.getElementById("build-skin-auto");
-    if (autoSkin) autoSkin.checked = true;
-    // raça Minion já escolhe o porte de minion (o molde dos minions do gameplay); dá para trocar depois
-    const raca = document.getElementById("build-race"), porte = document.getElementById("build-build");
-    if (raca && porte && raca.value === "Minion") porte.value = "minion";
-    refreshBuilderPreview();
-}
-
-// Escolher uma cor de pele vale em qualquer raça: desmarca "usar cor padrão da raça" na hora.
-function escolherCorDaPele() {
-    const autoSkin = document.getElementById("build-skin-auto");
-    if (autoSkin) autoSkin.checked = false;
-    refreshBuilderPreview();
-}
-
-function applyBuilderPreset() {
-    const sel = document.getElementById("build-preset");
-    const key = sel ? sel.value : "";
-    if (key.startsWith("minion:") && MINION_MODELOS[key.slice(7)]) return comecarMinionClassico(key.slice(7));
-    if (key && SPRITE_PRESETS[key]) {
-        setBuilderFormFromAppearance(SPRITE_PRESETS[key].appearance);
-        const nameField = document.getElementById("char-name");
-        if (nameField && !nameField.value.trim()) nameField.value = SPRITE_PRESETS[key].label.toUpperCase();
-    }
-    refreshBuilderPreview();
-}
-
-function stopBuilderPreview() {
-    if (builderPreviewTimer) {
-        clearInterval(builderPreviewTimer);
-        builderPreviewTimer = null;
-    }
-}
-
-// Arrastar uma cor dispara dezenas de trocas por segundo: a prévia só é refeita quando o dedo para por um instante
-// (antes cada passo gerava todos os quadros e o construtor travava por segundos).
-let builderPreviewDebounce = null;
-function refreshBuilderPreview() {
-    if (builderPreviewDebounce) clearTimeout(builderPreviewDebounce);
-    builderPreviewDebounce = setTimeout(() => { builderPreviewDebounce = null; refreshBuilderPreviewNow(); }, 90);
-}
-
-function refreshBuilderPreviewNow() {
-    const canvas = document.getElementById("build-preview-canvas");
-    if (!canvas || !canvas.getContext) return;
-    const bctx = canvas.getContext("2d");
-    const poseSel = document.getElementById("build-pose");
-    const state = poseSel ? poseSel.value : "idle";
-    const appearance = getBuilderAppearanceFromForm();
-
-    stopBuilderPreview();
-    builderPreviewFrame = 0;
-    // Cada quadro vira uma imagem só uma vez (antes criava e decodificava uma imagem nova a cada 130 ms).
-    const tEdit = editingTransformIndex !== null ? tempTransformations[editingTransformIndex] : null;
-    const ssjPrevia = state === "transform" || !!(tEdit && tEdit.ssj && SPRITE_SAIYAN_HAIR.includes(appearance.hairStyle));
-    // editando uma transformação com outra cor de cabelo: o cabelo transformado fica nessa cor (não no amarelo padrão)
-    const baseT = tEdit ? getTransformBase() : null;
-    const ssjColor = baseT && tEdit.ssj && appearance.hairColor !== normalizeAppearance(baseT).hairColor ? appearance.hairColor : undefined;
-    const list = getProceduralFrameUrls(appearance, state, { ssj: ssjPrevia, ssjColor });
-    const images = list.map(src => { const img = new Image(); img.src = src; return img; });
-    const draw = () => {
-        const img = images[builderPreviewFrame % images.length];
-        builderPreviewFrame++;
-        const paint = () => {
-            bctx.clearRect(0, 0, canvas.width, canvas.height);
-            const scale = Math.min((canvas.width * 0.92) / img.naturalWidth, (canvas.height * 0.92) / img.naturalHeight);
-            const w = img.naturalWidth * scale, h = img.naturalHeight * scale;
-            bctx.imageSmoothingEnabled = true;
-            bctx.drawImage(img, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h);
-        };
-        if (img.complete && img.naturalWidth) paint();
-        else img.onload = paint;
-    };
-    draw();
-    builderPreviewTimer = setInterval(draw, 130);
-}
-
-// Gera as animações de todos os movimentos e as coloca no personagem em edição — o mesmo lugar que a aba
-// ANIMAÇÕES preencheria à mão. Depois disso, SALVAR PERSONAGEM funciona exatamente como com uma sprite sheet.
-function applyBuilderToCharacter() {
-    if (editingTransformIndex !== null) return finishTransformationEdit("transformacao");   // no modo transformação, o botão conclui a edição
-    const appearance = getBuilderAppearanceFromForm();
-    const { animations, fpsSettings } = buildProceduralAnimations(appearance);
-    const alvo = conjEstaEditando() ? conjEdicao.stash : { anim: tempAnimations, fps: tempFps };   // montando uma forma: o construtor muda o ORIGINAL
-    SUB_ANIM_KEYS.forEach(state => {
-        alvo.anim[state] = animations[state];
-        alvo.fps[state] = fpsSettings[state];
-    });
-    builderLastAppearance = appearance;
-    builderMexido = false;
-    if (!conjEstaEditando() && tempMinionClassico) { tempMinionClassico = null; atualizarPainelMinionClassico(); }   // virou personagem do construtor
-    if (conjEstaEditando()) conjEdicao.stash.salvos = {}; else savedSpriteMotionPreviewFrames = {};
-    spriteMotionPreviewImageCache = {};
-    activeSpriteMovement = "idle";
-    spriteMotionPreviewFrame = 0;
-
-    const status = document.getElementById("build-status");
-    if (status) status.textContent = "Personagem gerado! Clique em SALVAR PERSONAGEM para guardar (ou ajuste a aparência e clique de novo).";
-    updateModalPreview();
-    renderSpriteAssignedFrames();
-    renderSpriteMotionPreview();
-}
-
-// ==================== MINION CLÁSSICO NO EDITOR ====================
-// Saibaman, Cell Jr. e os minions feitos a partir deles: o desenho original (minions.js) com as cores trocadas
-// aqui. Sem mexer nas cores fica exatamente o original. Usar o construtor (USAR ESTE PERSONAGEM) troca para o
-// desenho do construtor.
 let tempMinionClassico = null;
-let minionCorTimer = null;
-function aplicarMinionClassicoNoEditor() {
-    const a = minionClassicoAnimacoes(tempMinionClassico);
-    SUB_ANIM_KEYS.forEach(state => { tempAnimations[state] = a.animations[state].slice(); tempFps[state] = a.fpsSettings[state]; });
-    savedSpriteMotionPreviewFrames = {};
-    spriteMotionPreviewImageCache = {};
-    updateModalPreview();
-    renderSpriteAssignedFrames();
-    renderSpriteMotionPreview();
-}
-function atualizarPainelMinionClassico() {
-    const area = document.getElementById("minion-classico-area"), lista = document.getElementById("minion-classico-cores");
-    if (!area || !lista) return;
-    const n = tempMinionClassico && normalizarMinionClassico(tempMinionClassico);
-    area.style.display = n ? "" : "none";
-    lista.innerHTML = "";
-    if (!n) return;
-    const titulo = document.getElementById("minion-classico-modelo");
-    if (titulo) titulo.textContent = MINION_MODELOS[n.modelo].nome;
-    MINION_MODELOS[n.modelo].editaveis.forEach(([k, rotulo]) => {
-        const grupo = document.createElement("div");
-        grupo.className = "form-group";
-        const label = document.createElement("label");
-        label.htmlFor = "minion-cor-" + k;
-        label.textContent = rotulo;
-        const input = document.createElement("input");
-        input.type = "color";
-        input.id = "minion-cor-" + k;
-        input.value = n.cores[k] || MINION_MODELOS[n.modelo].padrao[k];
-        input.oninput = () => mudarCorMinionClassico(k, input.value);
-        grupo.appendChild(label);
-        grupo.appendChild(input);
-        lista.appendChild(grupo);
-    });
-}
-function mudarCorMinionClassico(k, cor) {
-    if (!tempMinionClassico) return;
-    tempMinionClassico = normalizarMinionClassico({ modelo: tempMinionClassico.modelo, cores: Object.assign({}, tempMinionClassico.cores, { [k]: cor }) });
-    clearTimeout(minionCorTimer);
-    minionCorTimer = setTimeout(aplicarMinionClassicoNoEditor, 120);
-}
-function voltarCoresMinionClassico() {
-    if (!tempMinionClassico) return;
-    tempMinionClassico = { modelo: tempMinionClassico.modelo, cores: {} };
-    atualizarPainelMinionClassico();
-    aplicarMinionClassicoNoEditor();
-}
-// "COMEÇAR A PARTIR DE..." um minion clássico: o personagem passa a ser esse minion (desenho e movimentos originais)
-function comecarMinionClassico(modelo) {
-    tempMinionClassico = { modelo, cores: {} };
-    builderLastAppearance = null;
-    builderMexido = false;
-    const nameField = document.getElementById("char-name"), align = document.getElementById("char-alignment");
-    if (nameField && !nameField.value.trim()) nameField.value = MINION_MODELOS[modelo].nome;
-    if (align) align.value = "MINION";
-    atualizarPainelMinionClassico();
-    aplicarMinionClassicoNoEditor();
-    const status = document.getElementById("build-status");
-    if (status) status.textContent = "Minion clássico escolhido! Troque as cores na aba DADOS e clique em SALVAR PERSONAGEM.";
-}
 
 // ==================== ABA TRANSFORMAÇÃO ====================
-// Lista de transformações do personagem em edição (cópia; vai para o personagem ao SALVAR). Cada uma guarda só o
-// que muda em relação ao personagem normal (diff), editado no próprio CONSTRUTOR — sem outro editor.
+// Lista de transformações do personagem em edição (cópia; vai para o personagem ao SALVAR): nome, aura e altura.
+// O desenho de cada forma vem do conjunto de sprites (aba ANIMAÇÕES): transformação N = forma de nível N do grupo.
 
-// Personagem normal das transformações: o gerado no construtor (USAR ESTE PERSONAGEM) ou o já salvo.
-function getTransformBase() {
-    if (builderLastAppearance) return builderLastAppearance;
-    const c = editingKey ? characterDB[editingKey] : null;
-    return c && c.builderAppearance ? c.builderAppearance : null;
-}
-
-function getTransformThumbnail(t) {
-    const base = getTransformBase();
-    if (base) {
-        const app = spriteTransformAppearance(base, t);
-        return generateSpriteFrameUrl(app, "idle", 0, { ssj: !!t.ssj && SPRITE_SAIYAN_HAIR.includes(app.hairStyle), noGlow: true, ssjColor: spriteSsjColor(t) });
-    }
-    const c = editingKey ? characterDB[editingKey] : null;
-    return (tempAnimations.idle && tempAnimations.idle[0]) || (c && c.defaultUrl) || getFallbackSpriteSvg();
-}
-
-function showTransformBanner(show, name) {
-    const banner = document.getElementById("build-transform-banner");
-    if (banner) banner.style.display = show ? "flex" : "none";
-    const label = document.getElementById("build-transform-name");
-    if (label) label.textContent = name || "";
+function getTransformThumbnail(i) {
+    const k = editingKey;
+    const q = k ? getCharacterAnimationFrames(k, "idle", i + 1) : null;
+    return (q && q[0]) || (tempAnimations.idle && tempAnimations.idle[0]) || CONJ_QUADRO_VAZIO;
 }
 
 function renderTransformationList() {
     const list = document.getElementById("transform-list");
     if (!list) return;
     list.innerHTML = "";
-    const base = getTransformBase();
     const auraSel = document.getElementById("char-aura");
     tempTransformations.forEach((t, i) => {
         const card = document.createElement("div");
@@ -3048,7 +2584,7 @@ function renderTransformationList() {
         ordem.textContent = (i + 1) + "º";
         const img = document.createElement("img");
         img.alt = t.name;
-        img.src = getTransformThumbnail(t);
+        img.src = getTransformThumbnail(i);
         const nome = document.createElement("input");
         nome.type = "text";
         nome.value = t.name;
@@ -3079,23 +2615,9 @@ function renderTransformationList() {
         card.append(ordem, img, nome, aura, altura,
             botao("▲", "Subir na ordem", () => moveTransformation(i, -1), i === 0),
             botao("▼", "Descer na ordem", () => moveTransformation(i, 1), i === tempTransformations.length - 1),
-            botao("EDITAR", base ? "Editar no construtor" : "Gere o personagem no CONSTRUTOR primeiro", () => editTransformation(i), !base),
             botao("✕", "Apagar transformação", () => removeTransformation(i), tempTransformations.length <= 1));
         list.appendChild(card);
     });
-    // "COPIAR O CORPO DE": a transformação nova pode começar da original ou de qualquer transformação da lista
-    const copia = document.getElementById("transform-copy-from");
-    if (copia) {
-        const atual = copia.value;
-        copia.innerHTML = "";
-        copia.add(new Option("Original", ""));
-        tempTransformations.forEach((t, i) => copia.add(new Option((i + 1) + "º — " + t.name, String(i))));
-        copia.value = atual !== "" && Number(atual) < tempTransformations.length ? atual : "";
-    }
-    const status = document.getElementById("transform-status");
-    if (status) status.textContent = base
-        ? "Toque em + para adicionar: ela começa igual à forma escolhida em COPIAR O CORPO DE e você muda no construtor."
-        : "Para mudar a aparência das transformações, gere o personagem no CONSTRUTOR (USAR ESTE PERSONAGEM). Sem isso, elas mudam só a aura, o poder e os raios.";
 }
 
 function moveTransformation(i, dir) {
@@ -3114,38 +2636,8 @@ function removeTransformation(i) {
     }, "APAGAR");
 }
 
-// Nova transformação: começa igual ao personagem normal (ou a uma transformação escolhida em "COPIAR O CORPO DE",
-// copiando as diferenças dela) e já abre no construtor.
+// Nova transformação no fim da lista (o desenho dela vem da próxima forma do conjunto de sprites)
 function addTransformation() {
-    const copia = document.getElementById("transform-copy-from");
-    const origem = copia && copia.value !== "" ? tempTransformations[Number(copia.value)] : null;
-    tempTransformations.push({ name: "Transformação " + (tempTransformations.length + 1), diff: origem ? JSON.parse(JSON.stringify(origem.diff || {})) : {}, ssj: origem ? !!origem.ssj : false, aura: origem ? (origem.aura || "amarelo") : "amarelo" });
+    tempTransformations.push({ name: "Transformação " + (tempTransformations.length + 1), aura: "amarelo" });
     renderTransformationList();
-    if (getTransformBase()) editTransformation(tempTransformations.length - 1);
-}
-
-function editTransformation(i) {
-    const base = getTransformBase();
-    const t = tempTransformations[i];
-    if (!base || !t) return;
-    if (editingTransformIndex === null) { transformEditStash = getBuilderAppearanceFromForm(); transformEditMexido = builderMexido; }
-    editingTransformIndex = i;
-    setBuilderFormFromAppearance(spriteTransformAppearance(base, t));
-    const presetSel = document.getElementById("build-preset");
-    if (presetSel) presetSel.value = "";
-    showTransformBanner(true, t.name);
-    switchEditorTab("construtor");
-}
-
-// Guarda na transformação só o que ficou diferente do personagem normal e devolve o construtor como estava.
-function finishTransformationEdit(nextTab = "transformacao") {
-    if (editingTransformIndex === null) return;
-    const t = tempTransformations[editingTransformIndex];
-    const base = getTransformBase();
-    if (t && base) t.diff = spriteAppearanceDiff(base, getBuilderAppearanceFromForm());
-    editingTransformIndex = null;
-    showTransformBanner(false);
-    if (transformEditStash) { setBuilderFormFromAppearance(transformEditStash); builderMexido = transformEditMexido; }   // mexer na transformação não conta como mexer no personagem
-    transformEditStash = null;
-    if (nextTab) switchEditorTab(nextTab);
 }

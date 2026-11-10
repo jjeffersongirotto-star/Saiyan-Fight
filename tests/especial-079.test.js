@@ -1,4 +1,4 @@
-// tests/especial-079.test.js — versão 0.79: movimento ESPECIAL (editor, construtor, conjuntos e luta) e o Galick Ho
+// tests/especial-079.test.js — versão 0.79: movimento ESPECIAL (editor, conjuntos e luta) e o Galick Ho
 // do Vegeta dos sprites.
 //
 // Uso: node tests/especial-079.test.js
@@ -13,11 +13,9 @@ check("ESPECIAL é um movimento do editor (botão e destino do DUPLICAR)", html.
 check("ESPECIAL entra em todas as listas de movimentos", run("SUB_ANIM_KEYS.includes('special') && SPRITE_STATES.includes('special') && CONJ_ESTADOS.includes('special')"));
 check("nome na prévia: ESPECIAL", run("getSpriteMovementDisplayName('special')") === "ESPECIAL");
 
-// construtor: pose própria, diferente do ataque
-const esp = run("[0,1,2,3,4].map(i => generateSpriteFrameSvg(SPRITE_PRESETS.goku.appearance, 'special', i))");
-check("personagens do construtor ganham 5 quadros de especial", esp.length === 5 && esp.every(s => s.startsWith("<svg") && !s.includes("NaN")) && new Set(esp).size === 5);
-check("o especial não é igual ao ataque", esp[0] !== run("generateSpriteFrameSvg(SPRITE_PRESETS.goku.appearance, 'attackKi', 0)"));
-check("o Goku do jogo tem animação de especial", run("getCharacterAnimationFrames('goku_adult', 'special', 0).length") === 5);
+// o Goku do jogo (pacote de sprites): especial próprio em cada forma
+h.carregarPacotes(["goku"]);
+check("o Goku do jogo tem animação de especial", run("getCharacterAnimationFrames('goku_adult', 'special', 0).length") >= 5);
 check("transformado também (cabelo amarelo)", run("getCharacterAnimationFrames('goku_adult', 'special', 1)[0]") !== run("getCharacterAnimationFrames('goku_adult', 'special', 0)[0]"));
 
 // sem quadros de especial: usa o ataque
@@ -40,6 +38,4 @@ const base = run("getCharacterAnimationFrames('vegeta', 'special', 0)"), ssj = r
 check("VEGETA SPRITES: Galick Ho com 5 ou mais quadros, normal e Super Saiyajin", base.length >= 5 && ssj.length >= 5 && base[0] !== ssj[0] &&
     base[0] !== run("getCharacterAnimationFrames('vegeta', 'attackKi', 0)[0]"));
 check("Galick Ho com os pés no chão, como os outros movimentos", pacote.normal.special.every(q => q[1] + q[3] <= pacote.pesY + 1 && q[1] + q[3] > pacote.pesY - 30));
-run("characterDB.vegeta.spriteActive = 'original'");
-
 process.exit(summary());

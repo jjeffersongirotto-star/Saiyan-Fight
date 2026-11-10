@@ -9,6 +9,7 @@ const dir = __dirname + "/..";
 const h = createHarness(dir, 800);
 const { run, check, summary, context } = h;
 
+h.carregarPacotes(["goku"]);
 // ---------- pacote do Goku ----------
 const pacote = JSON.parse(fs.readFileSync(dir + "/conjuntos/goku.json", "utf8"));
 const estados = run("CONJ_ESTADOS");
@@ -26,7 +27,7 @@ check("na luta o Goku usa os quadros novos, em WebP dentro do desenho do lutador
 const n3 = run("getCharacterAnimationFrames('goku_adult', 'idle', 3)");
 check("cada nível de transformação usa a sua forma (Blue no nível 3)", n3[0] !== idle[0] && run("getCharacterAnimationFrames('goku_adult', 'idle', 2)[0]") !== n3[0]);
 check("velocidade por movimento: o parry e o especial cabem no tempo da ação", run("conjuntoFps('goku_adult', 'parry', 0)") === 32 && run("conjuntoFps('goku_adult', 'special', 1)") === 12 && run("conjuntoFps('goku_adult', 'idle', 0)") === 10);
-check("ORIGINAL continua no editor (dá para voltar ao desenho antigo)", run("(() => { characterDB.goku_adult.spriteActive = 'original'; const r = getCharacterAnimationFrames('goku_adult', 'idle', 0)[0] === characterDB.goku_adult.animations.idle[0]; characterDB.goku_adult.spriteActive = 'g_goku'; return r; })()"));
+check("v0.113: sem desenho antigo — o Goku não tem animações próprias, só o conjunto", run("!(characterDB.goku_adult.animations.idle || []).length && characterDB.goku_adult.spriteActive === 'g_goku'"));
 
 // ---------- minions ----------
 check("tiras do Saibaman e do Cell Jr. existem (8 poses de 144x168)", ["saibaman", "celljr"].every(m => {
@@ -34,7 +35,7 @@ check("tiras do Saibaman e do Cell Jr. existem (8 poses de 144x168)", ["saibaman
     return b.slice(0, 4).toString() === "RIFF" && b.slice(8, 12).toString() === "WEBP";
 }) && run("MINION_IMAGEM_POSES.length") === 8);
 check("minion sem cores editadas usa a imagem nova", !!run("!!minionImagemPronta(normalizarMinionClassico({ modelo: 'saibaman', cores: {} }))"));
-check("minion com cores editadas continua com o desenho clássico", run(`(() => { const k = MINION_MODELOS.saibaman.editaveis[0][0]; const c = {}; c[k] = '#123456'; return minionImagemPronta(normalizarMinionClassico({ modelo: 'saibaman', cores: c })); })()`) === null);
+check("v0.113: cores antigas editadas são ignoradas (sempre a imagem)", run("JSON.stringify(normalizarMinionClassico({ modelo: 'saibaman', cores: { pele: '#123456' } }))") === JSON.stringify({ modelo: "saibaman", cores: {} }));
 h.calls.length = 0;
 run("desenharMinionClassico({ modelo: 'celljr', cores: {} }, 'investir', 0)");
 check("a pose investir sai da tira (sem erro no desenho)", run("MINION_IMAGEM_POSES.indexOf('investir')") === 5);

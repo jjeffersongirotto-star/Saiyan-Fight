@@ -49,16 +49,18 @@ check("UPDATES abre as novidades", run("window.__updates") === true);
 const importar = (texto, imagens = {}) => run(`(async () => { window.__r = await importarPersonagemDeTexto(${JSON.stringify(texto)}, ${JSON.stringify(imagens)}); })()`);
 const espera = () => new Promise(r => setTimeout(r, 30));
 (async () => {
+    h.carregarPacotes(["vegeta"]);
     const exp = run("JSON.stringify(dadosDoPersonagemParaArquivo('vegeta'))");
     importar(exp); await espera();
     const k1 = run("window.__r.key");
-    check("exportar e anexar de volta: vira um personagem igual", !!k1 && run(`characterDB['${k1}'].name`) === "VEGETA" && run(`JSON.stringify(characterDB['${k1}'].builderAppearance) === JSON.stringify(normalizeAppearance(characterDB.vegeta.builderAppearance))`));
+    check("exportar e anexar de volta: vira um personagem igual", !!k1 && run(`characterDB['${k1}'].name`) === "VEGETA" && run(`characterDB['${k1}'].animations.idle.length === getCharacterAnimationFrames('vegeta', 'idle', 0).length`));
     check("e fica salvo no navegador", JSON.parse(h.store.saiyan_db_v8_8bit)[k1] !== undefined);
-    for (const nome of ["exemplo-construtor", "exemplo-minion"]) {
+    check("v0.113: o arquivo leva os quadros (sprites), nunca a aparência do antigo construtor", !JSON.parse(exp).personagem.builderAppearance && !!JSON.parse(exp).personagem.animations.idle);
+    for (const nome of ["exemplo-minion"]) {
         importar(fs.readFileSync(`${dir}/formatos/${nome}.saiyan.json`, "utf8")); await espera();
         check(`formatos/${nome}.saiyan.json entra no jogo`, !!run("window.__r.key"), JSON.stringify(run("window.__r")));
     }
-    check("o minion do arquivo é o clássico com as cores do arquivo", run("(() => { const c = characterDB[window.__r.key]; return c.minionClassico.modelo === 'saibaman' && c.minionClassico.cores.pele === '#9b5de5' && c.alignment === 'MINION'; })()"));
+    check("o minion do arquivo usa as imagens do modelo", run("(() => { const c = characterDB[window.__r.key]; return c.minionClassico.modelo === 'saibaman' && c.alignment === 'MINION'; })()"));
     check("e aparece no campo MINION das arenas", run("getMinionsDisponiveis().some(m => m.id === window.__r.key)"));
     const png = "data:image/png;base64,AAAA";
     const quadros = fs.readFileSync(`${dir}/formatos/exemplo-quadros.saiyan.json`, "utf8");

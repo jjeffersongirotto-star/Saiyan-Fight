@@ -326,22 +326,7 @@
         .transform-card input[type="text"] { flex: 1 1 140px; min-width: 120px; }
         .transform-card .btn { padding: 6px 10px; min-height: 32px; }
         .transform-card .transform-altura { width: 76px; flex: 0 0 76px; }
-        .build-transform-banner {
-            display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
-            background: #3a2a05; border: 1px solid #ffd23f; color: #ffe9a6; border-radius: 6px;
-            padding: 8px 10px; margin-bottom: 10px; font-size: 12px;
-        }
 
-        /* construtor: título de cada grupo de peças (corpo, cabeça, roupas...) */
-        .build-section-title {
-            margin: 14px 0 6px;
-            padding-bottom: 3px;
-            border-bottom: 1px solid var(--border-color);
-            color: var(--cyan);
-            font-size: 12px;
-            font-weight: bold;
-            letter-spacing: 1px;
-        }
 
         .form-group input, .form-group select {
             background: #111;
@@ -1050,7 +1035,6 @@
             <div class="tabs">
                 <button id="tab-btn-basico" class="tab-btn active" onclick="switchEditorTab('basico')">DADOS</button>
                 <button id="tab-btn-animacoes" class="tab-btn" onclick="switchEditorTab('animacoes')">ANIMAÇÕES DOS MOVIMENTOS</button>
-                <button id="tab-btn-construtor" class="tab-btn" onclick="switchEditorTab('construtor')">CONSTRUTOR DE PERSONAGEM</button>
                 <button id="tab-btn-transformacao" class="tab-btn" onclick="switchEditorTab('transformacao')">TRANSFORMAÇÃO</button>
             </div>
 
@@ -1082,15 +1066,7 @@
                             </div>
                         </div>
 
-                        <!-- MINION CLÁSSICO (minions.js): desenho e movimentos originais, só as cores mudam -->
-                        <div id="minion-classico-area" class="form-row" style="display: none;">
-                            <div class="form-group" style="flex: 1 1 100%;">
-                                <label>MINION CLÁSSICO: <span id="minion-classico-modelo"></span></label>
-                                <p style="margin: 2px 0 6px; font-size: 12px; opacity: 0.85;">Desenho original do jogo, com a aparência e os movimentos de sempre. Só muda a cor que você trocar.</p>
-                                <div id="minion-classico-cores" class="form-row"></div>
-                                <button type="button" class="btn" onclick="voltarCoresMinionClassico()">VOLTAR ÀS CORES ORIGINAIS</button>
-                            </div>
-                        </div>
+
 
                         <div class="form-row">
                             <div class="form-group">
@@ -1358,260 +1334,13 @@
                 </div>
             </div>
 
-            <!-- ABA 3: CONSTRUTOR — monta um personagem do zero combinando partes (cabelo, roupa, cauda, asas, arma nas costas, acessórios) -->
-            <div id="tab-content-construtor" class="tab-content">
-                <div id="build-transform-banner" class="build-transform-banner" style="display:none;">
-                    <span>EDITANDO A TRANSFORMAÇÃO: <b id="build-transform-name"></b> — mude só o que for diferente do personagem normal.</span>
-                    <button type="button" class="btn" onclick="finishTransformationEdit()">CONCLUIR TRANSFORMAÇÃO</button>
-                </div>
-                <div class="preview-box">
-                    <div class="preview-image-wrap">
-                        <canvas id="build-preview-canvas" class="prev-canvas" width="600" height="600"></canvas>
-                    </div>
-                    <div class="preview-fields">
-                        <div class="form-row">
-                            <div class="form-group" style="flex:1; min-width:260px;">
-                                <label for="build-preset">COMEÇAR A PARTIR DE...</label>
-                                <select id="build-preset" onchange="applyBuilderPreset()">
-                                    <option value="">— personalizado (do zero) —</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="build-pose">PRÉVIA DA POSE</label>
-                                <select id="build-pose" onchange="refreshBuilderPreview()">
-                                    <option value="idle">PARADO</option>
-                                    <option value="flyRight">VOANDO</option>
-                                    <option value="attackKi">ATAQUE</option>
-                                    <option value="parry">PARRY</option>
-                                    <option value="chargeKi">CARREGAR</option>
-                                    <option value="transform">TRANSFORMAR</option>
-                                </select>
-                            </div>
-                        </div>
-                        <p style="font-size:11px; color:#9fb3d8; margin:0 0 6px;">Escolha as partes do personagem. A prévia ao lado é gerada na hora — não é preciso enviar nenhuma imagem.</p>
-                    </div>
-                </div>
-
-                <div class="build-section-title">CORPO</div>
-                <div class="sprite-control-row">
-                    <div class="form-group"><label for="build-gender">GÊNERO</label>
-                        <select id="build-gender" onchange="refreshBuilderPreview()">
-                            <option value="masculino">Masculino</option><option value="feminino">Feminino</option>
-                        </select>
-                    </div>
-                    <div class="form-group"><label for="build-race">RAÇA</label>
-                        <select id="build-race" onchange="escolherRaca()">
-                            <option value="Saiyajin">Saiyajin</option><option value="Humano">Humano</option>
-                            <option value="Namekuseijin">Namekuseijin</option><option value="Raça Freeza">Alienígena de pele lisa</option>
-                            <option value="Majin">Majin</option><option value="Android">Androide</option><option value="Bio-Androide">Bio-Androide</option>
-                            <option value="Kaioshin">Kaioshin</option><option value="Alienígena">Alienígena genérico</option>
-                            <option value="Minion">Minion</option>
-                        </select>
-                    </div>
-                    <div class="form-group"><label for="build-build">PORTE FÍSICO</label>
-                        <select id="build-build" onchange="refreshBuilderPreview()">
-                            <option value="normal">Normal</option><option value="magro">Magro</option>
-                            <option value="musculoso">Musculoso</option><option value="gigante">Gigante</option>
-                            <option value="jovem">Jovem/Criança</option><option value="gordo">Gordo</option><option value="minion">Minion (baixinho, cabeça grande)</option>
-                        </select>
-                    </div>
-                    <div class="form-group"><label for="build-arm-pose">POSIÇÃO DOS BRAÇOS</label>
-                        <select id="build-arm-pose" onchange="refreshBuilderPreview()"><option value="guarda">Guarda de luta</option><option value="cruzados">Cruzados (parado e voando)</option><option value="dedo">Dedo (ataque do Freeza)</option></select>
-                    </div>
-                    <div class="form-group"><label for="build-skin">COR DA PELE</label>
-                        <input type="color" id="build-skin" value="#f3c29a" oninput="escolherCorDaPele()">
-                        <label style="font-weight:normal; margin-top:4px;"><input type="checkbox" id="build-skin-auto" checked onchange="refreshBuilderPreview()"> usar cor padrão da raça</label>
-                    </div>
-                </div>
-
-                <div class="build-section-title">CABEÇA E ROSTO</div>
-                <div class="sprite-control-row">
-                    <div class="form-group"><label for="build-hair-style">CABELO</label>
-                        <select id="build-hair-style" onchange="refreshBuilderPreview()">
-                            <option value="careca">Careca / sem cabelo</option>
-                            <option value="goku">Espetado</option><option value="vegeta">Em chamas, para cima</option>
-                            <option value="gohan">Repicado com mecha</option><option value="gohan_ssj2">Super Saiyajin 2 (mechas finas)</option><option value="cell_crista">Crista com pintas</option><option value="bardock">Espetado para trás</option>
-                            <option value="raditz">Longo solto</option><option value="broly">Longo, denso e espetado</option>
-                            <option value="gotenks">3 picos</option><option value="gotenks_bicolor">Espetado de duas cores (centro e laterais)</option>
-                            <option value="vegetto">Espetado alto com 2 mechas na testa</option><option value="vegeta_sprite">Chama jogada para trás com reflexo azulado</option><option value="broly_lssj">Espetos enormes (Lendário)</option>
-                            <option value="trunks_futuro">Curto repartido ao meio</option><option value="trunks_kid">Liso curto</option>
-                            <option value="android17">Liso até o ombro</option><option value="android18">Curto com franja lateral</option>
-                            <option value="kaioshin_moicano">Moicano</option><option value="ssj_longo">Longo espetado até a cintura</option>
-                            <optgroup label="Super Saiyajin (mechas contornadas)">
-                                <option value="ssj_solto">Solto, mechas caindo na testa</option><option value="ssj_volumoso">Volumoso, muitas pontas</option>
-                                <option value="ssj_vegeta">Chama compacta e alta</option><option value="blue_goku">Pontas altas e franja curva (Blue)</option>
-                                <option value="blue_vegeta">Compacto (Blue)</option>
-                            </optgroup>
-                        </select>
-                    </div>
-                    <div class="form-group"><label for="build-hair-color">COR DO CABELO</label><input type="color" id="build-hair-color" value="#16110f" oninput="refreshBuilderPreview()"></div>
-                    <div class="form-group"><label for="build-hair-color2">COR 2 DO CABELO (laterais do de duas cores)</label><input type="color" id="build-hair-color2" value="#b58ce0" oninput="refreshBuilderPreview()"></div>
-                    <div class="form-group"><label for="build-ear-type">ORELHAS</label>
-                        <select id="build-ear-type" onchange="refreshBuilderPreview()">
-                            <option value="normal">Normais</option><option value="pontuda">Pontudas</option>
-                            <option value="majin">Furinhos</option><option value="nenhuma">Sem orelha</option>
-                        </select>
-                    </div>
-                    <div class="form-group"><label for="build-head-feature">CARACTERÍSTICA DA CABEÇA</label>
-                        <select id="build-head-feature" onchange="refreshBuilderPreview()">
-                            <option value="none">Nenhuma</option><option value="antenas">Antenas</option>
-                            <option value="majin_antena">Antena curva com ponta</option><option value="chifres">Chifres</option>
-                            <option value="capacete_freeza">Capacete com chifres finos</option><option value="capacete_chifres">Capacete com chifres grandes</option>
-                            <option value="cabeca_longa">Cabeça alongada com espinhos</option><option value="meia_cabeca_metal">Meia cabeça de metal com lente</option>
-                            <option value="antena_longa">Antena longa curvada para a frente</option>
-                            <option value="capacete_cell1">Capacete de inseto com pontas cruzadas</option><option value="capacete_cell2">Chapa preta e pontas laterais</option><option value="capacete_cell3">Chapa preta e pontas altas</option>
-                            <option value="cabeca_saibaman">Minion: cabeça de Saibaman</option><option value="crista_celljr">Minion: crista de Cell Jr.</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="sprite-control-row">
-                    <div class="form-group"><label for="build-eye-type">OLHOS</label>
-                        <select id="build-eye-type" onchange="refreshBuilderPreview()">
-                            <option value="normal">Normal</option><option value="gentil">Gentil</option><option value="serio">Sério</option>
-                            <option value="bravo">Bravo/franzido</option><option value="wide">Arregalado</option>
-                            <option value="freeza">Sem sobrancelha</option><option value="android">Frio, pupila pequena</option><option value="fechado">Fechados</option><option value="vazio">Brancos, sem pupila</option>
-                        </select>
-                    </div>
-                    <div class="form-group"><label for="build-iris-color">COR DA ÍRIS</label><input type="color" id="build-iris-color" value="#1a1210" oninput="refreshBuilderPreview()"></div>
-                    <div class="form-group"><label for="build-sclera-color">COR DO OLHO (fundo)</label><input type="color" id="build-sclera-color" value="#ffffff" oninput="refreshBuilderPreview()"></div>
-                    <div class="form-group"><label for="build-mouth-type">BOCA / EXPRESSÃO</label>
-                        <select id="build-mouth-type" onchange="refreshBuilderPreview()"><option value="smile">Sorridente</option><option value="serio">Séria</option><option value="grito">Gritando</option><option value="maligno">Maligna</option><option value="risada">Risada maligna</option><option value="sadico">Sorriso sádico com dentes</option><option value="alegre">Aberta e alegre</option></select>
-                    </div>
-                </div>
-
-                <div class="build-section-title">CARACTERÍSTICAS ESPECIAIS</div>
-                <div class="sprite-control-row">
-                    <div class="form-group"><label for="build-body-marks">MARCAS DA RAÇA</label>
-                        <select id="build-body-marks" onchange="refreshBuilderPreview()">
-                            <option value="none">Nenhuma</option><option value="namek">Placas rosadas e estrias</option>
-                            <option value="cell">Marcas no rosto</option><option value="freeza">Domo e placas roxas</option>
-                            <option value="listras_freeza">Pele rosada listrada</option><option value="carapaca_freeza">Placas brancas e pele listrada</option><option value="metal_freeza">Corpo de metal (ciborgue)</option>
-                            <option value="majin">Furinhos nos braços</option>
-                            <option value="cell_imperfeito">Bio-androide (1ª forma)</option><option value="cell_semi">Bio-androide (semi-perfeito)</option><option value="cell_perfeito">Bio-androide (perfeito)</option>
-                            <option value="aneis_minion">Minion: anéis (Saibaman)</option><option value="manchas_minion">Minion: manchas (Cell Jr.)</option>
-                        </select>
-                    </div>
-                    <div class="form-group"><label for="build-scar">CICATRIZ</label>
-                        <select id="build-scar" onchange="refreshBuilderPreview()"><option value="none">Nenhuma</option><option value="olho">No olho</option><option value="bochecha">Na bochecha</option><option value="peito">No peito (aparece sem camisa)</option><option value="lendario">De batalha: X no peito, ombro e barriga</option></select>
-                    </div>
-                    <div class="form-group"><label for="build-tail">RABO</label>
-                        <select id="build-tail" onchange="refreshBuilderPreview()"><option value="none">Nenhum</option><option value="saiyajin">De macaco, solto</option><option value="cinto_saiyajin">De macaco, na cintura</option><option value="freeza">Longo e liso, de réptil</option><option value="cell">Grande com ferrão</option></select>
-                    </div>
-                    <div class="form-group"><label for="build-wings">ASAS</label>
-                        <select id="build-wings" onchange="refreshBuilderPreview()"><option value="none">Nenhuma</option><option value="cell">Asas de inseto</option><option value="cell_abertas">Asas de inseto abertas</option><option value="cell_capa">Asas de inseto longas (capa)</option><option value="morcego">Asas de morcego</option><option value="anjo">Asas de anjo</option></select>
-                    </div>
-                </div>
-
-                <div class="build-section-title">ROUPAS</div>
-                <div class="sprite-control-row">
-                    <div class="form-group"><label for="build-inner-shirt">CAMISA (por baixo)</label>
-                        <select id="build-inner-shirt" onchange="refreshBuilderPreview()"><option value="camiseta">Camiseta de manguinha</option><option value="regata">Regata, sem manga</option><option value="malha">Malha de manga comprida</option><option value="malha_gola">Malha gola alta</option><option value="macacao">Macacão justo</option><option value="nenhuma">Nenhuma (pele à mostra)</option></select>
-                    </div>
-                    <div class="form-group"><label for="build-shirt-color">COR DA CAMISA</label><input type="color" id="build-shirt-color" value="#1f4fbf" oninput="refreshBuilderPreview()"></div>
-                    <div class="form-group"><label for="build-outer-shirt">ROUPA DE CIMA / CASACO</label>
-                        <select id="build-outer-shirt" onchange="refreshBuilderPreview()">
-                            <option value="none">Nenhuma</option>
-                            <optgroup label="Uniformes de luta">
-                                <option value="kimono">Gi tradicional</option>
-                                <option value="gi_piccolo">Gi com faixa na cintura</option><option value="gi_rasgado">Gi rasgado (sem mangas)</option>
-                                <option value="roupa_kaioshin">Túnica com gola e faixa</option>
-                            </optgroup>
-                            <optgroup label="Armaduras">
-                                <option value="armadura_saiyajin">Armadura de combate</option>
-                                <option value="armadura_exercito">Armadura com ombreiras douradas</option>
-                                <option value="armadura_curta">Armadura curta de ombreiras pequenas</option>
-                                <option value="armadura_broly">Peitoral com gema e ombreiras verdes</option>
-                            </optgroup>
-                            <optgroup label="Casacos e coletes">
-                                <option value="jaqueta_trunks">Jaqueta curta</option>
-                                <option value="colete_fusao">Colete aberto com faixa</option>
-                                <option value="colete_buu">Colete curto com cinto</option>
-                                <option value="colete_metamoran">Colete acolchoado aberto (fusão)</option>
-                                <option value="faixa_majin">Só o cinto largo com fivela M</option>
-                            </optgroup>
-                            <optgroup label="Trajes">
-                                <option value="traje_android">Traje com gola</option>
-                            </optgroup>
-                            <optgroup label="Corpo natural">
-                                <option value="armadura_cell">Carapaça com pintas</option>
-                                <option value="armadura_freeza">Armadura orgânica</option>
-                            </optgroup>
-                        </select>
-                    </div>
-                    <div class="form-group"><label for="build-pants">CALÇA</label>
-                        <select id="build-pants" onchange="refreshBuilderPreview()"><option value="larga">Larga</option><option value="justa">Justa</option><option value="bufante">Bufante (balão)</option><option value="nenhuma">Nenhuma (fica de cueca)</option></select>
-                    </div>
-                    <div class="form-group"><label for="build-pants-color">COR DA CALÇA</label><input type="color" id="build-pants-color" value="#f26a0f" oninput="refreshBuilderPreview()"></div>
-                    <div class="form-group"><label for="build-symbol">SÍMBOLO NO PEITO</label>
-                        <select id="build-symbol" onchange="refreshBuilderPreview()">
-                            <option value="none">Nenhum</option><option value="kame">Kame (tartaruga)</option><option value="kai">Kai</option><option value="go">Go (悟)</option>
-                            <option value="cc">Corporação Cápsula</option><option value="redribbon">Exército Red Ribbon</option><option value="saiyajin">Símbolo Saiyajin</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="sprite-control-row">
-                    <div class="form-group"><label for="build-shoes">CALÇADO</label>
-                        <select id="build-shoes" onchange="refreshBuilderPreview()">
-                            <option value="botas_artes">Botas de artes marciais</option><option value="botas_saiyajin">Botas brancas</option>
-                            <option value="botas_trunks">Botas amarelas altas</option><option value="botas_dobradas">Botas de pano dobradas</option><option value="botas_kaioshin">Sandálias</option>
-                            <option value="botas_marrons">Botas simples</option><option value="botas_cell">Botas escuras</option><option value="descalco">Descalço</option>
-                            <option value="pes_garras">Pés com garras</option><option value="sapato_cell">Sapato preto de pontas laranjas</option><option value="sapato_ponta">Sapato de ponta comprida</option><option value="caneleiras_freeza">Caneleiras e pés com garras</option>
-                            <option value="botas_vegetto">Botas brancas altas de ponta dourada</option><option value="botas_broly">Botas brancas de cano escuro e ponta verde</option>
-                            <option value="botas_majin">Botas pretas de dobra dourada</option><option value="botas_douradas">Botas douradas dobradas com meia</option>
-                            <option value="sapatilhas_faixa">Sapatilhas com faixas no tornozelo</option><option value="botas_ponta_dourada">Botas brancas de bico dourado</option>
-                            <option value="garras_minion">Minion: pés com garras</option>
-                        </select>
-                    </div>
-                    <div class="form-group"><label for="build-gloves">LUVAS</label>
-                        <select id="build-gloves" onchange="refreshBuilderPreview()"><option value="pulseiras">Munhequeiras</option><option value="luvas_saiyajin">Luvas brancas</option><option value="luvas_pretas">Luvas pretas</option><option value="bracadeiras_freeza">Braçadeiras brancas</option><option value="munhequeiras_borda">Munhequeiras escuras de borda branca</option><option value="munhequeiras_escuras">Munhequeiras pretas</option><option value="bracadeiras_majin">Braçadeiras pretas longas (unhas pretas)</option><option value="luvas_douradas">Luvas douradas</option><option value="luvas_punho_largo">Luvas brancas de punho largo</option><option value="garras_minion">Minion: mãos com garras</option><option value="nenhuma">Nenhuma</option></select>
-                    </div>
-                    <div class="form-group"><label for="build-hat">NA CABEÇA</label>
-                        <select id="build-hat" onchange="refreshBuilderPreview()"><option value="none">Nada</option><option value="turbante">Turbante</option><option value="faixa">Faixa na testa</option></select>
-                    </div>
-                </div>
-
-                <div class="build-section-title">ACESSÓRIOS</div>
-                <div class="sprite-control-row">
-                    <div class="form-group"><label for="build-accessory">NO ROSTO / ORELHA / PESCOÇO</label>
-                        <select id="build-accessory" onchange="refreshBuilderPreview()">
-                            <option value="none">Nenhum</option><option value="potara">Brincos Potara</option><option value="scouter">Scouter</option><option value="scouter_vermelho">Scouter vermelho</option><option value="potara_amarelo">Brincos Potara amarelos</option><option value="coleira">Coleira de metal (pescoço)</option>
-                        </select>
-                    </div>
-                    <div class="form-group"><label for="build-cape">NAS COSTAS: CAPA / OMBREIRAS</label>
-                        <select id="build-cape" onchange="refreshBuilderPreview()"><option value="none">Nenhuma</option><option value="capa">Capa</option><option value="ombreiras">Ombreiras</option><option value="capa_ombreiras">Capa + ombreiras</option><option value="capa_no">Capa com nó no pescoço</option><option value="manto_cintura">Manto felpudo na cintura</option></select>
-                    </div>
-                    <div class="form-group"><label for="build-cape-color">COR DA CAPA</label><input type="color" id="build-cape-color" value="#ffffff" oninput="refreshBuilderPreview()"></div>
-                    <div class="form-group"><label for="build-back-weapon">NAS COSTAS: ARMA</label>
-                        <select id="build-back-weapon" onchange="refreshBuilderPreview()"><option value="none">Nada</option><option value="espada_trunks">Espada</option><option value="bastao">Bastão sagrado</option></select>
-                    </div>
-                </div>
-
-                <div class="build-section-title">CORES</div>
-                <div class="sprite-control-row">
-                    <div class="form-group"><label for="build-primary-color">COR DA ROUPA DE CIMA</label><input type="color" id="build-primary-color" value="#f26a0f" oninput="refreshBuilderPreview()"></div>
-                    <div class="form-group"><label for="build-secondary-color">COR SECUNDÁRIA (faixa, munhequeira, cueca, top)</label><input type="color" id="build-secondary-color" value="#1f4fbf" oninput="refreshBuilderPreview()"></div>
-                    <div class="form-group"><label for="build-accent-color">COR DE DETALHE</label><input type="color" id="build-accent-color" value="#ffd23f" oninput="refreshBuilderPreview()"></div>
-                    <div class="form-group"><label for="build-ki-color">COR DO KI / AURA</label><input type="color" id="build-ki-color" value="#5be3ff" oninput="refreshBuilderPreview()"></div>
-                </div>
-                <div class="sprite-control-row">
-                    <div class="form-group"><label for="build-minion-color">COR DAS VEIAS / MANCHAS (PEÇAS DE MINION)</label><input type="color" id="build-minion-color" value="#2f6f22" oninput="refreshBuilderPreview()"></div>
-                    <div class="form-group"><label for="build-claw-color">COR DAS GARRAS (PEÇAS DE MINION)</label><input type="color" id="build-claw-color" value="#f2eee0" oninput="refreshBuilderPreview()"></div>
-                </div>
-
-                <div style="display:flex; gap:10px; margin-top:10px; align-items:center; flex-wrap:wrap;">
-                    <button type="button" class="btn" style="background:#0d6b3a;" onclick="applyBuilderToCharacter()">USAR ESTE PERSONAGEM (gera as animações)</button>
-                    <span id="build-status" style="font-size:11px; color:#9fb3d8;">As animações do personagem serão geradas automaticamente — nenhum desenho é necessário.</span>
-                </div>
-            </div>
-
+            <!-- ABA 3: TRANSFORMAÇÃO — nome, aura e altura de cada forma (o desenho vem do conjunto de sprites) -->
             <div id="tab-content-transformacao" class="tab-content">
                 <p style="font-size:12px; color:#9fb3d8; margin:0 0 10px;">Na luta, com o ki cheio, cada TRANSFORMAR leva para a próxima desta lista, de cima para baixo. Cada uma dá o poder extra por um tempo e a aparência fica até o fim da luta. Use ▲▼ para mudar a ordem.</p>
                 <div id="transform-list" class="transform-list"></div>
                 <div style="display:flex; gap:10px; margin-top:10px; align-items:center; flex-wrap:wrap;">
                     <button type="button" class="btn" style="background:#0d6b3a; font-size:18px; min-width:56px;" onclick="addTransformation()" aria-label="Adicionar transformação">+</button>
-                    <label for="transform-copy-from" style="font-size:12px; color:#9fb3d8;">COPIAR O CORPO DE</label>
-                    <select id="transform-copy-from" aria-label="Copiar o corpo de qual forma"><option value="">Original</option></select>
-                    <span id="transform-status" style="font-size:11px; color:#9fb3d8;">Adicione uma transformação: ela começa igual ao personagem e você muda no construtor.</span>
+                    <span id="transform-status" style="font-size:11px; color:#9fb3d8;">O desenho de cada transformação vem do conjunto de sprites (aba ANIMAÇÕES).</span>
                 </div>
             </div>
 
@@ -1649,7 +1378,11 @@
                 Novidades e correções do jogo.
             </p>
             <ul id="lista-updates" style="margin: 0 0 18px; color: #ddd; line-height: 1.5; padding: 0 4px 0 0; list-style: none; overflow-y: auto;">
-                <li class="upd-versao"><h3>Versão 0.112 (ATUAL)</h3><p>Gohan criança</p></li>
+                <li class="upd-versao"><h3>Versão 0.113 (ATUAL)</h3><p>Só sprites, abertura mais rápida</p></li>
+                <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>Só os desenhos novos</strong><p>Os bonecos desenhados antigos saíram do jogo: todos os personagens e minions usam só os sprites, e nunca mais aparece o boneco antigo antes do desenho novo. Personagens feitos no antigo construtor saem da lista.</p></li>
+                <li class="upd-item upd-melhorado"><span class="upd-tag">MELHORADO</span><strong>Editor só com sprites</strong><p>O editor de personagens não tem mais o CONSTRUTOR nem as cores dos minions: cada personagem é feito com sprites (aba ANIMAÇÕES e conjuntos de sprites). Na aba TRANSFORMAÇÃO cada forma tem nome, aura e altura, e a imagem vem do conjunto de sprites.</p></li>
+                <li class="upd-item upd-corrigido"><span class="upd-tag">CORRIGIDO</span><strong>App abre no primeiro toque</strong><p>Ao abrir, o jogo não baixa mais os desenhos dos lutadores nem monta bonecos: a tela inicial responde logo. Os desenhos de cada personagem só são preparados quando são usados, sem travar o celular.</p></li>
+                <li class="upd-versao"><h3>Versão 0.112</h3><p>Gohan criança</p></li>
                 <li class="upd-item upd-corrigido"><span class="upd-tag">CORRIGIDO</span><strong>Gohan do tamanho certo</strong><p>O Gohan Super Saiyajin e Super Saiyajin 2 tinham ficado grandes demais. Voltaram ao tamanho de antes, e o Gohan base agora é menor, com tamanho de criança, como nessa fase do anime.</p></li>
                 <li class="upd-versao"><h3>Versão 0.111</h3><p>Só os desenhos novos</p></li>
                 <li class="upd-item upd-corrigido"><span class="upd-tag">CORRIGIDO</span><strong>Goku Super Saiyajin God virado</strong><p>Parado, o Goku Super Saiyajin God olhava para o lado contrário das outras formas. Agora olha para o mesmo lado.</p></li>
@@ -2174,7 +1907,6 @@
     <script src="audio.js"></script>
     <script src="progress.js"></script>
     <script src="game-logic-core.js"></script>
-    <script src="sprites.js"></script>
     <script src="conjuntos.js"></script>
     <script src="minions.js"></script>
     <script src="database.js"></script>

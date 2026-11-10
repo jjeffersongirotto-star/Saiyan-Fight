@@ -83,10 +83,9 @@ const lutar = run("MENU_LAYOUT.characters.fight");
 run(`handleMenuClick(${lutar.x + 5}, ${lutar.y + 5})`);
 check("LUTAR começa a partida na fase escolhida", run("gameState") === "playing" && run("selectedStage") === "kame" && run("selecaoLuta") === null);
 
-run("characterDB.goku_adult.spriteActive = 'original'; characterDB.goku_adult.spriteForms = []; characterDB.goku_adult.spriteGroups = []");   // v0.102: o Goku vem com o conjunto do Gemini; aqui ele é o Goku do construtor
 // ---------- vilão de sprites espelhado ----------
-check("Vegeta com o conjunto de sprites conta como personagem de sprites; Goku do construtor não",
-    run("characterDB.vegeta.spriteActive = 'g_vegeta'; lutadorDeSprites('vegeta')") === true && run("lutadorDeSprites('goku_adult')") === false);
+check("v0.113: todo lutador é de sprites (o vilão sempre é espelhado para olhar o herói)",
+    run("characterDB.vegeta.spriteActive = 'g_vegeta'; lutadorDeSprites('vegeta')") === true && run("lutadorDeSprites('goku_adult')") === true);
 check("espelhado, o voo troca de lado (para a esquerda usa o voo para a frente)", run("trocarLadoDoMovimento('flyLeft')") === "flyRight" && run("trocarLadoDoMovimento('flyUpRight')") === "flyUpLeft" && run("trocarLadoDoMovimento('idle')") === "idle");
 run("selectedBoss = 'vegeta'; player2.actionState = 'idle'; h0 = 0");
 h.calls.length = 0; run("drawPlayerEntity(player2, characterDB.vegeta, true)");
@@ -129,11 +128,5 @@ h.context.__pacote = pacote;
 run("conjRegistrarPacote('vegeta', __pacote)");
 check("Vegeta (pacote novo, v0.103): sem cadeado, transformar e carregar repetem a tira inteira", run("conjTravaDaForma({ pacote: 'vegeta', variante: 'normal' }, 'transform')") === -1 && run("conjTravaDaForma({ pacote: 'vegeta', variante: 'ssj' }, 'chargeKi')") === -1);
 check("depois da 1ª volta o carregar não volta ao quadro em pé do começo", [6, 7, 8, 9, 10, 11, 12].every(t => core.getLoopFrameIndex(t, 6, 3) >= 3));
-
-// ---------- Trunks de teste ----------
-run("characterDB.teste_trunks = Object.assign({}, characterDB.goku_adult, { name: 'TRUNKS DO FUTURO', builderAppearance: Object.assign({}, characterDB.goku_adult.builderAppearance) }); writeStorage('saiyan_trunks_teste_081', '0'); apagarTrunksDeTeste081()");
-check("o TRUNKS DO FUTURO com visual do Goku sai do jogo", run("!characterDB.teste_trunks") === true && run("!!characterDB.trunks") === true);
-run("characterDB.teste_trunks = Object.assign({}, characterDB.goku_adult, { name: 'TRUNKS DO FUTURO' }); apagarTrunksDeTeste081()");
-check("a limpeza roda uma vez só", run("!!characterDB.teste_trunks") === true);
 
 process.exit(summary());

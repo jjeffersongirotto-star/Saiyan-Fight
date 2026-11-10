@@ -1,32 +1,20 @@
 // tests/desempenho.test.js — proteções contra os gargalos encontrados na auditoria de desempenho:
-// animações geradas só quando usadas (abrir o jogo era lento), memória dos quadros com limite, prévia do construtor
-// sem refazer tudo a cada passo ao arrastar uma cor, aura com quadros de tamanho fixo e o começo da luta/transformação
+// quadros dos pacotes viram imagem só quando usados (abrir o jogo era lento), abertura sem preparar lutadores,
+// aura com quadros de tamanho fixo e o começo da luta/transformação
 // preparando os desenhos aos poucos.
 //
 // Uso: node tests/desempenho.test.js
 
-const sp = require("../sprites.js");
 const { createHarness } = require("./harness.js");
 const h = createHarness(__dirname + "/..", 800);
 const { run, check, summary } = h;
 
-// ---------- abrir o jogo: animações só são geradas quando alguém as usa ----------
-run(`var __anim = buildProceduralAnimations(SPRITE_PRESETS.cell.appearance).animations;`);
-check("as animações não são geradas na hora de criar o personagem", run(`typeof Object.getOwnPropertyDescriptor(__anim, "transform").get`) === "function");
-check("na primeira leitura o movimento é gerado e guardado", run(`__anim.transform.length > 0 && !Object.getOwnPropertyDescriptor(__anim, "transform").get`));
-check("todos os movimentos continuam listados", run(`Object.keys(__anim).length`) === run("SUB_ANIM_KEYS.length"));
-
-// ---------- memória dos quadros com limite ----------
-for (let i = 0; i < 450; i++) sp.getProceduralFrameUrls(Object.assign({}, sp.SPRITE_PRESETS.goku.appearance, { primaryColor: "#" + (0x100000 + i).toString(16) }), "parry");
-check("limite de quadros guardados existe (SPRITE_FRAME_CACHE_MAX)", run("_spriteFrameCache.size <= SPRITE_FRAME_CACHE_MAX"));
-run(`for (let i = 0; i < 450; i++) getProceduralFrameUrls(Object.assign({}, SPRITE_PRESETS.goku.appearance, { primaryColor: "#" + (0x200000 + i).toString(16) }), "parry");`);
-check("depois de 450 cores diferentes, a memória continua no limite", run("_spriteFrameCache.size") <= run("SPRITE_FRAME_CACHE_MAX"));
-
-// ---------- construtor: arrastar uma cor não refaz a prévia a cada passo ----------
-run(`var __prev = 0; var __orig = refreshBuilderPreviewNow; refreshBuilderPreviewNow = function () { __prev++; };
-     for (let i = 0; i < 40; i++) refreshBuilderPreview();`);
-check("40 passos de cor seguidos não refazem a prévia na hora", run("__prev") === 0 && run("builderPreviewDebounce !== null"));
-run("refreshBuilderPreviewNow = __orig;");
+// ---------- abrir o jogo: v0.113 sem bonecos desenhados; pacotes viram imagem só quando usados ----------
+h.carregarPacotes(["goku", "vegeta", "gohan", "piccolo"]);
+check("pacote carregado: cada movimento só vira imagem quando é lido", run("typeof Object.getOwnPropertyDescriptor(conjPacoteDados.goku.ssj3, 'transform').get") === "function");
+check("na primeira leitura o movimento vira imagem e fica guardado", run("conjPacoteDados.goku.ssj3.transform.length > 0 && !Object.getOwnPropertyDescriptor(conjPacoteDados.goku.ssj3, 'transform').get"));
+check("na abertura não prepara os lutadores (só depois de uns segundos ou do 1º toque)", run("typeof AQUECER_DEPOIS_MS") === "number" && run("AQUECER_DEPOIS_MS") >= 2000);
+run("aquecerLiberado = true");
 
 // ---------- aura: quadros guardados não dependem do tamanho ----------
 run(`kiAuraCache = new Map(); deltaTime = 1/60; player.isCharging = true;
@@ -40,7 +28,7 @@ check("começar a luta não prepara tudo de uma vez", run("backgroundWork.frames
 run(`var __t = Date.now(); runBackgroundWork(4); var __dt = Date.now() - __t;`);
 check("cada quadro adianta só um pedaço", run("backgroundWork.frames.length + backgroundWork.images.length") > 0);
 run("terminarFila(); player.ki = 100; transformPlayer(player, false);");
-check("transformar depois da preparação não gera nada pesado na hora (o cabelo amarelo já estava pronto)", run("(() => { const t = Date.now(); terminarFila(); return Date.now() - t; })()") < 300);
+check("transformar depois da preparação não gera nada pesado na hora (a forma nova já estava pronta)", run("(() => { const t = Date.now(); terminarFila(); return Date.now() - t; })()") < 300);
 h.step(60);
 check("a luta segue sem erro", run("gameState") === "playing");
 

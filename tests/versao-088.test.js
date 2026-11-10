@@ -1,10 +1,9 @@
 // tests/versao-088.test.js — versão 0.88: retrato do vilão na forma escolhida, ranking com tempo total e golpes
-// sofridos, porte "minion" no construtor, e as arenas Plataforma Celestial e Capital do Oeste (3D em órbita).
+// sofridos e as arenas Plataforma Celestial e Capital do Oeste (3D em órbita).
 //
 // Uso: node tests/versao-088.test.js
 
 const core = require("../game-logic-core.js");
-const sp = require("../sprites.js");
 const { createHarness } = require("./harness.js");
 const h = createHarness(__dirname + "/..", 800);
 const { run, check, summary } = h;
@@ -32,10 +31,6 @@ check("partida antiga sem tempo mostra —", run("textoLinhaRanking(0, { score: 
 check("abas do ranking por fase cabem e não se sobrepõem", run(`(() => { const rs = STAGE_PROGRESSION.map((s, i) => getRankingStageTabRect(i));
     return rs.every(r => r.x >= 0 && r.x + r.w <= canvas.width) && !rs.some((a, i) => rs.some((b, j) => i < j && a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h)); })()`));
 run("setGameState('menu')");
-
-// ---------- porte minion ----------
-run("setBuilderFormFromAppearance(SPRITE_PRESETS.goku.appearance); document.getElementById('build-race').value = 'Minion'; escolherRaca()");
-check("escolher a raça Minion já põe o porte minion", run("document.getElementById('build-build').value") === "minion");
 
 // ---------- arenas novas ----------
 for (const [id, cena] of [["plataforma_celestial", "pcCena"], ["capital_oeste", "coCena"]]) {

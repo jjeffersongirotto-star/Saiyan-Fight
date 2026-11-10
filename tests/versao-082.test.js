@@ -38,7 +38,8 @@ run("setGameState('menu')");
 // ---------- retratos: Golden/Black Freeza x forma final ----------
 const menu = fs.readFileSync(__dirname + "/../menu.js", "utf8");
 check("o retrato é guardado pelo desenho inteiro (não por um pedaço do texto)", menu.includes("cardPortraitCache.get(src)") && !menu.includes("src.slice(meio"));
+h.carregarPacotes(["freeza"]);
 const f = run(`[3, 5, 6].map(n => getCharacterAnimationFrames("freeza_1", "idle", n)[0])`);
-check("forma final, Golden e Black têm desenhos diferentes (cores próprias)", new Set(f).size === 3 && f[1].includes("f2c233") && f[2].includes("25212c"));
+check("forma final, Golden e Black têm desenhos diferentes (formas próprias do pacote)", new Set(f).size === 3);
 
 process.exit(summary());

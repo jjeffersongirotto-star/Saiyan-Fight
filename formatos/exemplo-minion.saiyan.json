@@ -8,8 +8,7 @@
     "special": "AUTODESTRUIÇÃO",
     "altura": 120,
     "minionClassico": {
-      "modelo": "saibaman",
-      "cores": { "pele": "#9b5de5", "olhos": "#ffd23f" }
+      "modelo": "saibaman"
     }
   }
 }

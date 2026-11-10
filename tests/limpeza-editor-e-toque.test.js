@@ -2,7 +2,7 @@
 // - botões de toque (ataque, parry, especial; o CARREGAR vira transformar com o ki cheio) passam pelo mesmo caminho do teclado (triggerAction),
 //   sem texto no meio da luta (o aviso "ENCHA O KI PARA TRANSFORMAR" saiu; a barra de ki já mostra);
 // - "ADICIONAR QUADRO AO MOVIMENTO" e "SALVAR FRAMES NA PRÉVIA" faziam o mesmo: ficou um botão só;
-// - o editor sem imagem nenhuma continua mostrando/salvando a imagem reserva.
+// - v0.113: o editor sem imagem nenhuma (nem conjunto de sprites) não salva: pede os sprites.
 //
 // Uso: node tests/limpeza-editor-e-toque.test.js
 
@@ -54,11 +54,11 @@ run("selectedSpriteSheetFrames = new Set([2]); assignSelectedSpriteFrame()");
 check("adicionar quadros acrescenta ao movimento na ordem", JSON.stringify(run("tempAnimations.flyRight")) === JSON.stringify(["data:image/png;base64,Q0", "data:image/png;base64,Q1", "data:image/png;base64,Q2"]));
 check("a prévia pula para o primeiro quadro recém-adicionado", run("spriteMotionPreviewFrame") === 2);
 
-// ---------- editor sem imagem: usa a imagem reserva ----------
-run("openModal(null); document.getElementById('char-name').value = 'SO RESERVA'; builderLastAppearance = null; tempAnimations.idle = []");
-run("saveCharacterFromModal()");
+// ---------- editor sem imagem: v0.113 pede os sprites (não existe mais boneco desenhado de reserva) ----------
+run("openModal(null); document.getElementById('char-name').value = 'SO RESERVA'; tempAnimations.idle = []");
+run("var __al = []; var __sa = showSystemAlert; showSystemAlert = (t, m) => __al.push(t); saveCharacterFromModal(); showSystemAlert = __sa;");
 const k = run("Object.keys(characterDB).find(key => characterDB[key].name === 'SO RESERVA')");
-check("personagem sem imagem é salvo com a imagem reserva", !!k && run(`characterDB['${k}'].defaultUrl`) === run("getFallbackSpriteSvg()"));
+check("personagem sem sprites não é salvo: pede os quadros", !k && run("__al.includes('FALTAM OS SPRITES')"));
 
 run("setGameState('menu')");
 process.exit(summary());

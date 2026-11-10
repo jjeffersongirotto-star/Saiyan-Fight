@@ -1,35 +1,31 @@
-// tests/transformacoes.test.js — várias transformações por personagem (aba TRANSFORMAÇÃO do editor): cada uma
-// guarda só o que muda em relação ao personagem normal, é editada no próprio construtor, pode ser renomeada,
-// reordenada e apagada; na luta, cada TRANSFORMAR com o ki cheio leva à próxima, com todos os movimentos.
+// tests/transformacoes.test.js — várias transformações por personagem (aba TRANSFORMAÇÃO do editor): cada uma tem
+// nome, aura e altura, pode ser renomeada, reordenada e apagada (o desenho vem do conjunto de sprites, v0.113);
+// na luta, cada TRANSFORMAR com o ki cheio leva à próxima, com todos os movimentos.
 //
 // Uso: node tests/transformacoes.test.js
 
 const fs = require("fs");
-const sp = require("../sprites.js");
 const { createHarness } = require("./harness.js");
 const h = createHarness(__dirname + "/..", 800);
 const { run, check, summary } = h;
+h.carregarPacotes(["goku"]);
 
 // ---------- dados ----------
 check("todo personagem começa com a Transformação 1 (a de sempre)", run(`getCharacterTransformations("piccolo").length === 1 && getCharacterTransformations("piccolo")[0].name === "Transformação 1"`));
-check("o Goku já vem com a Transformação 2 (cabelo longo de Super Saiyajin)", run(`getCharacterTransformations("goku_adult")[1].diff.hairStyle`) === "ssj_longo");
-check("a transformação guarda só o que muda", JSON.stringify(sp.spriteAppearanceDiff(sp.SPRITE_PRESETS.goku.appearance, Object.assign({}, sp.SPRITE_PRESETS.goku.appearance, { hairColor: "#ffe34d" }))) === '{"hairColor":"#ffe34d"}');
+check("o Goku já vem com as formas dele (Super Saiyajin 3 em 2º)", run(`getCharacterTransformations("goku_adult")[1].name`) === "Super Saiyajin 3");
+check("v0.113: as transformações guardam só nome, aura e altura (sem aparência do construtor)", run(`Object.keys(DEFAULT_CHARACTERS).every(k => getCharacterTransformations(k).every(t => !t.diff))`));
 const html = fs.readFileSync(__dirname + "/../index.html", "utf8");
-check("cabelo longo de Super Saiyajin é uma opção do campo CABELO", html.includes('<option value="ssj_longo">'));
 check("editor tem a aba TRANSFORMAÇÃO com o botão +", html.includes('id="tab-btn-transformacao"') && html.includes('onclick="addTransformation()"'));
+check("v0.113: sem aba CONSTRUTOR", !html.includes('tab-btn-construtor') && !html.includes('id="build-'));
 
-// ---------- editor: + abre o construtor, concluir guarda só a diferença ----------
+// ---------- editor: +, renomear, ordem, apagar ----------
 run(`openModal("bardock"); switchEditorTab("transformacao");`);
 check("abre com a lista do personagem", run("tempTransformations.length") === 1);
 run(`addTransformation();`);
-check("+ adiciona 'Transformação 2' e abre no construtor", run("tempTransformations[1].name") === "Transformação 2" && run("currentEditorTab") === "construtor" && run("editingTransformIndex") === 1);
-check("a nova começa igual ao personagem normal", run(`document.getElementById("build-hair-style").value`) === "bardock");
-run(`document.getElementById("build-hair-style").value = "ssj_longo"; document.getElementById("build-hair-color").value = "#ffe34d"; finishTransformationEdit();`);
-check("concluir guarda só o cabelo e a cor", JSON.stringify(run("tempTransformations[1].diff")) === '{"hairStyle":"ssj_longo","hairColor":"#ffe34d"}');
-check("e o construtor volta ao personagem normal", run(`document.getElementById("build-hair-style").value`) === "bardock" && run("editingTransformIndex") === null);
+check("+ adiciona 'Transformação 2' (fica na mesma aba)", run("tempTransformations[1].name") === "Transformação 2" && run("currentEditorTab") === "transformacao");
 run(`tempTransformations[1].name = "Super Bardock"; moveTransformation(1, -1);`);
 check("dá para renomear e mudar a ordem", run("tempTransformations[0].name") === "Super Bardock");
-run(`moveTransformation(0, 1); addTransformation(); finishTransformationEdit();`);
+run(`moveTransformation(0, 1); addTransformation();`);
 check("cada + numera em sequência", run("tempTransformations[2].name") === "Transformação 3");
 run(`removeTransformation(2); executeSystemConfirm(true);`);
 check("dá para apagar", run("tempTransformations.length") === 2);

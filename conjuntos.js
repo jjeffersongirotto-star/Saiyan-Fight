@@ -1,7 +1,7 @@
 // ============================================================================
 // conjuntos.js — CONJUNTOS DE SPRITES de cada personagem (aba ANIMAÇÕES do editor).
 //
-// ORIGINAL (botão dourado, sempre existe) = as animações do próprio personagem (desenho do jogo ou sprite sheet).
+// ORIGINAL (botão dourado; só para quem tem animações próprias) = as animações do próprio personagem (sprite sheet).
 // FORMAS = conjuntos de quadros montados pelo jogador: "base" ou "transformação N" (só a próxima depois da última).
 // GRUPOS (botões azuis) = 1 forma base + transformação 1 (+ as seguintes, opcionais). O personagem usa o ORIGINAL
 // ou um grupo (spriteActive). Na luta, o grupo ativo dá a base e cada TRANSFORMAR sobe uma transformação; acabando,
@@ -15,6 +15,14 @@
 // Carrega ANTES do database.js (que chama estas funções ao salvar/carregar). Nada aqui roda no carregamento.
 // ============================================================================
 
+// v0.113: os bonecos desenhados antigos (sprites.js) saíram do jogo — estas constantes do formato dos quadros
+// (desenho 96x112, pés na linha 103) e dos movimentos ficaram aqui
+const SPRITE_VIEW = { w: 96, h: 112 };
+const SPRITE_STATES = ["idle", "flyRight", "flyLeft", "flyUp", "flyDown", "flyUpRight", "flyUpLeft", "flyDownRight", "flyDownLeft", "parry", "attackKi", "chargeKi", "transform", "special"];
+const SPRITE_FRAME_COUNTS = {
+    idle: 4, flyRight: 4, flyLeft: 4, flyUp: 4, flyDown: 4, flyUpRight: 4, flyUpLeft: 4, flyDownRight: 4, flyDownLeft: 4,
+    parry: 4, attackKi: 5, chargeKi: 4, transform: 5, special: 5
+};
 const CONJ_ESTADOS = ["idle", "flyRight", "flyLeft", "flyDown", "flyUp", "flyUpRight", "flyUpLeft", "flyDownRight", "flyDownLeft", "parry", "attackKi", "chargeKi", "transform", "special"];
 const CONJ_FPS_PADRAO = 12;
 
@@ -37,7 +45,7 @@ const CONJ_PACOTES = {
     piccolo: { arquivo: "conjuntos/piccolo.json", personagem: "piccolo", nome: "PICCOLO SPRITES", marca: "saiyan_conjunto_piccolo",
         variantes: ["normal"], ativar: true },
     freeza: { arquivo: "conjuntos/freeza.json", personagem: "freeza_1", nome: "FREEZA SPRITES", marca: "saiyan_conjunto_freeza",
-        variantes: ["f1", "f2", "f3", "final", "ciborgue", "golden", "black"], ativar: true },
+        variantes: ["f1", "f2", "f3", "final", "ciborgue", "golden", "black"], ativar: true, dedo: true },
     trunks: { arquivo: "conjuntos/trunks.json", personagem: "trunks", nome: "TRUNKS SPRITES", marca: "saiyan_conjunto_trunks",
         variantes: ["normal", "ssj"], ativar: true },
     gohan: { arquivo: "conjuntos/gohan.json", personagem: "gohan", nome: "GOHAN SPRITES", marca: "saiyan_conjunto_gohan",
@@ -97,9 +105,15 @@ function conjRegistrarPacote(nome, d) {
         if (!d[v]) return;
         pronto[v] = {};
         const usar = (CONJ_PACOTES[nome] && CONJ_PACOTES[nome].usar) || {};
+        // v0.113: cada movimento só vira imagem na primeira vez que é usado (embrulhar todos de uma vez travava o
+        // celular por um instante ao chegar um pacote de vários MB)
         CONJ_ESTADOS.forEach(st => {
             const origem = usar[st] && d[v][usar[st]] ? usar[st] : st;
-            pronto[v][st] = (d[v][origem] || []).map(q => conjEmbrulharQuadro(d, q, origem));
+            const fixa = (val) => Object.defineProperty(pronto[v], st, { value: val, enumerable: true, configurable: true, writable: true });
+            Object.defineProperty(pronto[v], st, {
+                enumerable: true, configurable: true,
+                get() { const val = (d[v][origem] || []).map(q => conjEmbrulharQuadro(d, q, origem)); fixa(val); return val; }
+            });
         });
     });
     conjPacoteDados[nome] = pronto;
@@ -137,9 +151,7 @@ function conjQuadrosDaForma(f, st) {
         const p = conjPacoteDados[f.pacote];
         if (!p) {
             conjCarregarPacote(f.pacote);
-            // v0.111: enquanto o pacote chega, nada do boneco desenhado antigo: o retrato leve (forma base parada) ou
-            // um quadro vazio (sem fetch/erro de rede o pacote não está carregando e o desenho antigo fica de reserva)
-            if (!conjPacoteCarregando[f.pacote]) return null;
+            // enquanto o pacote chega: o retrato leve (forma base parada) ou um quadro vazio
             const r = f.variante === conjVariantes(f.pacote)[0] && st === "idle" && conjRetratos && conjRetratos[f.pacote];
             return [r || CONJ_QUADRO_VAZIO];
         }
@@ -230,6 +242,15 @@ function conjuntoPonto(charKey, tipo, nivel) {
     return Array.isArray(pt) && pt.length === 2 ? pt : null;
 }
 
+// O personagem ataca com o dedo (pacote marcado com dedo: o Freeza): o tiro sai da ponta do dedo, mesmo antes
+// de o pacote chegar
+function conjAtiraComODedo(charKey) {
+    const c = typeof characterDB !== "undefined" ? characterDB[charKey] : null;
+    const g = conjGrupoAtivo(c);
+    const f = g ? conjFormaDoNivel(c, g, 0) : null;
+    return !!(f && f.pacote && CONJ_PACOTES[f.pacote] && CONJ_PACOTES[f.pacote].dedo);
+}
+
 function conjuntoFps(charKey, st, nivel) {
     const c = typeof characterDB !== "undefined" ? characterDB[charKey] : null;
     const g = conjGrupoAtivo(c);
@@ -305,7 +326,13 @@ function conjuntosAoCarregar() {
     let mudou = false;
     for (const nome in CONJ_PACOTES) {
         const p = CONJ_PACOTES[nome], c = characterDB[p.personagem];
-        if (!c || readStorage(p.marca) === "1") continue;
+        if (!c) continue;
+        // v0.113: sem os bonecos antigos, o personagem do pacote sem animações próprias precisa usar o grupo do pacote
+        const semProprias = !(c.animations && Array.isArray(c.animations.idle) && c.animations.idle.length);
+        const grupoOk = (c.spriteGroups || []).some(g => g.id === c.spriteActive);
+        if (semProprias && !grupoOk) {
+            if ((c.spriteGroups || []).some(g => g.id === "g_" + nome)) { c.spriteActive = "g_" + nome; mudou = true; continue; }
+        } else if (readStorage(p.marca) === "1") continue;
         writeStorage(p.marca, "1");
         c.spriteForms = (c.spriteForms || []).filter(f => f.pacote !== nome);
         const formas = conjVariantes(nome).map((v, i) => i === 0
@@ -368,7 +395,9 @@ function conjAbrirEditor(c) {
     conjTemp = {
         formas: (c && c.spriteForms ? c.spriteForms : []).map(f => f),
         grupos: (c && c.spriteGroups ? c.spriteGroups : []).map(g => Object.assign({}, g, { transfs: (g.transfs || []).slice() })),
-        ativo: (c && c.spriteActive) || "original"
+        ativo: (c && c.spriteActive) || "original",
+        // ORIGINAL só aparece para quem tem animações próprias (sprite sheet enviado)
+        temOriginal: !!(c && c.animations && Array.isArray(c.animations.idle) && c.animations.idle.length)
     };
     conjEdicao = null;
     conjGrupoAberto = null;
@@ -592,7 +621,7 @@ function renderConjuntos() {
     const linhaC = document.getElementById("conj-linha-conjuntos"), linhaF = document.getElementById("conj-linha-formas");
     if (!linhaC || !linhaF || !conjTemp) return;
     const ativo = conjTemp.ativo;
-    let html = `<button type="button" class="conj-btn conj-dourado${ativo === "original" ? " em-uso" : ""}" onclick="conjEscolher('original')" aria-pressed="${ativo === "original"}">` +
+    let html = conjTemp.temOriginal === false ? "" : `<button type="button" class="conj-btn conj-dourado${ativo === "original" ? " em-uso" : ""}" onclick="conjEscolher('original')" aria-pressed="${ativo === "original"}">` +
         conjIcone("ouro") + `<span class="conj-nome">ORIGINAL</span>${ativo === "original" ? '<span class="conj-tag">EM USO</span>' : ""}</button>`;
     conjTemp.grupos.forEach(g => {
         const usa = ativo === g.id;
