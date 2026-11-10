@@ -48,11 +48,13 @@ check("ki cheio de novo: Transformação 2", run("getTransformLevel(player)") ==
 check("Transformação 2 tem todos os movimentos com o cabelo novo", run(`SUB_ANIM_KEYS.every(st => { const f = getCharacterAnimationFrames("goku_adult", st, 2); return f.length > 0 && f[0] !== getCharacterAnimationFrames("goku_adult", st, 1)[0]; })`));
 check("o bônus não acumula ao transformar de novo durante o poder extra", run("player.speed") === 5.5);
 run(`player.ki = player.maxKi; triggerAction("transform", player, false);`);
-check("v0.98: ki cheio de novo: Super Saiyajin Blue, com a aura de chama azul", run("getTransformLevel(player)") === 3 && run(`getTransformationAura("goku_adult", 3)`) === "blue" && run("AURA_EFEITOS.blue[0]") === "aura_azul_chama");
-run(`player.ki = player.maxKi;`);
+check("v0.110: ki cheio de novo: Super Saiyajin God", run("getTransformLevel(player)") === 3 && run(`getCharacterTransformations("goku_adult")[2].name`) === "Super Saiyajin God");
+run(`player.ki = player.maxKi; triggerAction("transform", player, false);`);
+check("v0.98: depois do God vem o Super Saiyajin Blue, com a aura de chama azul", run("getTransformLevel(player)") === 4 && run(`getTransformationAura("goku_adult", 4)`) === "blue" && run("AURA_EFEITOS.blue[0]") === "aura_azul_chama");
+run(`player.ki = player.maxKi; triggerAction("transform", player, false); player.ki = player.maxKi;`);
 check("na última transformação, apertar de novo não faz nada", run("transformPlayer(player, false)") === false);
 run(`player.transformPowerTimer = 1; updateTransformPower(player, false, 1/60);`);
-check("acabou o poder extra: volta a velocidade normal e continua transformado", run("player.speed") === 4.5 && run("getTransformLevel(player)") === 3);
+check("acabou o poder extra: volta a velocidade normal e continua transformado", run("player.speed") === 4.5 && run("getTransformLevel(player)") === 5);
 run(`startGame();`);
 check("luta nova começa sem transformação", run("getTransformLevel(player)") === 0);
 check("personagem sem transformação visível (Piccolo) usa os quadros normais", run(`getCharacterAnimationFrames("piccolo", "idle", 1)[0] === getCharacterAnimationFrames("piccolo", "idle", 0)[0]`));

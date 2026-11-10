@@ -28,7 +28,7 @@ run("characterDB.vegeta.spriteActive = 'g_vegeta'");
 check("conjunto do Vegeta em uso: parado com os sprites", run("getCharacterAnimationFrames('vegeta', 'idle', 0)[0]") === q[0]);
 const ssj = run("getCharacterAnimationFrames('vegeta', 'flyRight', 1)");
 check("transformado: quadros do Super Saiyajin", ssj.length === pacote.ssj.flyRight.length && ssj[0] !== run("getCharacterAnimationFrames('vegeta', 'flyRight', 0)[0]"));
-check("transformando mais vezes do que o conjunto tem, fica na última", run("getCharacterAnimationFrames('vegeta', 'flyRight', 6)[0]") === run("getCharacterAnimationFrames('vegeta', 'flyRight', 3)[0]"));
+check("transformando mais vezes do que o conjunto tem, fica na última", run("getCharacterAnimationFrames('vegeta', 'flyRight', 8)[0]") === run("getCharacterAnimationFrames('vegeta', 'flyRight', 5)[0]"));
 check("golpe do vilão (sem quadro próprio) usa o parado do conjunto", run("getCharacterAnimationFrames('vegeta', 'hit', 0)[0]") === q[0]);
 run("characterDB.vegeta.spriteActive = 'original'");
 
