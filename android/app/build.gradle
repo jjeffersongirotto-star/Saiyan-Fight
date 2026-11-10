@@ -1,0 +1,74 @@
+apply plugin: 'com.android.application'
+
+// Versão do APK: vem de www/versao-apk.json, gerado por scripts/android/copiar-web.js
+// (major.minor do package.json + número de commits). Sem o arquivo, cai para 1.0.0.
+def versaoApk = [versao: '1.0.0', codigo: 1000000]
+def arquivoVersao = rootProject.file('../www/versao-apk.json')
+if (arquivoVersao.exists()) versaoApk = new groovy.json.JsonSlurper().parse(arquivoVersao)
+
+android {
+    namespace = "io.github.jjeffersongirotto.saiyanfight"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "io.github.jjeffersongirotto.saiyanfight"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode versaoApk.codigo as int
+        versionName versaoApk.versao
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    signingConfigs {
+        release {
+            // Chave PRIVADA de assinatura (nunca no repositório): variáveis SAIYAN_KEYSTORE (caminho do arquivo),
+            // SAIYAN_KEYSTORE_PASSWORD, SAIYAN_KEY_ALIAS e SAIYAN_KEY_PASSWORD. Na CI vêm dos segredos do GitHub.
+            // Com a mesma chave, cada versão nova instala por cima da antiga sem perder o progresso.
+            if (System.getenv('SAIYAN_KEYSTORE')) {
+                storeFile file(System.getenv('SAIYAN_KEYSTORE'))
+                storePassword System.getenv('SAIYAN_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('SAIYAN_KEY_ALIAS') ?: 'saiyanfight'
+                keyPassword System.getenv('SAIYAN_KEY_PASSWORD') ?: System.getenv('SAIYAN_KEYSTORE_PASSWORD')
+            }
+        }
+    }
+    buildTypes {
+        release {
+            signingConfig System.getenv('SAIYAN_KEYSTORE') ? signingConfigs.release : signingConfigs.debug
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}

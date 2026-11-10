@@ -289,6 +289,10 @@ ATUALIZANDO... § UPDATING... § ACTUALIZANDO...
 SEM CONEXÃO § NO CONNECTION § SIN CONEXIÓN
 JÁ ESTÁ ATUALIZADO § ALREADY UP TO DATE § YA ESTÁ ACTUALIZADO
 ATUALIZAR § UPDATE § ACTUALIZAR
+NOVA VERSÃO § NEW VERSION § NUEVA VERSIÓN
+Saiu uma versão nova do app. Baixar agora? Depois é só instalar por cima: o progresso continua salvo. § A new version of the app is out. Download it now? Then just install it over this one: your progress stays saved. § Salió una versión nueva de la app. ¿Descargarla ahora? Luego solo instálala encima: tu progreso sigue guardado.
+BAIXAR § DOWNLOAD § DESCARGAR
+AGORA NÃO § NOT NOW § AHORA NO
 BAIXAR APP § DOWNLOAD APP § DESCARGAR APP
 No Safari, toque em Compartilhar e depois em Adicionar à Tela de Início. § In Safari, tap Share and then Add to Home Screen. § En Safari, toca Compartir y luego Agregar a inicio.
 No Chrome, toque no menu (⋮) e depois em Instalar app ou Adicionar à tela inicial. Se acabou de desinstalar, feche e abra o Chrome antes. § In Chrome, tap the menu (⋮) and then Install app or Add to Home screen. If you just uninstalled it, close and reopen Chrome first. § En Chrome, toca el menú (⋮) y luego Instalar aplicación o Agregar a la pantalla principal. Si acabas de desinstalarla, cierra y vuelve a abrir Chrome antes.

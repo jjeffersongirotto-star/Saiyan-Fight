@@ -6,12 +6,40 @@
 // com alterações não salvas): espera voltar a um menu. Personagens, conquistas e recordes ficam no
 // localStorage e não se perdem.
 // Carregar por último (usa gameState/isModalCoveringScreen do menu.js).
+//
+// APK Android (Capacitor, window.Capacitor): os arquivos do jogo vão DENTRO do app e ele roda sem internet. Lá não
+// existe verificação automática nenhuma (nem ao abrir, nem nos menus): só quando o jogador aperta a setinha de
+// ATUALIZAR na janela UPDATES o jogo pergunta à página de Releases do GitHub se saiu um APK mais novo e oferece
+// baixá-lo (instala por cima, sem perder o progresso). Sem apertar, o app nunca baixa nem recarrega nada sozinho.
 
 const UPDATE_CHECK_INTERVAL_MS = 10 * 60 * 1000;   // de 10 em 10 minutos com o jogo aberto
 const UPDATE_MIN_GAP_MS = 2 * 60 * 1000;           // e ao voltar para o jogo, no máximo a cada 2 minutos
 let lastUpdateCheck = 0;
 let updateCheckRunning = false;
 let updatePending = false;
+
+// APK Android: endereço fixo do APK mais novo (a CI publica também com este nome) e a API da última versão.
+const APK_DOWNLOAD_URL = "https://github.com/jjeffersongirotto-star/Saiyan-Fight/releases/latest/download/Saiyan-Fight.apk";
+const APK_RELEASES_API = "https://api.github.com/repos/jjeffersongirotto-star/Saiyan-Fight/releases/latest";
+function jogoNoApk() {
+    try {
+        const cap = typeof window !== "undefined" ? window.Capacitor : null;
+        return Boolean(cap && (typeof cap.isNativePlatform !== "function" || cap.isNativePlatform()));
+    } catch (e) { return false; }
+}
+function celularAndroid() {
+    return typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent || "");
+}
+// > 0 quando a versão `a` é mais nova que `b` ("1.0.280" > "1.0.275"; aceita "apk-v"/"v" na frente).
+function compararVersoesApk(a, b) {
+    const partes = v => String(v || "").replace(/^[^0-9]*/, "").split(".").map(n => parseInt(n, 10) || 0);
+    const pa = partes(a), pb = partes(b);
+    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+        const d = (pa[i] || 0) - (pb[i] || 0);
+        if (d) return d;
+    }
+    return 0;
+}
 
 // Arquivos do jogo: a própria página, os scripts e o manifest.
 function getGameFileUrls() {
@@ -38,6 +66,7 @@ async function isGameFileOutdated(url) {
 }
 
 async function checkForGameUpdate(force = false) {
+    if (jogoNoApk()) return false;   // no APK só a setinha procura versão nova (procurarApkNovo)
     if (typeof fetch !== "function" || updateCheckRunning || updatePending) return false;
     const now = Date.now();
     if (!force && now - lastUpdateCheck < UPDATE_MIN_GAP_MS) return false;
@@ -107,6 +136,7 @@ async function lerListaUpdatesDoServidor() {
 // ATUALIZAR só baixa os arquivos que mudaram (não reinstala nada).
 let pedidoInstalarApp = null;
 function jogoEstaInstalado() {
+    if (jogoNoApk()) return true;
     try {
         if (typeof navigator !== "undefined" && navigator.standalone) return true;
         if (typeof matchMedia === "function") return ["fullscreen", "standalone", "minimal-ui"].some(m => matchMedia("(display-mode: " + m + ")").matches);
@@ -123,6 +153,11 @@ if (typeof window !== "undefined" && window.addEventListener) {
     if (typeof document !== "undefined") { document.addEventListener("DOMContentLoaded", atualizarRotuloDoBotao); atualizarRotuloDoBotao(); }
 }
 async function baixarApp() {
+    // Android no navegador: baixa o APK (abre rápido e funciona sem internet) em vez do atalho do Chrome.
+    if (celularAndroid() && !jogoNoApk()) {
+        try { location.href = APK_DOWNLOAD_URL; } catch (e) {}
+        return;
+    }
     if (pedidoInstalarApp) {
         const pedido = pedidoInstalarApp;
         pedidoInstalarApp = null;
@@ -136,7 +171,44 @@ async function baixarApp() {
         : "No Chrome, toque no menu (⋮) e depois em Instalar app ou Adicionar à tela inicial. Se acabou de desinstalar, feche e abra o Chrome antes.");
 }
 
+// APK: só roda quando o jogador aperta a setinha. Pergunta à página de Releases qual é o APK mais novo e, se for
+// mais novo que este (VERSAO_APK, gerado em www/versao-apk.js), oferece baixar; nada é baixado sem ele confirmar.
+async function procurarApkNovo() {
+    if (atualizandoAgora) return;
+    atualizandoAgora = true;
+    const botao = document.getElementById("btn-atualizar-jogo");
+    const rotulo = document.getElementById("btn-atualizar-rotulo");
+    if (botao) { botao.classList.add("girando"); botao.disabled = true; }
+    if (rotulo) rotulo.textContent = "VERIFICANDO...";
+    let novo = null, erro = false;
+    try {
+        const resposta = await fetch(APK_RELEASES_API, { headers: { Accept: "application/vnd.github+json" }, cache: "no-store" });
+        if (resposta && resposta.ok) {
+            const rel = await resposta.json();
+            const atual = typeof VERSAO_APK === "string" ? VERSAO_APK : "0";
+            if (rel && rel.tag_name && compararVersoesApk(rel.tag_name, atual) > 0) {
+                const apk = (rel.assets || []).find(a => a && a.name === "Saiyan-Fight.apk") || (rel.assets || []).find(a => a && /\.apk$/i.test(a.name || ""));
+                novo = apk && apk.browser_download_url ? apk.browser_download_url : APK_DOWNLOAD_URL;
+            }
+        } else if (!resposta || resposta.status !== 404) erro = true;   // 404 = ainda não há nenhuma versão publicada
+    } catch (e) { erro = true; }
+    if (botao) { botao.classList.remove("girando"); botao.disabled = false; }
+    atualizandoAgora = false;
+    if (novo) {
+        if (rotulo) rotulo.textContent = "ATUALIZAR";
+        const baixar = () => { try { location.href = novo; } catch (e) {} };
+        if (typeof showSystemConfirm === "function") showSystemConfirm("NOVA VERSÃO",
+            "Saiu uma versão nova do app. Baixar agora? Depois é só instalar por cima: o progresso continua salvo.",
+            baixar, "BAIXAR", "AGORA NÃO");
+        else baixar();
+        return;
+    }
+    if (rotulo) rotulo.textContent = erro ? "SEM CONEXÃO" : "JÁ ESTÁ ATUALIZADO";
+    setTimeout(atualizarRotuloDoBotao, 3000);
+}
+
 async function atualizarJogoAgora() {
+    if (jogoNoApk()) return procurarApkNovo();
     if (!jogoEstaInstalado()) return baixarApp();
     if (atualizandoAgora) return;
     atualizandoAgora = true;
@@ -161,7 +233,8 @@ async function atualizarJogoAgora() {
     atualizandoAgora = false;
 }
 
-if (typeof fetch === "function" && typeof location !== "undefined" && /^https?:/.test(location.protocol)) {
+// Verificação automática só no site (no APK, nunca: lá só a setinha procura versão nova).
+if (typeof fetch === "function" && typeof location !== "undefined" && /^https?:/.test(location.protocol) && !jogoNoApk()) {
     setTimeout(() => checkForGameUpdate(true), 3000);
     setInterval(() => checkForGameUpdate(true), UPDATE_CHECK_INTERVAL_MS);
     document.addEventListener("visibilitychange", () => { if (!document.hidden) checkForGameUpdate(); });

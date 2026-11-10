@@ -286,6 +286,8 @@ let isTouchDevice = false; // declarada aqui (antes de initSettings) para não v
 // aviso "Para sair da tela cheia, arraste..." (que nenhum site consegue esconder).
 function isInstalledApp() {
     const mq = (q) => Boolean(window.matchMedia && window.matchMedia(q).matches);
+    // dentro do APK Android (Capacitor) a tela já é cheia e deitada, como no app instalado
+    if (typeof window !== "undefined" && window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" && window.Capacitor.isNativePlatform()) return true;
     return mq("(display-mode: fullscreen)") || mq("(display-mode: standalone)") || (navigator && navigator.standalone === true);
 }
 

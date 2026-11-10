@@ -1,0 +1,18 @@
+{
+  "name": "saiyan-fight",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Saiyan Fight. O jogo é HTML/CSS/JS puro (sem build); este package.json só serve para empacotar o APK Android com o Capacitor.",
+  "scripts": {
+    "copiar": "node scripts/android/copiar-web.js",
+    "android": "node scripts/android/copiar-web.js && cap sync android && cd android && ./gradlew assembleRelease",
+    "test": "for f in *.js tests/*.js; do node --check \"$f\" || exit 1; done && node --test tests/game-logic-core.test.js && for t in tests/*.test.js; do [ \"$t\" = tests/game-logic-core.test.js ] || node \"$t\" || exit 1; done"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.3"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/core": "^8.5.3"
+  }
+}
