@@ -24,7 +24,7 @@ const CONJ_FPS_PADRAO = 12;
 // ---------------------------------------------------------------------------------------------------------------
 // v0.106: versão dos arquivos dos pacotes — vai no endereço (?v=) para o navegador não usar uma cópia antiga
 // guardada (o Vegeta continuava com os sprites recortados antigos). Suba o número sempre que trocar um pacote.
-const CONJ_VERSAO_ARQUIVOS = "110";
+const CONJ_VERSAO_ARQUIVOS = "111";
 const CONJ_PACOTES = {
     // v0.102: desenhos do jogador (gerados no Gemini) para as 4 formas do Goku; já entra como o conjunto em uso.
     // variantes = base + transformações em ordem (o jogo usa a forma do nível atual)
@@ -69,6 +69,7 @@ function conjVariantes(nome, d) {
 }
 const conjPacoteDados = {};        // nome -> { normal: { estado: [urls] }, ssj: {...}, fps }
 const conjPacoteCarregando = {};
+const CONJ_QUADRO_VAZIO = "data:image/svg+xml;utf8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="144" height="168" viewBox="0 0 96 112" shape-rendering="crispEdges"></svg>');
 
 // Cada quadro vira um SVG com a imagem recortada na posição/escala certas e "crispEdges": a luta trata como os
 // outros lutadores em pixel art (mesmo tamanho na tela e pés no chão).
@@ -134,7 +135,14 @@ function conjQuadrosDaForma(f, st) {
     let a = f.animations;
     if (f.pacote) {
         const p = conjPacoteDados[f.pacote];
-        if (!p) { conjCarregarPacote(f.pacote); return null; }
+        if (!p) {
+            conjCarregarPacote(f.pacote);
+            // v0.111: enquanto o pacote chega, nada do boneco desenhado antigo: o retrato leve (forma base parada) ou
+            // um quadro vazio (sem fetch/erro de rede o pacote não está carregando e o desenho antigo fica de reserva)
+            if (!conjPacoteCarregando[f.pacote]) return null;
+            const r = f.variante === conjVariantes(f.pacote)[0] && st === "idle" && conjRetratos && conjRetratos[f.pacote];
+            return [r || CONJ_QUADRO_VAZIO];
+        }
         a = p[f.variante];
     }
     if (!a) return null;
