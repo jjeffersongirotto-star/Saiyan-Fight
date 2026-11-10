@@ -24,16 +24,16 @@ const CONJ_FPS_PADRAO = 12;
 // ---------------------------------------------------------------------------------------------------------------
 // v0.106: versão dos arquivos dos pacotes — vai no endereço (?v=) para o navegador não usar uma cópia antiga
 // guardada (o Vegeta continuava com os sprites recortados antigos). Suba o número sempre que trocar um pacote.
-const CONJ_VERSAO_ARQUIVOS = "109";
+const CONJ_VERSAO_ARQUIVOS = "110";
 const CONJ_PACOTES = {
     // v0.102: desenhos do jogador (gerados no Gemini) para as 4 formas do Goku; já entra como o conjunto em uso.
     // variantes = base + transformações em ordem (o jogo usa a forma do nível atual)
-    goku: { arquivo: "conjuntos/goku.json", personagem: "goku_adult", nome: "GOKU SPRITES", marca: "saiyan_conjunto_goku",
-        variantes: ["normal", "ssj", "ssj3", "blue"], ativar: true },
+    goku: { arquivo: "conjuntos/goku.json", personagem: "goku_adult", nome: "GOKU SPRITES", marca: "saiyan_conjunto_goku_110",
+        variantes: ["normal", "ssj", "ssj3", "god", "blue", "instinto"], ativar: true },
     // v0.103: todos os outros personagens com os desenhos do Gemini (o Vegeta troca os sprites recortados antigos;
     // marca nova para entrar de novo em quem já tinha o pacote antigo)
-    vegeta: { arquivo: "conjuntos/vegeta.json", personagem: "vegeta", nome: "VEGETA SPRITES", marca: "saiyan_conjunto_vegeta_103",
-        variantes: ["normal", "ssj", "blue", "blue_evo"], ativar: true },
+    vegeta: { arquivo: "conjuntos/vegeta.json", personagem: "vegeta", nome: "VEGETA SPRITES", marca: "saiyan_conjunto_vegeta_110",
+        variantes: ["normal", "ssj", "god", "blue", "blue_evo", "ego"], ativar: true },
     piccolo: { arquivo: "conjuntos/piccolo.json", personagem: "piccolo", nome: "PICCOLO SPRITES", marca: "saiyan_conjunto_piccolo",
         variantes: ["normal"], ativar: true },
     freeza: { arquivo: "conjuntos/freeza.json", personagem: "freeza_1", nome: "FREEZA SPRITES", marca: "saiyan_conjunto_freeza",
@@ -44,10 +44,10 @@ const CONJ_PACOTES = {
         variantes: ["normal", "ssj", "ssj2"], ativar: true },
     kaioshin: { arquivo: "conjuntos/kaioshin.json", personagem: "kaioshin", nome: "SUPREMO SR. KAIO SPRITES", marca: "saiyan_conjunto_kaioshin",
         variantes: ["normal"], ativar: true },
-    vegetto: { arquivo: "conjuntos/vegetto.json", personagem: "gogeta", nome: "VEGETTO SPRITES", marca: "saiyan_conjunto_vegetto",
-        variantes: ["normal"], ativar: true },
-    bardock: { arquivo: "conjuntos/bardock.json", personagem: "bardock", nome: "BARDOCK SPRITES", marca: "saiyan_conjunto_bardock",
-        variantes: ["normal"], ativar: true },
+    vegetto: { arquivo: "conjuntos/vegetto.json", personagem: "gogeta", nome: "VEGETTO SPRITES", marca: "saiyan_conjunto_vegetto_110",
+        variantes: ["normal", "ssj", "blue"], ativar: true },
+    bardock: { arquivo: "conjuntos/bardock.json", personagem: "bardock", nome: "BARDOCK SPRITES", marca: "saiyan_conjunto_bardock_110",
+        variantes: ["normal", "ssj"], ativar: true },
     android17: { arquivo: "conjuntos/android17.json", personagem: "android17", nome: "ANDROIDE 17 SPRITES", marca: "saiyan_conjunto_android17",
         variantes: ["normal"], ativar: true },
     android18: { arquivo: "conjuntos/android18.json", personagem: "android18", nome: "ANDROIDE 18 SPRITES", marca: "saiyan_conjunto_android18",
@@ -58,8 +58,8 @@ const CONJ_PACOTES = {
         variantes: ["normal"], ativar: true },
     broly: { arquivo: "conjuntos/broly.json", personagem: "broly", nome: "BROLY SPRITES", marca: "saiyan_conjunto_broly",
         variantes: ["normal", "lssj"], ativar: true },
-    gotenks: { arquivo: "conjuntos/gotenks.json", personagem: "gotenks", nome: "GOTENKS SPRITES", marca: "saiyan_conjunto_gotenks",
-        variantes: ["normal", "ssj"], ativar: true },
+    gotenks: { arquivo: "conjuntos/gotenks.json", personagem: "gotenks", nome: "GOTENKS SPRITES", marca: "saiyan_conjunto_gotenks_110",
+        variantes: ["normal", "ssj", "ssj3"], ativar: true },
     cell: { arquivo: "conjuntos/cell.json", personagem: "cell", nome: "CELL SPRITES", marca: "saiyan_conjunto_cell",
         variantes: ["f1", "semi", "perfeito"], ativar: true }
 };

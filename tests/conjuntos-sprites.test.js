@@ -14,10 +14,10 @@ const html = fs.readFileSync(__dirname + "/../index.html", "utf8");
 const pacote = JSON.parse(fs.readFileSync(__dirname + "/../conjuntos/vegeta.json", "utf8"));
 const estados = run("CONJ_ESTADOS");
 check("pacote do Vegeta tem os 14 movimentos nas 4 formas",
-    ["normal", "ssj", "blue", "blue_evo"].every(v => estados.every(st => Array.isArray(pacote[v][st]) && pacote[v][st].length >= 5)));
+    ["normal", "ssj", "god", "blue", "blue_evo", "ego"].every(v => estados.every(st => Array.isArray(pacote[v][st]) && pacote[v][st].length >= 5)));
 check("Vegeta já vem com o conjunto azul (base + 3 transformações) em uso",
-    run("characterDB.vegeta.spriteGroups.some(g => g.id === 'g_vegeta' && g.transfs.length === 3)") && run("characterDB.vegeta.spriteActive") === "g_vegeta");
-check("o conjunto do Vegeta entra uma vez só (apagado, não volta)", run("readStorage('saiyan_conjunto_vegeta_103')") === "1");
+    run("characterDB.vegeta.spriteGroups.some(g => g.id === 'g_vegeta' && g.transfs.length === 5)") && run("characterDB.vegeta.spriteActive") === "g_vegeta");
+check("o conjunto do Vegeta entra uma vez só (apagado, não volta)", run("readStorage('saiyan_conjunto_vegeta_110')") === "1");
 context.__pacote = pacote;
 run("conjRegistrarPacote('vegeta', __pacote)");
 const q = run("conjQuadrosDaForma(conjFormaPorId(characterDB.vegeta.spriteForms, 'pk_vegeta_base'), 'idle')");
@@ -28,7 +28,7 @@ run("characterDB.vegeta.spriteActive = 'g_vegeta'");
 check("conjunto do Vegeta em uso: parado com os sprites", run("getCharacterAnimationFrames('vegeta', 'idle', 0)[0]") === q[0]);
 const ssj = run("getCharacterAnimationFrames('vegeta', 'flyRight', 1)");
 check("transformado: quadros do Super Saiyajin", ssj.length === pacote.ssj.flyRight.length && ssj[0] !== run("getCharacterAnimationFrames('vegeta', 'flyRight', 0)[0]"));
-check("transformando mais vezes do que o conjunto tem, fica na última", run("getCharacterAnimationFrames('vegeta', 'flyRight', 6)[0]") === run("getCharacterAnimationFrames('vegeta', 'flyRight', 3)[0]"));
+check("transformando mais vezes do que o conjunto tem, fica na última", run("getCharacterAnimationFrames('vegeta', 'flyRight', 8)[0]") === run("getCharacterAnimationFrames('vegeta', 'flyRight', 5)[0]"));
 check("golpe do vilão (sem quadro próprio) usa o parado do conjunto", run("getCharacterAnimationFrames('vegeta', 'hit', 0)[0]") === q[0]);
 run("characterDB.vegeta.spriteActive = 'original'");
 

@@ -467,6 +467,10 @@ Aura roxa § Purple aura § Aura morada
 Super Saiyajin Blue § Super Saiyan Blue § Super Saiyajin Blue
 Super Saiyajin Blue Evolução § Super Saiyan Blue Evolution § Super Saiyajin Blue Evolución
 Super Saiyajin § Super Saiyan § Super Saiyajin
+Super Saiyajin 3 § Super Saiyan 3 § Super Saiyajin 3
+Super Saiyajin God § Super Saiyan God § Super Saiyajin Dios
+Instinto Superior § Ultra Instinct § Ultra Instinto
+Ego Superior § Ultra Ego § Ultra Ego
 Ataque Especial § Special Attack § Ataque Especial
 Cor do Projétil § Projectile Color § Color del Proyectil
 Tamanho Projétil § Projectile Size § Tamaño del Proyectil

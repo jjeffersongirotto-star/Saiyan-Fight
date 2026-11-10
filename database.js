@@ -2325,6 +2325,7 @@ function loadCharacterData() {
                 seedNewDefaultCharacters();
                 atualizarFreezaSalvo();
                 transformacoesBlue098();
+                formasNovas110();
                 atualizarCellSalvo();
                 atualizarHeroisSalvos();
                 atualizarPersonagens075();
@@ -2380,20 +2381,36 @@ const CELL_TRANSFORMACOES = [
 
 // v0.98: formas Blue (aura de chama azul) do Goku e do Vegeta, e a nova forma do Vegeta com a aura azul escura
 const GOKU_BLUE = { name: "Super Saiyajin Blue", diff: { hairStyle: "blue_goku", hairColor: "#38a8ff", irisColor: "#2a7ad8" }, ssj: true, aura: "blue" };
+// v0.110: formas novas (desenhos do Gemini): Super Saiyajin God (cabelo vermelho), Instinto Superior (prateado),
+// Ego Superior (roxo), e as formas do Vegetto, Gotenks e Bardock
+const GOKU_GOD = { name: "Super Saiyajin God", diff: { hairColor: "#d8234a", irisColor: "#c0203a", build: "normal" }, ssj: true, aura: "vermelho" };
+const GOKU_INSTINTO = { name: "Instinto Superior", diff: { hairStyle: "blue_goku", hairColor: "#dfe4ee", irisColor: "#b8c0cc" }, ssj: true, aura: "gelo" };
+const GOKU_TRANSFORMACOES = [
+    { name: "Super Saiyajin", diff: {}, ssj: true, aura: "amarelo" },
+    { name: "Super Saiyajin 3", diff: { hairStyle: "ssj_longo", hairColor: "#ffe34d" }, ssj: false, aura: "amarelo" },
+    GOKU_GOD, GOKU_BLUE, GOKU_INSTINTO
+];
 const VEGETA_TRANSFORMACOES = [
     { name: "Super Saiyajin", diff: {}, ssj: true, aura: "amarelo" },
+    { name: "Super Saiyajin God", diff: { hairColor: "#d8234a", irisColor: "#c0203a" }, ssj: true, aura: "vermelho" },
     { name: "Super Saiyajin Blue", diff: { hairStyle: "blue_vegeta", hairColor: "#38a8ff", irisColor: "#2a7ad8" }, ssj: true, aura: "blue" },
-    { name: "Super Saiyajin Blue Evolução", diff: { hairStyle: "blue_vegeta", hairColor: "#1f4fd0", irisColor: "#1a3a9a" }, ssj: true, aura: "azul_escuro" }
+    { name: "Super Saiyajin Blue Evolução", diff: { hairStyle: "blue_vegeta", hairColor: "#1f4fd0", irisColor: "#1a3a9a" }, ssj: true, aura: "azul_escuro" },
+    { name: "Ego Superior", diff: { hairColor: "#9a2a9e", irisColor: "#7a2a9a" }, ssj: true, aura: "roxo" }
 ];
+const VEGETTO_TRANSFORMACOES = [
+    { name: "Super Saiyajin", diff: {}, ssj: true, aura: "amarelo" },
+    { name: "Super Saiyajin Blue", diff: { hairColor: "#38a8ff", irisColor: "#2a7ad8" }, ssj: true, aura: "blue" }
+];
+const GOTENKS_TRANSFORMACOES = [
+    { name: "Super Saiyajin", diff: {}, ssj: true, aura: "amarelo" },
+    { name: "Super Saiyajin 3", diff: { hairStyle: "ssj_longo", hairColor: "#ffe34d" }, ssj: false, aura: "amarelo" }
+];
+const BARDOCK_TRANSFORMACOES = [{ name: "Super Saiyajin", diff: {}, ssj: true, aura: "amarelo" }];
 
 const DEFAULT_CHARACTERS = {
     // Goku já vem com a Transformação 2 (cabelo longo de Super Saiyajin), criada pela aba TRANSFORMAÇÃO do editor
     goku_adult: { name: "GOKU", presetKey: "goku", align: "HERÓI", aura: "gelo", spec: "KAMEHAMEHA",
-        transformations: [
-            { name: "Transformação 1", diff: {}, ssj: true, aura: "amarelo" },
-            { name: "Transformação 2", diff: { hairStyle: "ssj_longo", hairColor: "#ffe34d" }, ssj: false, aura: "amarelo" },
-            GOKU_BLUE
-        ], efeitoEspecial: "kamehameha" },
+        transformations: GOKU_TRANSFORMACOES, efeitoEspecial: "kamehameha" },
     vegeta: { name: "VEGETA", presetKey: "vegeta", align: "ANTI-HERÓI", aura: "amarelo", spec: "FINAL FLASH", transformations: VEGETA_TRANSFORMACOES },
     piccolo: { name: "PICCOLO", presetKey: "piccolo", align: "ANTI-HERÓI", aura: "verde", spec: "MAKAN KOSAPPO" },
     // Freeza: começa na 1ª forma (armadura do exército) e cada TRANSFORMAR sobe uma forma, até o ciborgue
@@ -2402,8 +2419,8 @@ const DEFAULT_CHARACTERS = {
     trunks: { name: "TRUNKS", presetKey: "trunks", align: "HERÓI", aura: "azul", spec: "BURNING ATTACK", efeitoEspecial: "raio_azul" },
     gohan: { name: "GOHAN", presetKey: "gohan", align: "HERÓI", aura: "gelo", spec: "MASENKO", transformations: GOHAN_TRANSFORMACOES, efeitoEspecial: "kamehameha" },
     kaioshin: { name: "SUPREMO SR. KAIO", presetKey: "kaioshin", align: "HERÓI", aura: "rosa", spec: "KIAI SAGRADO" },
-    gogeta: { name: "VEGETTO", presetKey: "fusao", align: "HERÓI", aura: "amarelo", spec: "FINAL KAMEHAMEHA", efeitoEspecial: "kamehameha" },
-    bardock: { name: "BARDOCK", presetKey: "bardock", align: "ANTI-HERÓI", aura: "azul", spec: "RIOT JAVELIN", efeitoEspecial: "raio_vermelho" },
+    gogeta: { name: "VEGETTO", presetKey: "fusao", align: "HERÓI", aura: "amarelo", spec: "FINAL KAMEHAMEHA", transformations: VEGETTO_TRANSFORMACOES, efeitoEspecial: "kamehameha" },
+    bardock: { name: "BARDOCK", presetKey: "bardock", align: "ANTI-HERÓI", aura: "azul", spec: "RIOT JAVELIN", transformations: BARDOCK_TRANSFORMACOES, efeitoEspecial: "raio_vermelho" },
     android17: { name: "ANDROIDE 17", presetKey: "android17", align: "ANTI-HERÓI", aura: "verde", spec: "POWER BLITZ", efeitoEspecial: "raio_azul" },
     android18: { name: "ANDROIDE 18", presetKey: "android18", align: "ANTI-HERÓI", aura: "azul", spec: "DESTRUCTO DISC" },
     majin_buu: { name: "MAJIN BUU", presetKey: "majin", align: "VILÃO", aura: "rosa", spec: "CHOCOLATE BEAM", transformations: BUU_TRANSFORMACOES },
@@ -2413,7 +2430,7 @@ const DEFAULT_CHARACTERS = {
     // arenas. São os desenhos clássicos de minions.js (minion = modelo de MINION_MODELOS), não modelos do construtor.
     saibaman: { name: "SAIBAMAN", minion: "saibaman", align: "MINION", aura: "verde", spec: "AUTODESTRUIÇÃO" },
     celljr: { name: "CELL JR.", minion: "celljr", align: "MINION", aura: "azul", spec: "KAMEHAMEHA JR." },
-    gotenks: { name: "GOTENKS", presetKey: "gotenks", align: "HERÓI", aura: "amarelo", spec: "SUPER GHOST KAMIKAZE", efeitoEspecial: "kamehameha" },
+    gotenks: { name: "GOTENKS", presetKey: "gotenks", align: "HERÓI", aura: "amarelo", spec: "SUPER GHOST KAMIKAZE", transformations: GOTENKS_TRANSFORMACOES, efeitoEspecial: "kamehameha" },
     // Cell: começa na 1ª forma (imperfeito) e transforma em semi-perfeito e perfeito
     cell: { name: "CELL", presetKey: "cell", align: "VILÃO", aura: "verde", spec: "KAMEHAMEHA PERFEITO", transformations: CELL_TRANSFORMACOES, efeitoEspecial: "kamehameha" }
 };
@@ -2547,6 +2564,25 @@ function transformacoesBlue098() {
     const v = characterDB.vegeta;
     const padrao = (l) => !Array.isArray(l) || !l.length || (l.length === 1 && l[0] && !Object.keys(l[0].diff || {}).length);
     if (v && padrao(v.transformations)) { v.transformations = JSON.parse(JSON.stringify(VEGETA_TRANSFORMACOES)); mudou = true; }
+    if (mudou) saveCharacterData();
+}
+
+// v0.110: as formas novas (God, Instinto/Ego Superior, Vegetto, Gotenks SSJ3, Bardock SSJ) entram uma vez nos perfis
+// que ainda têm a lista de transformações padrão antiga (quem editou as transformações no editor fica como está)
+function formasNovas110() {
+    if (readStorage("saiyan_formas_110") === "1") return;
+    writeStorage("saiyan_formas_110", "1");
+    const nomes = (l) => (Array.isArray(l) ? l : []).map(t => (t && t.name) || "");
+    const so = (l, permitidos) => nomes(l).every(n => permitidos.includes(n));
+    const padrao = (l) => !Array.isArray(l) || !l.length || (l.length === 1 && l[0] && !Object.keys(l[0].diff || {}).length);
+    const trocar = (k, lista) => { characterDB[k].transformations = JSON.parse(JSON.stringify(lista)); return true; };
+    let mudou = false;
+    const g = characterDB.goku_adult, v = characterDB.vegeta;
+    if (g && so(g.transformations, ["Transformação 1", "Transformação 2", "Super Saiyajin Blue"])) mudou = trocar("goku_adult", GOKU_TRANSFORMACOES) || mudou;
+    if (v && (padrao(v.transformations) || so(v.transformations, ["Super Saiyajin", "Super Saiyajin Blue", "Super Saiyajin Blue Evolução"]))) mudou = trocar("vegeta", VEGETA_TRANSFORMACOES) || mudou;
+    [["gogeta", VEGETTO_TRANSFORMACOES], ["gotenks", GOTENKS_TRANSFORMACOES], ["bardock", BARDOCK_TRANSFORMACOES]].forEach(([k, lista]) => {
+        if (characterDB[k] && padrao(characterDB[k].transformations)) mudou = trocar(k, lista) || mudou;
+    });
     if (mudou) saveCharacterData();
 }
 

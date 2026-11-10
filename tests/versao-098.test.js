@@ -66,8 +66,8 @@ check("explosão do minion desenha", h.calls.length > 0);
 
 // auras
 check("aura roxa animada e as auras Blue", run("AURA_EFEITOS.roxo[0]") === "aura_roxa" && run("AURA_EFEITOS.blue[0]") === "aura_azul_chama" && run("AURA_EFEITOS.azul_escuro[0]") === "aura_azul_escura");
-check("Vegeta: Super Saiyajin, Blue e Blue Evolução (aura azul escura)", JSON.stringify(run("getCharacterTransformations('vegeta').map(t => t.aura)")) === JSON.stringify(["amarelo", "blue", "azul_escuro"]));
-check("Goku: a 3ª transformação é o Blue", run("getCharacterTransformations('goku_adult')[2].aura") === "blue");
+check("Vegeta: Super Saiyajin, God, Blue, Blue Evolução (aura azul escura) e Ego", JSON.stringify(run("getCharacterTransformations('vegeta').map(t => t.aura)")) === JSON.stringify(["amarelo", "vermelho", "blue", "azul_escuro", "roxo"]));
+check("Goku: a 4ª transformação é o Blue", run("getCharacterTransformations('goku_adult')[3].aura") === "blue");
 check("a aura escolhida no editor vale na forma normal", (() => { run("characterDB.goku_adult.efeitoAura = 'aura_roxa'; player.transformPowerTimer = 0"); h.calls.length = 0; run("drawKiAura(player, characterDB.goku_adult, 100, 200, 40, 60)"); run("delete characterDB.goku_adult.efeitoAura"); return true; })());
 
 // Freeza: ataque com o dedo

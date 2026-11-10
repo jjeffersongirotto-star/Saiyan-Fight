@@ -12,13 +12,13 @@ const { run, check, summary, context } = h;
 // ---------- pacote do Goku ----------
 const pacote = JSON.parse(fs.readFileSync(dir + "/conjuntos/goku.json", "utf8"));
 const estados = run("CONJ_ESTADOS");
-check("pacote do Goku: normal, Super Saiyajin, Super Saiyajin 3 e Blue", JSON.stringify(pacote.variantes) === JSON.stringify(["normal", "ssj", "ssj3", "blue"]));
+check("pacote do Goku: normal, SSJ, SSJ3, God, Blue e Instinto Superior (v0.110)", JSON.stringify(pacote.variantes) === JSON.stringify(["normal", "ssj", "ssj3", "god", "blue", "instinto"]));
 check("cada forma tem os 14 movimentos com 5 a 11 quadros", pacote.variantes.every(v => estados.every(st => Array.isArray(pacote[v][st]) && pacote[v][st].length >= 5 && pacote[v][st].length <= 11)),
     pacote.variantes.map(v => estados.filter(st => !(pacote[v][st] && pacote[v][st].length >= 7)).join(",")).join(" | "));
-check("quadros em WebP, leve (menos de 3,5 MB)", pacote.mime === "image/webp" && fs.statSync(dir + "/conjuntos/goku.json").size < 3.5 * 1024 * 1024);
+check("quadros em WebP, leve (menos de 6 MB)", pacote.mime === "image/webp" && fs.statSync(dir + "/conjuntos/goku.json").size < 6 * 1024 * 1024);
 check("o Goku já vem com o conjunto novo em uso (com as 3 transformações)",
-    run("characterDB.goku_adult.spriteActive") === "g_goku" && run("characterDB.goku_adult.spriteGroups.find(g => g.id === 'g_goku').transfs.length") === 3);
-check("o Vegeta também vem com o conjunto do Gemini em uso (v0.103)", run("characterDB.vegeta.spriteGroups.find(g => g.id === 'g_vegeta').transfs.length") === 3 && run("characterDB.vegeta.spriteActive") === "g_vegeta");
+    run("characterDB.goku_adult.spriteActive") === "g_goku" && run("characterDB.goku_adult.spriteGroups.find(g => g.id === 'g_goku').transfs.length") === 5);
+check("o Vegeta também vem com o conjunto do Gemini em uso (v0.103)", run("characterDB.vegeta.spriteGroups.find(g => g.id === 'g_vegeta').transfs.length") === 5 && run("characterDB.vegeta.spriteActive") === "g_vegeta");
 context.__pacote = pacote;
 run("conjRegistrarPacote('goku', __pacote)");
 const idle = run("getCharacterAnimationFrames('goku_adult', 'idle', 0)");
