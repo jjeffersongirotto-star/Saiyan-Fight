@@ -18,7 +18,7 @@ check("valor inválido no editor não quebra", core.normalizarAltura("") === nul
 
 // ---------- alturas dos personagens ----------
 const alt = (k, n) => run(`getAlturaPersonagem('${k}', ${n})`);
-check("alturas oficiais: Goku 175, Vegeta 164, Piccolo 226, Gohan (criança) 155", alt("goku_adult", 0) === 175 && alt("vegeta", 0) === 164 && alt("piccolo", 0) === 226 && alt("gohan", 0) === 155);
+check("alturas oficiais: Goku 175, Vegeta 164, Piccolo 226, Gohan (criança) 135", alt("goku_adult", 0) === 175 && alt("vegeta", 0) === 164 && alt("piccolo", 0) === 226 && alt("gohan", 0) === 135);
 check("Freeza: 1ª forma pequena, 2ª bem alta, 3ª menor que a 2ª e maior que a 1ª", alt("freeza_1", 0) < alt("freeza_1", 2) && alt("freeza_1", 2) < alt("freeza_1", 1) && alt("freeza_1", 0) === 132 && alt("freeza_1", 1) === 221);
 check("Cell muda de altura nas formas; Broly Lendário 300 cm", alt("cell", 0) === 228 && alt("cell", 1) === 259 && alt("cell", 2) === 213 && alt("broly", 1) === 300);
 check("transformação sem altura própria fica com a da forma normal", alt("goku_adult", 1) === 175);

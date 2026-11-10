@@ -938,9 +938,11 @@ function drawCharacterFormsPanel(key, escolher = false) {
     ctx.font = "10px monospace";
     if (escolher) ctx.fillText("EM QUAL FORMA ELE APARECE NESTA FASE?", canvas.width / 2, py + 40);
     else ctx.fillText(`${c.alignment || ""}  ·  ESPECIAL: ${c.special || "-"}`, canvas.width / 2, py + 40);
-    // cada forma do tamanho da sua ALTURA na luta (a maior ocupa a coluna inteira; as outras ficam proporcionais)
+    // cada forma do tamanho da sua ALTURA na luta. v0.114: em escala absoluta — um personagem de 175 cm ocupa a
+    // coluna inteira e um mais baixo (Gohan criança, Gotenks) aparece menor; se alguma forma for mais alta que isso,
+    // todas encolhem juntas para caber
     const escalas = formas.map(f => escalaDaAltura(getAlturaPersonagem(key, f.nivel)));
-    const maiorEscala = Math.max(...escalas);
+    const maiorEscala = Math.max(1, ...escalas);
     ctx.save();
     ctx.beginPath();
     ctx.rect(L.areaX, topo - 2, L.areaW, altura + 4);
