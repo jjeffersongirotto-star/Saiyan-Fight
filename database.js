@@ -2264,6 +2264,7 @@ function loadCharacterData() {
                 transformacoesBlue098();
                 formasNovas110();
                 piccoloAntiHeroi085();
+                gohanCrianca114();
                 conjuntosAoCarregar();
                 if (limpouConstrutor) saveCharacterData();
                 return;
@@ -2372,7 +2373,7 @@ const DEFAULT_CHARACTERS = {
 // vale mais que isto. Na luta a altura vira escala (escalaDaAltura, com limites).
 const ALTURAS_PADRAO = {
     goku_adult: { base: 175 }, vegeta: { base: 164 }, piccolo: { base: 226 }, trunks: { base: 170 },
-    gohan: { base: 155 }, kaioshin: { base: 157 }, gogeta: { base: 175 }, bardock: { base: 175 },
+    gohan: { base: 135 }, kaioshin: { base: 157 }, gogeta: { base: 175 }, bardock: { base: 175 },
     android17: { base: 172 }, android18: { base: 172 }, raditz: { base: 198 }, gotenks: { base: 125 },
     saibaman: { base: 120 }, celljr: { base: 110 },
     freeza_1: { base: 132, "Segunda forma": 221, "Terceira forma": 214, "Forma final": 158, "Freeza ciborgue": 158, "Golden Freeza": 158, "Black Freeza": 158 },
@@ -2479,6 +2480,19 @@ function piccoloAntiHeroi085() {
 
 // v0.98: o Goku ganha a forma Super Saiyajin Blue no fim da lista e o Vegeta (só com a transformação padrão)
 // passa a ter Super Saiyajin, Blue e Blue Evolução. Uma vez só; listas que o jogador mudou ficam como estão.
+// v0.114: o Gohan da saga Cell é criança — 135 cm (antes 155). Uma vez: quem tinha os 155 de antes salvos (o editor
+// grava a altura mostrada) passa para 135; uma altura que o jogador mudou fica como está.
+function gohanCrianca114() {
+    if (readStorage("saiyan_gohan_crianca_114") === "1") return;
+    writeStorage("saiyan_gohan_crianca_114", "1");
+    const g = characterDB.gohan;
+    if (!g) return;
+    let mudou = false;
+    if (Number(g.altura) === 155) { g.altura = 135; mudou = true; }
+    (g.transformations || []).forEach(t => { if (t && Number(t.altura) === 155) { t.altura = 135; mudou = true; } });
+    if (mudou) saveCharacterData();
+}
+
 function transformacoesBlue098() {
     if (readStorage("saiyan_transf_blue_098") === "1") return;
     writeStorage("saiyan_transf_blue_098", "1");
