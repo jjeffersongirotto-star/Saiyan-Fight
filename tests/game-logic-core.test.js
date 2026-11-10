@@ -30,6 +30,13 @@ const {
     WAVE_DIFFICULTY_CAP,
     STAGE_PROGRESSION,
     VERSUS_ROUNDS_TO_WIN,
+    VERSUS_FIGHTER_HP,
+    getVersusFighterHp,
+    KI_TIRO_INTERVALO_QUADROS,
+    cooldownTiroKiPronto,
+    passoCooldownTiroKi,
+    deveProtegerHeroiAposDerrota,
+    projeteisAposVitoriaDoOponente,
     registerVersusRoundWin,
     getStageBossDefeats,
     STAGE_MODE_WAVE_COUNT,
@@ -667,4 +674,41 @@ test("getLoopFrameIndex: cadeado faz a repetição recomeçar no quadro travado"
     assert.equal(getLoopFrameIndex(5, 4, 0), 1, "cadeado no 1º = normal");
     assert.equal(getLoopFrameIndex(5, 4, 9), 1, "cadeado inválido = normal");
     assert.equal(getLoopFrameIndex(3, 0, 1), 0);
+});
+
+test("versus: os dois lutadores têm a mesma vida, maior que o especial", () => {
+    assert.equal(getVersusFighterHp(), VERSUS_FIGHTER_HP);
+    assert.equal(VERSUS_FIGHTER_HP, 4);
+    assert.ok(getVersusFighterHp() > getSpecialDamage(), "especial (3) não pode fechar a rodada com a vida cheia");
+});
+
+test("tiro de ki: o intervalo do teclado é o mesmo do toque (~5 por segundo)", () => {
+    assert.equal(KI_TIRO_INTERVALO_QUADROS, 11);
+    assert.equal(cooldownTiroKiPronto(0), true);
+    assert.equal(cooldownTiroKiPronto(11), false);
+    assert.equal(passoCooldownTiroKi(0, 1 / 60, true), 11);
+    assert.equal(passoCooldownTiroKi(11, 1 / 60, false), 10);
+    let cd = 0;
+    let tiros = 0;
+    for (let i = 0; i < 60; i++) {
+        cd = passoCooldownTiroKi(cd, 1 / 60, false);
+        if (cooldownTiroKiPronto(cd)) {
+            tiros++;
+            cd = passoCooldownTiroKi(cd, 1 / 60, true);
+        }
+    }
+    assert.ok(tiros >= 5 && tiros <= 6, `em 1s no ritmo certo saem uns 5 tiros, não 30 (saiu ${tiros})`);
+});
+
+test("depois da derrota do oponente o herói fica protegido", () => {
+    assert.equal(deveProtegerHeroiAposDerrota(false, false), false);
+    assert.equal(deveProtegerHeroiAposDerrota(true, false), true);
+    assert.equal(deveProtegerHeroiAposDerrota(false, true), true);
+    const restam = projeteisAposVitoriaDoOponente([
+        { fromPlayer: true, id: "p1" },
+        { fromPlayer: false, id: "inimigo" },
+        { fromPlayer: false, id: "p2" }
+    ]);
+    assert.deepEqual(restam.map(o => o.id), ["p1"]);
+    assert.deepEqual(projeteisAposVitoriaDoOponente(null), []);
 });

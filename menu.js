@@ -306,7 +306,7 @@ let voltarTelaCheiaNoToque = false;
 let telaCheiaVoltouEm = -1e9;   // quando a tela cheia voltou sozinha (o mesmo toque não pode desligá-la)
 const PAUSE_BUTTON = { w: 44, h: 28 };
 let touchAttackCooldown = 0;       // frames até o próximo tiro automático (dedo apoiado no analógico/tela)
-const TOUCH_AUTOFIRE_INTERVAL = 11; // frames entre tiros (~5 por segundo)
+const TOUCH_AUTOFIRE_INTERVAL = (typeof KI_TIRO_INTERVALO_QUADROS === "number") ? KI_TIRO_INTERVALO_QUADROS : 11; // mesmo ritmo do teclado (~5 por segundo)
 let autoPaused = false;            // pausa foi automática (troca de aba, ligação...)
 let resumeCountdown = 0;           // segundos restantes da contagem 3-2-1 ao retomar
 const PC_KEY_ROW_Y0 = 148;         // linhas da tela de teclas (agora 9 ações, por isso o espaçamento menor)
@@ -2673,6 +2673,7 @@ function getPadIntent(pad) {
 const padHeldKeys = { p1: {}, p2: {} };
 const padPrevPressed = { p1: {}, p2: {} };
 const padAttackCooldown = { p1: 0, p2: 0 };
+const tecladoTiroCooldown = { p1: 0, p2: 0 };   // mesmo intervalo do toque/controle, só para teclas (não o mouse)
 let padPrevPause = false;
 let padPrevCreate = false;   // botão CREATE/SHARE (pular passo do tutorial)
 let padPrevTouchpad = false; // botão do touchpad (tela cheia)
@@ -3405,6 +3406,52 @@ canvas.addEventListener("touchcancel", (e) => {
     resetTouchInputState();
 }, { passive: false });
 
+function bindingEhMouse(code) {
+    return typeof code === "string" && code.startsWith("Mouse");
+}
+
+// Primeiro aperto de uma tecla de ATAQUE: atira na hora se o intervalo já passou.
+// A repetição automática do teclado não conta (quem segura é o pollTecladoTiro, no mesmo ritmo do toque).
+// No choque de feixes, só o aperto novo entra na disputa.
+function tentarTiroPorTecla(perfil, alvo, isP2, isRepeat) {
+    const emChoque = world.beamOwner === "clash" && world.beamActive > 0;
+    if (emChoque) {
+        if (isRepeat) return;
+        triggerAction("attack", alvo, isP2);
+        return;
+    }
+    if (isRepeat) return;
+    if (!cooldownTiroKiPronto(tecladoTiroCooldown[perfil])) return;
+    triggerAction("attack", alvo, isP2);
+    tecladoTiroCooldown[perfil] = KI_TIRO_INTERVALO_QUADROS;
+}
+
+function acionarTeclaPressionada(perfil, alvo, isP2, code, isRepeat) {
+    for (let act in keyBindings[perfil]) {
+        if (keyBindings[perfil][act] !== code) continue;
+        if (act === "attack" && !bindingEhMouse(code)) tentarTiroPorTecla(perfil, alvo, isP2, isRepeat);
+        else triggerAction(act, alvo, isP2);
+    }
+}
+
+function pollTecladoTiro(dt) {
+    const jogando = gameState === "playing" || gameState === "tutorial";
+    const emChoque = world.beamOwner === "clash" && world.beamActive > 0;
+    const perfis = [["p1", player, false]];
+    if (gameMode === "coop") perfis.push(["p2", player2, true]);
+    for (const [perfil, alvo, isP2] of perfis) {
+        tecladoTiroCooldown[perfil] = passoCooldownTiroKi(tecladoTiroCooldown[perfil], dt, false);
+        if (!jogando || emChoque) continue;
+        const code = keyBindings[perfil] && keyBindings[perfil].attack;
+        if (!code || bindingEhMouse(code) || !keysPressed[code]) continue;
+        const bloqueado = !isP2 && (player.isCharging || player.parryHighlightTimer > 0 || world.beamActive > 0);
+        if (bloqueado) continue;
+        if (!cooldownTiroKiPronto(tecladoTiroCooldown[perfil])) continue;
+        triggerAction("attack", alvo, isP2);
+        tecladoTiroCooldown[perfil] = passoCooldownTiroKi(tecladoTiroCooldown[perfil], dt, true);
+    }
+}
+
 window.onkeydown = (e) => {
     if (!controleUsadoAgora()) lastKeyInputAt = Date.now();
     // AUTOMÁTICO: usou o teclado → modo PC
@@ -3439,14 +3486,10 @@ window.onkeydown = (e) => {
             return;
         }
 
-        for (let act in keyBindings.p1) {
-            if (keyBindings.p1[act] === e.code) triggerAction(act, player, false);
-        }
+        acionarTeclaPressionada("p1", player, false, e.code, !!e.repeat);
 
         if (gameMode === "coop") {
-            for (let act in keyBindings.p2) {
-                if (keyBindings.p2[act] === e.code) triggerAction(act, player2, true);
-            }
+            acionarTeclaPressionada("p2", player2, true, e.code, !!e.repeat);
         }
     } else if (gameState === "tutorial") {
         if (e.code === "Escape" || e.code === "KeyP") {
@@ -3454,9 +3497,7 @@ window.onkeydown = (e) => {
             pauseGame();
             return;
         }
-        for (let act in keyBindings.p1) {
-            if (keyBindings.p1[act] === e.code) triggerAction(act, player, false);
-        }
+        acionarTeclaPressionada("p1", player, false, e.code, !!e.repeat);
     } else if (gameState === "controls_test") {
         if (e.code === "Escape") setGameState("options_controls");
     } else if (gameState === "paused") {
@@ -6413,6 +6454,7 @@ function render() {
     menuTargets = [];
     pollGamepadMenu(deltaTime);
     pollControlsTestExit();
+    pollTecladoTiro(deltaTime);
 
     applyRenderTransform();   // base do quadro: escala da resolução real (sem tremor/rotação sobrando)
     ctx.clearRect(0, 0, canvas.width, canvas.height);

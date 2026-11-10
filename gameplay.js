@@ -711,7 +711,7 @@ let player2 = {
     hoverTime: 0, shootTimer: 0, animTimer: 0,
     hp: 3, maxHp: 3, hitTimer: 0, actionState: "idle", actionTimer: 0,
     ki: 0, maxKi: 100, isTransformed: false, isCharging: false,
-    aggressiveness: 0.5, isDying: false, dyingspeedX: 0
+    aggressiveness: 0.5, isDying: false, dyingspeedX: 0, zenkaiUsed: false
 };
 
 // ==================== ESTADO DO MUNDO (ARRAYS DE GAME OBJECTS E TIMERS) ====================
@@ -800,7 +800,7 @@ function startGame() {
     world.versusScore = { p1: 0, p2: 0 };   // VERSUS: rodadas vencidas por cada jogador (melhor de 3)
     world.versusRound = 1;
     screenFlashTimer = 0;
-    world.lastPlayerHp = 3;
+    world.heroiProtegidoAposVitoria = false;
     world.saibamanSpawnTimer = 0;
     world.pickupSpawnTimer = 180;
     bossPatternBag = [];
@@ -813,14 +813,16 @@ function startGame() {
 
     player.x = 80;
     player.y = 150;
-    player.hp = player.maxHp = 3;
+    const vidaInicial = gameMode === "coop" ? getVersusFighterHp() : 3;
+    player.hp = player.maxHp = vidaInicial;
+    world.lastPlayerHp = player.hp;
     player.invulnerableTimer = 0;
     player.speedBuffTimer = 0;
     player.powerBuffTimer = 0;
     player.parryCombo = 0;
     player.parryComboTimer = 0;
     player.lastParryComboBonus = 0;
-    player.zenkaiUsed = false;    // ressurreição de uma vez por partida (só no versus, ver attemptZenkaiRevival)
+    player.zenkaiUsed = false;    // ressurreição de uma vez por partida no VERSUS (os dois lutadores)
     player.ki = 0;
     player.isSSJ = false;
     player.shield = false;
@@ -840,7 +842,8 @@ function startGame() {
     player2.alvoX = null;   // patrulha do vilão recomeça (stepVilaoPatrulha)
     [player2.w, player2.h] = getFighterBoxSize(selectedBoss, 0);   // tamanho da forma normal (altura)
     player2.shootTimer = 0;
-    player2.hp = player2.maxHp = waveParams.bossHp;
+    player2.hp = player2.maxHp = gameMode === "coop" ? vidaInicial : waveParams.bossHp;
+    player2.zenkaiUsed = false;
     player2.hitTimer = 0;
     player2.ki = 0;
     player2.isTransformed = false;
@@ -865,6 +868,20 @@ function onBossDeath() {
     playSound("hit");
     triggerScreenShake(15, 25);
     createImpactParticles(player2.x + player2.w / 2, player2.y + player2.h / 2, "#ff0000", 30);
+    protegerHeroiAposVitoria();
+}
+
+// A vitória já está decidida (chefe/rival saindo de tela): o herói não pode mais levar dano nem perder a partida.
+function heroiEstaProtegido() {
+    return !!(world.heroiProtegidoAposVitoria || deveProtegerHeroiAposDerrota(player2.isDying, pendingStageVictory));
+}
+function protegerHeroiAposVitoria() {
+    world.heroiProtegidoAposVitoria = true;
+    world.obstacles = projeteisAposVitoriaDoOponente(world.obstacles);
+    world.saibamans = [];
+}
+function soltarProtecaoDoHeroi() {
+    world.heroiProtegidoAposVitoria = false;
 }
 
 // Chamado no lugar de advanceWave() quando o chefe morre no modo história (não no versus): usa a MESMA
@@ -920,10 +937,12 @@ function handleStageModeProgression() {
 function respawnBoss() {
     if (pendingStageVictory) {
         pendingStageVictory = false;
+        soltarProtecaoDoHeroi();
         resolveStageVictory();
         return;
     }
     if (gameMode === "coop") {   // VERSUS: o rival terminou de sair voando = o jogador 1 venceu a rodada
+        soltarProtecaoDoHeroi();
         finishVersusRound("p1");
         return;
     }
@@ -945,6 +964,7 @@ function respawnBoss() {
     player2.x = canvas.width + 100;
     player2.y = 150;
     player2.isDying = false;
+    soltarProtecaoDoHeroi();
     player2.dyingspeedX = 0;
     player2.vy = 2;
     player2.alvoX = null;   // patrulha do vilão recomeça (stepVilaoPatrulha)
@@ -989,10 +1009,12 @@ function startNextVersusRound(lastRoundWinner) {
     world.clashMashP2 = 0;
     world.clashResolved = false;
     // os dois voltam ao lugar, com vida cheia e sem ki/transformação — rodada nova começa igual para os dois
-    Object.assign(player, { x: 80, y: 150, hp: player.maxHp, ki: 0, isSSJ: false, speed: 4.5, invulnerableTimer: 60, parryCooldown: 0 });
-    const waveParams = getWaveParams(waveNumber);
+    soltarProtecaoDoHeroi();
+    const vidaVersus = getVersusFighterHp();
+    player.maxHp = vidaVersus;
+    Object.assign(player, { x: 80, y: 150, hp: vidaVersus, ki: 0, isSSJ: false, speed: 4.5, invulnerableTimer: 60, parryCooldown: 0 });
     Object.assign(player2, {
-        x: 680, y: 150, vx: 0, vy: 2, hp: waveParams.bossHp, maxHp: waveParams.bossHp, ki: 0, isTransformed: false,
+        x: 680, y: 150, vx: 0, vy: 2, hp: vidaVersus, maxHp: vidaVersus, ki: 0, isTransformed: false,
         isDying: false, dyingspeedX: 0, hitTimer: 0, parryCooldown: 0
     });
     addFloatingText({ text: `JOGADOR ${lastRoundWinner === "p1" ? 1 : 2} VENCEU A RODADA!`, x: canvas.width / 2, y: 120, alpha: 1, color: "#ffd23f" });
@@ -1174,6 +1196,7 @@ function explodeSaibaman(s) {
     createImpactParticles(cx, cy, "#7dff5a", 6);
     triggerScreenShake(7, 14);
     playSound("hit");
+    if (heroiEstaProtegido()) return;
     player.hp--;
     runStats.hitsReceived++;
     takenDamageInRun = true;
@@ -1181,7 +1204,7 @@ function explodeSaibaman(s) {
     player.parryComboTimer = 0;
     player.lastParryComboBonus = 0;
     player.invulnerableTimer = 30;
-    if (player.hp <= 0 && !attemptZenkaiRevival()) {
+    if (player.hp <= 0 && !attemptZenkaiRevival(player)) {
         triggerGameOver();
     }
 }
@@ -1333,16 +1356,16 @@ function triggerScreenFlash(color = "#ffffff", duration = 18) {
     screenFlashColor = color;
 }
 
-// Zenkai: no VERSUS, a primeira vez que o jogador 1 chegaria a 0 de vida ele ressurge com 1 HP e um instante
-// de invulnerabilidade, em vez de perder a rodada — tema clássico Saiyajin de quase-morte. Só uma vez por
-// partida. Fora do versus não existe (não faria sentido contra ondas intermináveis de chefes).
-function attemptZenkaiRevival() {
-    if (gameMode !== "coop" || player.zenkaiUsed) return false;
-    player.zenkaiUsed = true;
+// Zenkai: no VERSUS, a primeira vez que um dos dois chegaria a 0 de vida ele ressurge com 1 HP e um instante
+// de invulnerabilidade, em vez de perder a rodada — tema clássico Saiyajin de quase-morte. Uma vez por
+// lutador, por partida. Fora do versus não existe (não faria sentido contra ondas intermináveis de chefes).
+function attemptZenkaiRevival(alvo = player) {
+    if (gameMode !== "coop" || !alvo || alvo.zenkaiUsed) return false;
+    alvo.zenkaiUsed = true;
     bumpStat("zenkaiTotal", 1);
     unlockAchievement("zenkai_first");
-    player.hp = 1;
-    player.invulnerableTimer = 90;
+    alvo.hp = 1;
+    alvo.invulnerableTimer = 90;
     triggerScreenFlash("#ffe45a", 30);
     triggerScreenShake(14, 24);
     playSound("powerup");
@@ -1350,9 +1373,19 @@ function attemptZenkaiRevival() {
     return true;
 }
 
+// No VERSUS o rival também tem Zenkai: se ela salvar, a rodada continua; senão o oponente cai.
+function derrubarOponenteSePreciso(pontos) {
+    if (gameMode === "coop" && attemptZenkaiRevival(player2)) return false;
+    score += pontos;
+    if (gameMode === "coop") advanceWave();
+    else handleStageModeProgression();
+    return true;
+}
+
 // Mesmo perdendo antes de completar o modo da fase, o jogador vê o que fez na
 // tentativa — ataques, rebatidas, itens, golpes recebidos — e o jogo avisa se bateu recorde (da fase ou geral).
 function triggerGameOver() {
+    if (heroiEstaProtegido()) return;   // a vitória/rodada já estava decidida: um tiro atrasado não pode virar derrota
     if (gameMode === "coop") { finishVersusRound("p2"); return; }   // VERSUS: o jogador 2 venceu a rodada
     const prevGeneralList = readJsonStorage("saiyan_ranking", []);
     const prevGeneralBest = Array.isArray(prevGeneralList) && prevGeneralList.length ? prevGeneralList[0].score : 0;
@@ -1447,12 +1480,8 @@ function aplicarDanoDoEspecial(isP2, damage) {
         player2.hp -= damage;
         player2.hitTimer = 25;
 
-        if (player2.hp <= 0) {
-            score += 3;
-            if (gameMode === "coop") advanceWave();
-            else handleStageModeProgression();
-        }
-    } else if (player.invulnerableTimer === 0) {
+        if (player2.hp <= 0) derrubarOponenteSePreciso(3);
+    } else if (!heroiEstaProtegido() && player.invulnerableTimer === 0) {
         if (player.shield) {
             player.shield = false;
             playSound("reflect");
@@ -1463,7 +1492,7 @@ function aplicarDanoDoEspecial(isP2, damage) {
             player.parryCombo = 0;
             player.parryComboTimer = 0;
             player.lastParryComboBonus = 0;
-            if (player.hp <= 0 && !attemptZenkaiRevival()) triggerGameOver();
+            if (player.hp <= 0 && !attemptZenkaiRevival(player)) triggerGameOver();
         }
         player.invulnerableTimer = 30;
     }
@@ -1513,7 +1542,7 @@ function resolveClashDamage() {
     // a disputa leva um pouco de dano (a explosão do meio não poupa ninguém).
     triggerScreenShake(16, 22);
     const roundBefore = world.versusRound;
-    if (player.invulnerableTimer === 0) {
+    if (!heroiEstaProtegido() && player.invulnerableTimer === 0) {
         if (player.shield) { player.shield = false; playSound("reflect"); }
         else {
             player.hp -= p1Dmg;
@@ -1522,7 +1551,7 @@ function resolveClashDamage() {
             player.parryCombo = 0;
             player.parryComboTimer = 0;
             player.lastParryComboBonus = 0;
-            if (player.hp <= 0 && !attemptZenkaiRevival()) triggerGameOver();
+            if (player.hp <= 0 && !attemptZenkaiRevival(player)) triggerGameOver();
         }
         player.invulnerableTimer = 30;
     }
@@ -1530,7 +1559,11 @@ function resolveClashDamage() {
     if (world.versusRound !== roundBefore || gameState !== "playing") return;
     player2.hp -= p2Dmg;
     player2.hitTimer = 20;
-    if (player2.hp <= 0) { score += 3; advanceWave(); }
+    if (player2.hp <= 0) {
+        if (gameMode === "coop" && attemptZenkaiRevival(player2)) return;
+        score += 3;
+        advanceWave();
+    }
 }
 
 function fireKiBarrage(p, isP2 = false, withPose = true) {
@@ -1859,7 +1892,7 @@ function update(dt) {
 
         if (!obs.fromPlayer) {
             if (circleHitsEntity(obs.x, obs.y, obs.radius, player)) {
-                if (player.invulnerableTimer === 0) {
+                if (!heroiEstaProtegido() && player.invulnerableTimer === 0) {
                     if (player.shield) {
                         player.shield = false;
                         playSound("reflect");
@@ -1873,7 +1906,7 @@ function update(dt) {
                         player.lastParryComboBonus = 0;
                         triggerScreenShake(8, 15);
 
-                        if (player.hp <= 0 && !attemptZenkaiRevival()) {
+                        if (player.hp <= 0 && !attemptZenkaiRevival(player)) {
                             triggerGameOver();
                         }
                     }
@@ -1892,11 +1925,7 @@ function update(dt) {
                 playSound("hit");
                 createImpactParticles(obs.x, obs.y, obs.color, 15);
 
-                if (player2.hp <= 0) {
-                    score += 5;
-                    if (gameMode === "coop") advanceWave();
-                    else handleStageModeProgression();
-                }
+                if (player2.hp <= 0) derrubarOponenteSePreciso(5);
                 world.obstacles.splice(i, 1);
                 continue;
             }
@@ -1908,10 +1937,11 @@ function update(dt) {
     }
 
     // VERSUS é só um contra o outro, nas mesmas condições: sem Saibamans/Cell Jr.
-    if (gameMode !== "coop") world.saibamanSpawnTimer += dt * 60;
+    // Com o chefe já derrotado, ninguém novo nasce para machucar o herói na saída.
+    if (gameMode !== "coop" && !heroiEstaProtegido()) world.saibamanSpawnTimer += dt * 60;
     if (world.saibamanSpawnTimer > SPAWN_TIMERS.SAIBAMAN_FRAMES) {
         world.saibamanSpawnTimer = 0;
-        spawnSaibaman();
+        if (!heroiEstaProtegido()) spawnSaibaman();
     }
 
     const someoneGrabbing = world.saibamans.some(s => s.phase === "agarrar");
@@ -1954,10 +1984,7 @@ function update(dt) {
             explosaoDeSaibaman(s);
             player2.hp -= 1;
             player2.hitTimer = 15;
-            if (player2.hp <= 0) {
-                score += 5;
-                handleStageModeProgression();
-            }
+            if (player2.hp <= 0) derrubarOponenteSePreciso(5);
             continue;
         }
 
