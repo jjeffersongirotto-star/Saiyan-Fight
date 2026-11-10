@@ -46,6 +46,9 @@ check("o especial guarda a mão e o raio sai dela (espelhado no rival)", gp.incl
 check("cartão sem o pacote carregado usa o retrato leve (não baixa o pacote)",
     run("(() => { conjRetratos = { raditz: 'RET' }; const r = conjRetratoUrl(characterDB.raditz); return r; })()") === "RET" && !run("conjPacoteCarregando.raditz"));
 
+check("v0.111: pacote carregando não mostra o boneco desenhado antigo (retrato parado ou quadro vazio)",
+    run("(() => { conjPacoteCarregando.raditz = true; const a = getCharacterAnimationFrames('raditz', 'flyRight', 0)[0]; const b = getCharacterAnimationFrames('raditz', 'idle', 0)[0]; conjPacoteCarregando.raditz = false; return a === CONJ_QUADRO_VAZIO && b === 'RET'; })()"));
+
 // ---------- minions ----------
 check("tiras dos minions continuam com 8 poses", ["saibaman", "celljr"].every(m => fs.statSync(`${dir}/minions/${m}.webp`).size > 10000));
 
