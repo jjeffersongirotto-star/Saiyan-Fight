@@ -1,0 +1,10 @@
+node_modules
+# cópia dos arquivos do jogo para o APK (gerada por scripts/android/copiar-web.js)
+www
+*.log
+.DS_Store
+# chave de assinatura: NUNCA no repositório
+*.jks
+*.keystore
+__pycache__/
+pacote-web

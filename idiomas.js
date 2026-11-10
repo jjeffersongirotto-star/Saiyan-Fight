@@ -289,6 +289,13 @@ ATUALIZANDO... § UPDATING... § ACTUALIZANDO...
 SEM CONEXÃO § NO CONNECTION § SIN CONEXIÓN
 JÁ ESTÁ ATUALIZADO § ALREADY UP TO DATE § YA ESTÁ ACTUALIZADO
 ATUALIZAR § UPDATE § ACTUALIZAR
+NOVA VERSÃO § NEW VERSION § NUEVA VERSIÓN
+BAIXAR § DOWNLOAD § DESCARGAR
+AGORA NÃO § NOT NOW § AHORA NO
+ATUALIZAR AGORA? § UPDATE NOW? § ¿ACTUALIZAR AHORA?
+BAIXANDO... § DOWNLOADING... § DESCARGANDO...
+ERRO AO ATUALIZAR § UPDATE FAILED § ERROR AL ACTUALIZAR
+Esta versão do jogo precisa do app novo. Baixar o APK agora? Depois é só instalar por cima: o progresso continua salvo. § This version of the game needs the new app. Download the APK now? Then just install it over this one: your progress stays saved. § Esta versión del juego necesita la app nueva. ¿Descargar el APK ahora? Luego solo instálalo encima: tu progreso sigue guardado.
 BAIXAR APP § DOWNLOAD APP § DESCARGAR APP
 No Safari, toque em Compartilhar e depois em Adicionar à Tela de Início. § In Safari, tap Share and then Add to Home Screen. § En Safari, toca Compartir y luego Agregar a inicio.
 No Chrome, toque no menu (⋮) e depois em Instalar app ou Adicionar à tela inicial. Se acabou de desinstalar, feche e abra o Chrome antes. § In Chrome, tap the menu (⋮) and then Install app or Add to Home screen. If you just uninstalled it, close and reopen Chrome first. § En Chrome, toca el menú (⋮) y luego Instalar aplicación o Agregar a la pantalla principal. Si acabas de desinstalarla, cierra y vuelve a abrir Chrome antes.
@@ -882,6 +889,7 @@ Tamanho na luta: 175 cm = tamanho normal. Muito alto ou muito baixo tem limite, 
 // Textos com partes que mudam (números, nomes): [expressão, inglês, espanhol]. "$1" = trecho igual;
 // "{1}" = trecho traduzido também. Função recebe (m, T) e devolve o texto.
 const IDIOMA_REGRAS = [
+    [/^Saiu a versão ([0-9.]+) do jogo\. Atualizar agora\? O jogo baixa a versão nova e reinicia; o progresso continua salvo\.$/, "Version $1 of the game is out. Update now? The game downloads the new version and restarts; your progress stays saved.", "Salió la versión $1 del juego. ¿Actualizar ahora? El juego descarga la versión nueva y se reinicia; tu progreso sigue guardado."],
     [/^Deseja selecionar (.+) para o (JOGADOR \d)\?$/, (m, T) => `Select ${m[1]} for ${T(m[2])}?`, (m, T) => `¿Seleccionar a ${m[1]} para el ${T(m[2])}?`],
     [/^Em qual forma (.+) aparece nesta fase\?$/, "Which form does $1 appear in on this stage?", "¿En qué forma aparece $1 en esta fase?"],
     [/^OCUPA O LUGAR DE: (.*) \(AS OUTRAS ANDAM UMA POSIÇÃO\)$/, "TAKES THE PLACE OF: $1 (THE OTHERS MOVE ONE POSITION)", "OCUPA EL LUGAR DE: $1 (LAS DEMÁS SE MUEVEN UNA POSICIÓN)"],

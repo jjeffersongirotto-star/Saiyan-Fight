@@ -1,0 +1,109 @@
+# Gera o APK Android do Saiyan Fight (Capacitor): o jogo vai DENTRO do app, que abre rápido e roda sem internet.
+# Em toda PR e push na main o APK e o pacote do jogo (.zip da pasta www + latest.json) são gerados (artefatos).
+# Na main:
+#  - o pacote do jogo é publicado na Release "app-bundle" (latest.json + saiyan-fight-web-<jogo>-<build>.zip):
+#    é dali que a setinha ATUALIZAR do APK atualiza o jogo dentro do app, sem instalar APK novo;
+#  - com os segredos de assinatura, o APK é publicado como Saiyan-Fight-<versão>.apk e Saiyan-Fight.apk
+#    (o botão BAIXAR APP do site aponta para releases/latest/download/Saiyan-Fight.apk).
+name: APK Android
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # a versão do APK usa o número de commits (git rev-list --count HEAD)
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22  # o Capacitor 8 exige Node 22+
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - name: Copiar o jogo para www/
+        run: node scripts/android/copiar-web.js
+      - run: npx cap sync android
+      - name: Chave de assinatura (segredos do repositório)
+        id: key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.SAIYAN_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/saiyan.keystore"
+            echo "SAIYAN_KEYSTORE=$RUNNER_TEMP/saiyan.keystore" >> "$GITHUB_ENV"
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Sem o segredo SAIYAN_KEYSTORE_BASE64: o APK sai com a chave de depuração e não é publicado em Releases."
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Gerar o APK
+        working-directory: android
+        env:
+          SAIYAN_KEYSTORE_PASSWORD: ${{ secrets.SAIYAN_KEYSTORE_PASSWORD }}
+        run: ./gradlew --no-daemon assembleRelease
+      - name: Nome do APK com a versão
+        id: apk
+        run: |
+          v=$(node -p "require('./www/versao-apk.json').versao")
+          jogo=$(node -p "require('./www/versao-apk.json').jogo")
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "jogo=$jogo" >> "$GITHUB_OUTPUT"
+          cp android/app/build/outputs/apk/release/app-release.apk "Saiyan-Fight-$v.apk"
+          # nome fixo: o botão BAIXAR APP aponta para releases/latest/download/Saiyan-Fight.apk
+          cp "Saiyan-Fight-$v.apk" Saiyan-Fight.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Saiyan-Fight-${{ steps.apk.outputs.version }}-apk
+          path: Saiyan-Fight-${{ steps.apk.outputs.version }}.apk
+      - name: Pacote do jogo para atualizar dentro do app (zip + latest.json)
+        run: python3 scripts/android/pacote-web.py pacote-web
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pacote-web-${{ steps.apk.outputs.version }}
+          path: pacote-web/
+      - name: Publicar o pacote do jogo (Release app-bundle)
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          zip=$(node -p "require('./pacote-web/latest.json').arquivo")
+          if ! gh release view app-bundle >/dev/null 2>&1; then
+            gh release create app-bundle --target "$GITHUB_SHA" --prerelease --latest=false --title "Pacotes do jogo (atualização dentro do app)" \
+              --notes "Usado pela setinha ATUALIZAR do APK: latest.json diz a versão mais nova do jogo e o .zip é baixado e conferido (sha256) dentro do app. Não precisa baixar nada daqui."
+          fi
+          # primeiro o zip, depois o latest.json (quem ler o latest.json já encontra o zip)
+          gh release upload app-bundle "pacote-web/$zip" --clobber
+          gh release upload app-bundle pacote-web/latest.json --clobber
+          # guarda só os 3 pacotes mais novos
+          gh release view app-bundle --json assets --jq '.assets[].name' | { grep '^saiyan-fight-web-.*\.zip$' || true; } \
+            | sort -t- -k5,5n | head -n -3 | while read -r velho; do gh release delete-asset app-bundle "$velho" -y; done
+      - name: Publicar na página de Releases
+        if: github.ref == 'refs/heads/main' && steps.key.outputs.signed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v=${{ steps.apk.outputs.version }}
+          jogo=${{ steps.apk.outputs.jogo }}
+          if gh release view "apk-v$v" >/dev/null 2>&1; then
+            gh release upload "apk-v$v" "Saiyan-Fight-$v.apk" Saiyan-Fight.apk --clobber
+          else
+            gh release create "apk-v$v" "Saiyan-Fight-$v.apk" Saiyan-Fight.apk --target "$GITHUB_SHA" --latest \
+              --title "Saiyan Fight (APK $v, jogo v$jogo)" \
+              --notes "APK Android do Saiyan Fight com o jogo na versão $jogo (novidades na janela UPDATES do jogo). Para instalar: baixe o arquivo Saiyan-Fight.apk no celular e permita instalar apps desta fonte. Versões novas instalam por cima, sem perder o progresso."
+          fi
