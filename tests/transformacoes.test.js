@@ -11,7 +11,7 @@ const { run, check, summary } = h;
 h.carregarPacotes(["goku"]);
 
 // ---------- dados ----------
-check("todo personagem começa com a Transformação 1 (a de sempre)", run(`getCharacterTransformations("piccolo").length === 1 && getCharacterTransformations("piccolo")[0].name === "Transformação 1"`));
+check("personagem sem formas próprias (Raditz) começa com a Transformação 1", run(`getCharacterTransformations("raditz").length === 1 && getCharacterTransformations("raditz")[0].name === "Transformação 1"`));
 check("o Goku já vem com as formas dele (Super Saiyajin 3 em 2º)", run(`getCharacterTransformations("goku_adult")[1].name`) === "Super Saiyajin 3");
 check("v0.113: as transformações guardam só nome, aura e altura (sem aparência do construtor)", run(`Object.keys(DEFAULT_CHARACTERS).every(k => getCharacterTransformations(k).every(t => !t.diff))`));
 const html = fs.readFileSync(__dirname + "/../index.html", "utf8");
@@ -53,7 +53,7 @@ run(`player.transformPowerTimer = 1; updateTransformPower(player, false, 1/60);`
 check("acabou o poder extra: volta a velocidade normal e continua transformado", run("player.speed") === 4.5 && run("getTransformLevel(player)") === 5);
 run(`startGame();`);
 check("luta nova começa sem transformação", run("getTransformLevel(player)") === 0);
-check("personagem sem transformação visível (Piccolo) usa os quadros normais", run(`getCharacterAnimationFrames("piccolo", "idle", 1)[0] === getCharacterAnimationFrames("piccolo", "idle", 0)[0]`));
+check("personagem sem transformação visível (Raditz) usa os quadros normais", run(`getCharacterAnimationFrames("raditz", "idle", 1)[0] === getCharacterAnimationFrames("raditz", "idle", 0)[0]`));
 check("a aura de cada transformação vem da lista", run(`getTransformationAura("goku_adult", 2)`) === "amarelo");
 
 process.exit(summary());

@@ -2263,6 +2263,7 @@ function loadCharacterData() {
                 seedNewDefaultCharacters();
                 transformacoesBlue098();
                 formasNovas110();
+                formasNovas116();
                 piccoloAntiHeroi085();
                 gohanCrianca114();
                 conjuntosAoCarregar();
@@ -2340,21 +2341,26 @@ const GOTENKS_TRANSFORMACOES = [
     { name: "Super Saiyajin 3", aura: "amarelo" }
 ];
 const BARDOCK_TRANSFORMACOES = [{ name: "Super Saiyajin", aura: "amarelo" }];
+// v0.116: Piccolo sem capa e turbante e Piccolo Laranja (filme Super Hero), Super 17 (GT) e Trunks do Futuro
+// Super Saiyajin Fúria (DB Super) — desenhos do Gemini
+const PICCOLO_TRANSFORMACOES = [{ name: "Sem capa", aura: "verde" }, { name: "Piccolo Laranja", aura: "amarelo" }];
+const ANDROID17_TRANSFORMACOES = [{ name: "Super 17", aura: "verde" }];
+const TRUNKS_TRANSFORMACOES = [{ name: "Super Saiyajin", aura: "amarelo" }, { name: "Super Saiyajin Fúria", aura: "amarelo" }];
 
 const DEFAULT_CHARACTERS = {
     goku_adult: { name: "GOKU", ki: "#5be3ff", align: "HERÓI", aura: "gelo", spec: "KAMEHAMEHA",
         transformations: GOKU_TRANSFORMACOES, efeitoEspecial: "kamehameha" },
     vegeta: { name: "VEGETA", ki: "#ffe45a", align: "ANTI-HERÓI", aura: "amarelo", spec: "FINAL FLASH", transformations: VEGETA_TRANSFORMACOES },
-    piccolo: { name: "PICCOLO", ki: "#e9ff7a", align: "ANTI-HERÓI", aura: "verde", spec: "MAKAN KOSAPPO" },
+    piccolo: { name: "PICCOLO", ki: "#e9ff7a", align: "ANTI-HERÓI", aura: "verde", spec: "MAKAN KOSAPPO", transformations: PICCOLO_TRANSFORMACOES },
     // Freeza: começa na 1ª forma (armadura do exército) e cada TRANSFORMAR sobe uma forma, até o ciborgue
     freeza_1: { name: "FREEZA", ki: "#ff5be0", align: "VILÃO", aura: "roxo", spec: "DEATH BEAM",
         transformations: FREEZA_TRANSFORMACOES, efeitoTiro: "esfera_roxa", efeitoEspecial: "sol_freeza" },
-    trunks: { name: "TRUNKS", ki: "#9fd0ff", align: "HERÓI", aura: "azul", spec: "BURNING ATTACK", efeitoEspecial: "raio_azul" },
+    trunks: { name: "TRUNKS", ki: "#9fd0ff", align: "HERÓI", aura: "azul", spec: "BURNING ATTACK", transformations: TRUNKS_TRANSFORMACOES, efeitoEspecial: "raio_azul" },
     gohan: { name: "GOHAN", ki: "#ffd45b", align: "HERÓI", aura: "gelo", spec: "MASENKO", transformations: GOHAN_TRANSFORMACOES, efeitoEspecial: "kamehameha" },
     kaioshin: { name: "SUPREMO SR. KAIO", ki: "#c9a0ff", align: "HERÓI", aura: "rosa", spec: "KIAI SAGRADO" },
     gogeta: { name: "VEGETTO", ki: "#7fd8ff", align: "HERÓI", aura: "amarelo", spec: "FINAL KAMEHAMEHA", transformations: VEGETTO_TRANSFORMACOES, efeitoEspecial: "kamehameha" },
     bardock: { name: "BARDOCK", ki: "#ff9a5b", align: "ANTI-HERÓI", aura: "azul", spec: "RIOT JAVELIN", transformations: BARDOCK_TRANSFORMACOES, efeitoEspecial: "raio_vermelho" },
-    android17: { name: "ANDROIDE 17", ki: "#ffe07a", align: "ANTI-HERÓI", aura: "verde", spec: "POWER BLITZ", efeitoEspecial: "raio_azul" },
+    android17: { name: "ANDROIDE 17", ki: "#ffe07a", align: "ANTI-HERÓI", aura: "verde", spec: "POWER BLITZ", transformations: ANDROID17_TRANSFORMACOES, efeitoEspecial: "raio_azul" },
     android18: { name: "ANDROIDE 18", ki: "#a9e3ff", align: "ANTI-HERÓI", aura: "azul", spec: "DESTRUCTO DISC" },
     majin_buu: { name: "MAJIN BUU", ki: "#ff9de0", align: "VILÃO", aura: "rosa", spec: "CHOCOLATE BEAM", transformations: BUU_TRANSFORMACOES },
     raditz: { name: "RADITZ", ki: "#ff7ad9", align: "VILÃO", aura: "roxo", spec: "DOUBLE SUNDAY", efeitoEspecial: "raio_vermelho" },
@@ -2372,9 +2378,9 @@ const DEFAULT_CHARACTERS = {
 // (que guardam a lista de transformações sem altura). O que o jogador digitar no editor (c.altura / t.altura)
 // vale mais que isto. Na luta a altura vira escala (escalaDaAltura, com limites).
 const ALTURAS_PADRAO = {
-    goku_adult: { base: 175 }, vegeta: { base: 164 }, piccolo: { base: 226 }, trunks: { base: 170 },
+    goku_adult: { base: 175 }, vegeta: { base: 164 }, piccolo: { base: 226, "Piccolo Laranja": 245 }, trunks: { base: 170 },
     gohan: { base: 135 }, kaioshin: { base: 157 }, gogeta: { base: 175 }, bardock: { base: 175 },
-    android17: { base: 172 }, android18: { base: 172 }, raditz: { base: 198 }, gotenks: { base: 125 },
+    android17: { base: 172, "Super 17": 190 }, android18: { base: 172 }, raditz: { base: 198 }, gotenks: { base: 125 },
     saibaman: { base: 120 }, celljr: { base: 110 },
     freeza_1: { base: 132, "Segunda forma": 221, "Terceira forma": 214, "Forma final": 158, "Freeza ciborgue": 158, "Golden Freeza": 158, "Black Freeza": 158 },
     cell: { base: 228, "Semi-perfeito": 259, "Perfeito": 213 },
@@ -2509,6 +2515,20 @@ function transformacoesBlue098() {
 
 // v0.110: as formas novas (God, Instinto/Ego Superior, Vegetto, Gotenks SSJ3, Bardock SSJ) entram uma vez nos perfis
 // que ainda têm a lista de transformações padrão antiga (quem editou as transformações no editor fica como está)
+// v0.116: Piccolo, Androide 17 e Trunks ganham as formas novas uma vez, se ainda têm só a "Transformação 1" padrão
+// (quem mudou as transformações no editor fica como está)
+function formasNovas116() {
+    if (readStorage("saiyan_formas_116") === "1") return;
+    writeStorage("saiyan_formas_116", "1");
+    const padrao = (l) => !Array.isArray(l) || !l.length || (l.length === 1 && l[0] && l[0].name === TRANSFORMACAO_PADRAO.name);
+    let mudou = false;
+    [["piccolo", PICCOLO_TRANSFORMACOES], ["android17", ANDROID17_TRANSFORMACOES], ["trunks", TRUNKS_TRANSFORMACOES]].forEach(([k, lista]) => {
+        const c = characterDB[k];
+        if (c && Array.isArray(c.transformations) && padrao(c.transformations)) { c.transformations = JSON.parse(JSON.stringify(lista)); mudou = true; }
+    });
+    if (mudou) saveCharacterData();
+}
+
 function formasNovas110() {
     if (readStorage("saiyan_formas_110") === "1") return;
     writeStorage("saiyan_formas_110", "1");

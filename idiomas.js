@@ -465,6 +465,9 @@ Super Saiyajin 3 § Super Saiyan 3 § Super Saiyajin 3
 Super Saiyajin God § Super Saiyan God § Super Saiyajin Dios
 Instinto Superior § Ultra Instinct § Ultra Instinto
 Ego Superior § Ultra Ego § Ultra Ego
+Sem capa § No cape § Sin capa
+Piccolo Laranja § Orange Piccolo § Piccolo Naranja
+Super Saiyajin Fúria § Super Saiyan Rage § Super Saiyajin Furia
 Ataque Especial § Special Attack § Ataque Especial
 Cor do Projétil § Projectile Color § Color del Proyectil
 Tamanho Projétil § Projectile Size § Tamaño del Proyectil

@@ -32,7 +32,7 @@ const CONJ_FPS_PADRAO = 12;
 // ---------------------------------------------------------------------------------------------------------------
 // v0.106: versão dos arquivos dos pacotes — vai no endereço (?v=) para o navegador não usar uma cópia antiga
 // guardada (o Vegeta continuava com os sprites recortados antigos). Suba o número sempre que trocar um pacote.
-const CONJ_VERSAO_ARQUIVOS = "115";
+const CONJ_VERSAO_ARQUIVOS = "116";
 const CONJ_PACOTES = {
     // v0.102: desenhos do jogador (gerados no Gemini) para as 4 formas do Goku; já entra como o conjunto em uso.
     // variantes = base + transformações em ordem (o jogo usa a forma do nível atual)
@@ -42,12 +42,12 @@ const CONJ_PACOTES = {
     // marca nova para entrar de novo em quem já tinha o pacote antigo)
     vegeta: { arquivo: "conjuntos/vegeta.json", personagem: "vegeta", nome: "VEGETA SPRITES", marca: "saiyan_conjunto_vegeta_110",
         variantes: ["normal", "ssj", "god", "blue", "blue_evo", "ego"], ativar: true },
-    piccolo: { arquivo: "conjuntos/piccolo.json", personagem: "piccolo", nome: "PICCOLO SPRITES", marca: "saiyan_conjunto_piccolo",
-        variantes: ["normal"], ativar: true },
+    piccolo: { arquivo: "conjuntos/piccolo.json", personagem: "piccolo", nome: "PICCOLO SPRITES", marca: "saiyan_conjunto_piccolo_116",
+        variantes: ["normal", "semcapa", "laranja"], ativar: true },
     freeza: { arquivo: "conjuntos/freeza.json", personagem: "freeza_1", nome: "FREEZA SPRITES", marca: "saiyan_conjunto_freeza",
         variantes: ["f1", "f2", "f3", "final", "ciborgue", "golden", "black"], ativar: true, dedo: true },
-    trunks: { arquivo: "conjuntos/trunks.json", personagem: "trunks", nome: "TRUNKS SPRITES", marca: "saiyan_conjunto_trunks",
-        variantes: ["normal", "ssj"], ativar: true },
+    trunks: { arquivo: "conjuntos/trunks.json", personagem: "trunks", nome: "TRUNKS SPRITES", marca: "saiyan_conjunto_trunks_116",
+        variantes: ["normal", "ssj", "furia"], ativar: true },
     gohan: { arquivo: "conjuntos/gohan.json", personagem: "gohan", nome: "GOHAN SPRITES", marca: "saiyan_conjunto_gohan",
         variantes: ["normal", "ssj", "ssj2"], ativar: true },
     kaioshin: { arquivo: "conjuntos/kaioshin.json", personagem: "kaioshin", nome: "SUPREMO SR. KAIO SPRITES", marca: "saiyan_conjunto_kaioshin",
@@ -56,8 +56,8 @@ const CONJ_PACOTES = {
         variantes: ["normal", "ssj", "blue"], ativar: true },
     bardock: { arquivo: "conjuntos/bardock.json", personagem: "bardock", nome: "BARDOCK SPRITES", marca: "saiyan_conjunto_bardock_110",
         variantes: ["normal", "ssj"], ativar: true },
-    android17: { arquivo: "conjuntos/android17.json", personagem: "android17", nome: "ANDROIDE 17 SPRITES", marca: "saiyan_conjunto_android17",
-        variantes: ["normal"], ativar: true },
+    android17: { arquivo: "conjuntos/android17.json", personagem: "android17", nome: "ANDROIDE 17 SPRITES", marca: "saiyan_conjunto_android17_116",
+        variantes: ["normal", "super17"], ativar: true },
     android18: { arquivo: "conjuntos/android18.json", personagem: "android18", nome: "ANDROIDE 18 SPRITES", marca: "saiyan_conjunto_android18",
         variantes: ["normal"], ativar: true },
     buu: { arquivo: "conjuntos/buu.json", personagem: "majin_buu", nome: "MAJIN BUU SPRITES", marca: "saiyan_conjunto_buu",
