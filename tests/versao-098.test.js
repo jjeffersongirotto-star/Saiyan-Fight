@@ -7,7 +7,6 @@
 
 const fs = require("fs");
 const core = require("../game-logic-core.js");
-const sp = require("../sprites.js");
 const { createHarness } = require("./harness.js");
 const dir = __dirname + "/..";
 const h = createHarness(dir, 1366);
@@ -70,17 +69,10 @@ check("Vegeta: Super Saiyajin, God, Blue, Blue Evolução (aura azul escura) e E
 check("Goku: a 4ª transformação é o Blue", run("getCharacterTransformations('goku_adult')[3].aura") === "blue");
 check("a aura escolhida no editor vale na forma normal", (() => { run("characterDB.goku_adult.efeitoAura = 'aura_roxa'; player.transformPowerTimer = 0"); h.calls.length = 0; run("drawKiAura(player, characterDB.goku_adult, 100, 200, 40, 60)"); run("delete characterDB.goku_adult.efeitoAura"); return true; })());
 
-// Freeza: ataque com o dedo
-const fz = sp.SPRITE_PRESETS.freeza.appearance;
-check("o Freeza vem com a POSIÇÃO DOS BRAÇOS 'dedo'", fz.armPose === "dedo" && html.includes('<option value="dedo">'));
-check("o ataque e o especial com o dedo mudam o desenho (e o resto fica igual)",
-    sp.generateSpriteFrameSvg(fz, "attackKi", 2) !== sp.generateSpriteFrameSvg(Object.assign({}, fz, { armPose: "guarda" }), "attackKi", 2) &&
-    sp.generateSpriteFrameSvg(fz, "special", 0) !== sp.generateSpriteFrameSvg(Object.assign({}, fz, { armPose: "guarda" }), "special", 0) &&
-    sp.generateSpriteFrameSvg(fz, "idle", 0) === sp.generateSpriteFrameSvg(Object.assign({}, fz, { armPose: "guarda" }), "idle", 0));
-check("a bola do sol nasce na ponta do dedo levantado (acima da cabeça)", (() => { const pd = sp.spritePontaDoDedo(fz, "special", 0); return pd && pd[1] < 0.25 && pd[0] > 0.5; })());
-check("no especial o braço começa levantado com o dedo para cima", sp.spritePoseFor("special", 0, 5, fz).armR[0] > 140 && sp.spritePoseFor("special", 4, 5, fz).armR[0] < 100);
-run("characterDB.freeza_1.builderAppearance.armPose = 'guarda'; writeStorage('saiyan_freeza_dedo_098', '0'); atualizarFreezaSalvo()");
-check("o Freeza salvo antes passa a atacar com o dedo (uma vez)", run("characterDB.freeza_1.builderAppearance.armPose") === "dedo");
+// Freeza: ataque com o dedo (v0.113: a ponta do dedo vem do pacote de sprites)
+h.carregarPacotes(["freeza"]);
+check("a bola do sol nasce na ponta do dedo levantado (acima do meio do desenho)", (() => { const pd = run("conjuntoPonto('freeza_1', 'dedo', 0)"); return Array.isArray(pd) && pd[1] < 0.5; })());
+check("o tiro do Freeza sai da ponta do dedo", run("!!conjuntoPonto('freeza_1', 'dedo', 0)"));
 
 // arquivo
 const exp = JSON.parse(run("JSON.stringify(dadosDoPersonagemParaArquivo('goku_adult'))"));

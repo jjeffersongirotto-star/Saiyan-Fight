@@ -296,21 +296,6 @@ function setTutorialActionState(dx, dy) {
 
 // getHitboxRect, rectsOverlap e circleHitsEntity agora vivem em game-logic-core.js.
 
-// Saiyajin transformado: na luta usa os mesmos movimentos, mas com o cabelo amarelo (Super Saiyajin).
-// Só para personagens do construtor (têm a aparência salva) com cabelo de Saiyajin; o resto segue igual.
-// Transformação N (lista do personagem, ver getCharacterTransformations): o personagem base + só o que muda
-// naquela transformação (diff). "ssj" pinta o cabelo de Saiyajin de amarelo. Sem diferença visível, usa os
-// quadros normais (o efeito fica por conta da aura e dos raios).
-function getTransformedFrames(char, state, t) {
-    const a = char.builderAppearance;
-    if (!a || !t || typeof getProceduralFrameUrls !== "function" || !SPRITE_FRAME_COUNTS[state]) return null;
-    const hasDiff = t.diff && Object.keys(t.diff).length > 0;
-    const app = hasDiff ? spriteTransformAppearance(a, t) : a;
-    const ssj = !!t.ssj && SPRITE_SAIYAN_HAIR.includes(app.hairStyle);
-    if (!hasDiff && !ssj) return null;
-    return getProceduralFrameUrls(app, state, { ssj, noGlow: true, ssjColor: spriteSsjColor(t) });
-}
-
 // Nível de transformação de um lutador (0 = normal). Antes só existia uma (isSSJ/isTransformed).
 function getTransformLevel(p) {
     return (p && (p.isSSJ || p.isTransformed)) ? Math.max(1, p.transformLevel || 1) : 0;
@@ -324,14 +309,6 @@ function getCharacterAnimationFrames(charKey, actionState, transformed) {
     // conjunto de sprites em uso (botão azul do editor): base e transformações do grupo
     const doConjunto = conjuntoQuadros(charKey, SPRITE_FRAME_COUNTS[actionState || "idle"] ? (actionState || "idle") : "idle", level);
     if (doConjunto && doConjunto.length) return doConjunto;
-    if (level > 0) {
-        const t = getCharacterTransformations(charKey)[level - 1];
-        // pose sem desenho próprio (ex.: "hit" do vilão levando golpe): usa a parada transformada, senão o
-        // cabelo voltava ao normal por um instante a cada golpe
-        const pose = SPRITE_FRAME_COUNTS[actionState || "idle"] ? (actionState || "idle") : "idle";
-        const tFrames = getTransformedFrames(char, pose, t);
-        if (tFrames && tFrames.length) return tFrames;
-    }
 
     let anims = char.animations || {};
     let state = actionState || "idle";
@@ -388,7 +365,7 @@ function getCharacterAnimationFrame(charKey, actionState, animTimer, transformed
 }
 
 // Carrega de antemão todos os quadros do personagem. Sem isso, a 1ª vez que cada quadro aparece (ao mudar de
-// movimento) ele ainda não está pronto e o personagem "pisca". Transformado: os quadros de cabelo amarelo.
+// movimento) ele ainda não está pronto e o personagem "pisca". Transformado: os quadros da forma transformada.
 // Feito aos poucos (ver runBackgroundWork): gerar e carregar tudo de uma vez travava o começo da luta e, ao
 // transformar, congelava o jogo por quase um segundo no celular. Cada movimento vira uma tarefa que só calcula
 // os desenhos (rápido); as imagens normais são carregadas uma por tarefa. As do cabelo amarelo só são calculadas
@@ -443,7 +420,13 @@ function warmFrameArt(charKey, state, src, tries, nivel) {
 
 // Nos menus, já prepara os lutadores escolhidos (quadros + pixel art): o primeiro segundo da luta não precisa
 // mais montar desenho nenhum. Refaz quando a escolha muda; não mexe em nada com uma janela (editor) aberta.
+// v0.113: só começa uns segundos depois de abrir o jogo (ou no primeiro toque/tecla): baixar e preparar os pacotes
+// dos lutadores logo na abertura deixava o primeiro toque sem resposta no celular
+const AQUECER_DEPOIS_MS = 4000;
+let aquecerLiberado = false;
+if (typeof addEventListener === "function") ["pointerdown", "keydown", "touchstart"].forEach(t => addEventListener(t, () => { aquecerLiberado = true; }, { once: true, passive: true }));
 function warmSelectedFighters() {
+    if (!aquecerLiberado && performance.now() < AQUECER_DEPOIS_MS) return;
     const key = selectedCharacter + "|" + selectedBoss + "|" + selectedStage;   // a fase muda a forma inicial do vilão
     if (backgroundWork.warmedFor === key || !characterDB[selectedCharacter]) return;
     backgroundWork.warmedFor = key;
@@ -796,6 +779,7 @@ function startGame() {
     takenDamageInRun = false;
     
     // o que os menus ainda não deixaram pronto (ver warmSelectedFighters) termina aos poucos durante a luta
+    aquecerLiberado = true;
     warmSelectedFighters();
     let waveParams = getWaveParams(waveNumber);
 
@@ -1430,7 +1414,7 @@ function triggerSpecialAttack(isP2 = false) {
     const chaveEsp = isP2 ? selectedBoss : selectedCharacter, nivelEsp = getTransformLevel(caster);
     // v0.103: personagem com desenhos do pacote — a ponta do dedo e a mão (de onde sai o raio) vêm do próprio desenho
     const dedoPacote = typeof conjuntoPonto === "function" ? conjuntoPonto(chaveEsp, "dedo", nivelEsp) : null;
-    world.solDedo = sol ? (dedoPacote || getPontaDoDedoNoEspecial(chaveEsp, nivelEsp)) : null;
+    world.solDedo = sol ? dedoPacote : null;
     world.especialMao = typeof conjuntoPonto === "function" ? conjuntoPonto(chaveEsp, "mao", nivelEsp) : null;
     world.beamActive = sol ? SOL_DURACAO : 40;
     world.beamDuracao = world.beamActive;
@@ -1453,14 +1437,6 @@ function triggerSpecialAttack(isP2 = false) {
     world.obstacles = [];
     if (sol) { world.especialPendente = { isP2, damage }; return; }
     aplicarDanoDoEspecial(isP2, damage);
-}
-
-// Ponta do dedo levantado no 1º quadro do especial (fração do desenho), na forma atual; null sem dedo levantado
-function getPontaDoDedoNoEspecial(key, nivel) {
-    const c = characterDB[key], ap = c && c.builderAppearance;
-    if (!ap || typeof spritePontaDoDedo !== "function") return null;
-    const t = nivel > 0 ? getCharacterTransformations(key)[nivel - 1] : null;
-    return spritePontaDoDedo(t ? spriteTransformAppearance(ap, t) : ap, "special", 0);
 }
 
 // Sol do Freeza: quadros (de world.beamActive) que a bola leva crescendo, sendo empurrada e voando até o alvo
@@ -1564,9 +1540,8 @@ function fireKiBarrage(p, isP2 = false, withPose = true) {
     let dir = isP2 ? -1 : 1;
     let startX = isP2 ? p.x - 10 : p.x + p.w + 10;
     const efeito = getEfeitoDoTiro(isP2 ? selectedBoss : selectedCharacter);
-    // quem ataca com o dedo (POSIÇÃO DOS BRAÇOS "dedo", o Freeza): o tiro sai da ponta do dedo, na altura do ombro
-    const quem = characterDB[isP2 ? selectedBoss : selectedCharacter], ap = quem && quem.builderAppearance;
-    const dedo = efeito === "tiro_freeza" || !!(ap && ap.armPose === "dedo");
+    // quem ataca com o dedo (o Freeza: o pacote tem o ponto do dedo levantado): o tiro sai da ponta do dedo
+    const dedo = efeito === "tiro_freeza" || conjAtiraComODedo(isP2 ? selectedBoss : selectedCharacter);
     
     if (world.obstacles.length < MAX_OBSTACLES) {
         world.obstacles.push({

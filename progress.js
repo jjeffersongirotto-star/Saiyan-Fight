@@ -116,11 +116,8 @@ let achievements = {
     versus_win_first: { name: "Rivalidade Saudável", desc: "Vença uma partida do Versus (melhor de 3)", statKey: "versusWinsTotal", threshold: 1, tier: "bronze" },
     versus_win_10: { name: "Freguês Garantido", desc: "Vença 10 partidas do Versus. Pede revanche?", statKey: "versusWinsTotal", threshold: 10, tier: "silver" },
     // -- Construtor de personagens --
-    builder_first: { name: "Fábrica de Guerreiros", desc: "Crie seu 1º personagem no construtor", statKey: "customCharactersCreated", threshold: 1, tier: "bronze" },
+    builder_first: { name: "Fábrica de Guerreiros", desc: "Crie seu 1º personagem no editor", statKey: "customCharactersCreated", threshold: 1, tier: "bronze" },
     builder_5: { name: "Elenco Próprio", desc: "Crie 5 personagens. Dá pra montar um time!", statKey: "customCharactersCreated", threshold: 5, tier: "silver" },
-    builder_tail: { name: "Rabo de Macaco", desc: "Crie um personagem com cauda", tier: "bronze" },
-    builder_wings: { name: "Asa Delta Saiyajin", desc: "Crie um personagem com asas", tier: "bronze" },
-    builder_weapon: { name: "Espada nas Costas", desc: "Crie um personagem com arma nas costas", tier: "bronze" },
     // -- Progresso geral --
     games_5: { name: "Pegou Gosto", desc: "Jogue 5 partidas", statKey: "gamesPlayed", threshold: 5, tier: "bronze" },
     games_20: { name: "Só Mais Uma...", desc: "Jogue 20 partidas. Só mais uma, juro!", statKey: "gamesPlayed", threshold: 20, tier: "silver" },

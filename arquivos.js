@@ -2,9 +2,8 @@
 // arquivos feitos no jogo ou fora dele. É um arquivo de DADOS (JSON), nunca código: nada nele é executado, então um
 // arquivo de fora não consegue quebrar o jogo. O formato está em formatos/LEIA-ME.md (com exemplos).
 //
-// Três jeitos de desenhar o personagem (um só por arquivo):
-//   builderAppearance (+ transformations) — feito no CONSTRUTOR (refeito pelo sprites.js ao carregar)
-//   minionClassico { modelo, cores }      — Saibaman / Cell Jr. clássicos (minions.js)
+// Três jeitos de desenhar o personagem (um só por arquivo; v0.113: o antigo builderAppearance do construtor saiu):
+//   minionClassico { modelo }             — Saibaman / Cell Jr. (imagens de minions.js)
 //   animations { idle: [...], ... }       — quadros prontos: imagens "data:image/..." ou nomes de imagens anexadas junto
 //   folha { imagem, largura, altura, movimentos: { idle: [0, 1, 2], ... } } — uma folha de sprites cortada em grade
 // Carrega depois de database.js (usa characterDB, saveCharacterData, SUB_ANIM_KEYS...).
@@ -33,12 +32,14 @@ function dadosDoPersonagemParaArquivo(key) {
         altura: typeof getAlturaPersonagem === "function" ? getAlturaPersonagem(key, 0) : (c.altura || 175)
     };
     if (c.minionClassico) p.minionClassico = normalizarMinionClassico(c.minionClassico);
-    else if (c.builderAppearance) {
-        p.builderAppearance = normalizeAppearance(c.builderAppearance);
-        p.transformations = JSON.parse(JSON.stringify(getCharacterTransformations(key)));
-    } else {
+    else {
+        // quadros próprios ou, sem eles, os da forma base do conjunto de sprites em uso
         p.animations = {};
-        SUB_ANIM_KEYS.forEach(k => { const l = c.animations && c.animations[k]; if (Array.isArray(l) && l.length) p.animations[k] = l.slice(); });
+        SUB_ANIM_KEYS.forEach(k => {
+            let l = c.animations && c.animations[k];
+            if (!(Array.isArray(l) && l.length)) l = (getCharacterAnimationFrames(key, k, 0) || []).filter(u => u !== CONJ_QUADRO_VAZIO);
+            if (Array.isArray(l) && l.length) p.animations[k] = l.slice();
+        });
         if (!p.animations.idle && c.defaultUrl) p.animations.idle = [c.defaultUrl];
         if (c.fpsSettings) p.fpsSettings = Object.assign({}, c.fpsSettings);
         if (Array.isArray(c.transformations)) p.transformations = JSON.parse(JSON.stringify(c.transformations));
@@ -92,14 +93,11 @@ function validarArquivoPersonagem(dados) {
         if (!lista.includes(d[campo])) return { erro: arqErro("ANIMAÇÃO DESCONHECIDA", campo + ": " + d[campo]) };
         p[campo] = d[campo];
     }
-    const fontes = ["builderAppearance", "minionClassico", "animations", "folha"].filter(k => d[k] !== undefined && d[k] !== null);
-    if (!fontes.length) return { erro: "FALTA O DESENHO: builderAppearance, minionClassico, animations OU folha." };
+    const fontes = ["minionClassico", "animations", "folha"].filter(k => d[k] !== undefined && d[k] !== null);
+    if (!fontes.length) return { erro: "FALTA O DESENHO: minionClassico, animations OU folha." };
     if (fontes.length > 1) return { erro: arqErro("USE SÓ UM DESENHO POR ARQUIVO", fontes.join(", ")) };
     const fonte = fontes[0];
-    if (fonte === "builderAppearance") {
-        if (typeof d.builderAppearance !== "object" || Array.isArray(d.builderAppearance)) return { erro: arqErro("DESENHO INVÁLIDO", "builderAppearance") };
-        p.builderAppearance = d.builderAppearance;
-    } else if (fonte === "minionClassico") {
+    if (fonte === "minionClassico") {
         const mc = normalizarMinionClassico(d.minionClassico);
         if (!mc) return { erro: arqErro("MODELO DE MINION DESCONHECIDO", typeof d.minionClassico === "object" ? d.minionClassico.modelo : d.minionClassico) };
         p.minionClassico = mc;
@@ -138,7 +136,7 @@ function validarArquivoPersonagem(dados) {
         if (!Array.isArray(t) || t.some(x => !x || typeof x !== "object" || (x.diff !== undefined && (typeof x.diff !== "object" || Array.isArray(x.diff))))) return { erro: "TRANSFORMAÇÕES INVÁLIDAS (transformations)." };
         if (t.length) p.transformations = t.slice(0, 12).map((x, i) => ({
             name: typeof x.name === "string" && x.name.trim() ? x.name.trim().slice(0, 30) : `Transformação ${i + 1}`,
-            diff: x.diff || {}, ssj: !!x.ssj, aura: ARQ_AURAS.includes(x.aura) ? x.aura : "amarelo",
+            aura: ARQ_AURAS.includes(x.aura) ? x.aura : "amarelo",
             ...(Number(x.altura) > 0 ? { altura: Math.max(50, Math.min(500, Math.round(Number(x.altura)))) } : {})
         }));
     }
@@ -198,12 +196,6 @@ async function montarPersonagemDoArquivo(p, imagens) {
     };
     if (p.transformations) c.transformations = p.transformations;
     if (p.minionClassico) return { c: aplicarMinionClassico(c, p.minionClassico) };
-    if (p.builderAppearance) {
-        c.builderAppearance = normalizeAppearance(p.builderAppearance);
-        Object.assign(c, buildProceduralAnimations(c.builderAppearance));
-        c.defaultUrl = generateSpriteFrameUrl(c.builderAppearance, "idle", 0);
-        return { c };
-    }
     let animations;
     if (p.folha) {
         const r = await cortarFolhaDoArquivo(p.folha, imagens);

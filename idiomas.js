@@ -390,15 +390,9 @@ Vença uma partida do Versus (melhor de 3) § Win a Versus match (best of 3) § 
 Freguês Garantido § Regular Customer § Cliente Fijo
 Vença 10 partidas do Versus. Pede revanche? § Win 10 Versus matches. Want a rematch? § Gana 10 partidas de Versus. ¿Pides revancha?
 Fábrica de Guerreiros § Warrior Factory § Fábrica de Guerreros
-Crie seu 1º personagem no construtor § Create your 1st character in the builder § Crea tu 1er personaje en el constructor
+Crie seu 1º personagem no editor § Create your 1st character in the editor § Crea tu 1er personaje en el editor
 Elenco Próprio § Your Own Roster § Elenco Propio
 Crie 5 personagens. Dá pra montar um time! § Create 5 characters. That's a whole team! § Crea 5 personajes. ¡Ya tienes un equipo!
-Rabo de Macaco § Monkey Tail § Cola de Mono
-Crie um personagem com cauda § Create a character with a tail § Crea un personaje con cola
-Asa Delta Saiyajin § Saiyan Hang Glider § Ala Delta Saiyajin
-Crie um personagem com asas § Create a character with wings § Crea un personaje con alas
-Espada nas Costas § Sword on the Back § Espada a la Espalda
-Crie um personagem com arma nas costas § Create a character with a back weapon § Crea un personaje con arma a la espalda
 Pegou Gosto § Hooked § Le Agarraste el Gusto
 Só Mais Uma... § Just One More... § Solo Una Más...
 Jogue 20 partidas. Só mais uma, juro! § Play 20 matches. Just one more, I swear! § Juega 20 partidas. ¡Solo una más, lo juro!
@@ -517,230 +511,28 @@ DUPLICAR INVERTIDO § DUPLICATE FLIPPED § DUPLICAR VOLTEADO
 CLONAR § CLONE § CLONAR
 APAGAR FRAME § DELETE FRAME § BORRAR CUADRO
 Nenhum quadro atribuído ao movimento. § No frames assigned to this move. § Ningún cuadro asignado al movimiento.
-EDITANDO A TRANSFORMAÇÃO: § EDITING TRANSFORMATION: § EDITANDO LA TRANSFORMACIÓN:
-— mude só o que for diferente do personagem normal. § — change only what differs from the normal character. § — cambia solo lo que sea distinto del personaje normal.
-CONCLUIR TRANSFORMAÇÃO § FINISH TRANSFORMATION § TERMINAR TRANSFORMACIÓN
 COMEÇAR A PARTIR DE... § START FROM... § EMPEZAR A PARTIR DE...
-— personalizado (do zero) — § — custom (from scratch) — § — personalizado (desde cero) —
-PRÉVIA DA POSE § POSE PREVIEW § VISTA PREVIA DE LA POSE
-VOANDO § FLYING § VOLANDO
-Escolha as partes do personagem. A prévia ao lado é gerada na hora — não é preciso enviar nenhuma imagem. § Pick the character's parts. The preview is generated instantly — no image upload needed. § Elige las partes del personaje. La vista previa se genera al instante — no hace falta subir ninguna imagen.
 CORPO § BODY § CUERPO
-GÊNERO § GENDER § GÉNERO
-Masculino § Male § Masculino
-Feminino § Female § Femenino
 RAÇA § RACE § RAZA
-Humano § Human § Humano
-Alienígena de pele lisa § Smooth-skinned alien § Alienígena de piel lisa
 Androide § Android § Androide
-Bio-Androide § Bio-Android § Bioandroide
-Alienígena genérico § Generic alien § Alienígena genérico
-PORTE FÍSICO § BUILD § COMPLEXIÓN
-Magro § Slim § Delgado
-Musculoso § Muscular § Musculoso
-Gigante § Giant § Gigante
-Jovem/Criança § Young/Child § Joven/Niño
-Gordo § Chubby § Gordo
 POSIÇÃO DOS BRAÇOS § ARM POSE § POSICIÓN DE LOS BRAZOS
-Guarda de luta § Fighting stance § Guardia de pelea
-Cruzados (parado e voando) § Crossed (idle and flying) § Cruzados (quieto y volando)
 Dedo (ataque do Freeza) § Finger (Freeza's attack) § Dedo (ataque de Freeza)
-COR DA PELE § SKIN COLOR § COLOR DE PIEL
 usar cor padrão da raça § use the race's default color § usar el color de la raza
-CABEÇA E ROSTO § HEAD & FACE § CABEZA Y ROSTRO
-CABELO § HAIR § PELO
-Careca / sem cabelo § Bald / no hair § Calvo / sin pelo
-Espetado § Spiky § Puntiagudo
-Em chamas, para cima § Flame-like, upward § En llamas, hacia arriba
-Repicado com mecha § Layered with a lock § Desfilado con mechón
-Super Saiyajin 2 (mechas finas) § Super Saiyan 2 (thin locks) § Súper Saiyajin 2 (mechones finos)
-Crista com pintas § Spotted crest § Cresta con manchas
-Espetado para trás § Swept-back spikes § Puntas hacia atrás
-Longo solto § Long and loose § Largo suelto
-Longo, denso e espetado § Long, thick and spiky § Largo, denso y puntiagudo
-3 picos § 3 spikes § 3 picos
-Espetado de duas cores (centro e laterais) § Two-tone spikes (center and sides) § Puntas de dos colores (centro y lados)
-Espetado alto com 2 mechas na testa § Tall spikes with 2 bangs § Puntas altas con 2 mechones en la frente
-Chama jogada para trás com reflexo azulado § Swept-back flame with bluish shine § Llama hacia atrás con reflejo azulado
-Espetos enormes (Lendário) § Huge spikes (Legendary) § Puntas enormes (Legendario)
-Curto repartido ao meio § Short, center-parted § Corto con raya al medio
-Liso curto § Short and straight § Liso corto
-Liso até o ombro § Straight, shoulder-length § Liso hasta el hombro
-Curto com franja lateral § Short with side bangs § Corto con flequillo lateral
-Moicano § Mohawk § Mohicano
-Longo espetado até a cintura § Long spikes down to the waist § Largo puntiagudo hasta la cintura
-Solto, mechas caindo na testa § Loose, locks on the forehead § Suelto, mechones en la frente
-Volumoso, muitas pontas § Voluminous, many spikes § Voluminoso, muchas puntas
-Chama compacta e alta § Tall, compact flame § Llama compacta y alta
-Pontas altas e franja curva (Blue) § Tall spikes and curved bangs (Blue) § Puntas altas y flequillo curvo (Blue)
-Compacto (Blue) § Compact (Blue) § Compacto (Blue)
-COR DO CABELO § HAIR COLOR § COLOR DEL PELO
-COR 2 DO CABELO (laterais do de duas cores) § HAIR COLOR 2 (sides of two-tone hair) § COLOR 2 DEL PELO (lados del de dos colores)
-ORELHAS § EARS § OREJAS
-Normais § Normal § Normales
-Pontudas § Pointy § Puntiagudas
-Furinhos § Holes § Agujeritos
-Sem orelha § No ears § Sin orejas
-CARACTERÍSTICA DA CABEÇA § HEAD FEATURE § RASGO DE LA CABEZA
 Nenhuma § None § Ninguna
 Nenhum § None § Ninguno
-Antenas § Antennae § Antenas
-Antena curva com ponta § Curved antenna with tip § Antena curva con punta
-Chifres § Horns § Cuernos
-Capacete com chifres finos § Helmet with thin horns § Casco con cuernos finos
-Capacete com chifres grandes § Helmet with big horns § Casco con cuernos grandes
-Cabeça alongada com espinhos § Elongated head with spikes § Cabeza alargada con púas
-Meia cabeça de metal com lente § Half-metal head with lens § Media cabeza de metal con lente
-Antena longa curvada para a frente § Long forward-curving antenna § Antena larga curvada hacia delante
-Capacete de inseto com pontas cruzadas § Insect helmet with crossed tips § Casco de insecto con puntas cruzadas
-Chapa preta e pontas laterais § Black plate and side tips § Placa negra y puntas laterales
-Chapa preta e pontas altas § Black plate and tall tips § Placa negra y puntas altas
-OLHOS § EYES § OJOS
-Gentil § Kind § Amable
 Sério § Serious § Serio
-Bravo/franzido § Angry/frowning § Enojado/fruncido
-Arregalado § Wide-eyed § Ojos muy abiertos
-Sem sobrancelha § No eyebrows § Sin cejas
-Frio, pupila pequena § Cold, small pupils § Frío, pupila pequeña
-Fechados § Closed § Cerrados
-Brancos, sem pupila § White, no pupils § Blancos, sin pupila
-COR DA ÍRIS § IRIS COLOR § COLOR DEL IRIS
-COR DO OLHO (fundo) § EYE COLOR (white) § COLOR DEL OJO (fondo)
-BOCA / EXPRESSÃO § MOUTH / EXPRESSION § BOCA / EXPRESIÓN
-Sorridente § Smiling § Sonriente
-Séria § Serious § Seria
-Gritando § Shouting § Gritando
-Maligna § Evil § Malvada
-Risada maligna § Evil laugh § Risa malvada
-Sorriso sádico com dentes § Sadistic toothy grin § Sonrisa sádica con dientes
-Aberta e alegre § Open and cheerful § Abierta y alegre
-CARACTERÍSTICAS ESPECIAIS § SPECIAL FEATURES § RASGOS ESPECIALES
-MARCAS DA RAÇA § RACE MARKINGS § MARCAS DE LA RAZA
-Placas rosadas e estrias § Pink plates and stripes § Placas rosadas y estrías
-Marcas no rosto § Face markings § Marcas en el rostro
-Domo e placas roxas § Dome and purple plates § Domo y placas moradas
-Pele rosada listrada § Striped pink skin § Piel rosada a rayas
-Placas brancas e pele listrada § White plates and striped skin § Placas blancas y piel a rayas
-Corpo de metal (ciborgue) § Metal body (cyborg) § Cuerpo de metal (cyborg)
-Furinhos nos braços § Holes in the arms § Agujeritos en los brazos
-Bio-androide (1ª forma) § Bio-android (1st form) § Bioandroide (1ª forma)
-Bio-androide (semi-perfeito) § Bio-android (semi-perfect) § Bioandroide (semiperfecto)
-Bio-androide (perfeito) § Bio-android (perfect) § Bioandroide (perfecto)
-CICATRIZ § SCAR § CICATRIZ
-No olho § On the eye § En el ojo
-Na bochecha § On the cheek § En la mejilla
-No peito (aparece sem camisa) § On the chest (shows when shirtless) § En el pecho (se ve sin camisa)
-De batalha: X no peito, ombro e barriga § Battle scars: X on chest, shoulder and belly § De batalla: X en pecho, hombro y barriga
-RABO § TAIL § COLA
-De macaco, solto § Monkey, loose § De mono, suelta
-De macaco, na cintura § Monkey, around the waist § De mono, en la cintura
-Longo e liso, de réptil § Long and smooth, reptile § Larga y lisa, de reptil
-Grande com ferrão § Big with stinger § Grande con aguijón
 ASAS § WINGS § ALAS
-Asas de inseto § Insect wings § Alas de insecto
-Asas de inseto abertas § Open insect wings § Alas de insecto abiertas
-Asas de inseto longas (capa) § Long insect wings (cape) § Alas de insecto largas (capa)
-Asas de morcego § Bat wings § Alas de murciélago
-Asas de anjo § Angel wings § Alas de ángel
-ROUPAS § CLOTHES § ROPA
-CAMISA (por baixo) § SHIRT (underneath) § CAMISA (debajo)
-Camiseta de manguinha § Short-sleeve tee § Camiseta de manga corta
-Regata, sem manga § Tank top, sleeveless § Camiseta sin mangas
-Malha de manga comprida § Long-sleeve top § Malla de manga larga
 Malha gola alta § Turtleneck top § Malla de cuello alto
-Macacão justo § Tight jumpsuit § Mono ajustado
 Nenhuma (pele à mostra) § None (bare skin) § Ninguna (piel al aire)
-COR DA CAMISA § SHIRT COLOR § COLOR DE LA CAMISA
-ROUPA DE CIMA / CASACO § TOP / JACKET § PRENDA SUPERIOR / CHAQUETA
-Gi tradicional § Traditional gi § Gi tradicional
 Gi com faixa na cintura § Gi with waist sash § Gi con faja en la cintura
-Gi rasgado (sem mangas) § Torn gi (sleeveless) § Gi rasgado (sin mangas)
-Túnica com gola e faixa § Tunic with collar and sash § Túnica con cuello y faja
-Armadura de combate § Battle armor § Armadura de combate
-Armadura com ombreiras douradas § Armor with gold shoulder pads § Armadura con hombreras doradas
-Armadura curta de ombreiras pequenas § Short armor with small pads § Armadura corta de hombreras pequeñas
-Peitoral com gema e ombreiras verdes § Chestplate with gem and green pads § Peto con gema y hombreras verdes
-Jaqueta curta § Cropped jacket § Chaqueta corta
-Colete aberto com faixa § Open vest with sash § Chaleco abierto con faja
-Colete curto com cinto § Short vest with belt § Chaleco corto con cinturón
-Colete acolchoado aberto (fusão) § Open padded vest (fusion) § Chaleco acolchado abierto (fusión)
-Só o cinto largo com fivela M § Just the wide M-buckle belt § Solo el cinturón ancho con hebilla M
-Traje com gola § Suit with collar § Traje con cuello
-Carapaça com pintas § Spotted carapace § Caparazón con manchas
-Armadura orgânica § Organic armor § Armadura orgánica
-CALÇA § PANTS § PANTALÓN
-Larga § Baggy § Ancho
-Justa § Tight § Ajustado
-Bufante (balão) § Puffy (balloon) § Bombacho (globo)
-Nenhuma (fica de cueca) § None (underwear only) § Ninguno (en ropa interior)
-COR DA CALÇA § PANTS COLOR § COLOR DEL PANTALÓN
-SÍMBOLO NO PEITO § CHEST SYMBOL § SÍMBOLO EN EL PECHO
-Kame (tartaruga) § Kame (turtle) § Kame (tortuga)
 Corporação Cápsula § Capsule Corp. § Corporación Cápsula
-Exército Red Ribbon § Red Ribbon Army § Patrulla Roja
-Símbolo Saiyajin § Saiyan symbol § Símbolo Saiyajin
-CALÇADO § FOOTWEAR § CALZADO
-Botas de artes marciais § Martial arts boots § Botas de artes marciales
-Botas brancas § White boots § Botas blancas
-Botas amarelas altas § Tall yellow boots § Botas amarillas altas
-Botas de pano dobradas § Folded cloth boots § Botas de tela dobladas
-Sandálias § Sandals § Sandalias
-Botas simples § Plain boots § Botas simples
-Botas escuras § Dark boots § Botas oscuras
-Descalço § Barefoot § Descalzo
-Pés com garras § Clawed feet § Pies con garras
-Sapato preto de pontas laranjas § Black shoes with orange tips § Zapato negro de puntas naranjas
-Sapato de ponta comprida § Long-tipped shoes § Zapato de punta larga
-Caneleiras e pés com garras § Shin guards and clawed feet § Espinilleras y pies con garras
-Botas brancas altas de ponta dourada § Tall white boots with gold tips § Botas blancas altas de punta dorada
-Botas brancas de cano escuro e ponta verde § White boots with dark tops and green tips § Botas blancas de caña oscura y punta verde
-Botas pretas de dobra dourada § Black boots with gold cuffs § Botas negras de doblez dorado
-Botas douradas dobradas com meia § Folded gold boots with socks § Botas doradas dobladas con calcetín
-Sapatilhas com faixas no tornozelo § Slippers with ankle wraps § Zapatillas con vendas en el tobillo
-Botas brancas de bico dourado § White boots with gold toes § Botas blancas de puntera dorada
-LUVAS § GLOVES § GUANTES
-Munhequeiras § Wristbands § Muñequeras
-Luvas brancas § White gloves § Guantes blancos
-Luvas pretas § Black gloves § Guantes negros
-Braçadeiras brancas § White bracers § Brazaletes blancos
-Munhequeiras escuras de borda branca § Dark wristbands with white trim § Muñequeras oscuras con borde blanco
-Munhequeiras pretas § Black wristbands § Muñequeras negras
-Braçadeiras pretas longas (unhas pretas) § Long black bracers (black nails) § Brazaletes negros largos (uñas negras)
-Luvas douradas § Gold gloves § Guantes dorados
-Luvas brancas de punho largo § White gloves with wide cuffs § Guantes blancos de puño ancho
-NA CABEÇA § ON THE HEAD § EN LA CABEZA
 Nada § Nothing § Nada
-Turbante § Turban § Turbante
-Faixa na testa § Headband § Cinta en la frente
-ACESSÓRIOS § ACCESSORIES § ACCESORIOS
-NO ROSTO / ORELHA / PESCOÇO § FACE / EAR / NECK § ROSTRO / OREJA / CUELLO
-Brincos Potara § Potara earrings § Pendientes Pothala
-Scouter vermelho § Red scouter § Scouter rojo
-Brincos Potara amarelos § Yellow Potara earrings § Pendientes Pothala amarillos
-Coleira de metal (pescoço) § Metal collar (neck) § Collar de metal (cuello)
-NAS COSTAS: CAPA / OMBREIRAS § BACK: CAPE / SHOULDER PADS § ESPALDA: CAPA / HOMBRERAS
 Capa § Cape § Capa
-Ombreiras § Shoulder pads § Hombreras
-Capa + ombreiras § Cape + shoulder pads § Capa + hombreras
-Capa com nó no pescoço § Cape knotted at the neck § Capa anudada al cuello
-Manto felpudo na cintura § Furry waist mantle § Manto peludo en la cintura
-COR DA CAPA § CAPE COLOR § COLOR DE LA CAPA
-NAS COSTAS: ARMA § BACK: WEAPON § ESPALDA: ARMA
-Espada § Sword § Espada
-Bastão sagrado § Sacred staff § Báculo sagrado
 CORES § COLORS § COLORES
-COR DA ROUPA DE CIMA § TOP COLOR § COLOR DE LA PRENDA SUPERIOR
-COR SECUNDÁRIA (faixa, munhequeira, cueca, top) § SECONDARY COLOR (sash, wristband, underwear, top) § COLOR SECUNDARIO (faja, muñequera, ropa interior, top)
-COR DE DETALHE § DETAIL COLOR § COLOR DE DETALLE
-COR DO KI / AURA § KI / AURA COLOR § COLOR DEL KI / AURA
-USAR ESTE PERSONAGEM (gera as animações) § USE THIS CHARACTER (builds the animations) § USAR ESTE PERSONAJE (genera las animaciones)
-As animações do personagem serão geradas automaticamente — nenhum desenho é necessário. § The character's animations are generated automatically — no drawing needed. § Las animaciones del personaje se generan automáticamente — no hace falta dibujar nada.
 Na luta, com o ki cheio, cada TRANSFORMAR leva para a próxima desta lista, de cima para baixo. Cada uma dá o poder extra por um tempo e a aparência fica até o fim da luta. Use ▲▼ para mudar a ordem. § In battle, with full ki, each TRANSFORM goes to the next one in this list, top to bottom. Each gives extra power for a while and the look stays until the end of the fight. Use ▲▼ to reorder. § En la pelea, con el ki lleno, cada TRANSFORMAR pasa a la siguiente de esta lista, de arriba abajo. Cada una da poder extra un tiempo y el aspecto se queda hasta el final de la pelea. Usa ▲▼ para cambiar el orden.
 Adicionar transformação § Add transformation § Añadir transformación
 COPIAR O CORPO DE § COPY THE BODY OF § COPIAR EL CUERPO DE
-Copiar o corpo de qual forma § Copy the body of which form § Copiar el cuerpo de qué forma
 Original § Original § Original
-Adicione uma transformação: ela começa igual ao personagem e você muda no construtor. § Add a transformation: it starts like the character and you change it in the builder. § Añade una transformación: empieza igual que el personaje y la cambias en el constructor.
 CONJUNTOS DE SPRITES § SPRITE SETS § CONJUNTOS DE SPRITES
 SALVAR PERSONAGEM § SAVE CHARACTER § GUARDAR PERSONAJE
 Atualizar o jogo para a versão mais nova § Update the game to the newest version § Actualizar el juego a la versión más nueva
@@ -793,18 +585,16 @@ TOQUE EM SALVAR FORMA OU CANCELAR FORMA ANTES DE SALVAR O PERSONAGEM. § TAP SAV
 CAMPO OBRIGATÓRIO § REQUIRED FIELD § CAMPO OBLIGATORIO
 DIGITE O NOME DO PERSONAGEM! § TYPE THE CHARACTER'S NAME! § ¡ESCRIBE EL NOMBRE DEL PERSONAJE!
 SEM ESPAÇO § OUT OF SPACE § SIN ESPACIO
+FALTAM OS SPRITES § SPRITES MISSING § FALTAN LOS SPRITES
+ESCOLHA OS QUADROS DO PERSONAGEM NA ABA ANIMAÇÕES OU USE UM CONJUNTO DE SPRITES. § PICK THE CHARACTER'S FRAMES IN THE ANIMATIONS TAB OR USE A SPRITE SET. § ELIGE LOS CUADROS DEL PERSONAJE EN LA PESTAÑA ANIMACIONES O USA UN CONJUNTO DE SPRITES.
+O desenho de cada transformação vem do conjunto de sprites (aba ANIMAÇÕES). § Each transformation's drawing comes from the sprite set (ANIMATIONS tab). § El dibujo de cada transformación viene del conjunto de sprites (pestaña ANIMACIONES).
 O NAVEGADOR NÃO TEM ESPAÇO PARA SALVAR ESTE PERSONAGEM. USE MENOS QUADROS OU IMAGENS MENORES, OU EXCLUA OUTRO PERSONAGEM. § THE BROWSER HAS NO SPACE TO SAVE THIS CHARACTER. USE FEWER FRAMES OR SMALLER IMAGES, OR DELETE ANOTHER CHARACTER. § EL NAVEGADOR NO TIENE ESPACIO PARA GUARDAR ESTE PERSONAJE. USA MENOS CUADROS O IMÁGENES MÁS PEQUEÑAS, O ELIMINA OTRO PERSONAJE.
 NÃO FOI POSSÍVEL CARREGAR A IMAGEM! § COULDN'T LOAD THE IMAGE! § ¡NO SE PUDO CARGAR LA IMAGEN!
-Personagem gerado! Clique em SALVAR PERSONAGEM para guardar (ou ajuste a aparência e clique de novo). § Character generated! Click SAVE CHARACTER to keep it (or adjust the look and click again). § ¡Personaje generado! Haz clic en GUARDAR PERSONAJE para conservarlo (o ajusta el aspecto y vuelve a hacer clic).
 Nome da transformação § Transformation name § Nombre de la transformación
 Aura da transformação § Transformation aura § Aura de la transformación
 Subir na ordem § Move up § Subir en el orden
 Descer na ordem § Move down § Bajar en el orden
-Editar no construtor § Edit in the builder § Editar en el constructor
-Gere o personagem no CONSTRUTOR primeiro § Generate the character in the BUILDER first § Genera el personaje en el CONSTRUCTOR primero
 Apagar transformação § Delete transformation § Borrar transformación
-Toque em + para adicionar: ela começa igual à forma escolhida em COPIAR O CORPO DE e você muda no construtor. § Tap + to add one: it starts like the form chosen in COPY THE BODY OF and you change it in the builder. § Toca + para añadir: empieza igual que la forma elegida en COPIAR EL CUERPO DE y la cambias en el constructor.
-Para mudar a aparência das transformações, gere o personagem no CONSTRUTOR (USAR ESTE PERSONAGEM). Sem isso, elas mudam só a aura, o poder e os raios. § To change how the transformations look, generate the character in the BUILDER (USE THIS CHARACTER). Without that, they only change the aura, power and lightning. § Para cambiar el aspecto de las transformaciones, genera el personaje en el CONSTRUCTOR (USAR ESTE PERSONAJE). Sin eso, solo cambian el aura, el poder y los rayos.
 APAGAR TRANSFORMAÇÃO § DELETE TRANSFORMATION § BORRAR TRANSFORMACIÓN
 APAGAR § DELETE § BORRAR
 MONTE UMA FORMA § BUILD A FORM § ARMA UNA FORMA
@@ -849,7 +639,6 @@ PERSONAGEM § CHARACTER § PERSONAJE
 MINION § MINION § ESBIRRO
 MINIONS § MINIONS § ESBIRROS
 Minion § Minion § Esbirro
-MINION CLÁSSICO: § CLASSIC MINION: § ESBIRRO CLÁSICO:
 EDITOR DE PERSONAGENS § CHARACTER EDITOR § EDITOR DE PERSONAJES
 EDITOR DE ARENAS § ARENA EDITOR § EDITOR DE ARENAS
 ILHA DE PEDRA RACHADA § CRACKED ROCK ISLAND § ISLA DE ROCA AGRIETADA
@@ -1058,7 +847,7 @@ FALTA O NOME DO PERSONAGEM (name). § THE CHARACTER NAME IS MISSING (name). § F
 ALINHAMENTO INVÁLIDO § INVALID ALIGNMENT § ALINEACIÓN NO VÁLIDA
 COR DA AURA INVÁLIDA § INVALID AURA COLOUR § COLOR DEL AURA NO VÁLIDO
 ANIMAÇÃO DESCONHECIDA § UNKNOWN ANIMATION § ANIMACIÓN DESCONOCIDA
-FALTA O DESENHO: builderAppearance, minionClassico, animations OU folha. § THE DRAWING IS MISSING: builderAppearance, minionClassico, animations OR folha. § FALTA EL DIBUJO: builderAppearance, minionClassico, animations O folha.
+FALTA O DESENHO: minionClassico, animations OU folha. § THE DRAWING IS MISSING: minionClassico, animations OR folha. § FALTA EL DIBUJO: minionClassico, animations O folha.
 USE SÓ UM DESENHO POR ARQUIVO § USE ONLY ONE DRAWING PER FILE § USA SOLO UN DIBUJO POR ARCHIVO
 DESENHO INVÁLIDO § INVALID DRAWING § DIBUJO NO VÁLIDO
 MODELO DE MINION DESCONHECIDO § UNKNOWN MINION MODEL § MODELO DE ESBIRRO DESCONOCIDO
@@ -1074,32 +863,10 @@ ANEXE UM ARQUIVO .json DE PERSONAGEM (PODE JUNTO COM AS IMAGENS). § ATTACH A CH
 ANEXE SÓ UM ARQUIVO .json POR VEZ. § ATTACH ONLY ONE .json FILE AT A TIME. § ADJUNTA SOLO UN ARCHIVO .json A LA VEZ.
 ARQUIVOS GRANDES DEMAIS (MÁXIMO 4 MB NO TOTAL). § FILES TOO LARGE (4 MB MAXIMUM IN TOTAL). § ARCHIVOS DEMASIADO GRANDES (MÁXIMO 4 MB EN TOTAL).
 O NAVEGADOR NÃO TEM ESPAÇO PARA SALVAR ESTE PERSONAGEM. § THE BROWSER HAS NO ROOM TO SAVE THIS CHARACTER. § EL NAVEGADOR NO TIENE ESPACIO PARA GUARDAR ESTE PERSONAJE.
-MINION CLÁSSICO § CLASSIC MINION § ESBIRRO CLÁSICO
-Desenho original do jogo, com a aparência e os movimentos de sempre. Só muda a cor que você trocar. § The game's original drawing, with its usual look and moves. Only the colours you change are different. § El dibujo original del juego, con el aspecto y los movimientos de siempre. Solo cambia el color que cambies.
 VOLTAR ÀS CORES ORIGINAIS § BACK TO ORIGINAL COLOURS § VOLVER A LOS COLORES ORIGINALES
-Minion clássico escolhido! Troque as cores na aba DADOS e clique em SALVAR PERSONAGEM. § Classic minion chosen! Change the colours in the INFO tab and click SAVE CHARACTER. § ¡Esbirro clásico elegido! Cambia los colores en la pestaña DATOS y haz clic en GUARDAR PERSONAJE.
 Saibaman (clássico) § Saibaman (classic) § Saibaman (clásico)
 Cell Jr. (clássico) § Cell Jr. (classic) § Cell Jr. (clásico)
-PELE § SKIN § PIEL
-BOCA § MOUTH § BOCA
-GARRAS § CLAWS § GARRAS
-CONTORNO § OUTLINE § CONTORNO
 MANCHAS § SPOTS § MANCHAS
-ARMADURA § ARMOUR § ARMADURA
-ROSTO § FACE § ROSTRO
-MARCAS § MARKS § MARCAS
-QUEIXEIRA § CHIN GUARD § BARBOQUEJO
-MÃOS § HANDS § MANOS
-BOTAS § BOOTS § BOTAS
-Minion: cabeça de Saibaman § Minion: Saibaman head § Esbirro: cabeza de Saibaman
-Minion: crista de Cell Jr. § Minion: Cell Jr. crest § Esbirro: cresta de Cell Jr.
-Minion: anéis (Saibaman) § Minion: rings (Saibaman) § Esbirro: anillos (Saibaman)
-Minion: manchas (Cell Jr.) § Minion: spots (Cell Jr.) § Esbirro: manchas (Cell Jr.)
-Minion: pés com garras § Minion: clawed feet § Esbirro: pies con garras
-Minion: mãos com garras § Minion: clawed hands § Esbirro: manos con garras
-Minion (baixinho, cabeça grande) § Minion (short, big head) § Esbirro (bajito, cabeza grande)
-COR DAS VEIAS / MANCHAS (PEÇAS DE MINION) § VEIN / SPOT COLOR (MINION PARTS) § COLOR DE VENAS / MANCHAS (PIEZAS DE ESBIRRO)
-COR DAS GARRAS (PEÇAS DE MINION) § CLAW COLOR (MINION PARTS) § COLOR DE LAS GARRAS (PIEZAS DE ESBIRRO)
 TROCAR § CHANGE § CAMBIAR
 NENHUM ESCOLHIDO § NONE CHOSEN § NINGUNO ELEGIDO
 ADVERSÁRIOS MAIS FORTES VIRÃO! § STRONGER OPPONENTS ARE COMING! § ¡VIENEN RIVALES MÁS FUERTES!

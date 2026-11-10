@@ -7,13 +7,14 @@
 const { createHarness } = require("./harness.js");
 const h = createHarness(__dirname + "/..", 800);
 const { run, check, summary } = h;
+h.carregarPacotes(["vegeta"]);
 
 run(`selectedCharacter = "goku_adult"; selectedBoss = "vegeta"; gameMode = "singleplayer"; selectedStage = "terra"; startGame();
      world.saibamanSpawnTimer = -1e9; player.invulnerableTimer = 1e9;`);
 // duas transformações na lista do vilão
 run(`characterDB[selectedBoss].transformations = [
-        { name: "SSJ", diff: {}, ssj: true, aura: "ouro" },
-        { name: "SSJ 2", diff: { hairColor: "#fff3a0" }, ssj: true, aura: "ouro" }];`);
+        { name: "SSJ", aura: "ouro" },
+        { name: "SSJ 2", aura: "ouro" }];`);
 const total = run("getCharacterTransformations(selectedBoss).length");
 check("o vilão usa a lista de transformações do editor", total === 2);
 

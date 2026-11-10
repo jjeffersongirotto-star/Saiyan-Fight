@@ -1,6 +1,6 @@
 // tests/conjuntos-sprites.test.js — CONJUNTOS DE SPRITES (versão 0.76): botão dourado ORIGINAL, formas (base e
 // transformações em ordem), AGRUPAR (base + transformação 1), conjunto ativo na luta (passando do fim fica na
-// última), o Vegeta com os sprites recortados como conjunto azul e as peças novas do construtor.
+// última) e o Vegeta com os sprites como conjunto azul.
 //
 // Uso: node tests/conjuntos-sprites.test.js
 
@@ -22,7 +22,7 @@ context.__pacote = pacote;
 run("conjRegistrarPacote('vegeta', __pacote)");
 const q = run("conjQuadrosDaForma(conjFormaPorId(characterDB.vegeta.spriteForms, 'pk_vegeta_base'), 'idle')");
 check("cada quadro vira desenho em pixel art do tamanho dos lutadores (pés na linha 103)", q.length === pacote.normal.idle.length && decodeURIComponent(q[0]).includes("crispEdges") && decodeURIComponent(q[0]).includes('viewBox="0 0 96 112"'));
-run("characterDB.vegeta.spriteActive = 'original'");
+run("characterDB.vegeta.animations = { idle: ['data:image/png;base64,PROPRIO'] }; characterDB.vegeta.spriteActive = 'original'");
 check("ORIGINAL em uso: a luta usa as animações de sempre", run("getCharacterAnimationFrames('vegeta', 'idle', 0)[0]") === run("characterDB.vegeta.animations.idle[0]"));
 run("characterDB.vegeta.spriteActive = 'g_vegeta'");
 check("conjunto do Vegeta em uso: parado com os sprites", run("getCharacterAnimationFrames('vegeta', 'idle', 0)[0]") === q[0]);
@@ -37,7 +37,7 @@ check("área CONJUNTOS DE SPRITES no rodapé do editor", html.includes('id="conj
 const confirmacoes = [], alertas = [];
 context.__conf = confirmacoes; context.__alertas = alertas;
 run("var __c0 = showSystemConfirm, __a0 = showSystemAlert; showSystemConfirm = (t, m, ok) => __conf.push({ t, m, ok }); showSystemAlert = (t, m) => __alertas.push(m)");
-run("characterDB.goku_adult.spriteActive = 'original'; characterDB.goku_adult.spriteForms = []; characterDB.goku_adult.spriteGroups = []");   // v0.102: o Goku vem com o conjunto do Gemini; aqui ele é o Goku do construtor
+run("characterDB.goku_adult.spriteActive = 'original'; characterDB.goku_adult.spriteForms = []; characterDB.goku_adult.spriteGroups = []; characterDB.goku_adult.animations = {}; SUB_ANIM_KEYS.forEach(k => characterDB.goku_adult.animations[k] = ['data:image/png;base64,PROPRIO_' + k])");   // aqui o Goku é um personagem de sprite sheet (animações próprias)
 run("openModal('goku_adult'); switchEditorTab('animacoes')");
 const linhaC = () => run("document.getElementById('conj-linha-conjuntos').innerHTML");
 check("botão dourado ORIGINAL em uso, com o desenho do lutador", /conj-dourado em-uso/.test(linhaC()) && linhaC().includes("<svg") && linhaC().includes("EM USO"));
@@ -92,14 +92,5 @@ run(`openModal('goku_adult'); conjApagarForma('${fBase}')`);
 confirmacoes[confirmacoes.length - 1].ok();
 check("apagar uma forma do conjunto apaga o conjunto também", run("conjTemp.grupos.length") === 0 && run("conjTemp.formas.length") === 1);
 run("closeModal(); showSystemConfirm = __c0; showSystemAlert = __a0");
-
-// ---------- peças novas do construtor ----------
-["vegeta_sprite", "armadura_curta", "macacao", "luvas_punho_largo", "botas_ponta_dourada", 'id="build-arm-pose"', 'value="cruzados"'].forEach(v =>
-    check(`construtor tem ${v}`, html.includes(v)));
-const cruz = (st) => run(`generateSpriteFrameSvg(Object.assign({}, SPRITE_PRESETS.vegeta.appearance, { armPose: 'cruzados' }), '${st}', 0)`) !==
-    run(`generateSpriteFrameSvg(SPRITE_PRESETS.vegeta.appearance, '${st}', 0)`);
-check("braços cruzados mudam o parado e o voo para frente e para cima", cruz("idle") && cruz("flyRight") && cruz("flyUp"));
-check("e não mudam ataque, parry, carregar nem voo para baixo", !cruz("attackKi") && !cruz("parry") && !cruz("chargeKi") && !cruz("flyDown"));
-check("cabelo do Vegeta dos sprites é de Saiyajin (fica amarelo transformado)", run("SPRITE_SAIYAN_HAIR.includes('vegeta_sprite')"));
 
 process.exit(summary());

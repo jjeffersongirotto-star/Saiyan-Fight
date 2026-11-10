@@ -1,25 +1,21 @@
-// tests/personagens-iniciais.test.js — todo modelo da lista "COMEÇAR A PARTIR DE..." do construtor já vem pronto
-// como personagem no Database e na tela PERSONAGENS (perfil novo e perfil antigo). O construtor continua igual
-// para criar personagens novos. A tela PERSONAGENS rola quando uma aba passa de 10 personagens.
+// tests/personagens-iniciais.test.js — os personagens iniciais já vêm prontos no Database e na tela PERSONAGENS
+// (perfil novo e perfil antigo), desenhados pelos pacotes de sprites. A tela PERSONAGENS rola quando uma aba passa de 10 personagens.
 //
 // Uso: node tests/personagens-iniciais.test.js
 
 const { createHarness } = require("./harness.js");
 const path = __dirname + "/..";
 
-// ---------- perfil novo: um personagem para cada modelo do construtor ----------
+// ---------- perfil novo: os personagens iniciais (desenhados pelos pacotes de sprites) ----------
 const h = createHarness(path, 800);
-const presetCount = h.run("Object.keys(SPRITE_PRESETS).length");
-const defaultPresets = h.run("Object.values(DEFAULT_CHARACTERS).filter(d => !d.minion).map(d => d.presetKey).sort()");   // minions são os desenhos clássicos (minions.js)
-h.check("cada modelo do construtor tem um personagem inicial", JSON.stringify(defaultPresets) === JSON.stringify(h.run("Object.keys(SPRITE_PRESETS).sort()")), JSON.stringify(defaultPresets));
-h.check(`perfil novo já vem com os ${presetCount} personagens no Database`, h.run("Object.keys(DEFAULT_CHARACTERS).every(k => !!characterDB[k])"));
-h.check("todos os personagens iniciais têm animações de movimento", h.run("Object.keys(DEFAULT_CHARACTERS).every(k => characterDB[k].animations && characterDB[k].animations.flyRight && characterDB[k].animations.flyRight.length > 0)"));
+h.check("perfil novo já vem com os personagens iniciais no Database", h.run("Object.keys(DEFAULT_CHARACTERS).every(k => !!characterDB[k])"));
+h.check("v0.113: cada personagem inicial usa o conjunto de sprites dele (minions: as imagens do modelo)", h.run("Object.keys(DEFAULT_CHARACTERS).every(k => DEFAULT_CHARACTERS[k].minion ? !!characterDB[k].minionClassico : !!conjGrupoAtivo(characterDB[k]))"));
+h.check("v0.113: nenhum personagem guarda a aparência do antigo construtor", h.run("Object.values(characterDB).every(c => !c.builderAppearance)"));
 h.check("cada um aparece na aba certa (herói/anti-herói em HERÓIS, vilão/anti-herói em VILÕES; minions em nenhuma)", h.run(`(() => {
     currentTab = "HERÓIS"; const herois = getFilteredCharacters();
     currentTab = "VILÕES"; const viloes = getFilteredCharacters();
     return Object.keys(DEFAULT_CHARACTERS).every(k => DEFAULT_CHARACTERS[k].align === "MINION" ? !herois.includes(k) && !viloes.includes(k) : herois.includes(k) || viloes.includes(k));
 })()`));
-h.check("o construtor continua oferecendo todos os modelos em 'COMEÇAR A PARTIR DE...'", h.run("(() => { populateBuilderPresetOptions(); return Object.keys(SPRITE_PRESETS).length; })()") === presetCount);
 
 // um personagem inicial pode ser usado numa partida de verdade
 h.run("selectedCharacter = 'gogeta'; selectedBoss = 'broly'; gameMode = 'singleplayer'; stageMode = 'normal'; startGame(); for (let i = 0; i < 20; i++) { update(1/60); render(); }");

@@ -4977,12 +4977,9 @@ function drawStageBackground() {
 }
 
 // ==================== RENDERIZAÇÃO DE ENTIDADES & ITENS ====================
-// Personagem desenhado com sprites recortados (conjunto em uso ou sprite sheet enviado), e não pelo construtor
+// Todo lutador é desenhado com sprites (conjunto em uso ou sprite sheet enviado): o vilão é espelhado para olhar o herói
 function lutadorDeSprites(key) {
-    const c = characterDB[key];
-    if (!c) return false;
-    if (typeof conjGrupoAtivo === "function" && conjGrupoAtivo(c)) return true;
-    return !c.builderAppearance;
+    return !!characterDB[key];
 }
 const LADO_TROCADO = { flyRight: "flyLeft", flyLeft: "flyRight", flyUpRight: "flyUpLeft", flyUpLeft: "flyUpRight", flyDownRight: "flyDownLeft", flyDownLeft: "flyDownRight" };
 function trocarLadoDoMovimento(st) { return LADO_TROCADO[st] || st; }
@@ -5405,60 +5402,16 @@ function getMinionKind() {
     return typeof selectedStage !== "undefined" ? getMinionDaFase(selectedStage) : "saibaman";
 }
 
-// Minion de cada personagem: o clássico (minions.js: Saibaman/Cell Jr. originais ou um minion feito a partir deles,
-// com as cores do editor) ou um minion montado no construtor (v0.87: os quadros do próprio desenho no tamanho de
-// minion). Saibaman/Cell Jr. apagados do gerenciador continuam com o desenho original na luta.
+// Minion de cada personagem: o modelo de minions.js (imagens do Saibaman/Cell Jr.). Um minion apagado do
+// gerenciador continua com a imagem do modelo na luta.
 function getMinionClassico(tipo) {
     const c = typeof characterDB === "object" ? characterDB[tipo] : null;
     if (c && c.minionClassico) return normalizarMinionClassico(c.minionClassico);
-    if (c && c.builderAppearance) return null;
     return { modelo: tipo === "celljr" ? "celljr" : "saibaman", cores: {} };
-}
-const minionAssinaturas = new WeakMap();
-function minionAssinatura(app) {
-    if (!app || typeof app !== "object") return "";
-    let s = minionAssinaturas.get(app);
-    if (s === undefined) { s = JSON.stringify(normalizeAppearance(app)); minionAssinaturas.set(app, s); }
-    return s;
-}
-const MINION_POSE_ESTADO = { brotar: "flyUp", saltar: "flyUp", voar: "idle", investir: "flyLeft", agarrar: "chargeKi", arremessado: "flyDown" };
-const minionConstruidoCache = new Map();
-function getMinionConstruidoSprite(tipo, pose, frame) {
-    const c = characterDB[tipo], app = c && c.builderAppearance;
-    if (!app) return null;
-    const key = tipo + "|" + minionAssinatura(app) + "|" + pose + "|" + frame;
-    let item = minionConstruidoCache.get(key);
-    if (!item) {
-        const estado = MINION_POSE_ESTADO[pose] || "idle";
-        const n = (SPRITE_FRAME_COUNTS && SPRITE_FRAME_COUNTS[estado]) || 1;
-        const tela = document.createElement("canvas");
-        tela.width = (32 + SAIBAMAN_SPRITE_PAD * 2) * SAIBAMAN_SPRITE_SCALE;
-        tela.height = (40 + SAIBAMAN_SPRITE_PAD * 2) * SAIBAMAN_SPRITE_SCALE;
-        item = { tela, pronto: false };
-        const img = new Image();
-        img.onload = () => {
-            const g = tela.getContext && tela.getContext("2d");
-            if (!g) return;
-            // o desenho (96x112) no espaço do minion (32x40, pés embaixo)
-            const k = 46 / SPRITE_VIEW.h;
-            g.scale(SAIBAMAN_SPRITE_SCALE, SAIBAMAN_SPRITE_SCALE);
-            g.drawImage(img, SAIBAMAN_SPRITE_PAD + 16 - SPRITE_VIEW.w / 2 * k, SAIBAMAN_SPRITE_PAD + 1 + 40 - 104 * k, SPRITE_VIEW.w * k, SPRITE_VIEW.h * k);
-            item.pronto = true;
-        };
-        img.src = generateSpriteFrameUrl(app, estado, frame % n);
-        if (minionConstruidoCache.size > 200) minionConstruidoCache.clear();
-        minionConstruidoCache.set(key, item);
-    }
-    return item.pronto ? item.tela : null;
 }
 
 function getSaibamanSprite(pose, frame, tipo = getMinionKind()) {
-    let mc = getMinionClassico(tipo);
-    if (!mc) {
-        const pronto = getMinionConstruidoSprite(tipo, pose, frame);
-        if (pronto) return pronto;
-        mc = { modelo: "saibaman", cores: {} };   // enquanto a imagem carrega: o clássico
-    }
+    const mc = getMinionClassico(tipo);
     const key = minionAssinaturaClassica(mc) + pose + frame;
     let c = saibamanSpriteCache.get(key);
     if (c) return c;

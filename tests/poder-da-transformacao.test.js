@@ -6,6 +6,7 @@
 const { createHarness } = require("./harness.js");
 const h = createHarness(__dirname + "/..", 800);
 const { run, check, summary } = h;
+h.carregarPacotes(["goku"]);
 
 run(`selectedCharacter = "goku_adult"; selectedBoss = "vegeta"; gameMode = "coop"; startGame();
      world.saibamanSpawnTimer = -1e9; world.pickupSpawnTimer = -1e9;`);
@@ -33,7 +34,7 @@ check("carregar ki ainda aumenta a aura depois do tempo", (() => {
     run("player.isCharging = true; for (let i = 0; i < 120; i++) drawKiAura(player, characterDB.goku_adult, 100, 200, 60, 100); player.isCharging = false;");
     return run("player.kiAuraLevel") > 0.9;
 })());
-check("o cabelo continua amarelo depois do tempo", decodeURIComponent(String(run(`getCharacterAnimationFrame("goku_adult", "idle", 0, true) && getCharacterAnimationFrames("goku_adult", "idle", !!player.isSSJ)[0]`))).includes("ffe34d"));
+check("continua transformado depois do tempo (quadros da forma Super Saiyajin)", run(`getCharacterAnimationFrames("goku_adult", "idle", getTransformLevel(player))[0] === getCharacterAnimationFrames("goku_adult", "idle", 1)[0] && getTransformLevel(player) === 1`));
 check("depois da última transformação não dá para transformar de novo", (() => {
     run("for (let n = 0; n < 10; n++) { player.ki = 100; if (!transformPlayer(player, false)) break; }");
     return run("getTransformLevel(player)") === run("getCharacterTransformations('goku_adult').length") && run("player.ki = 100; transformPlayer(player, false)") === false;
