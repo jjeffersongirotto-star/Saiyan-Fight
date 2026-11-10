@@ -520,6 +520,34 @@ function getSuperAttackDamage(specialDamage, hasPowerBuff) {
 // Internamente o modo continua se chamando "coop" (gameMode), porque esse valor já fica salvo no navegador
 // de quem joga ("saiyan_mode"); na tela ele aparece como VERSUS.
 const VERSUS_ROUNDS_TO_WIN = 2;
+// Vida de cada lutador no VERSUS. Maior que o dano do especial (3), para ninguém fechar a rodada
+// com a vida cheia em um golpe só — os dois começam iguais.
+const VERSUS_FIGHTER_HP = 4;
+function getVersusFighterHp() {
+    return VERSUS_FIGHTER_HP;
+}
+
+// Ritmo do tiro de ki no teclado, no toque e no controle: ~5 tiros por segundo (11 quadros a 60 fps).
+const KI_TIRO_INTERVALO_QUADROS = 11;
+function cooldownTiroKiPronto(cooldown) {
+    return !(cooldown > 0);
+}
+function passoCooldownTiroKi(cooldown, dt, disparou, intervalo) {
+    const iv = intervalo == null ? KI_TIRO_INTERVALO_QUADROS : intervalo;
+    if (disparou) return iv;
+    return Math.max(0, (Number(cooldown) || 0) - (Number(dt) || 0) * 60);
+}
+
+// Depois que o oponente já caiu (animação de saída, quadro de vitória, rodada do VERSUS decidida),
+// o herói não pode mais levar dano nem perder.
+function deveProtegerHeroiAposDerrota(oponenteMorrendo, vitoriaPendente) {
+    return !!(oponenteMorrendo || vitoriaPendente);
+}
+// Tira da lista os tiros do adversário; os do herói (fromPlayer) continuam.
+function projeteisAposVitoriaDoOponente(obstacles) {
+    if (!Array.isArray(obstacles)) return [];
+    return obstacles.filter(o => o && o.fromPlayer);
+}
 
 // Registra quem venceu a rodada. Devolve o placar novo e, se alguém chegou a VERSUS_ROUNDS_TO_WIN, o vencedor
 // da partida ("p1" ou "p2"); senão matchWinner = null (a partida continua com a próxima rodada).
@@ -878,6 +906,13 @@ if (typeof module !== "undefined" && module.exports) {
         trocarPosicaoFase,
         aplicarOrdemDasFases,
         VERSUS_ROUNDS_TO_WIN,
+        VERSUS_FIGHTER_HP,
+        getVersusFighterHp,
+        KI_TIRO_INTERVALO_QUADROS,
+        cooldownTiroKiPronto,
+        passoCooldownTiroKi,
+        deveProtegerHeroiAposDerrota,
+        projeteisAposVitoriaDoOponente,
         registerVersusRoundWin,
         STAGE_MODE_WAVE_COUNT,
         NORMAL_MODE_WAVES,

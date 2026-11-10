@@ -11,9 +11,16 @@ const { run, check, summary } = h;
 const semSpawns = "world.pickupSpawnTimer = -1e9; world.saibamanSpawnTimer = -1e9;";
 const textosDesenhados = () => { h.calls.length = 0; run("render()"); return h.calls.filter(c => c[0] === "fillText").map(c => String(c[1][0])); };
 const derrubarRival = () => {
-    run(`player2.hp = 1; world.obstacles.push({ x: player2.x + 5, y: player2.y + 5, radius: 20, vx: 0, vy: 0, fromPlayer: true, color: '#0ff', damage: 5 })`);
-    run("update(1/60)");   // o golpe acerta e o rival começa a sair voando
-    for (let i = 0; i < 120 && run("player2.isDying"); i++) run("update(1/60)");
+    // A Zenkai também vale para o jogador 2: a 1ª queda o salva, então um "derrubar" de verdade
+    // precisa passar por essa defesa (se ainda estiver disponível) e depois pela saída de tela.
+    for (let n = 0; n < 2; n++) {
+        if (run("gameState") !== "playing" || run("player2.isDying")) break;
+        const p1Antes = run("world.versusScore.p1");
+        run(`player2.invulnerableTimer = 0; player2.hp = 1; world.obstacles.push({ x: player2.x + 5, y: player2.y + 5, radius: 20, vx: 0, vy: 0, fromPlayer: true, color: '#0ff', damage: 5 })`);
+        run("update(1/60)");   // o golpe acerta (ou a Zenkai salva)
+        for (let i = 0; i < 120 && run("player2.isDying"); i++) run("update(1/60)");
+        if (run("world.versusScore.p1") > p1Antes || run("gameState") !== "playing") break;
+    }
 };
 const derrubarJogador1 = () => run(`player.invulnerableTimer = 0; player.shield = false; player.hp = 1; world.obstacles.push({ x: player.x + 5, y: player.y + 5, radius: 20, vx: 0, vy: 0, fromPlayer: false, color: '#f00' }); update(1/60)`);
 
