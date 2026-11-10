@@ -1,7 +1,10 @@
 # Gera o APK Android do Saiyan Fight (Capacitor): o jogo vai DENTRO do app, que abre rápido e roda sem internet.
-# Em toda PR e push na main o APK é gerado (artefato do Actions). Na main, com os segredos de assinatura,
-# ele é publicado na página de Releases como Saiyan-Fight-<versão>.apk e com o nome fixo Saiyan-Fight.apk
-# (o botão BAIXAR APP do site aponta para releases/latest/download/Saiyan-Fight.apk).
+# Em toda PR e push na main o APK e o pacote do jogo (.zip da pasta www + latest.json) são gerados (artefatos).
+# Na main:
+#  - o pacote do jogo é publicado na Release "app-bundle" (latest.json + saiyan-fight-web-<jogo>-<build>.zip):
+#    é dali que a setinha ATUALIZAR do APK atualiza o jogo dentro do app, sem instalar APK novo;
+#  - com os segredos de assinatura, o APK é publicado como Saiyan-Fight-<versão>.apk e Saiyan-Fight.apk
+#    (o botão BAIXAR APP do site aponta para releases/latest/download/Saiyan-Fight.apk).
 name: APK Android
 
 on:
@@ -68,6 +71,28 @@ jobs:
         with:
           name: Saiyan-Fight-${{ steps.apk.outputs.version }}-apk
           path: Saiyan-Fight-${{ steps.apk.outputs.version }}.apk
+      - name: Pacote do jogo para atualizar dentro do app (zip + latest.json)
+        run: python3 scripts/android/pacote-web.py pacote-web
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pacote-web-${{ steps.apk.outputs.version }}
+          path: pacote-web/
+      - name: Publicar o pacote do jogo (Release app-bundle)
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          zip=$(node -p "require('./pacote-web/latest.json').arquivo")
+          if ! gh release view app-bundle >/dev/null 2>&1; then
+            gh release create app-bundle --target "$GITHUB_SHA" --prerelease --latest=false --title "Pacotes do jogo (atualização dentro do app)" \
+              --notes "Usado pela setinha ATUALIZAR do APK: latest.json diz a versão mais nova do jogo e o .zip é baixado e conferido (sha256) dentro do app. Não precisa baixar nada daqui."
+          fi
+          # primeiro o zip, depois o latest.json (quem ler o latest.json já encontra o zip)
+          gh release upload app-bundle "pacote-web/$zip" --clobber
+          gh release upload app-bundle pacote-web/latest.json --clobber
+          # guarda só os 3 pacotes mais novos
+          gh release view app-bundle --json assets --jq '.assets[].name' | { grep '^saiyan-fight-web-.*\.zip$' || true; } \
+            | sort -t- -k5,5n | head -n -3 | while read -r velho; do gh release delete-asset app-bundle "$velho" -y; done
       - name: Publicar na página de Releases
         if: github.ref == 'refs/heads/main' && steps.key.outputs.signed == 'true'
         env:
