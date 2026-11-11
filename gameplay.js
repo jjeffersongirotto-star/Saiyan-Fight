@@ -1005,8 +1005,13 @@ function heroiEstaProtegido() {
 }
 function protegerHeroiAposVitoria() {
     world.heroiProtegidoAposVitoria = true;
-    world.obstacles = projeteisAposVitoriaDoOponente(world.obstacles);
-    world.saibamans = [];
+    // v0.120: esvazia as MESMAS listas (sem trocar por listas novas): isto roda no meio dos laços de tiros e de
+    // minions do update, e trocar a lista ali fazia o laço ler um item que não existia — o jogo travava com a tela
+    // preta (ex.: Saibaman lançado pelo parry derrubando o vilão)
+    const ficam = projeteisAposVitoriaDoOponente(world.obstacles);
+    world.obstacles.length = 0;
+    ficam.forEach(o => world.obstacles.push(o));
+    world.saibamans.length = 0;
 }
 function soltarProtecaoDoHeroi() {
     world.heroiProtegidoAposVitoria = false;
@@ -1431,6 +1436,7 @@ function tryReflect(target = player, isP2 = false) {
 
     for (let i = world.obstacles.length - 1; i >= 0; i--) {
         let obs = world.obstacles[i];
+        if (!obs) continue;   // a lista encolheu no meio do laço (vitória, rodada nova)
         // Alcance do parry é intencionalmente circular (é uma "habilidade", não a hitbox do corpo).
         let dist = Math.hypot(obs.x - area.x, obs.y - area.y);
 
@@ -1989,6 +1995,7 @@ function update(dt) {
 
     for (let i = world.obstacles.length - 1; i >= 0; i--) {
         let obs = world.obstacles[i];
+        if (!obs) continue;   // a lista encolheu no meio do laço (vitória, rodada nova)
         let hitSomething = false;
 
         if (obs.isHoming && !obs.fromPlayer) {
@@ -2082,6 +2089,7 @@ function update(dt) {
     const someoneGrabbing = world.saibamans.some(s => s.phase === "agarrar");
     for (let i = world.saibamans.length - 1; i >= 0; i--) {
         let s = world.saibamans[i];
+        if (!s) continue;   // a lista encolheu no meio do laço (vilão derrotado, rodada nova)
         if (s.phase === "agarrar") {
             // fica grudado nas pernas do herói, pela frente, enquanto a contagem corre
             s.x = player.x + s.grabOffsetX;
