@@ -11,7 +11,7 @@ const { run, check, summary, context } = h;
 const html = fs.readFileSync(__dirname + "/../index.html", "utf8");
 
 // ---------- pacote do Vegeta (v0.103: desenhos do Gemini, 4 formas, já em uso) ----------
-const pacote = JSON.parse(fs.readFileSync(__dirname + "/../conjuntos/vegeta.json", "utf8"));
+const pacote = require("./harness.js").lerPacoteInteiro(__dirname + "/..", "vegeta");
 const estados = run("CONJ_ESTADOS");
 check("pacote do Vegeta tem os 14 movimentos nas 4 formas",
     ["normal", "ssj", "god", "blue", "blue_evo", "ego"].every(v => estados.every(st => Array.isArray(pacote[v][st]) && pacote[v][st].length >= 5)));

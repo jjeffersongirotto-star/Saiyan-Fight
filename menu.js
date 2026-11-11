@@ -3646,6 +3646,7 @@ function drawTutorialScreen() {
 }
 
 function triggerAction(actionName, targetPlayer, isP2 = false) {
+    if (gameState === "playing" && world.carregandoLuta) return;   // v0.118: a luta ainda está carregando
     if (actionName === "attack") {
         if (world.beamOwner === "clash" && world.beamActive > 0) { registerClashMash(isP2); return; }
         fireKiBarrage(targetPlayer, isP2);
@@ -5146,8 +5147,14 @@ function drawPlayerEntity(p, charData, isBoss = false) {
     const pixelPending = isPixel && !pixelArt;
     if (pixelArt) {
         // pixel art no tamanho exato: 1 pixel do desenho = 1 pixel real da tela (sem esticar = nítido)
-        const k = renderScale, ax = Math.round(artX * k) / k, ay = Math.round(artY * k) / k;
+        // v0.118: pixel art de outro tamanho (resolução mudou no meio da luta, o tamanho certo ainda está sendo
+        // montado): esticada para o tamanho de agora, sem suavizar
+        const escala = pixelArt.w ? Math.max(1, Math.round(artW * renderScale)) / pixelArt.w : 1;
+        const k = renderScale / escala, ax = Math.round(artX * renderScale) / renderScale, ay = Math.round(artY * renderScale) / renderScale;
+        const suave = ctx.imageSmoothingEnabled;
+        if (escala !== 1) ctx.imageSmoothingEnabled = false;
         ctx.drawImage(pixelArt.img, ax - pixelArt.pad / k, ay - pixelArt.pad / k, pixelArt.img.width / k, pixelArt.img.height / k);
+        ctx.imageSmoothingEnabled = suave;
         p.lastSpriteDraw = { key: fallbackKey, img: pixelArt.img, pad: pixelArt.pad / k, k, w: artW, h: artH };
     } else if (last && (pixelPending || !isDrawableSource(animationFrame))) {
         if (last.pad) {
@@ -6357,6 +6364,30 @@ function canTouchTransform() {
     return player.ki >= player.maxKi && getTransformLevel(player) < getCharacterTransformations(selectedCharacter).length;
 }
 
+// v0.118: enquanto os sprites da luta ficam prontos (comecarEsperaDaLuta), a arena aparece escurecida com uma
+// barra de CARREGANDO; a luta só anda quando herói, vilão e as próximas formas estão prontos.
+function drawCarregandoLuta() {
+    const formas = formasDaLutaNecessarias(true);
+    const prontas = formas.filter(kn => formaProntaParaLuta(kn[0], kn[1])).length;
+    const fr = formas.length ? prontas / formas.length : 1;
+    const w = 260, h = 12, x = (canvas.width - w) / 2, y = canvas.height / 2 + 6;
+    ctx.save();
+    ctx.fillStyle = "rgba(6, 8, 20, 0.82)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#ffd23f";
+    ctx.font = "bold 18px monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("CARREGANDO", canvas.width / 2, y - 14);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = "#ffb000";
+    ctx.fillRect(x, y, w * Math.max(0.06, fr), h);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+    ctx.restore();
+}
+
 function drawTouchHUD() {
     if (!isTouchDevice && gameState !== "options_hud") return;
 
@@ -6506,6 +6537,7 @@ function render() {
 
         drawHUD();
         drawTouchHUD();
+        if (gameState === "playing" && world.carregandoLuta) drawCarregandoLuta();
 
         if (gameState === "paused") {
             drawPauseOverlay();

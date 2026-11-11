@@ -31,7 +31,7 @@ run("player.ki = player.maxKi; world.beamActive = 0; gameState = 'playing'; trig
 check("jogador fica no ESPECIAL enquanto o raio sai", run("player.actionState") === "special");
 
 // Vegeta dos sprites: Galick Ho normal e Super Saiyajin
-const pacote = JSON.parse(fs.readFileSync(__dirname + "/../conjuntos/vegeta.json", "utf8"));
+const pacote = require("./harness.js").lerPacoteInteiro(__dirname + "/..", "vegeta");
 context.__pacote = pacote;
 run("conjRegistrarPacote('vegeta', __pacote); characterDB.vegeta.spriteActive = 'g_vegeta'");
 const base = run("getCharacterAnimationFrames('vegeta', 'special', 0)"), ssj = run("getCharacterAnimationFrames('vegeta', 'special', 1)");

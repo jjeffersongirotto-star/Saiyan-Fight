@@ -87,7 +87,7 @@ check("pacote carregado também atualiza a imagem da aba DADOS", run("(() => { l
 run("closeModal()");
 
 // ---------- Vegeta: mesmo tamanho ----------
-const pacote = JSON.parse(fs.readFileSync(__dirname + "/../conjuntos/vegeta.json", "utf8"));
+const pacote = require("./harness.js").lerPacoteInteiro(__dirname + "/..", "vegeta");
 context.__pacote = pacote;
 // v0.103: pacote novo (desenhos do Gemini): cada tira já sai no tamanho do parado da forma ao montar o pacote,
 // então não há mais escala por movimento; os pés do parado ficam na linha 103

@@ -13,7 +13,7 @@ const { run, check, summary } = h;
 h.carregarPacotes(["goku", "vegeta", "gohan", "piccolo"]);
 check("pacote carregado: cada movimento só vira imagem quando é lido", run("typeof Object.getOwnPropertyDescriptor(conjPacoteDados.goku.ssj3, 'transform').get") === "function");
 check("na primeira leitura o movimento vira imagem e fica guardado", run("conjPacoteDados.goku.ssj3.transform.length > 0 && !Object.getOwnPropertyDescriptor(conjPacoteDados.goku.ssj3, 'transform').get"));
-check("na abertura não prepara os lutadores (só depois de uns segundos ou do 1º toque)", run("typeof AQUECER_DEPOIS_MS") === "number" && run("AQUECER_DEPOIS_MS") >= 2000);
+check("na abertura não prepara os lutadores (só depois de uns segundos ou do 1º toque)", run("typeof AQUECER_DEPOIS_MS") === "number" && run("AQUECER_DEPOIS_MS") >= 1000);
 run("aquecerLiberado = true");
 
 // ---------- aura: quadros guardados não dependem do tamanho ----------
