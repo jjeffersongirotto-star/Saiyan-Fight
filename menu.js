@@ -6366,6 +6366,14 @@ function canTouchTransform() {
 
 // v0.118: enquanto os sprites da luta ficam prontos (comecarEsperaDaLuta), a arena aparece escurecida com uma
 // barra de CARREGANDO; a luta só anda quando herói, vilão e as próximas formas estão prontos.
+// Erro na lógica da luta: aparece no console (uma vez por mensagem) e o jogo continua
+const errosDaLuta = new Set();
+function registrarErroDaLuta(erro) {
+    const msg = String(erro && erro.message || erro);
+    if (errosDaLuta.has(msg)) return;
+    errosDaLuta.add(msg);
+    if (typeof console !== "undefined" && console.error) console.error("Erro na luta:", erro);
+}
 function drawCarregandoLuta() {
     const formas = formasDaLutaNecessarias(true);
     const prontas = formas.filter(kn => formaProntaParaLuta(kn[0], kn[1])).length;
@@ -6509,7 +6517,9 @@ function render() {
     }
     else if (gameState === "playing" || gameState === "paused" || gameState === "gameover") {
         pollGamepads(deltaTime);
-        update(deltaTime);
+        // v0.120: um erro na lógica de um quadro não pode apagar a tela e parar o jogo inteiro (tela preta, sem som):
+        // registra e segue desenhando; o próximo quadro tenta de novo
+        try { update(deltaTime); } catch (erro) { registrarErroDaLuta(erro); }
         if (gameState === "playing") gameplayClock += deltaTime;
 
         drawStageBackground();
