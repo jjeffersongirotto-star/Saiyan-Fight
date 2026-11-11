@@ -32,52 +32,55 @@ const CONJ_FPS_PADRAO = 12;
 // ---------------------------------------------------------------------------------------------------------------
 // v0.106: versão dos arquivos dos pacotes — vai no endereço (?v=) para o navegador não usar uma cópia antiga
 // guardada (o Vegeta continuava com os sprites recortados antigos). Suba o número sempre que trocar um pacote.
-const CONJ_VERSAO_ARQUIVOS = "116";
+const CONJ_VERSAO_ARQUIVOS = "118";
 const CONJ_PACOTES = {
     // v0.102: desenhos do jogador (gerados no Gemini) para as 4 formas do Goku; já entra como o conjunto em uso.
     // variantes = base + transformações em ordem (o jogo usa a forma do nível atual)
-    goku: { arquivo: "conjuntos/goku.json", personagem: "goku_adult", nome: "GOKU SPRITES", marca: "saiyan_conjunto_goku_110",
+    goku: { pasta: "conjuntos/goku/", personagem: "goku_adult", nome: "GOKU SPRITES", marca: "saiyan_conjunto_goku_110",
         variantes: ["normal", "ssj", "ssj3", "god", "blue", "instinto"], ativar: true },
     // v0.103: todos os outros personagens com os desenhos do Gemini (o Vegeta troca os sprites recortados antigos;
     // marca nova para entrar de novo em quem já tinha o pacote antigo)
-    vegeta: { arquivo: "conjuntos/vegeta.json", personagem: "vegeta", nome: "VEGETA SPRITES", marca: "saiyan_conjunto_vegeta_110",
+    vegeta: { pasta: "conjuntos/vegeta/", personagem: "vegeta", nome: "VEGETA SPRITES", marca: "saiyan_conjunto_vegeta_110",
         variantes: ["normal", "ssj", "god", "blue", "blue_evo", "ego"], ativar: true },
-    piccolo: { arquivo: "conjuntos/piccolo.json", personagem: "piccolo", nome: "PICCOLO SPRITES", marca: "saiyan_conjunto_piccolo_116",
+    piccolo: { pasta: "conjuntos/piccolo/", personagem: "piccolo", nome: "PICCOLO SPRITES", marca: "saiyan_conjunto_piccolo_116",
         variantes: ["normal", "semcapa", "laranja"], ativar: true },
-    freeza: { arquivo: "conjuntos/freeza.json", personagem: "freeza_1", nome: "FREEZA SPRITES", marca: "saiyan_conjunto_freeza",
+    freeza: { pasta: "conjuntos/freeza/", personagem: "freeza_1", nome: "FREEZA SPRITES", marca: "saiyan_conjunto_freeza",
         variantes: ["f1", "f2", "f3", "final", "ciborgue", "golden", "black"], ativar: true, dedo: true },
-    trunks: { arquivo: "conjuntos/trunks.json", personagem: "trunks", nome: "TRUNKS SPRITES", marca: "saiyan_conjunto_trunks_116",
+    trunks: { pasta: "conjuntos/trunks/", personagem: "trunks", nome: "TRUNKS SPRITES", marca: "saiyan_conjunto_trunks_116",
         variantes: ["normal", "ssj", "furia"], ativar: true },
-    gohan: { arquivo: "conjuntos/gohan.json", personagem: "gohan", nome: "GOHAN SPRITES", marca: "saiyan_conjunto_gohan",
+    gohan: { pasta: "conjuntos/gohan/", personagem: "gohan", nome: "GOHAN SPRITES", marca: "saiyan_conjunto_gohan",
         variantes: ["normal", "ssj", "ssj2"], ativar: true },
-    kaioshin: { arquivo: "conjuntos/kaioshin.json", personagem: "kaioshin", nome: "SUPREMO SR. KAIO SPRITES", marca: "saiyan_conjunto_kaioshin",
+    kaioshin: { pasta: "conjuntos/kaioshin/", personagem: "kaioshin", nome: "SUPREMO SR. KAIO SPRITES", marca: "saiyan_conjunto_kaioshin",
         variantes: ["normal"], ativar: true },
-    vegetto: { arquivo: "conjuntos/vegetto.json", personagem: "gogeta", nome: "VEGETTO SPRITES", marca: "saiyan_conjunto_vegetto_110",
+    vegetto: { pasta: "conjuntos/vegetto/", personagem: "gogeta", nome: "VEGETTO SPRITES", marca: "saiyan_conjunto_vegetto_110",
         variantes: ["normal", "ssj", "blue"], ativar: true },
-    bardock: { arquivo: "conjuntos/bardock.json", personagem: "bardock", nome: "BARDOCK SPRITES", marca: "saiyan_conjunto_bardock_110",
+    bardock: { pasta: "conjuntos/bardock/", personagem: "bardock", nome: "BARDOCK SPRITES", marca: "saiyan_conjunto_bardock_110",
         variantes: ["normal", "ssj"], ativar: true },
-    android17: { arquivo: "conjuntos/android17.json", personagem: "android17", nome: "ANDROIDE 17 SPRITES", marca: "saiyan_conjunto_android17",
+    android17: { pasta: "conjuntos/android17/", personagem: "android17", nome: "ANDROIDE 17 SPRITES", marca: "saiyan_conjunto_android17",
         variantes: ["normal"], ativar: true },
-    android18: { arquivo: "conjuntos/android18.json", personagem: "android18", nome: "ANDROIDE 18 SPRITES", marca: "saiyan_conjunto_android18",
+    android18: { pasta: "conjuntos/android18/", personagem: "android18", nome: "ANDROIDE 18 SPRITES", marca: "saiyan_conjunto_android18",
         variantes: ["normal"], ativar: true },
-    buu: { arquivo: "conjuntos/buu.json", personagem: "majin_buu", nome: "MAJIN BUU SPRITES", marca: "saiyan_conjunto_buu",
+    buu: { pasta: "conjuntos/buu/", personagem: "majin_buu", nome: "MAJIN BUU SPRITES", marca: "saiyan_conjunto_buu",
         variantes: ["kid", "gordo"], ativar: true },
-    raditz: { arquivo: "conjuntos/raditz.json", personagem: "raditz", nome: "RADITZ SPRITES", marca: "saiyan_conjunto_raditz",
+    raditz: { pasta: "conjuntos/raditz/", personagem: "raditz", nome: "RADITZ SPRITES", marca: "saiyan_conjunto_raditz",
         variantes: ["normal"], ativar: true },
-    broly: { arquivo: "conjuntos/broly.json", personagem: "broly", nome: "BROLY SPRITES", marca: "saiyan_conjunto_broly",
+    broly: { pasta: "conjuntos/broly/", personagem: "broly", nome: "BROLY SPRITES", marca: "saiyan_conjunto_broly",
         variantes: ["normal", "lssj"], ativar: true },
-    gotenks: { arquivo: "conjuntos/gotenks.json", personagem: "gotenks", nome: "GOTENKS SPRITES", marca: "saiyan_conjunto_gotenks_110",
+    gotenks: { pasta: "conjuntos/gotenks/", personagem: "gotenks", nome: "GOTENKS SPRITES", marca: "saiyan_conjunto_gotenks_110",
         variantes: ["normal", "ssj", "ssj3"], ativar: true },
-    cell: { arquivo: "conjuntos/cell.json", personagem: "cell", nome: "CELL SPRITES", marca: "saiyan_conjunto_cell",
+    cell: { pasta: "conjuntos/cell/", personagem: "cell", nome: "CELL SPRITES", marca: "saiyan_conjunto_cell",
         variantes: ["f1", "semi", "perfeito"], ativar: true }
 };
 // variantes de um pacote (os pacotes antigos têm só normal + ssj)
 function conjVariantes(nome, d) {
     return (d && d.variantes) || (CONJ_PACOTES[nome] && CONJ_PACOTES[nome].variantes) || ["normal", "ssj"];
 }
-const conjPacoteDados = {};        // nome -> { normal: { estado: [urls] }, ssj: {...}, fps }
-const conjPacoteCarregando = {};
+const conjPacoteDados = {};        // nome -> { normal: { estado: [urls] }, ssj: {...}, fps } (só as formas já baixadas)
+const conjPacoteCarregando = {};   // nome (pacote inteiro, testes antigos) ou "nome/variante" -> baixando
 const CONJ_QUADRO_VAZIO = "data:image/svg+xml;utf8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="144" height="168" viewBox="0 0 96 112" shape-rendering="crispEdges"></svg>');
+// v0.118: de onde veio cada quadro de pacote (a imagem WebP e onde ela fica no desenho 96x112). A luta monta a
+// pixel art direto dessa imagem (decodificada fora do jogo, createImageBitmap), sem passar pelo SVG.
+const conjQuadroFonte = new Map();
 
 // Cada quadro vira um SVG com a imagem recortada na posição/escala certas e "crispEdges": a luta trata como os
 // outros lutadores em pixel art (mesmo tamanho na tela e pés no chão).
@@ -90,20 +93,28 @@ function conjEmbrulharQuadro(d, q, st) {
     const k = (d.k || 1) / s;
     const yBase = 103 + (apoioY - d.pesY) / (d.k || 1);   // a linha de apoio fica onde estava
     const n = (v) => Math.round(v * 100) / 100;
+    const gx = n(48 + (x - d.centroX) / k), gy = n(yBase + (y - apoioY) / k), gw = n(w / k), gh = n(h / k);
+    const mime = d.mime || "image/png";
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="144" height="168" viewBox="0 0 96 112" shape-rendering="crispEdges">` +
-        `<image x="${n(48 + (x - d.centroX) / k)}" y="${n(yBase + (y - apoioY) / k)}" width="${n(w / k)}" height="${n(h / k)}" preserveAspectRatio="none" ` +
-        `style="image-rendering:pixelated" href="data:${d.mime || "image/png"};base64,${b64}"/></svg>`;
-    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+        `<image x="${gx}" y="${gy}" width="${gw}" height="${gh}" preserveAspectRatio="none" ` +
+        `style="image-rendering:pixelated" href="data:${mime};base64,${b64}"/></svg>`;
+    const url = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+    if (!conjQuadroFonte.has(url)) conjQuadroFonte.set(url, { mime, b64, x: gx, y: gy, w: gw, h: gh, bmp: null, pedido: false });
+    return url;
 }
 
+// Registra um pacote: o inteiro (testes antigos) ou um arquivo de UMA forma (conjuntos/<nome>/<forma>.json, v0.118).
+// Junta com as formas que já chegaram.
 function conjRegistrarPacote(nome, d) {
     // loop: { variante: { movimento: quadro do cadeado } }; fpsMov: quadros por segundo de cada movimento
     // mao/dedo: { variante: [x, y] } = ponto (fração do desenho 96x112) de onde sai o raio do especial (a mão ou o
     // brilho no último quadro) e a ponta do dedo levantado (sol do Freeza), medidos ao montar o pacote
-    const pronto = { fps: d.fps || 10, fpsMov: d.fpsMov || {}, loop: d.loop || {}, mao: d.mao || {}, dedo: d.dedo || {} };
+    const pronto = conjPacoteDados[nome] || { fps: d.fps || 10, fpsMov: d.fpsMov || {}, loop: {}, mao: {}, dedo: {} };
+    ["loop", "mao", "dedo"].forEach(k => Object.assign(pronto[k], d[k] || {}));
     conjVariantes(nome, d).forEach(v => {
         if (!d[v]) return;
         pronto[v] = {};
+        conjPacoteCarregando[nome + "/" + v] = false;
         const usar = (CONJ_PACOTES[nome] && CONJ_PACOTES[nome].usar) || {};
         // v0.113: cada movimento só vira imagem na primeira vez que é usado (embrulhar todos de uma vez travava o
         // celular por um instante ao chegar um pacote de vários MB)
@@ -121,13 +132,71 @@ function conjRegistrarPacote(nome, d) {
     conjAoMudar();
 }
 
-function conjCarregarPacote(nome) {
-    const p = CONJ_PACOTES[nome];
-    if (!p || conjPacoteDados[nome] || conjPacoteCarregando[nome] || typeof fetch !== "function") return;
-    conjPacoteCarregando[nome] = true;
+// v0.118: imagem pronta (decodificada) de um quadro de pacote. createImageBitmap decodifica o WebP fora do jogo
+// (sem travar a tela); sem ele, uma Image comum. pronto(img) é chamado quando ela chega (img null = falhou).
+function conjImagemDoQuadro(fonte, pronto) {
+    if (fonte.bmp) { pronto(fonte.bmp); return; }
+    (fonte.esperando || (fonte.esperando = [])).push(pronto);
+    if (fonte.pedido) return;
+    fonte.pedido = true;
+    const fim = (img) => {
+        fonte.bmp = img || null; fonte.pedido = false; fonte.falhou = !img;
+        const lista = fonte.esperando || []; fonte.esperando = null;
+        lista.forEach(f => f(img || null));
+    };
+    const url = "data:" + fonte.mime + ";base64," + fonte.b64;
+    const comImagem = () => {
+        if (typeof Image === "undefined") { fim(null); return; }
+        const im = new Image();
+        im.onload = () => fim(im); im.onerror = () => fim(null);
+        im.src = url;
+    };
     try {
-        fetch(p.arquivo + "?v=" + CONJ_VERSAO_ARQUIVOS).then(r => r.json()).then(d => conjRegistrarPacote(nome, d)).catch(() => { conjPacoteCarregando[nome] = false; });
-    } catch (e) { conjPacoteCarregando[nome] = false; }
+        if (typeof createImageBitmap === "function" && typeof atob === "function" && typeof Blob === "function") {
+            const bin = atob(fonte.b64), bytes = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+            createImageBitmap(new Blob([bytes], { type: fonte.mime })).then(fim, comImagem);
+            return;
+        }
+    } catch (e) { /* cai na Image comum */ }
+    comImagem();
+}
+// Solta a imagem decodificada de um quadro (forma que saiu da luta): volta a ser só o texto do pacote
+function conjLiberarQuadro(url) {
+    const fonte = conjQuadroFonte.get(url);
+    if (!fonte || !fonte.bmp) return;
+    if (typeof fonte.bmp.close === "function") { try { fonte.bmp.close(); } catch (e) { /* já fechada */ } }
+    fonte.bmp = null;
+}
+// A forma que o lutador usa naquele nível já chegou (ou não vem de pacote)?
+function conjFormaDoLutadorCarregada(charKey, nivel) {
+    const c = typeof characterDB !== "undefined" ? characterDB[charKey] : null;
+    const g = conjGrupoAtivo(c);
+    if (!g) return true;
+    const f = conjFormaDoNivel(c, g, nivel | 0);
+    if (!f || !f.pacote) return true;
+    if (!conjFormaCarregada(f.pacote, f.variante)) { conjCarregarPacote(f.pacote, f.variante); return false; }
+    return true;
+}
+
+// A forma (variante) do pacote já chegou?
+function conjFormaCarregada(nome, variante) {
+    const p = conjPacoteDados[nome];
+    return !!(p && p[variante]);
+}
+
+// Baixa só o arquivo de uma forma (v0.118: conjuntos/<nome>/<forma>.json, uns 0,3–0,9 MB, em vez do pacote inteiro
+// com todas as formas, que chegava a 6 MB). Sem forma: a primeira (base).
+function conjCarregarPacote(nome, variante) {
+    const p = CONJ_PACOTES[nome];
+    const v = variante || conjVariantes(nome)[0];
+    const chave = nome + "/" + v;
+    if (!p || conjFormaCarregada(nome, v) || conjPacoteCarregando[chave] || typeof fetch !== "function") return;
+    conjPacoteCarregando[chave] = true;
+    try {
+        fetch(p.pasta + v + ".json?v=" + CONJ_VERSAO_ARQUIVOS).then(r => r.json()).then(d => conjRegistrarPacote(nome, d))
+            .catch(() => { conjPacoteCarregando[chave] = false; });
+    } catch (e) { conjPacoteCarregando[chave] = false; }
 }
 
 // Algo mudou (pacote carregou, formas lidas do IndexedDB): refaz a área do editor e deixa os lutadores serem
@@ -149,8 +218,8 @@ function conjQuadrosDaForma(f, st) {
     let a = f.animations;
     if (f.pacote) {
         const p = conjPacoteDados[f.pacote];
-        if (!p) {
-            conjCarregarPacote(f.pacote);
+        if (!p || !p[f.variante]) {
+            conjCarregarPacote(f.pacote, f.variante);
             // enquanto o pacote chega: o retrato leve (forma base parada) ou um quadro vazio
             const r = f.variante === conjVariantes(f.pacote)[0] && st === "idle" && conjRetratos && conjRetratos[f.pacote];
             return [r || CONJ_QUADRO_VAZIO];
@@ -192,7 +261,7 @@ function conjRetratoUrl(c) {
     const g = conjGrupoAtivo(c);
     if (!g) return null;
     const f = conjFormaDoNivel(c, g, 0);
-    if (f && f.pacote && !conjPacoteDados[f.pacote]) {
+    if (f && f.pacote && !conjFormaCarregada(f.pacote, f.variante)) {
         if (!conjRetratosPedido && typeof fetch === "function") {
             conjRetratosPedido = true;
             try {
@@ -442,8 +511,8 @@ function conjNovaForma(silencioso) {
 function conjEditarForma(id) {
     const f = conjFormaPorId(conjTemp && conjTemp.formas, id);
     if (!f || conjEstaEditando()) return;
-    if (f.pacote && !conjPacoteDados[f.pacote]) {
-        conjCarregarPacote(f.pacote);
+    if (f.pacote && !conjFormaCarregada(f.pacote, f.variante)) {
+        conjCarregarPacote(f.pacote, f.variante);
         return showSystemAlert("CARREGANDO", "OS QUADROS DESTA FORMA AINDA ESTÃO CARREGANDO. TENTE DE NOVO EM UM INSTANTE.");
     }
     const fonte = f.pacote ? conjPacoteDados[f.pacote][f.variante] : (f.animations || {});

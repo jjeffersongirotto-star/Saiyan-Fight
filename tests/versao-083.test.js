@@ -43,7 +43,7 @@ check("save antigo com escala vira altura equivalente", run("(() => { characterD
 
 // ---------- Vegeta: diagonais para trás ----------
 // v0.103: o pacote do Vegeta foi refeito (desenhos do Gemini, em pé nas diagonais): cada diagonal tem os seus quadros
-const pacote = JSON.parse(fs.readFileSync(__dirname + "/../conjuntos/vegeta.json", "utf8"));
+const pacote = require("./harness.js").lerPacoteInteiro(__dirname + "/..", "vegeta");
 h.context.__pacote = pacote;
 run("conjRegistrarPacote('vegeta', __pacote)");
 check("diagonais para trás do Vegeta têm quadros próprios", run("['normal', 'ssj'].every(v => ['flyUpLeft', 'flyDownLeft'].every(st => conjPacoteDados.vegeta[v][st].length > 0 && JSON.stringify(conjPacoteDados.vegeta[v][st]) !== JSON.stringify(conjPacoteDados.vegeta[v].flyLeft)))") === true);

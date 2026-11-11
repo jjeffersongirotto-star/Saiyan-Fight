@@ -13,7 +13,7 @@ const html = fs.readFileSync(dir + "/index.html", "utf8");
 const h = createHarness(dir, 800);
 const { run, check, summary } = h;
 
-check("notas: versão 0.117 é a atual", html.includes("Versão 0.117 (ATUAL)") && !html.includes("Versão 0.116 (ATUAL)"));
+check("notas: versão 0.117 está na lista", html.includes("<h3>Versão 0.117") && !html.includes("Versão 0.116 (ATUAL)"));
 
 // ---------- 1) tiro atrasado não vira derrota ----------
 run(`gameMode = "singleplayer"; stageMode = "normal"; selectedCharacter = "goku_adult"; startGame();

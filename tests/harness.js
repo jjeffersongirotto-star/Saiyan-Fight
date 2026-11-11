@@ -22,6 +22,8 @@ function createHarness(dir, width = 800, height = 360) {
             if (k in t) return t[k];
             if (k === "createLinearGradient" || k === "createRadialGradient") return () => ({ addColorStop() {} });
             if (k === "measureText") return () => ({ width: 10 });
+            // pixels de verdade (todos transparentes) para o código que lê/monta imagens (pixel art da luta)
+            if (k === "getImageData") return (x, y, w, h) => { calls.push([k, [x, y, w, h]]); return { data: new Uint8ClampedArray(Math.max(1, w | 0) * Math.max(1, h | 0) * 4), width: w, height: h }; };
             return (...a) => { calls.push([k, a]); };
         },
         set(t, k, v) { if (k === "fillStyle") calls.push(["set:fillStyle", [v]]); t[k] = v; return true; }
@@ -99,7 +101,7 @@ function createHarness(dir, width = 800, height = 360) {
     const carregarPacotes = (nomes) => {
         const lista = nomes || Object.keys(run("CONJ_PACOTES"));
         for (const n of lista) {
-            context.__pacote = JSON.parse(fs.readFileSync(path.join(dir, run(`CONJ_PACOTES[${JSON.stringify(n)}].arquivo`)), "utf8"));
+            context.__pacote = lerPacoteInteiro(dir, n);
             run(`conjRegistrarPacote(${JSON.stringify(n)}, __pacote)`);
         }
         delete context.__pacote;
@@ -108,7 +110,23 @@ function createHarness(dir, width = 800, height = 360) {
     return { context, document, docL, els, store, run, canvas, touch, fire, check, step, summary, calls, MQ, scripts, carregarPacotes };
 }
 
-module.exports = { createHarness };
+
+// v0.118: os pacotes ficam divididos (conjuntos/<nome>/<forma>.json). Junta as formas no formato antigo do pacote
+// inteiro (para os testes que conferem os dados de todas as formas).
+function lerPacoteInteiro(dir, nome) {
+    const pasta = path.join(dir, "conjuntos", nome);
+    let todo = null;
+    for (const arq of fs.readdirSync(pasta).filter(a => a.endsWith(".json"))) {
+        const d = JSON.parse(fs.readFileSync(path.join(pasta, arq), "utf8"));
+        if (!todo) { todo = Object.assign({}, d); delete todo.forma; todo.loop = {}; todo.mao = {}; todo.dedo = {}; }
+        todo[d.forma] = d[d.forma];
+        for (const k of ["loop", "mao", "dedo"]) Object.assign(todo[k], d[k] || {});
+    }
+    for (const k of ["loop", "dedo"]) if (!Object.keys(todo[k]).length) delete todo[k];
+    return todo;
+}
+
+module.exports = { createHarness, lerPacoteInteiro };
 
 // Executado diretamente (`node tests/harness.js`): só valida que o jogo carrega e o loop roda sem erro.
 // Cenários específicos devem importar `createHarness` e escrever seus próprios `check(...)`.

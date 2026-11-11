@@ -418,11 +418,107 @@ function warmFrameArt(charKey, state, src, tries, nivel) {
     getPixelArtSource(img, bw * k * PIXEL_SPRITE_SCALE * renderScale, bh * k * PIXEL_SPRITE_SCALE * renderScale);
 }
 
+// ==================== FORMAS PREPARADAS (v0.118) ====================
+// Cada lutador fica sempre com a forma em que está E a próxima já prontas (quadros + pixel art no tamanho da luta);
+// o vilão também guarda a forma em que começa cada onda. Ao transformar, a seguinte começa a ser preparada na hora
+// e a que não serve mais é liberada da memória. Assim nada é carregado no meio da luta.
+const formasPreparadas = new Map();   // "chave|nivel" -> [chave, nivel]
+const formasNaFila = new Set();       // formas cujos quadros já foram para a fila de preparo (a fila pode ser zerada)
+function nivelInicialDoVilao() {
+    if (gameMode === "coop") return 0;
+    const v = typeof getVilaoDaFase === "function" ? getVilaoDaFase(selectedStage) : null;
+    return v && v.key === selectedBoss && v.nivel > 0 ? v.nivel : 0;
+}
+function formasDaLutaNecessarias(emLuta) {
+    const lista = [];
+    const add = (k, n) => {
+        if (!k || !characterDB[k]) return;
+        n = Math.max(0, Math.min(n | 0, getCharacterTransformations(k).length));
+        if (!lista.some(x => x[0] === k && x[1] === n)) lista.push([k, n]);
+    };
+    const nh = emLuta ? getTransformLevel(player) : 0;
+    add(selectedCharacter, nh); add(selectedCharacter, nh + 1);
+    const ini = nivelInicialDoVilao(), nv = emLuta ? getTransformLevel(player2) : ini;
+    add(selectedBoss, ini); add(selectedBoss, nv); add(selectedBoss, nv + 1);
+    return lista;
+}
+// endereços dos quadros de uma forma (todos os movimentos)
+function quadrosDaForma(charKey, nivel) {
+    const r = new Set();
+    if (!characterDB[charKey]) return r;
+    SUB_ANIM_KEYS.forEach(st => getCharacterAnimationFrames(charKey, st, nivel).forEach(src => r.add(src)));
+    return r;
+}
+// Solta a pixel art e as imagens decodificadas de uma forma, menos os quadros que outra forma ainda usa
+function liberarForma(charKey, nivel, emUso) {
+    quadrosDaForma(charKey, nivel).forEach(src => {
+        if (emUso && emUso.has(src)) return;
+        const stub = pixelSvgStubs.get(src);
+        if (stub) { pixelArtCache.delete(stub.__svgImage); pixelSvgStubs.delete(src); }
+        if (typeof conjLiberarQuadro === "function") conjLiberarQuadro(src);
+    });
+}
+// Confere as formas da luta: prepara as que faltam (assim que o arquivo da forma chegar) e libera as que saíram
+function atualizarFormasDaLuta(emLuta) {
+    const precisa = new Map();
+    formasDaLutaNecessarias(emLuta).forEach(kn => precisa.set(kn[0] + "|" + kn[1], kn));
+    const sair = [];
+    formasPreparadas.forEach((kn, id) => { if (!precisa.has(id)) sair.push([id, kn]); });
+    if (sair.length) {
+        const emUso = new Set();
+        precisa.forEach(kn => quadrosDaForma(kn[0], kn[1]).forEach(s => emUso.add(s)));
+        sair.forEach(([id, kn]) => { liberarForma(kn[0], kn[1], emUso); formasPreparadas.delete(id); formasNaFila.delete(id); });
+    }
+    precisa.forEach((kn, id) => {
+        if (formasNaFila.has(id)) return;
+        if (typeof conjFormaDoLutadorCarregada === "function" && !conjFormaDoLutadorCarregada(kn[0], kn[1])) return;   // baixando
+        formasPreparadas.set(id, kn);
+        formasNaFila.add(id);
+        preloadCharacterFrames(kn[0], kn[1], true);
+    });
+}
+// A forma está pronta para aparecer (arquivo baixado e a pixel art de todos os quadros feita no tamanho da luta)?
+function formaProntaParaLuta(charKey, nivel) {
+    const char = characterDB[charKey];
+    if (!char) return true;
+    if (typeof conjFormaDoLutadorCarregada === "function" && !conjFormaDoLutadorCarregada(charKey, nivel)) return false;
+    if (typeof ACTION_SPRITE_SCALE === "undefined") return true;
+    const [bw, bh] = getFighterBoxSize(charKey, nivel);
+    for (const st of SUB_ANIM_KEYS) {
+        const k = ACTION_SPRITE_SCALE[st] || 1;
+        const chave = Math.max(1, Math.round(bw * k * PIXEL_SPRITE_SCALE * renderScale)) + "x" + Math.max(1, Math.round(bh * k * PIXEL_SPRITE_SCALE * renderScale));
+        for (const src of getCharacterAnimationFrames(charKey, st, nivel)) {
+            const img = getOrCacheGameplayImage(src, char.imageObj, char.bgRemoval);
+            if (!isDrawableSource(img)) return false;
+            if (!img.__svgImage) continue;
+            const per = pixelArtCache.get(img.__svgImage);
+            if (!per || !per[chave]) return false;
+        }
+    }
+    return true;
+}
+function lutaPronta() {
+    return formasDaLutaNecessarias(true).every(kn => formaProntaParaLuta(kn[0], kn[1]));
+}
+// Antes da luta (e de cada rodada do VERSUS) a tela espera, com CARREGANDO, até o herói, o vilão e as próximas
+// formas estarem prontos — nunca carrega no meio da luta. Sem createImageBitmap (navegador muito antigo, testes)
+// não espera: continua como antes. Limite de segurança: ESPERA_LUTA_MAX_MS.
+const ESPERA_LUTA_MAX_MS = 9000;
+function comecarEsperaDaLuta() {
+    atualizarFormasDaLuta(true);
+    world.carregandoLuta = (typeof createImageBitmap === "function" && !lutaPronta()) ? performance.now() : 0;
+}
+function lutaCarregando() {
+    if (!world.carregandoLuta) return false;
+    if (lutaPronta() || performance.now() - world.carregandoLuta > ESPERA_LUTA_MAX_MS) { world.carregandoLuta = 0; return false; }
+    return true;
+}
+
 // Nos menus, já prepara os lutadores escolhidos (quadros + pixel art): o primeiro segundo da luta não precisa
 // mais montar desenho nenhum. Refaz quando a escolha muda; não mexe em nada com uma janela (editor) aberta.
 // v0.113: só começa uns segundos depois de abrir o jogo (ou no primeiro toque/tecla): baixar e preparar os pacotes
 // dos lutadores logo na abertura deixava o primeiro toque sem resposta no celular
-const AQUECER_DEPOIS_MS = 4000;
+const AQUECER_DEPOIS_MS = 1500;
 let aquecerLiberado = false;
 if (typeof addEventListener === "function") ["pointerdown", "keydown", "touchstart"].forEach(t => addEventListener(t, () => { aquecerLiberado = true; }, { once: true, passive: true }));
 function warmSelectedFighters() {
@@ -433,14 +529,11 @@ function warmSelectedFighters() {
     backgroundWork.frames.length = 0;
     backgroundWork.images.length = 0;
     backgroundWork.light.length = 0;
-    preloadCharacterFrames(selectedCharacter, false);
-    preloadCharacterFrames(selectedBoss, false);
-    // transformações do jogador: as duas primeiras já com a pixel art (transformar sem engasgo); as demais só
-    // calculadas. O rival: só a primeira (é a única que ele faz sozinho).
-    getCharacterTransformations(selectedCharacter).forEach((t, i) => preloadCharacterFrames(selectedCharacter, i + 1, i < 2));
-    preloadCharacterFrames(selectedBoss, 1);
-    const vilaoFase = typeof getVilaoDaFase === "function" ? getVilaoDaFase(selectedStage) : null;
-    if (vilaoFase && vilaoFase.key === selectedBoss && vilaoFase.nivel > 1) preloadCharacterFrames(selectedBoss, vilaoFase.nivel, true);
+    formasNaFila.clear();   // a fila foi zerada: as formas da luta entram de novo (o que já está pronto não é refeito)
+    // v0.118: herói e vilão já com a forma inicial e a próxima prontas (ver atualizarFormasDaLuta); as formas de
+    // outros personagens vistos antes são liberadas. Os arquivos que ainda estão chegando entram quando chegarem
+    // (conjAoMudar refaz esta preparação).
+    atualizarFormasDaLuta(false);
     // desenhos do Saibaman (andando, saltando, abraçando): prontos antes do primeiro aparecer
     if (typeof getSaibamanSprite === "function") {
         for (let f = 0; f < 4; f++) backgroundWork.light.push(() => getSaibamanSprite("voar", f));
@@ -468,6 +561,9 @@ function runBackgroundWork(budgetMs = 4) {
     if (gameState !== "playing" && gameState !== "tutorial" && gameState !== "paused") {
         if (typeof isModalCoveringScreen === "function" && isModalCoveringScreen()) return;
         warmSelectedFighters();
+    } else if (gameState === "playing") {
+        atualizarFormasDaLuta(true);
+        if (world.carregandoLuta) budgetMs = Math.max(budgetMs, 12);   // tela de CARREGANDO: nada mais para fazer
     }
     const start = performance.now();
     let feito = 0, imagens = 0;
@@ -586,19 +682,47 @@ function getPixelArtSource(source, w, h) {
     let perSize = pixelArtCache.get(svg);
     if (!perSize) { perSize = {}; pixelArtCache.set(svg, perSize); }
     const key = w + "x" + h;
-    if (key in perSize) return perSize[key];
-    // O SVG é redesenhado já com o tamanho final (width/height = pixels da tela do jogo): desenhar o grande e
-    // encolher misturaria as cores (borrão). Carrega em segundo plano; até lá, o jogo usa o desenho normal.
+    if (perSize[key]) return perSize[key];
+    if (!(key in perSize)) iniciarPixelArt(svg, perSize, key, w, h);
+    // v0.118: enquanto este tamanho não fica pronto (a resolução mudou no meio da luta, a tela girou), usa o mesmo
+    // quadro já pronto em outro tamanho, esticado — em vez de congelar no último desenho ou piscar
+    for (const k in perSize) if (perSize[k]) return perSize[k];
+    return null;
+}
+
+// Monta a pixel art de um quadro num tamanho. Quadros de pacote (v0.118): direto da imagem WebP decodificada fora
+// do jogo (conjImagemDoQuadro), na mesma posição do desenho 96x112 — sem decodificar um SVG enorme na tela do jogo.
+// Os outros desenhos: o SVG redesenhado já com o tamanho final (width/height = pixels da tela do jogo); desenhar
+// o grande e encolher misturaria as cores (borrão). Até ficar pronto, o jogo usa o desenho anterior.
+function iniciarPixelArt(svg, perSize, key, w, h) {
     const src = String(svg.src || "");
-    if (!src.startsWith("data:image/svg")) return null;
+    if (!src.startsWith("data:image/svg")) return;
     perSize[key] = null;
+    // montar a pixel art (ler e chapar os pixels) fica na fila de runBackgroundWork, sem picos de vários de uma vez
+    const escalaPedida = renderScale;
+    const guardar = (r) => {
+        if (r) r.rs = escalaPedida;
+        perSize[key] = r;
+        // tamanhos feitos para outra resolução (a tela mudou) não servem mais: libera a memória. Tamanhos da mesma
+        // resolução ficam (o mesmo quadro pode aparecer em duas formas de alturas diferentes)
+        if (r) for (const k in perSize) if (k !== key && perSize[k] && perSize[k].rs !== escalaPedida) delete perSize[k];
+    };
+    const fonte = typeof conjQuadroFonte !== "undefined" ? conjQuadroFonte.get(src) : null;
+    if (fonte && !fonte.falhou) {
+        conjImagemDoQuadro(fonte, img => {
+            if (!img) { delete perSize[key]; return; }   // não decodificou: na próxima vez tenta pelo SVG
+            backgroundWork.pixelArt.push(() => {
+                const s = Math.min(w / 96, h / 112), ox = (w - 96 * s) / 2, oy = (h - 112 * s) / 2;   // como o viewBox do SVG
+                guardar(buildPixelArt(g => g.drawImage(img, ox + fonte.x * s, oy + fonte.y * s, fonte.w * s, fonte.h * s), w, h, null));
+            });
+        });
+        return;
+    }
     const sized = new Image();
     // cores chapadas só nos desenhos em pixel art (nítidos); outros SVGs mantêm os degradês
     const pixelStyle = src.includes("crispEdges");
-    // montar a pixel art (ler e chapar os pixels) fica na fila de runBackgroundWork, sem picos de vários de uma vez
-    sized.onload = () => { backgroundWork.pixelArt.push(() => { perSize[key] = buildPixelArt(sized, w, h, pixelStyle ? getSvgPalette(src) : null); }); };
+    sized.onload = () => { backgroundWork.pixelArt.push(() => guardar(buildPixelArt(sized, w, h, pixelStyle ? getSvgPalette(src) : null))); };
     sized.src = src.replace(/width%3D%22[\d.]+%22%20height%3D%22[\d.]+%22/, `width%3D%22${w}%22%20height%3D%22${h}%22`);
-    return null;
 }
 
 // Cores usadas no desenho (para "chapar" cada pixel na cor mais próxima, sem misturas de borda/transparência).
@@ -618,7 +742,8 @@ function buildPixelArt(svg, w, h, palette) {
         c.height = H;
         const g = c.getContext("2d", { willReadFrequently: true });
         g.imageSmoothingEnabled = false;
-        g.drawImage(svg, pad, pad, w, h);
+        if (typeof svg === "function") { g.translate(pad, pad); svg(g); g.setTransform(1, 0, 0, 1, 0, 0); }
+        else g.drawImage(svg, pad, pad, w, h);
         const px = g.getImageData(0, 0, W, H), d = px.data;
         const solid = new Uint8Array(W * H);
         for (let i = 0; i < W * H; i++) if (d[i * 4 + 3] === 255) solid[i] = 1;
@@ -659,7 +784,7 @@ function buildPixelArt(svg, w, h, palette) {
             }
         }
         g.putImageData(px, 0, 0);
-        result = { img: c, pad };
+        result = { img: c, pad, w, h };
     } catch (err) {
         result = null;
     }
@@ -781,6 +906,7 @@ function startGame() {
     // o que os menus ainda não deixaram pronto (ver warmSelectedFighters) termina aos poucos durante a luta
     aquecerLiberado = true;
     warmSelectedFighters();
+    backgroundWork.warmedFor = null;   // volta aos menus: confere de novo
     let waveParams = getWaveParams(waveNumber);
 
     world.obstacles = [];
@@ -859,6 +985,7 @@ function startGame() {
 
     initScenario();
     setGameState("playing");
+    comecarEsperaDaLuta();   // v0.118: herói, vilão e próximas formas prontos antes de a luta andar
 }
 
 function onBossDeath() {
@@ -1021,6 +1148,7 @@ function startNextVersusRound(lastRoundWinner) {
     addFloatingText({ text: `RODADA ${world.versusRound}  —  ${world.versusScore.p1} x ${world.versusScore.p2}`, x: canvas.width / 2, y: 145, alpha: 1, color: "#ffffff" });
     playSound("powerup");
     triggerScreenShake(10, 20);
+    comecarEsperaDaLuta();   // v0.118: a rodada recomeça na forma normal: confere se ela continua pronta
 }
 
 function endVersusMatch(matchWinner) {
@@ -1137,7 +1265,6 @@ function transformPlayer(p, isP2 = false, force = false) {
     if (!force) p.ki = 0;
     p.transformLevel = nivel + 1;
     const bonusJaAtivo = p.transformPowerTimer > 0;   // transformou de novo durante o bônus: renova o tempo, não acumula
-    if (lista[nivel + 1]) preloadCharacterFrames(charKey, nivel + 2, !isP2);   // já prepara a próxima (com a pixel art)
     if (!isP2) {
         p.isSSJ = true;
         if (!bonusJaAtivo) p.speed += 1.0;
@@ -1160,6 +1287,7 @@ function transformPlayer(p, isP2 = false, force = false) {
     playSound("transform");
     if (!isP2) vibrate([60, 40, 120]);
     triggerScreenShake(12, 25);
+    atualizarFormasDaLuta(true);   // v0.118: já prepara a próxima forma e libera a que não serve mais
     return true;
 }
 
@@ -1749,6 +1877,7 @@ function checkRunMilestones() {
 
 function update(dt) {
     if (gameState !== "playing") return;
+    if (lutaCarregando()) return;   // v0.118: esperando os sprites da luta ficarem prontos (tela CARREGANDO)
 
     checkRunMilestones();
 

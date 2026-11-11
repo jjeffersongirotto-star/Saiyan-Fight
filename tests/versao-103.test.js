@@ -16,7 +16,7 @@ const retratos = JSON.parse(fs.readFileSync(dir + "/conjuntos/retratos.json", "u
 // ---------- pacotes ----------
 Object.keys(pacotes).forEach(nome => {
     const p = pacotes[nome];
-    const d = JSON.parse(fs.readFileSync(dir + "/" + p.arquivo, "utf8"));
+    const d = require("./harness.js").lerPacoteInteiro(dir, nome);
     check(`${nome}: variantes do pacote iguais às do jogo`, JSON.stringify(d.variantes) === JSON.stringify(p.variantes));
     check(`${nome}: cada forma tem os 14 movimentos`, p.variantes.every(v => estados.every(st => Array.isArray(d[v][st]) && d[v][st].length >= 5)),
         p.variantes.map(v => estados.filter(st => !(d[v][st] && d[v][st].length >= 5)).join(",")).join(" | "));
@@ -28,10 +28,10 @@ Object.keys(pacotes).forEach(nome => {
     check(`${nome}: transformações do jogo cobrem as formas do pacote`, run(`getCharacterTransformations('${p.personagem}').length`) >= p.variantes.length - 1);
 });
 check("Freeza: ponto do dedo levantado (sol) em cada forma",
-    (() => { const d = JSON.parse(fs.readFileSync(dir + "/conjuntos/freeza.json", "utf8")); return pacotes.freeza.variantes.every(v => Array.isArray(d.dedo[v]) && d.dedo[v][1] < 0.5); })());
+    (() => { const d = require("./harness.js").lerPacoteInteiro(dir, "freeza"); return pacotes.freeza.variantes.every(v => Array.isArray(d.dedo[v]) && d.dedo[v][1] < 0.5); })());
 
 // ---------- raio da mão ----------
-context.__d = JSON.parse(fs.readFileSync(dir + "/conjuntos/broly.json", "utf8"));
+context.__d = require("./harness.js").lerPacoteInteiro(dir, "broly");
 run("conjRegistrarPacote('broly', __d)");
 const mao = run("conjuntoPonto('broly', 'mao', 0)");
 check("conjuntoPonto lê a mão da forma do nível", Array.isArray(mao) && JSON.stringify(mao) === JSON.stringify(context.__d.mao.normal) &&
