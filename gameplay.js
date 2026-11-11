@@ -970,6 +970,7 @@ function startGame() {
     player2.shootTimer = 0;
     player2.hp = player2.maxHp = gameMode === "coop" ? vidaInicial : waveParams.bossHp;
     player2.zenkaiUsed = false;
+    player2.invulnerableTimer = 0;
     player2.hitTimer = 0;
     player2.ki = 0;
     player2.isTransformed = false;
@@ -1142,7 +1143,7 @@ function startNextVersusRound(lastRoundWinner) {
     Object.assign(player, { x: 80, y: 150, hp: vidaVersus, ki: 0, isSSJ: false, speed: 4.5, invulnerableTimer: 60, parryCooldown: 0 });
     Object.assign(player2, {
         x: 680, y: 150, vx: 0, vy: 2, hp: vidaVersus, maxHp: vidaVersus, ki: 0, isTransformed: false,
-        isDying: false, dyingspeedX: 0, hitTimer: 0, parryCooldown: 0
+        isDying: false, dyingspeedX: 0, hitTimer: 0, parryCooldown: 0, invulnerableTimer: 60
     });
     addFloatingText({ text: `JOGADOR ${lastRoundWinner === "p1" ? 1 : 2} VENCEU A RODADA!`, x: canvas.width / 2, y: 120, alpha: 1, color: "#ffd23f" });
     addFloatingText({ text: `RODADA ${world.versusRound}  —  ${world.versusScore.p1} x ${world.versusScore.p2}`, x: canvas.width / 2, y: 145, alpha: 1, color: "#ffffff" });
@@ -1605,6 +1606,7 @@ const SOL_DURACAO = 72, SOL_CRESCE = 22, SOL_EMPURRA = 32, SOL_CHEGA = 62;
 
 function aplicarDanoDoEspecial(isP2, damage) {
     if (!isP2) {
+        if (player2.invulnerableTimer > 0) return;   // rival acabou de voltar com a Zenkai
         player2.hp -= damage;
         player2.hitTimer = 25;
 
@@ -1887,6 +1889,9 @@ function update(dt) {
     avancarAnimacao(player2, dt);
 
     if (player.invulnerableTimer > 0) player.invulnerableTimer = Math.max(0, player.invulnerableTimer - dt * 60);
+    // v0.119: a Zenkai do rival (VERSUS) também dá um instante de invulnerabilidade — antes o tempo nunca acabava e
+    // o rival ficava meio transparente (piscando parado) até o fim da partida
+    if (player2.invulnerableTimer > 0) player2.invulnerableTimer = Math.max(0, player2.invulnerableTimer - dt * 60);
     if (player.speedBuffTimer > 0) player.speedBuffTimer = Math.max(0, player.speedBuffTimer - dt * 60);
     if (player.powerBuffTimer > 0) player.powerBuffTimer = Math.max(0, player.powerBuffTimer - dt * 60);
     updateTransformPower(player, false, dt);
@@ -2049,6 +2054,7 @@ function update(dt) {
 
         if (obs.fromPlayer && !player2.isDying) {
             if (circleHitsEntity(obs.x, obs.y, obs.radius, player2)) {
+                if (player2.invulnerableTimer > 0) { world.obstacles.splice(i, 1); continue; }   // acabou de voltar (Zenkai)
                 player2.hp -= (obs.damage || NORMAL_ATTACK_DAMAGE);
                 player2.hitTimer = 15;
                 playSound("hit");
