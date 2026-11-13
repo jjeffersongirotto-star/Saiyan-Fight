@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#0a0f1f" />
+    <link rel="icon" href="data:," />
+    <title>Saiyan Fight (prévia Phaser)</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #0a0f1f; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+      #jogo { position: fixed; inset: 0; }
+      #gire { display: none; position: fixed; inset: 0; z-index: 10; background: #0a0f1f; color: #ffd23a;
+        font: 900 22px Arial, sans-serif; align-items: center; justify-content: center; text-align: center; }
+      /* celular em pé: pede para deitar (o jogo é sempre na horizontal) */
+      @media (orientation: portrait) and (pointer: coarse) { #gire { display: flex; } }
+    </style>
+  </head>
+  <body>
+    <div id="jogo"></div>
+    <div id="gire">⟳ GIRE O CELULAR<br />TURN YOUR PHONE · GIRA EL CELULAR</div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

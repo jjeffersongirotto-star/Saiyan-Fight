@@ -1,0 +1,39 @@
+# Saiyan Fight NOVO (pasta novo/: Phaser 3 + TypeScript + Vite). Só confere e gera uma PRÉVIA para baixar:
+# NÃO publica no GitHub Pages (o site continua sendo o jogo antigo da raiz) e NÃO mexe no APK nem na
+# Release "app-bundle" da setinha ATUALIZAR — o app instalado não recebe o jogo novo por aqui.
+name: Jogo novo (Phaser)
+
+on:
+  push:
+    paths: ['novo/**', '.github/workflows/novo.yml']
+  pull_request:
+    paths: ['novo/**', '.github/workflows/novo.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  novo:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: novo
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: novo/package-lock.json
+      - run: npm ci
+      - name: Testes (vitest)
+        run: npm test
+      - name: Build (tsc estrito + vite)
+        run: npm run build
+      - name: Prévia para baixar (abrir dist/index.html por um servidor local)
+        uses: actions/upload-artifact@v4
+        with:
+          name: saiyan-fight-novo-previa
+          path: novo/dist
+          retention-days: 14
