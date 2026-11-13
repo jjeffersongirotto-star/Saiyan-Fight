@@ -7,6 +7,7 @@ import { T } from '../logica/idioma';
 import { dificilLiberado, faseLiberada, semLimiteLiberado, type ModoFase, type ProgressoFases } from '../logica/ondas';
 import { lerProgresso, lerRecordes, type Recordes } from '../logica/progresso';
 import { fasesEmOrdem, type Fase } from '../dados/fases';
+import { retratoDe } from '../ui/criados';
 import { formaDoNivel, PERSONAGENS } from '../dados/personagens';
 import { mostrarBarraDeCarregamento } from '../ui/barra';
 import { criarBotao } from '../ui/botao';
@@ -170,7 +171,8 @@ export class Mapa extends Phaser.Scene {
     else if (!this.liberado(this.foco, 'unlimited')) linhas.push(T('VENÇA O DIFÍCIL PARA LIBERAR O SEM LIMITE'));
     if (recTxt) linhas.push(`${T('RECORDE')}: ${recTxt}`);
     this.detalhe.setText(linhas.join('\n'));
-    if (this.textures.get('retratos').has(f.vilao.personagem)) this.retrato.setFrame(f.vilao.personagem).setFlipX(true);
+    const [kr, fr] = retratoDe(f.vilao.personagem);
+    if (kr !== 'retratos' || this.textures.get('retratos').has(fr)) this.retrato.setTexture(kr, fr).setFlipX(true);
     for (const { modo, b } of this.botoes) b.container.setAlpha(this.liberado(this.foco, modo) ? 1 : 0.35);
     // fundo: a arena da fase (as bloqueadas também, para dar vontade)
     const m = cenariosProntos();

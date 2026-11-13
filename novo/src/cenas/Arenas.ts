@@ -4,7 +4,7 @@ import Phaser from 'phaser';
 import { ajustarCamera, estiloTexto } from '../ui/resolucao';
 import { TELA_L } from '../logica/constantes';
 import { T } from '../logica/idioma';
-import { FASES } from '../dados/fases';
+import { todasAsFases } from '../dados/fases';
 import { TEMAS } from '../dados/temas';
 import { ArenaAntiga, carregarCenarios, cenariosProntos } from '../ui/arena';
 import { criarBotao } from '../ui/botao';
@@ -13,8 +13,8 @@ import type { DadosDaLuta } from './Menu';
 import { aoApertar } from '../entrada/teclas';
 import { som } from '../audio/som';
 
-const COLS = 4, BL = 186, BA = 34, ESP_X = 8, ESP_Y = 6;
-const X0 = (TELA_L - (COLS * BL + (COLS - 1) * ESP_X)) / 2 + BL / 2, Y0 = 210;
+const BL = 186, BA = 34, ESP_X = 8, ESP_Y = 6;
+const Y0 = 210;
 
 /** a última arena escolhida fica para a próxima vez (só nesta sessão) */
 let ultima = 0;
@@ -53,12 +53,16 @@ export class Arenas extends Phaser.Scene {
     this.add.rectangle(TELA_L / 2, 270, TELA_L, 160, 0x000000, 0.45);
     this.add.text(TELA_L / 2, 22, T('ESCOLHA A ARENA'), estiloTexto({ fontFamily: 'Arial Black, Arial', fontSize: '20px', color: '#ffd23a', stroke: '#8a2b00', strokeThickness: 5 })).setOrigin(0.5);
     this.nome = this.add.text(TELA_L / 2, 176, '', estiloTexto({ fontFamily: 'Arial Black, Arial', fontSize: '16px', color: '#ffffff', stroke: '#000000', strokeThickness: 4 })).setOrigin(0.5);
-    const itens = [...FASES.map((f) => T(f.nome)), T('ALEATÓRIA')];
+    const itens = [...todasAsFases().map((f) => T(f.nome)), T('ALEATÓRIA')];
+    // com as arenas criadas no editor (até 7 a mais) os botões ficam menores, em 5 colunas
+    const muitas = itens.length > 12;
+    const COLS = muitas ? 5 : 4, bl = muitas ? 150 : BL, ba = muitas ? 26 : BA, ey = muitas ? 6 : ESP_Y;
+    const x0 = (TELA_L - (COLS * bl + (COLS - 1) * ESP_X)) / 2 + bl / 2, y0 = muitas ? 202 : Y0;
     itens.forEach((rotulo, i) => {
-      const x = X0 + (i % COLS) * (BL + ESP_X), y = Y0 + Math.floor(i / COLS) * (BA + ESP_Y);
-      const b = criarBotao(this, x, y, rotulo, () => (this.foco === i ? this.escolher() : this.focar(i)), BL);
-      b.rotulo.setFontSize(11);
-      b.container.setSize(BL, BA);
+      const x = x0 + (i % COLS) * (bl + ESP_X), y = y0 + Math.floor(i / COLS) * (ba + ey);
+      const b = criarBotao(this, x, y, rotulo, () => (this.foco === i ? this.escolher() : this.focar(i)), bl, muitas ? 26 : 40);
+      b.rotulo.setFontSize(muitas ? 9 : 11);
+      b.container.setSize(bl, ba);
       this.botoes.push(b);
     });
     criarBotao(this, TELA_L - 60, 22, T('VOLTAR'), () => this.scene.start('Selecao', { modo: this.dados.modo }), 100);
@@ -76,13 +80,13 @@ export class Arenas extends Phaser.Scene {
 
   /** ALEATÓRIA mostra uma arena que vai trocando */
   private idFocado(): string {
-    return this.foco < FASES.length ? FASES[this.foco].id : FASES[Math.floor(this.quadro / 120) % FASES.length].id;
+    return this.foco < todasAsFases().length ? todasAsFases()[this.foco].id : todasAsFases()[Math.floor(this.quadro / 120) % todasAsFases().length].id;
   }
 
   private focar(i: number): void {
     this.foco = i;
     this.botoes.forEach((b, j) => b.desenhar(j === i));
-    const f = FASES[i];
+    const f = todasAsFases()[i];
     this.nome.setText(f ? `${T(f.nome)} · ♪ ${TEMAS[f.musica]?.nome ?? f.musica}` : T('ALEATÓRIA'));
     this.trocarArena();
   }
@@ -97,14 +101,14 @@ export class Arenas extends Phaser.Scene {
   }
 
   private escolher(): void {
-    const i = this.foco < FASES.length ? this.foco : Math.floor(Math.random() * FASES.length);
+    const i = this.foco < todasAsFases().length ? this.foco : Math.floor(Math.random() * todasAsFases().length);
     ultima = this.foco;
-    this.scene.start('Luta', { ...this.dados, arena: FASES[i].id } satisfies DadosDaLuta);
+    this.scene.start('Luta', { ...this.dados, arena: todasAsFases()[i].id } satisfies DadosDaLuta);
   }
 
   update(): void {
     this.quadro++;
-    if (this.foco >= FASES.length && this.quadro % 120 === 0) this.trocarArena();
+    if (this.foco >= todasAsFases().length && this.quadro % 120 === 0) this.trocarArena();
     this.arena?.desenhar(this.quadro);
   }
 }

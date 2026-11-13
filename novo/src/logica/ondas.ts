@@ -60,6 +60,7 @@ export type ProgressoFases = Record<string, { normalDone?: boolean; hardDone?: b
 export function faseLiberada(id: string, ordem: string[], prog: ProgressoFases): boolean {
   const i = ordem.indexOf(id);
   if (i < 0) return false;
+  if (id.startsWith('arena_')) return true; // arena criada no EDITOR DE ARENAS: sempre liberada (como no antigo)
   if (i === 0 || prog[id]?.normalDone) return true;
   return !!prog[ordem[i - 1]]?.normalDone;
 }

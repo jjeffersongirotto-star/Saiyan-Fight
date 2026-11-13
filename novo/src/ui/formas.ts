@@ -14,7 +14,8 @@ export interface MetaAtlas {
 
 export const ehAtlasDeForma = (chave: string) => {
   const [id, forma] = chave.split('-');
-  return !!PERSONAGENS[id]?.formas.some((f) => f.forma === forma);
+  // os criados no editor do antigo são montados uma vez no jogo (ui/criados.ts) e ficam
+  return !!PERSONAGENS[id] && !PERSONAGENS[id].criado && PERSONAGENS[id].formas.some((f) => f.forma === forma);
 };
 
 export function metaDoAtlas(cena: Phaser.Scene, chave: string): MetaAtlas {
@@ -26,7 +27,7 @@ export function metaDoAtlas(cena: Phaser.Scene, chave: string): MetaAtlas {
 export function pedirFormas(cena: Phaser.Scene, chaves: string[]): number {
   let n = 0;
   for (const k of chaves) {
-    if (cena.textures.exists(k)) continue;
+    if (cena.textures.exists(k) || PERSONAGENS[k.split('-')[0]]?.criado) continue;
     cena.load.atlas(k, `atlas/${k}.webp`, `atlas/${k}.json`);
     n++;
   }

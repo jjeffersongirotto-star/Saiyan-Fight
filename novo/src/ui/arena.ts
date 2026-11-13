@@ -13,8 +13,14 @@ let promessa: Promise<Modulo> | null = null;
 let pronto: Modulo | null = null;
 
 /** Começa a baixar o código das arenas (um pedaço separado do jogo, ~40 KB comprimido). */
+let arenasCriadas: unknown[] = [];
+/** arenas do EDITOR DE ARENAS do antigo para o desenho do arenas.js (agora ou quando o módulo chegar) */
+export function aplicarArenasCriadas(lista: unknown[]): void {
+  arenasCriadas = lista;
+  pronto?.definirArenasCriadas(lista);
+}
 export function carregarCenarios(): Promise<Modulo> {
-  promessa ??= import('../legado/cenarios-legado.js').then((m) => (pronto = m));
+  promessa ??= import('../legado/cenarios-legado.js').then((m) => { m.definirArenasCriadas(arenasCriadas); return (pronto = m); });
   return promessa;
 }
 export const cenariosProntos = () => pronto;

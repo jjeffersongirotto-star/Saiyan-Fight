@@ -12,10 +12,19 @@ import type { DadosDaLuta } from './Menu';
 import { aoApertar } from '../entrada/teclas';
 import { som } from '../audio/som';
 import { faseDe } from '../dados/fases';
+import { retratoDe } from '../ui/criados';
 import type { ModoFase } from '../logica/ondas';
 
-const COLUNAS = 8, CARTA_L = 84, CARTA_A = 92, ESP = 8;
-const X0 = (TELA_L - (COLUNAS * CARTA_L + (COLUNAS - 1) * ESP)) / 2, Y0 = 46;
+// 16 personagens: 2 linhas de 8. Com os criados no editor do antigo os cartões diminuem (3 linhas).
+let COLUNAS = 8, CARTA_L = 84, CARTA_A = 92, ESP = 8, LINHAS = 2;
+let X0 = 0;
+const Y0 = 46;
+function medir(n: number): void {
+  if (n <= 16) { COLUNAS = 8; CARTA_L = 84; CARTA_A = 92; ESP = 8; }
+  else { COLUNAS = Math.max(9, Math.ceil(n / 3)); ESP = 6; CARTA_L = Math.floor((TELA_L - 40 - (COLUNAS - 1) * ESP) / COLUNAS); CARTA_A = Math.min(62, Math.round(CARTA_L * 1.1)); }
+  LINHAS = Math.ceil(n / COLUNAS);
+  X0 = (TELA_L - (COLUNAS * CARTA_L + (COLUNAS - 1) * ESP)) / 2;
+}
 
 export class Selecao extends Phaser.Scene {
   private modo!: DadosDaLuta['modo'];
@@ -57,10 +66,11 @@ export class Selecao extends Phaser.Scene {
     desenharFundo(this);
     this.add.rectangle(TELA_L / 2, 175, TELA_L, 350, 0x000000, 0.45);
     this.titulo = this.add.text(TELA_L / 2, 22, '', estiloTexto({ fontFamily: 'Arial Black, Arial', fontSize: '20px', color: '#ffd23a', stroke: '#8a2b00', strokeThickness: 5 })).setOrigin(0.5);
+    medir(ORDEM_PERSONAGENS.length);
     ORDEM_PERSONAGENS.forEach((id, i) => {
       const { x, y } = this.posicao(i);
       this.add.rectangle(x, y, CARTA_L, CARTA_A, 0x14204a, 0.9).setOrigin(0, 0);
-      const img = this.add.image(x + CARTA_L / 2, y + CARTA_A - 4, 'retratos', id).setOrigin(0.5, 103 / 112);
+      const img = this.add.image(x + CARTA_L / 2, y + CARTA_A - 4, ...retratoDe(id)).setOrigin(0.5, 103 / 112);
       img.setScale((CARTA_A - 8) / 112 / 1.5 * 1.05);
       this.add.text(x + CARTA_L / 2, y + CARTA_A - 2, PERSONAGENS[id].nome, estiloTexto({ fontFamily: 'Arial', fontSize: '9px', color: '#ffffff', stroke: '#000000', strokeThickness: 3 })).setOrigin(0.5, 1);
       const moldura = this.add.graphics();
@@ -69,7 +79,7 @@ export class Selecao extends Phaser.Scene {
       zona.on('pointerover', (p: Phaser.Input.Pointer) => { if (!p.wasTouch) this.focar(i); });
       zona.on('pointerup', () => (this.foco === i ? this.escolher(id) : this.focar(i)));
     });
-    const yInfo = Y0 + 2 * (CARTA_A + ESP) + 6;
+    const yInfo = Y0 + LINHAS * (CARTA_A + ESP) + 6;
     this.info = this.add.text(X0, yInfo, '', estiloTexto({ fontFamily: 'Arial Black, Arial', fontSize: '15px', color: '#ffffff' }));
     this.formas = this.add.text(X0, yInfo + 22, '', estiloTexto({ fontFamily: 'Arial', fontSize: '11px', color: '#dfe7ff', wordWrap: { width: 520 } }));
     criarBotao(this, TELA_L - 190, yInfo + 24, T('ALEATÓRIO'), () => this.escolher(ORDEM_PERSONAGENS[Math.floor(Math.random() * ORDEM_PERSONAGENS.length)]), 130);

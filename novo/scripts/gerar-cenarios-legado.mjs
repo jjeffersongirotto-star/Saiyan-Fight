@@ -23,12 +23,19 @@ function trecho(texto, de, ate, incluirAte = false) {
 const nucleo = trecho(ler('game-logic-core.js'), '// Sala do Tempo: o cenário', 'function getForwardTravel', true);
 const menu = trecho(ler('menu.js'), '// ==================== SALA DO TEMPO', '// ==================== RENDERIZAÇÃO DE ENTIDADES');
 const c3d = ler('cenarios3d.js');
+// EDITOR DE ARENAS (arenas.js): só a parte do desenho (peças, céu, chão, hora, clima), até o arquivo .arena.json
+const arenas = trecho(ler('arenas.js'), '// arenas.js — EDITOR DE ARENAS', '// ---------------- arquivo .arena.json');
 
 const saida = `// @ts-nocheck
 // GERADO por novo/scripts/gerar-cenarios-legado.mjs a partir do jogo antigo — NÃO EDITAR À MÃO.
 // Trechos: game-logic-core.js (ângulos), menu.js (Sala do Tempo, Torneio de Cell, Nave de Freeza,
 // drawStageBackground) e cenarios3d.js. O canvas é a "tela" do jogo antigo: 800x350 lógicos, contexto escalado.
 /* eslint-disable */
+// arenas criadas no EDITOR DE ARENAS do antigo (saiyan_arenas, lidas pelo jogo novo): id -> arena
+let arenasDoJogador = new Map();
+export function definirArenasCriadas(lista) {
+  arenasDoJogador = new Map((Array.isArray(lista) ? lista : []).filter((a) => a && typeof a.id === 'string').map((a) => [a.id, a]));
+}
 export function criarCenariosLegado(canvasEl) {
   const GAME_WIDTH = 800, GAME_HEIGHT = 350;
   let renderScale = 1;
@@ -41,6 +48,18 @@ export function criarCenariosLegado(canvasEl) {
 ${nucleo}
 ${menu}
 ${c3d}
+  // ---- arenas.js (desenho das arenas criadas) ----
+  const readJsonStorage = (_k, padrao) => padrao;
+  const writeStorage = () => false;
+  const normalizadas = new WeakMap();
+  function getFaseDef(id) {
+    const bruta = arenasDoJogador.get(id);
+    if (!bruta) return null;
+    let a = normalizadas.get(bruta);
+    if (!a) { a = normalizarArena(bruta); normalizadas.set(bruta, a); }
+    return { id, arena: a, criada: true, camera: { tipo: a.movimento === 'seguir' ? 'anda' : 'orbita', volta: 10800 } };
+  }
+${arenas}
   return {
     /** desenha a arena \`id\` com o avanço \`scroll\` (1,5 por quadro, como o antigo) e o relógio \`t\` em segundos */
     desenhar(id, scroll, t) {

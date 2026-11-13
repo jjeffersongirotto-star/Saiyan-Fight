@@ -2,7 +2,7 @@
 // jogo antigo (musica). As arenas desenhadas entram na fase 4; por enquanto cada fase tem o céu na cor dela.
 // VILÃO DE CADA FASE: no jogo antigo o jogador escolhia em ARENAS (sem escolha, ficava o último escolhido —
 // o Vegeta). Aqui cada fase tem um vilão padrão (MUDANÇA para o Jefferson confirmar; a tabela é fácil de trocar).
-import type { IdTema } from './temas';
+import { TEMAS, type IdTema } from './temas';
 import type { ModeloMinion } from '../logica/minions';
 import { lerConfigFases, salvarConfigFases, type ConfigFases } from '../logica/configFases';
 import { ORDEM_PERSONAGENS, PERSONAGENS } from './personagens';
@@ -17,6 +17,8 @@ export interface Fase {
   /** cores do céu (de cima, do horizonte) e do chão no fundo provisório */
   ceu: [string, string];
   chao: [string, string];
+  /** arena feita no EDITOR DE ARENAS do antigo (sempre liberada, depois das 11) */
+  criada?: true;
 }
 
 const hex = (s: string) => parseInt(s.slice(1), 16);
@@ -37,8 +39,24 @@ export const FASES: Fase[] = [
   f('capital_oeste', 'CAPITAL DO OESTE', '#facc15', 'capital', 'saibaman', 'broly', 0, ['#ff9a5b', '#ffe0b0'], ['#9aa0a8', '#6d727a']),
 ];
 
+// ---- arenas criadas no EDITOR DE ARENAS do antigo (saiyan_arenas): viram fases, no fim (registrarArenasCriadas) ----
+let criadas: Fase[] = [];
+const corOu = (x: unknown, p: string) => (typeof x === 'string' && /^#[0-9a-f]{6}$/i.test(x) ? x : p);
+export function definirArenasDoJogador(lista: Record<string, unknown>[]): void {
+  criadas = lista.map((a) => {
+    const ceu = (a.ceu ?? {}) as Record<string, unknown>, chao = (a.chao ?? {}) as Record<string, unknown>;
+    const musica = (typeof a.musica === 'string' && a.musica in TEMAS ? a.musica : 'classico') as IdTema;
+    const nome = typeof a.nome === 'string' && a.nome.trim() ? a.nome.trim().toUpperCase().slice(0, 24) : 'MINHA ARENA';
+    // vilão: no antigo, sem escolha em ARENAS ficava o último escolhido (o Vegeta)
+    return { id: a.id as string, nome, cor: hex(corOu(a.cor, '#22d3ee')), musica, minion: a.minion === 'celljr' ? 'celljr' : 'saibaman', vilao: { personagem: 'vegeta', nivel: 0 },
+      ceu: [corOu(ceu.topo, '#4f9be0'), corOu(ceu.horizonte, '#cfe8fa')], chao: [corOu(chao.cor, '#6fc04e'), corOu(chao.cor, '#6fc04e')], criada: true } satisfies Fase;
+  });
+}
+/** as 11 fases + as arenas criadas */
+export const todasAsFases = (): Fase[] => [...FASES, ...criadas];
+
 /** a fase como está na tabela (sem as escolhas do jogador em ARENAS) */
-export const fasePadrao = (id: string): Fase => FASES.find((x) => x.id === id) ?? FASES[0];
+export const fasePadrao = (id: string): Fase => FASES.find((x) => x.id === id) ?? criadas.find((x) => x.id === id) ?? FASES[0];
 
 // escolhas do jogador em ARENAS (vilão + forma, minion, ordem): lidas uma vez, trocadas pela tela ARENAS
 let cfg: ConfigFases | null = null;
@@ -66,9 +84,10 @@ export const fasesEmOrdem = (): Fase[] => ordenarFases(configDasFases().ordem).m
 
 /** Ordem salva no jogo antigo (ARENAS: saiyan_ordem_fases); ids que faltam entram no fim (ordenarFases). */
 export function ordenarFases(ordemSalva: unknown): Fase[] {
-  if (!Array.isArray(ordemSalva) || !ordemSalva.length) return FASES.slice();
+  const todas = todasAsFases();
+  if (!Array.isArray(ordemSalva) || !ordemSalva.length) return todas;
   const lista: Fase[] = [];
-  for (const id of ordemSalva) { const x = FASES.find((ff) => ff.id === id); if (x && !lista.includes(x)) lista.push(x); }
-  for (const x of FASES) if (!lista.includes(x)) lista.push(x);
+  for (const id of ordemSalva) { const x = todas.find((ff) => ff.id === id); if (x && !lista.includes(x)) lista.push(x); }
+  for (const x of todas) if (!lista.includes(x)) lista.push(x);
   return lista;
 }
