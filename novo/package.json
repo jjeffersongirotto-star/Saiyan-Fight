@@ -1,7 +1,7 @@
 {
   "name": "saiyan-fight-novo",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Saiyan Fight refeito em Phaser 3 + TypeScript + Vite (fase 1: base + luta VERSUS de exemplo). O jogo no ar continua sendo o da raiz do repositório.",
   "type": "module",
   "scripts": {

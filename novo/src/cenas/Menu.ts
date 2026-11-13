@@ -9,14 +9,14 @@ import { som } from '../audio/som';
 import { botao, botaoNav, dentro, montarTela, painel, ret, type BotaoTela, type Navegacao } from '../ui/telas';
 import { esferaDoDragao, fotoDoPerfil } from '../ui/esfera';
 import { conquistas, APELIDO_MAX } from '../logica/conquistas';
-import { avisar, pedirTexto } from '../ui/janela';
+import { pedirTexto } from '../ui/janela';
 import { avisarQueOJogoAbriu, infoVersao } from '../app/plataforma';
 import { abrirEditor } from '../ui/editores';
 import { aoApertar } from '../entrada/teclas';
 import type { ModoFase } from '../logica/ondas';
 
 export interface DadosDaLuta {
-  modo: 'cpu' | 'versus' | 'historia';
+  modo: 'cpu' | 'versus' | 'historia' | 'tutorial';
   p1: string;
   p2: string;
   /** só no modo história: a fase (id de FASES) e o modo dela */
@@ -61,7 +61,7 @@ export class Menu extends Phaser.Scene {
     b(L.options, 'OPÇÕES', () => this.scene.start('Opcoes', { voltar: 'Menu' }));
     b(L.ranking, 'RANKING', () => this.scene.start('Ranking'));
     b(L.achievements, 'CONQUISTAS', () => this.scene.start('Conquistas'));
-    b(L.tutorial, 'TUTORIAL', () => (this.scene.manager.keys['Tutorial'] ? this.scene.start('Tutorial') : avisar('TUTORIAL', 'O TUTORIAL CHEGA NA PRÓXIMA ETAPA (PR phaser-tutorial).')));
+    b(L.tutorial, 'TUTORIAL', () => this.scene.start('Luta', { modo: 'tutorial', p1: 'goku', p2: 'goku' } satisfies DadosDaLuta));
     this.add.text(TELA_L - 6, TELA_A - 4, `v${infoVersao().jogo}`, estiloTexto({ fontFamily: 'Arial', fontSize: '10px', color: '#94a3b8' })).setOrigin(1, 1);
 
     // esfera de 4 estrelas
