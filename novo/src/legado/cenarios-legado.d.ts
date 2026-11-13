@@ -4,3 +4,5 @@ export interface CenariosLegado {
   escala(k: number): void;
 }
 export function criarCenariosLegado(canvas: HTMLCanvasElement | OffscreenCanvas): CenariosLegado;
+/** arenas do EDITOR DE ARENAS do antigo (como estão em `saiyan_arenas`); o desenho usa o arenas.js do antigo */
+export function definirArenasCriadas(lista: unknown[]): void;

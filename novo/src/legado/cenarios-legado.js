@@ -3,6 +3,11 @@
 // Trechos: game-logic-core.js (ângulos), menu.js (Sala do Tempo, Torneio de Cell, Nave de Freeza,
 // drawStageBackground) e cenarios3d.js. O canvas é a "tela" do jogo antigo: 800x350 lógicos, contexto escalado.
 /* eslint-disable */
+// arenas criadas no EDITOR DE ARENAS do antigo (saiyan_arenas, lidas pelo jogo novo): id -> arena
+let arenasDoJogador = new Map();
+export function definirArenasCriadas(lista) {
+  arenasDoJogador = new Map((Array.isArray(lista) ? lista : []).filter((a) => a && typeof a.id === 'string').map((a) => [a.id, a]));
+}
 export function criarCenariosLegado(canvasEl) {
   const GAME_WIDTH = 800, GAME_HEIGHT = 350;
   let renderScale = 1;
@@ -3021,6 +3026,1207 @@ function drawCapitalStage(ang) {
         trCam = TR_CAM;
     }
 }
+
+  // ---- arenas.js (desenho das arenas criadas) ----
+  const readJsonStorage = (_k, padrao) => padrao;
+  const writeStorage = () => false;
+  const normalizadas = new WeakMap();
+  function getFaseDef(id) {
+    const bruta = arenasDoJogador.get(id);
+    if (!bruta) return null;
+    let a = normalizadas.get(bruta);
+    if (!a) { a = normalizarArena(bruta); normalizadas.set(bruta, a); }
+    return { id, arena: a, criada: true, camera: { tipo: a.movimento === 'seguir' ? 'anda' : 'orbita', volta: 10800 } };
+  }
+// arenas.js — EDITOR DE ARENAS (v0.92): arenas montadas pelo jogador com peças separadas dos cenários do jogo
+// (construções, nave, natureza, chão, céu e enfeites). Cada arena criada vira uma fase de verdade: entra no
+// FASES_PADRAO (cenario "criada", sempre liberada), aparece em ARENAS, no mapa, no ranking e na luta, com a
+// câmera dando a volta no centro como as fases 3D (cache drawCachedOrbitLayer + céu de 360°).
+// Dados: localStorage "saiyan_arenas" (só números e textos — pequeno). Arquivo .arena.json para exportar/anexar
+// (formatos/LEIA-ME-ARENAS.md). Carrega depois de mapa.js (usa as funções de desenho de cenarios3d.js e menu.js).
+
+const ARENA_MAX = 7;            // arenas criadas (cabem na tela ARENAS e nas abas do ranking)
+const ARENA_PECAS_MAX = 80;     // peças por arena (desempenho no celular)
+const ARENA_RAIO = 420;         // a planta vai de -ARENA_RAIO a +ARENA_RAIO (o centro é onde a luta acontece)
+const ARENA_FORMATO = "saiyan-fight-arena";
+const ARENA_CAMERAS = {
+    baixa: { CX: 400, HY: 118, D: 700, H: 110, F: 600, PERTO: 30, CORTE: 220 },
+    media: { CX: 400, HY: 78, D: 720, H: 180, F: 580, PERTO: 30, CORTE: 190 },
+    alta: { CX: 400, HY: 42, D: 700, H: 250, F: 560, PERTO: 30, CORTE: 160 }
+};
+const ARENA_CHAOS = {
+    grama: { nome: "GRAMA", cor: "#6fbf4a" }, areia: { nome: "AREIA", cor: "#e3c98a" }, mar: { nome: "MAR", cor: "#2f86c9" },
+    ladrilho: { nome: "PISO DE LADRILHOS", cor: "#cfd6df" }, terra: { nome: "TERRA", cor: "#a0703f" }, nuvens: { nome: "NUVENS", cor: "#e8f1fb" },
+    espaco: { nome: "ESPAÇO", cor: "#1b1638" }, lava: { nome: "LAVA", cor: "#7a1d0c" }, neve: { nome: "NEVE", cor: "#eef4fb" }
+};
+const ARENA_ABAS = [["construcao", "CONSTRUÇÃO"], ["nave", "NAVE"], ["natureza", "NATUREZA"], ["chao", "CHÃO"], ["pincel", "PINCEL"], ["planicies", "PLANÍCIES"], ["ceu", "CÉU"], ["efeitos", "EFEITOS"], ["enfeites", "ENFEITES"], ["conjuntos", "CONJUNTOS"], ["lista", "NA ARENA"]];
+const ARENA_ANIMADAS_MAX = 10;   // peças que se mexem (desenhadas a cada quadro)
+const ARENA_DESFAZER_MAX = 50;   // passos guardados no ↶ DESFAZER do editor
+const ARENA_GRADE = 20;          // GRADE ligada: posições de 20 em 20 e giro de 15 em 15 graus
+const ARENA_TESTE_ID = "arena_teste";   // fase temporária do TESTAR (só existe durante a luta de teste)
+let arenaTeste = null;           // { ed, arena, antes } enquanto a luta de teste do editor acontece
+// EMPILHAR: construções soltas em cima destas peças encaixam alinhadas no topo (altura do topo, sem o tamanho)
+const ARENA_SUPORTES = { bloco: 30, pilar: 68, predio: 72.2, ringue: 10 };
+// altura aproximada de cada peça (espaço em pé, câmera perto, toque na tela grande); as outras: 40
+const AR_ALTURAS = { bloco: 30, pilar: 68, predio: 72, ringue: 10, parede: 36, parede_janelas: 40, parede_porta: 40, escada: 24, portao: 63,
+    coluna_lava: 260, arco_lava: 190, torre: 100, torre_mirante: 90, montanha: 140, mesa_pedra: 90, fumaca: 160, antena: 70, coqueiro: 80, brasas: 110 };
+function arenaAlturaPeca(p) { return (AR_ALTURAS[p.t] || 40) * (p.e || 1); }
+const ARENA_CONJUNTOS_MAX = 20;  // conjuntos de peças guardados (aba CONJUNTOS)
+// hora do dia e clima da arena (DADOS DA ARENA)
+const ARENA_HORAS = [["dia", "DIA"], ["tarde", "TARDE"], ["noite", "NOITE"]];
+const ARENA_CLIMAS = [["nenhum", "SEM CLIMA"], ["chuva", "CHUVA"], ["neve", "NEVE"], ["neblina", "NEBLINA"], ["vento", "VENTO COM FOLHAS"], ["lava", "LAVA"]];
+// PINCEL DE CHÃO: cada pincelada é 1 peça (até ARENA_PINCEL_PONTOS pontos)
+const ARENA_PINCEL = { grama: ["GRAMA", "#6fc04e"], areia: ["AREIA", "#e8d39a"], lava: ["LAVA", "#ff5a1f"], agua: ["ÁGUA", "#4aa3df"], terra: ["TERRA", "#9c6b3f"], neve: ["NEVE", "#eef4fb"] };
+const ARENA_PINCEL_PONTOS = 60;
+// formatos das peças do chão (gramado, lago, lava...): o mesmo contorno serve de piso ou, com ALTURA, de monte
+const ARENA_FORMATOS = [["circulo", "CÍRCULO"], ["oval", "OVAL"], ["feijao", "FEIJÃO"], ["irregular", "IRREGULAR"], ["rio", "RIO RETO"], ["rio_curvo", "RIO EM CURVA"]];
+
+// ---------------- ajudantes de peça (coordenadas locais da peça -> mundo) ----------------
+function arEsc(p) { return p.e || 1; }
+function arGiro(p) { const a = (p.r || 0) * Math.PI / 180; return [Math.cos(a), Math.sin(a)]; }
+function arPt(p, lx, y, lz) {
+    const [c, s] = arGiro(p), e = arEsc(p);
+    return [p.x + (lx * c - lz * s) * e, y * e, p.z + (lx * s + lz * c) * e];
+}
+function arNormal(p, nx, ny, nz) { const [c, s] = arGiro(p); return [nx * c - nz * s, ny, nx * s + nz * c]; }
+function arProj(p, lx, y, lz, ang) { const w = arPt(p, lx, y, lz); return trProj(w[0], w[1], w[2], ang); }
+// clareia (q > 0) ou escurece (q < 0) uma cor #rrggbb e devolve #rrggbb (dá para misturar de novo)
+function arMix(cor, q) {
+    const n = parseInt(String(cor).slice(1), 16);
+    if (!/^#[0-9a-f]{6}$/i.test(cor)) return cor;
+    const f = (v) => Math.round(q >= 0 ? v + (255 - v) * q : v * (1 + q));
+    return "#" + [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(v => f(v).toString(16).padStart(2, "0")).join("");
+}
+// luz do sol fixa no mundo: faces viradas para ela mais claras
+const AR_SOL = (() => { const v = [-0.45, 0.6, 0.66], n = Math.hypot(...v); return v.map(c => c / n); })();
+function arTom(cor, normal) {
+    const l = normal[0] * AR_SOL[0] + normal[1] * AR_SOL[1] + normal[2] * AR_SOL[2];
+    return arMix(cor, Math.max(-0.35, Math.min(0.25, (l - 0.3) * 0.5)));
+}
+function arFace(p, pts, n, cor, ang, contorno) {
+    const nw = arNormal(p, n[0], n[1], n[2]);
+    return c3Face(pts.map(q => arPt(p, q[0], q[1], q[2])), nw, arTom(cor, nw), ang, contorno);
+}
+// caixa local [x0,x1] x [y0,y1] x [z0,z1]; devolve as faces visíveis por nome (frente +z, tras -z, dir +x, esq -x, topo)
+function arCaixa(p, x0, x1, y0, y1, z0, z1, cor, ang, corTopo, contorno) {
+    const t = contorno === undefined ? "rgba(40, 50, 70, 0.35)" : contorno, v = {};
+    v.tras = arFace(p, [[x1, y0, z0], [x0, y0, z0], [x0, y1, z0], [x1, y1, z0]], [0, 0, -1], cor, ang, t);
+    v.esq = arFace(p, [[x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0]], [-1, 0, 0], cor, ang, t);
+    v.dir = arFace(p, [[x1, y0, z1], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1]], [1, 0, 0], cor, ang, t);
+    v.frente = arFace(p, [[x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]], [0, 0, 1], cor, ang, t);
+    v.topo = arFace(p, [[x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1]], [0, 1, 0], corTopo || cor, ang, t);
+    return v;
+}
+// polígono num plano local (pontos [lx, y, lz])
+function arPoli(p, pts, cor, ang) {
+    trPoly(pts.map(q => arProj(p, q[0], q[1], q[2], ang)));
+    trG.fillStyle = cor; trG.fill();
+}
+// retângulo numa face vertical: face "frente"/"tras" (plano z) ou "dir"/"esq" (plano x), de a0..a1 na largura e b0..b1 de altura
+function arRetFace(p, face, plano, a0, a1, b0, b1, cor, ang) {
+    const q = (a, b) => face === "frente" ? [a, b, plano] : face === "tras" ? [-a, b, plano] : face === "dir" ? [plano, b, -a] : [plano, b, a];
+    arPoli(p, [q(a0, b0), q(a1, b0), q(a1, b1), q(a0, b1)], cor, ang);
+}
+function arOvalFace(p, face, plano, ca, cb, ra, rb, cor, ang) {
+    const pts = [];
+    for (let i = 0; i < 14; i++) {
+        const t = i / 14 * Math.PI * 2, a = ca + Math.cos(t) * ra, b = cb + Math.sin(t) * rb;
+        pts.push(face === "frente" ? [a, b, plano] : face === "tras" ? [-a, b, plano] : face === "dir" ? [plano, b, -a] : [plano, b, a]);
+    }
+    arPoli(p, pts, cor, ang);
+}
+// grade de janelas numa face (largura -L..L, altura h0..h1)
+function arJanelasFace(p, face, plano, L, h0, h1, cols, linhas, ang) {
+    const cw = L * 2 / cols, rh = (h1 - h0) / linhas;
+    for (let r = 0; r < linhas; r++) for (let c = 0; c < cols; c++) {
+        const a0 = -L + c * cw + cw * 0.2, a1 = a0 + cw * 0.6, b0 = h0 + r * rh + rh * 0.2, b1 = b0 + rh * 0.6;
+        arRetFace(p, face, plano, a0, a1, b0, b1, "#3a6cbf", ang);
+        arRetFace(p, face, plano, a0, a1, b1 - (b1 - b0) * 0.35, b1, "#8db3ea", ang);
+    }
+}
+// disco no chão (raio r) e retângulo no chão
+function arDisco(p, r, cor, ang, y) {
+    const pts = [];
+    for (let i = 0; i < 32; i++) { const a = i / 32 * Math.PI * 2; pts.push([Math.cos(a) * r * (1 + 0.05 * Math.sin(a * 3 + p.x)), y || 0.5, Math.sin(a) * r]); }
+    arPoli(p, pts, cor, ang);
+}
+function arRetChao(p, w, d, cor, ang, y) { arPoli(p, [[-w, y || 0.5, -d], [w, y || 0.5, -d], [w, y || 0.5, d], [-w, y || 0.5, d]], cor, ang); }
+function arLinhaChao(p, a, b, cor, larg, ang) {
+    const A = arProj(p, a[0], a[1], a[2], ang), B = arProj(p, b[0], b[1], b[2], ang);
+    trG.strokeStyle = cor; trG.lineWidth = Math.max(0.6, larg * A[3]);
+    trG.beginPath(); trG.moveTo(A[0], A[1]); trG.lineTo(B[0], B[1]); trG.stroke();
+}
+// semente fixa de cada peça (a mesma mesmo quando a vista anda ou centra nela)
+function arSemente(p) { return p._s !== undefined ? p._s : (p.x || 0) * 0.01 + (p.z || 0) * 0.02; }
+// relógio dos efeitos: o da luta durante a partida; nos menus e no editor, o relógio do navegador
+function arRelogio() { return typeof gameState !== "undefined" && gameState === "playing" && typeof gameplayClock === "number" ? gameplayClock : performance.now() / 1000; }
+// contorno (pontos locais [x, z]) de um formato com raio R; s = semente para o irregular
+function arFormaPontos(f, R, s) {
+    const pts = [];
+    if (f === "rio" || f === "rio_curvo") {
+        // faixa comprida com margens onduladas (reta ou em arco)
+        const N = 16, L = R * 2.6, W = R * 0.42, curva = f === "rio_curvo";
+        const centro = (u) => curva ? [Math.sin(u * 1.1) * R * 1.9, (1 - Math.cos(u * 1.1)) * R * 1.9 - R * 0.6] : [u * L / 2, 0];
+        const lado = (u, sinal) => {
+            const [cx, cz] = centro(u), e = 0.01, [ax, az] = centro(u + e), dx = ax - cx, dz = az - cz, m = Math.hypot(dx, dz) || 1;
+            const w = W * (1 + 0.18 * Math.sin(u * 7 + s) * sinal);
+            return [cx - dz / m * w * sinal, cz + dx / m * w * sinal];
+        };
+        for (let i = 0; i <= N; i++) pts.push(lado(-1 + 2 * i / N, 1));
+        for (let i = N; i >= 0; i--) pts.push(lado(-1 + 2 * i / N, -1));
+        return pts;
+    }
+    for (let i = 0; i < 32; i++) {
+        const a = i / 32 * Math.PI * 2;
+        let rx = R, rz = R;
+        if (f === "oval") { rx = R * 1.45; rz = R * 0.7; }
+        else if (f === "feijao") { const k = 1 + 0.22 * Math.cos(2 * a) - 0.38 * Math.pow(Math.max(0, Math.sin(a)), 3); rx = R * 1.25 * k; rz = R * 0.8 * k; }
+        else if (f === "irregular") { const k = 1 + 0.2 * Math.sin(3 * a + s) + 0.12 * Math.sin(5 * a + s * 2.3); rx = R * k; rz = R * k; }
+        else { const k = 1 + 0.05 * Math.sin(a * 3 + s); rx = R * k; rz = R * k; }
+        pts.push([Math.cos(a) * rx, Math.sin(a) * rz]);
+    }
+    return pts;
+}
+function arRaioForma(p, R) { return arFormaPontos(p.f, R, 1).reduce((m, q) => Math.max(m, Math.hypot(q[0], q[1])), 0); }
+// peça do chão com formato: piso plano ou, com altura (p.v), um monte em camadas (base larga embaixo, topo claro)
+function arChaoForma(p, R, cor, ang, deco) {
+    const pts = arFormaPontos(p.f, R, arSemente(p));
+    const alt = Math.max(0, Math.min(3, p.v || 0)) * 22;
+    if (!alt) {
+        arPoli(p, pts.map(q => [q[0], 0.5, q[1]]), cor, ang);
+        if (deco) deco(pts, 0.6);
+        return;
+    }
+    const N = 8;
+    for (let i = 0; i <= N; i++) {
+        const f = i / N, k = Math.sqrt(1 - f * f * 0.92), y = alt * (1 - (1 - f) * (1 - f)) + 0.5;
+        arPoli(p, pts.map(q => [q[0] * k, y, q[1] * k]), arMix(cor, -0.28 + f * 0.4), ang);
+    }
+    if (deco) deco(pts.map(q => [q[0] * 0.3, q[1] * 0.3]), alt + 0.8);
+}
+// figura plana virada para a câmera (estátua, placa...): ponto da base na tela + escala
+function arBase(p, ang, y) { return trProj(p.x, (y || 0) * arEsc(p), p.z, ang); }
+// mistura duas cores #rrggbb (t = 0 -> a, 1 -> b)
+function arMistura(a, b, t) {
+    if (!/^#[0-9a-f]{6}$/i.test(a) || !/^#[0-9a-f]{6}$/i.test(b)) return a;
+    const x = parseInt(a.slice(1), 16), y = parseInt(b.slice(1), 16);
+    return "#" + [16, 8, 0].map(k => Math.round(((x >> k) & 255) * (1 - t) + ((y >> k) & 255) * t).toString(16).padStart(2, "0")).join("");
+}
+// pincelada: faixa com cantos redondos pelos pontos (em coordenadas da peça)
+function arDesenharPincelada(p, ang) {
+    const pts = p.pts && p.pts.length ? p.pts : [[0, 0]], r = (p.w || 24) / 2, y = 0.6;
+    const borda = arMix(p.c, -0.12);
+    const disco = (q, rr, cor) => { const l = []; for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; l.push([q[0] + Math.cos(a) * rr, y, q[1] + Math.sin(a) * rr]); } arPoli(p, l, cor, ang); };
+    const faixa = (rr, cor) => {
+        for (let i = 1; i < pts.length; i++) {
+            const a = pts[i - 1], b = pts[i], dx = b[0] - a[0], dz = b[1] - a[1], m = Math.hypot(dx, dz) || 1, nx = -dz / m * rr, nz = dx / m * rr;
+            arPoli(p, [[a[0] + nx, y, a[1] + nz], [b[0] + nx, y, b[1] + nz], [b[0] - nx, y, b[1] - nz], [a[0] - nx, y, a[1] - nz]], cor, ang);
+        }
+        pts.forEach(q => disco(q, rr, cor));
+    };
+    faixa(r, borda);
+    faixa(r * 0.8, p.c);
+    if (p.m === "lava") faixa(r * 0.3, "#ffd36b");
+    else if (p.m === "agua") faixa(r * 0.25, arMix(p.c, 0.35));
+}
+// distância de (x, z) do mundo até a linha da pincelada
+function arenaDistPincel(p, x, z) {
+    const e = p.e || 1, a = -(p.r || 0) * Math.PI / 180, dx = (x - p.x) / e, dz = (z - p.z) / e;
+    const lx = dx * Math.cos(a) - dz * Math.sin(a), lz = dx * Math.sin(a) + dz * Math.cos(a), pts = p.pts || [[0, 0]];
+    let m = Infinity;
+    pts.forEach((q, i) => {
+        const o = i ? pts[i - 1] : q, vx = q[0] - o[0], vz = q[1] - o[1], L = vx * vx + vz * vz;
+        const t = L ? Math.max(0, Math.min(1, ((lx - o[0]) * vx + (lz - o[1]) * vz) / L)) : 0;
+        m = Math.min(m, Math.hypot(lx - o[0] - vx * t, lz - o[1] - vz * t));
+    });
+    return m * e;
+}
+
+// ---------------- as peças ----------------
+// aba, nome, cor padrão, planta (forma na planta de cima: ret [w, d] ou circ r) e o desenho.
+// chao: desenhada antes de tudo (plana); ceu: vai no céu de 360° (a = azimute 0-360, h = altura 0-1); texto: tem TEXTO.
+const ARENA_PECAS = {
+    // ---- CONSTRUÇÃO ----
+    bloco: { aba: "construcao", nome: "BLOCO QUADRADO", cor: "#d9dee6", planta: { ret: [15, 15] },
+        desenha: (p, ang) => arCaixa(p, -15, 15, 0, 30, -15, 15, p.c, ang) },
+    parede: { aba: "construcao", nome: "PAREDE", cor: "#e6e2d6", planta: { ret: [40, 4] },
+        desenha: (p, ang) => arCaixa(p, -40, 40, 0, 36, -4, 4, p.c, ang) },
+    parede_janelas: { aba: "construcao", nome: "PAREDE COM JANELAS", cor: "#eef2f7", planta: { ret: [40, 4] },
+        desenha: (p, ang) => {
+            const v = arCaixa(p, -40, 40, 0, 40, -4, 4, p.c, ang);
+            if (v.frente) arJanelasFace(p, "frente", 4.3, 40, 4, 38, 4, 2, ang);
+            if (v.tras) arJanelasFace(p, "tras", -4.3, 40, 4, 38, 4, 2, ang);
+        } },
+    parede_porta: { aba: "construcao", nome: "PAREDE COM PORTA", cor: "#f2d9b8", planta: { ret: [40, 4] },
+        desenha: (p, ang) => {
+            const v = arCaixa(p, -40, 40, 0, 40, -4, 4, p.c, ang);
+            [["frente", 4.3], ["tras", -4.3]].forEach(([f, pl]) => {
+                if (!v[f]) return;
+                arRetFace(p, f, pl, -11, 11, 0, 28, "#f4f4f6", ang);
+                arRetFace(p, f, pl, -9, 9, 0, 26, "#7a4a28", ang);
+                arRetFace(p, f, pl, 5, 7, 12, 14, "#ffd447", ang);
+            });
+        } },
+    predio: { aba: "construcao", nome: "PRÉDIO", cor: "#3b82f6", planta: { ret: [25, 20] },
+        desenha: (p, ang) => {
+            const v = arCaixa(p, -25, 25, 0, 72, -20, 20, "#eef2f7", ang, "#f7f9fc");
+            if (v.frente) arJanelasFace(p, "frente", 20.3, 25, 6, 68, 3, 5, ang);
+            if (v.tras) arJanelasFace(p, "tras", -20.3, 25, 6, 68, 3, 5, ang);
+            if (v.dir) arJanelasFace(p, "dir", 25.3, 20, 6, 68, 2, 5, ang);
+            if (v.esq) arJanelasFace(p, "esq", -25.3, 20, 6, 68, 2, 5, ang);
+            arPoli(p, [[-21, 72.2, -16], [21, 72.2, -16], [21, 72.2, 16], [-21, 72.2, 16]], p.c, ang);
+        } },
+    casa_domo: { aba: "construcao", nome: "CASINHA REDONDA", cor: "#60a5fa", planta: { circ: 15 },
+        desenha: (p, ang) => coCasa({ x: p.x, z: p.z, r: 14 * arEsc(p), faixa: p.c }, ang) },
+    domo: { aba: "construcao", nome: "DOMO", cor: "#ffd447", planta: { circ: 42 },
+        desenha: (p, ang) => {
+            const e = arEsc(p);
+            c3Cilindro(p.x, p.z, 0, 6 * e, 42 * e, "#e3e8f0", ang, "#f2f5f9", "rgba(90, 100, 125, 0.4)");
+            c3Domo(p.x, p.z, 6 * e, 40 * e, 32 * e, p.c, ang);
+        } },
+    torre: { aba: "construcao", nome: "TORRE REDONDA", cor: "#e8edf3", planta: { circ: 13 },
+        desenha: (p, ang) => {
+            const e = arEsc(p);
+            c3Cilindro(p.x, p.z, 0, 90 * e, 12 * e, p.c, ang, arMix(p.c, 0.3), "rgba(80, 100, 130, 0.45)");
+            const a = c3Anel(p.x, p.z, 74 * e, 12.4 * e, ang);
+            trG.fillStyle = "#5b8ed0"; trG.beginPath(); trG.ellipse(a.cx, a.cy, a.rx, a.ry + 3 * a.k * e, 0, 0, Math.PI); trG.fill();
+            c3Domo(p.x, p.z, 90 * e, 12 * e, 10 * e, "#d9a53c", ang);
+        } },
+    torre_mirante: { aba: "construcao", nome: "TORRE MIRANTE", cor: "#f4f7fb", planta: { circ: 15 },
+        desenha: (p, ang) => pcTorre(p.x, p.z, ang) },
+    pilar: { aba: "construcao", nome: "PILAR", cor: "#cfc6b8", planta: { ret: [9, 9] },
+        desenha: (p, ang) => {
+            arCaixa(p, -9, 9, 0, 6, -9, 9, p.c, ang);
+            arCaixa(p, -6, 6, 6, 62, -6, 6, arMix(p.c, 0.08), ang);
+            arCaixa(p, -9, 9, 62, 68, -9, 9, p.c, ang);
+        } },
+    escada: { aba: "construcao", nome: "ESCADA", cor: "#e2ddd2", planta: { ret: [30, 24] },
+        desenha: (p, ang) => { for (let i = 0; i < 4; i++) arCaixa(p, -30, 30, i * 6, i * 6 + 6, -24 + i * 12, 24, p.c, ang); } },
+    ringue: { aba: "construcao", nome: "RINGUE DE LUTA", cor: "#d8d4cc", planta: { ret: [80, 80] },
+        desenha: (p, ang) => {
+            arCaixa(p, -86, 86, 0, 4, -86, 86, arMix(p.c, -0.15), ang);
+            arCaixa(p, -80, 80, 4, 10, -80, 80, p.c, ang);
+            trG.save();
+            for (let i = -60; i <= 60; i += 20) {
+                arLinhaChao(p, [i, 10.2, -80], [i, 10.2, 80], "rgba(90, 90, 100, 0.45)", 1, ang);
+                arLinhaChao(p, [-80, 10.2, i], [80, 10.2, i], "rgba(90, 90, 100, 0.45)", 1, ang);
+            }
+            trG.restore();
+        } },
+    portao: { aba: "construcao", nome: "PORTÃO", cor: "#d9342b", planta: { ret: [36, 5] },
+        desenha: (p, ang) => {
+            arCaixa(p, -32, -26, 0, 56, -3, 3, p.c, ang);
+            arCaixa(p, 26, 32, 0, 56, -3, 3, p.c, ang);
+            arCaixa(p, -38, 38, 50, 56, -4, 4, p.c, ang);
+            arCaixa(p, -42, 42, 58, 63, -5, 5, "#2b2b2b", ang);
+        } },
+    // ---- NAVE ----
+    casco_nave: { aba: "nave", nome: "CASCO DE NAVE", cor: "#e9edf3", planta: { circ: 90 },
+        desenha: (p, ang) => {
+            const e = arEsc(p);
+            c3Cilindro(p.x, p.z, 10 * e, 24 * e, 90 * e, "#c9d1dd", ang, "#d8dee8", "rgba(70, 80, 100, 0.45)");
+            const a = c3Anel(p.x, p.z, 17 * e, 90.5 * e, ang);
+            for (let i = -6; i <= 6; i++) {
+                const u = i / 7, px = a.cx + u * a.rx, py = a.cy + a.ry * Math.sqrt(1 - u * u);
+                trG.fillStyle = "#24345a"; trG.beginPath(); trG.ellipse(px, py, 5 * a.k * e * Math.sqrt(1 - u * u) + 1, 3.4 * a.k * e, 0, 0, Math.PI * 2); trG.fill();
+                trG.fillStyle = "#8fb4ea"; trG.beginPath(); trG.ellipse(px - 1.2 * a.k * e, py - 1 * a.k * e, 1.6 * a.k * e * Math.sqrt(1 - u * u) + 0.4, 1 * a.k * e, 0, 0, Math.PI * 2); trG.fill();
+            }
+            c3Domo(p.x, p.z, 24 * e, 84 * e, 44 * e, p.c, ang);
+            const t = c3Anel(p.x, p.z, 24 * e, 84 * e, ang);
+            trG.fillStyle = "#ffd447";
+            for (let i = -4; i <= 4; i++) { const u = i / 5; trG.beginPath(); trG.arc(t.cx + u * t.rx, t.cy + t.ry * Math.sqrt(1 - u * u) - 2 * t.k, 1.8 * t.k * e, 0, Math.PI * 2); trG.fill(); }
+        } },
+    perna_aco: { aba: "nave", nome: "PERNA DE AÇO", cor: "#9aa5b5", planta: { ret: [22, 5] },
+        desenha: (p, ang) => {
+            const A = arProj(p, -14, 46, 0, ang), B = arProj(p, 22, 0, 0, ang), k = A[3] * arEsc(p);
+            trG.lineCap = "round";
+            trG.strokeStyle = arMix(p.c, -0.3); trG.lineWidth = Math.max(2, 9 * k);
+            trG.beginPath(); trG.moveTo(A[0], A[1]); trG.lineTo(B[0], B[1]); trG.stroke();
+            trG.strokeStyle = p.c; trG.lineWidth = Math.max(1.4, 6 * k); trG.stroke();
+            trG.strokeStyle = "rgba(255, 255, 255, 0.55)"; trG.lineWidth = Math.max(0.6, 1.6 * k);
+            trG.beginPath(); trG.moveTo(A[0] - 1.5 * k, A[1]); trG.lineTo(B[0] - 1.5 * k, B[1] - 2 * k); trG.stroke();
+            trG.lineCap = "butt";
+            trG.fillStyle = arMix(p.c, -0.2);
+            trG.beginPath(); trG.ellipse(B[0], B[1], 10 * k, 3.4 * k, 0, 0, Math.PI * 2); trG.fill();
+        } },
+    parede_metal: { aba: "nave", nome: "PAREDE DE METAL COM JANELAS OVAIS", cor: "#b8c2d0", planta: { ret: [40, 4] },
+        desenha: (p, ang) => {
+            const v = arCaixa(p, -40, 40, 0, 34, -4, 4, p.c, ang);
+            [["frente", 4.3], ["tras", -4.3]].forEach(([f, pl]) => {
+                if (!v[f]) return;
+                [-24, 0, 24].forEach(a => { arOvalFace(p, f, pl, a, 18, 8, 9, "#24345a", ang); arOvalFace(p, f, pl, a - 2, 21, 3.2, 3.4, "#8fb4ea", ang); });
+            });
+        } },
+    painel_botoes: { aba: "nave", nome: "PAINEL DE BOTÕES", cor: "#5b6577", planta: { ret: [16, 9] },
+        desenha: (p, ang) => {
+            const v = arCaixa(p, -16, 16, 0, 20, -9, 9, p.c, ang, arMix(p.c, -0.25));
+            if (v.frente) { arRetFace(p, "frente", 9.3, -12, 12, 6, 16, "#0f2a3d", ang); arRetFace(p, "frente", 9.4, -10, 2, 8, 14, "#22d3ee", ang); }
+            [["#ef4444", -9], ["#facc15", -3], ["#22c55e", 3], ["#3b82f6", 9]].forEach(([cor, lx]) => {
+                const q = arProj(p, lx, 20.5, 2, ang);
+                trG.fillStyle = cor; trG.beginPath(); trG.ellipse(q[0], q[1], 2.4 * q[3] * arEsc(p), 1.3 * q[3] * arEsc(p), 0, 0, Math.PI * 2); trG.fill();
+            });
+        } },
+    antena: { aba: "nave", nome: "ANTENA", cor: "#ef4444", planta: { circ: 5 },
+        desenha: (p, ang) => {
+            const b = arBase(p, ang), t = arBase(p, ang, 70), k = b[3] * arEsc(p);
+            trG.strokeStyle = "#c7cfdb"; trG.lineWidth = Math.max(1, 2.4 * k);
+            trG.beginPath(); trG.moveTo(b[0], b[1]); trG.lineTo(t[0], t[1]); trG.stroke();
+            trG.fillStyle = p.c; trG.beginPath(); trG.arc(t[0], t[1], 4 * k, 0, Math.PI * 2); trG.fill();
+            trG.fillStyle = "rgba(255, 255, 255, 0.6)"; trG.beginPath(); trG.arc(t[0] - 1.2 * k, t[1] - 1.2 * k, 1.4 * k, 0, Math.PI * 2); trG.fill();
+        } },
+    capsula: { aba: "nave", nome: "CÁPSULA ESPACIAL", cor: "#e9edf3", planta: { circ: 16 },
+        desenha: (p, ang) => {
+            const c = arBase(p, ang, 16), k = c[3] * arEsc(p), r = 15 * k;
+            const g = trG.createRadialGradient(c[0] - r * 0.4, c[1] - r * 0.4, r * 0.1, c[0], c[1], r);
+            g.addColorStop(0, "#ffffff"); g.addColorStop(1, arMix(p.c, -0.35));
+            trG.strokeStyle = "#8a94a6"; trG.lineWidth = Math.max(1, 2 * k);
+            trG.beginPath(); trG.moveTo(c[0] - r * 0.7, c[1] + r * 0.6); trG.lineTo(c[0] - r, c[1] + r * 1.1); trG.moveTo(c[0] + r * 0.7, c[1] + r * 0.6); trG.lineTo(c[0] + r, c[1] + r * 1.1); trG.stroke();
+            trG.fillStyle = g; trG.beginPath(); trG.arc(c[0], c[1], r, 0, Math.PI * 2); trG.fill();
+            trG.fillStyle = "#b91c1c"; trG.beginPath(); trG.ellipse(c[0], c[1] - r * 0.1, r * 0.55, r * 0.4, 0, 0, Math.PI * 2); trG.fill();
+            trG.fillStyle = "rgba(255, 200, 200, 0.6)"; trG.beginPath(); trG.ellipse(c[0] - r * 0.2, c[1] - r * 0.25, r * 0.18, r * 0.1, -0.4, 0, Math.PI * 2); trG.fill();
+        } },
+    luz_pista: { aba: "nave", nome: "LUZ DE PISTA", cor: "#7dd3fc", planta: { circ: 4 },
+        desenha: (p, ang) => {
+            const b = arBase(p, ang), t = arBase(p, ang, 14), k = b[3] * arEsc(p);
+            trG.fillStyle = "#6b7280"; trG.fillRect(b[0] - 1.5 * k, t[1], 3 * k, b[1] - t[1]);
+            const g = trG.createRadialGradient(t[0], t[1], 0, t[0], t[1], 9 * k);
+            g.addColorStop(0, "#ffffff"); g.addColorStop(0.35, p.c); g.addColorStop(1, "rgba(0, 0, 0, 0)");
+            trG.fillStyle = g; trG.beginPath(); trG.arc(t[0], t[1], 9 * k, 0, Math.PI * 2); trG.fill();
+        } },
+    // ---- NATUREZA ----
+    coqueiro: { aba: "natureza", nome: "COQUEIRO", cor: "#3fa548", planta: { circ: 10 },
+        desenha: (p, ang) => { const e = arEsc(p), [c, s] = arGiro(p); khDrawCoqueiro({ x: p.x, z: p.z, lx: 16 * e * c, lz: 16 * e * s, h: 70 * e }, ang); } },
+    palmeira: { aba: "natureza", nome: "PALMEIRA PEQUENA", cor: "#43a84c", planta: { circ: 8 },
+        desenha: (p, ang) => pcCoqueiro(p.x, p.z, ang) },
+    cipreste: { aba: "natureza", nome: "CIPRESTE", cor: "#1f5a3a", planta: { circ: 6 },
+        desenha: (p, ang) => pcCipreste({ x: p.x, z: p.z, h: 34 * arEsc(p) }, ang) },
+    arvore: { aba: "natureza", nome: "ÁRVORE REDONDA", cor: "#2f7a32", planta: { circ: 10 },
+        desenha: (p, ang) => coArvore({ x: p.x, z: p.z, t: 9 * arEsc(p) }, ang) },
+    arbusto: { aba: "natureza", nome: "ARBUSTO", cor: "#3c9440", planta: { circ: 12 },
+        desenha: (p, ang) => khDrawArbusto({ x: p.x, z: p.z, r: 12 * arEsc(p) }, ang) },
+    pedra: { aba: "natureza", nome: "PEDRA", cor: "#9aa58a", planta: { circ: 14 },
+        desenha: (p, ang) => khDrawPedra({ x: p.x, z: p.z, r: 14 * arEsc(p) }, ang) },
+    mesa_pedra: { aba: "natureza", nome: "MESA DE PEDRA", cor: "#b8875a", planta: { circ: 30 },
+        desenha: (p, ang) => {
+            const e = arEsc(p);
+            c3Cilindro(p.x, p.z, 0, 90 * e, 30 * e, p.c, ang, arMix(p.c, 0.2), "rgba(80, 50, 30, 0.45)");
+            [28, 52, 72].forEach(y => { const a = c3Anel(p.x, p.z, y * e, 30.3 * e, ang); trG.strokeStyle = "rgba(90, 55, 30, 0.45)"; trG.lineWidth = 1; trG.beginPath(); trG.ellipse(a.cx, a.cy, a.rx, a.ry, 0, 0.1, Math.PI - 0.1); trG.stroke(); });
+        } },
+    montanha: { aba: "natureza", nome: "MONTANHA", cor: "#7b8794", planta: { circ: 90 },
+        desenha: (p, ang) => {
+            const e = arEsc(p), a = c3Anel(p.x, p.z, 0, 90 * e, ang), t = trProj(p.x, 140 * e, p.z, ang);
+            const g = trG.createLinearGradient(a.cx - a.rx, 0, a.cx + a.rx, 0);
+            g.addColorStop(0, arMix(p.c, 0.15)); g.addColorStop(1, arMix(p.c, -0.3));
+            trG.fillStyle = g;
+            trG.beginPath(); trG.moveTo(a.cx - a.rx, a.cy); trG.lineTo(t[0], t[1]); trG.lineTo(a.cx + a.rx, a.cy); trG.ellipse(a.cx, a.cy, a.rx, a.ry, 0, 0, Math.PI); trG.closePath(); trG.fill();
+            const f = 0.28, nx = (q) => t[0] + (q - t[0]) * f, ny = t[1] + (a.cy - t[1]) * f;
+            trG.fillStyle = "#f4f7fb";
+            trG.beginPath(); trG.moveTo(t[0], t[1]); trG.lineTo(nx(a.cx + a.rx), ny); trG.lineTo(t[0] + (nx(a.cx + a.rx) - t[0]) * 0.4, ny - 4 * a.k); trG.lineTo(t[0], ny + 3 * a.k); trG.lineTo(nx(a.cx - a.rx), ny); trG.closePath(); trG.fill();
+        } },
+    cristal: { aba: "natureza", nome: "CRISTAL", cor: "#7dd3fc", planta: { circ: 10 },
+        desenha: (p, ang) => {
+            const b = arBase(p, ang), k = b[3] * arEsc(p);
+            [[-6, 30, -0.2], [4, 40, 0.1], [11, 22, 0.35]].forEach(([dx, h, inc]) => {
+                const x = b[0] + dx * k, y = b[1], w = 5 * k, tx = x + inc * h * k, ty = y - h * k;
+                trG.fillStyle = arMix(p.c, -0.2); trG.beginPath(); trG.moveTo(x - w, y); trG.lineTo(tx, ty); trG.lineTo(x + w, y); trG.closePath(); trG.fill();
+                trG.fillStyle = arMix(p.c, 0.35); trG.beginPath(); trG.moveTo(x - w * 0.2, y); trG.lineTo(tx, ty); trG.lineTo(x + w, y); trG.closePath(); trG.fill();
+            });
+        } },
+    // ---- CHÃO (planas) ----
+    gramado: { aba: "chao", chao: true, forma: 70, nome: "GRAMADO", cor: "#6fc04e", planta: { circ: 70 }, desenha: (p, ang) => arChaoForma(p, 70, p.c, ang) },
+    lago: { aba: "chao", chao: true, forma: 60, nome: "LAGO", cor: "#4aa3df", planta: { circ: 60 },
+        desenha: (p, ang) => arChaoForma(p, 60, p.c, ang, (pts, y) => {
+            arPoli(p, pts.map(q => [q[0] * 0.66, y, q[1] * 0.66]), arMix(p.c, 0.18), ang);
+            arPoli(p, pts.map(q => [q[0] * 0.3, y + 0.1, q[1] * 0.3]), arMix(p.c, 0.32), ang);
+        }) },
+    areia: { aba: "chao", chao: true, forma: 70, nome: "AREIA", cor: "#e8d39a", planta: { circ: 70 }, desenha: (p, ang) => arChaoForma(p, 70, p.c, ang) },
+    terra: { aba: "chao", chao: true, forma: 70, nome: "TERRA", cor: "#9c6b3f", planta: { circ: 70 }, desenha: (p, ang) => arChaoForma(p, 70, p.c, ang) },
+    lava: { aba: "chao", chao: true, forma: 60, nome: "LAVA", cor: "#ff5a1f", planta: { circ: 60 },
+        desenha: (p, ang) => arChaoForma(p, 60, p.c, ang, (pts, y) => arPoli(p, pts.map(q => [q[0] * 0.55, y, q[1] * 0.55]), "#ffc04d", ang)) },
+    neve: { aba: "chao", chao: true, forma: 70, nome: "NEVE", cor: "#eef4fb", planta: { circ: 70 }, desenha: (p, ang) => arChaoForma(p, 70, p.c, ang) },
+    piso: { aba: "chao", chao: true, nome: "PISO DE LADRILHOS", cor: "#d9d4c7", planta: { ret: [80, 80] },
+        desenha: (p, ang) => {
+            arRetChao(p, 80, 80, p.c, ang);
+            for (let i = -60; i <= 60; i += 20) { arLinhaChao(p, [i, 0.6, -80], [i, 0.6, 80], "rgba(90, 90, 100, 0.4)", 1, ang); arLinhaChao(p, [-80, 0.6, i], [80, 0.6, i], "rgba(90, 90, 100, 0.4)", 1, ang); }
+        } },
+    estrada: { aba: "chao", chao: true, nome: "ESTRADA", cor: "#8d96a3", planta: { ret: [100, 13] },
+        desenha: (p, ang) => {
+            arRetChao(p, 100, 13, p.c, ang);
+            for (let i = -90; i < 90; i += 24) arLinhaChao(p, [i, 0.6, 0], [i + 12, 0.6, 0], "rgba(255, 255, 255, 0.8)", 1.4, ang);
+        } },
+    // pincelada do PINCEL DE CHÃO: faixa larga (w) pelos pontos pts (relativos a x, z), lisa no chão
+    pincel: { aba: "pincel", chao: true, pincel: true, nome: "PINCELADA", cor: "#6fc04e", planta: { circ: 12 },
+        desenha: (p, ang) => arDesenharPincelada(p, ang) },
+    trilha: { aba: "chao", chao: true, nome: "TRILHA", cor: "#efe4c2", planta: { ret: [80, 7] }, desenha: (p, ang) => arRetChao(p, 80, 7, p.c, ang) },
+    // ---- CÉU (no céu de 360°: desenhadas uma vez na faixa) ----
+    sol: { aba: "ceu", ceu: true, nome: "SOL", cor: "#fff3b0",
+        desenha: (g, x, y, r, p) => {
+            const gr = g.createRadialGradient(x, y, 0, x, y, r * 2.4);
+            gr.addColorStop(0, "rgba(255, 250, 220, 0.95)"); gr.addColorStop(0.4, "rgba(255, 240, 180, 0.35)"); gr.addColorStop(1, "rgba(255, 240, 180, 0)");
+            g.fillStyle = gr; g.beginPath(); g.arc(x, y, r * 2.4, 0, Math.PI * 2); g.fill();
+            g.fillStyle = p.c; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+        } },
+    lua: { aba: "ceu", ceu: true, nome: "LUA", cor: "#d6d3cc", desenha: (g, x, y, r, p, s) => ksPlaneta(g, x, y, r, "lua", s) },
+    planeta_gasoso: { aba: "ceu", ceu: true, nome: "PLANETA GASOSO", cor: "#d9b48a",
+        desenha: (g, x, y, r, p, s) => {
+            ksPlaneta(g, x, y, r, "jupiter", s);
+            g.strokeStyle = "rgba(230, 210, 170, 0.75)"; g.lineWidth = Math.max(1, r * 0.12);
+            g.beginPath(); g.ellipse(x, y, r * 1.7, r * 0.38, -0.25, 0.15, Math.PI * 2 - 0.15); g.stroke();
+        } },
+    planeta_oceano: { aba: "ceu", ceu: true, nome: "PLANETA OCEANO", cor: "#2f86c9", desenha: (g, x, y, r, p, s) => ksPlaneta(g, x, y, r, "oceano", s) },
+    planeta_terra: { aba: "ceu", ceu: true, nome: "PLANETA TERRA", cor: "#4a9a5a", desenha: (g, x, y, r, p, s) => ksPlaneta(g, x, y, r, "terra", s) },
+    nuvem: { aba: "ceu", ceu: true, nome: "NUVEM", cor: "#ffffff", desenha: (g, x, y, r, p, s) => khNuvem(g, x, y + r * 0.6, r * 5, r * 1.6, s) },
+    estrelas: { aba: "ceu", ceu: true, nome: "ESTRELAS", cor: "#ffffff",
+        desenha: (g, x, y, r, p, s) => {
+            g.fillStyle = p.c;
+            for (let i = 0; i < 40; i++) { const sx = x + (c3Hash(s * 13 + i) - 0.5) * r * 12, sy = y + (c3Hash(s * 29 + i * 3) - 0.5) * r * 3.2, t = 0.5 + c3Hash(s + i * 7) * 1.1; g.globalAlpha = 0.5 + c3Hash(i + s) * 0.5; g.fillRect(sx, sy, t, t); }
+            g.globalAlpha = 1;
+        } },
+    morros: { aba: "ceu", ceu: true, nome: "MORROS NO HORIZONTE", cor: "#6fa86a", baixo: true,
+        desenha: (g, x, y, r, p, s, base) => {
+            g.fillStyle = p.c;
+            for (let i = 0; i < 6; i++) {
+                const cx = x + (i - 2.5) * r * 2.2, l = r * (1.6 + c3Hash(s + i) * 1.4), a = r * (0.5 + c3Hash(s * 3 + i) * 0.7);
+                g.beginPath(); g.moveTo(cx - l, base); g.quadraticCurveTo(cx, base - a * 2, cx + l, base); g.closePath(); g.fill();
+            }
+        } },
+    montanhas_neve: { aba: "ceu", ceu: true, nome: "MONTANHAS COM NEVE", cor: "#7b8794", baixo: true,
+        desenha: (g, x, y, r, p, s, base) => {
+            for (let i = 0; i < 5; i++) {
+                const cx = x + (i - 2) * r * 2, l = r * (1.2 + c3Hash(s + i) * 0.8), a = r * (1.2 + c3Hash(s * 5 + i) * 1.2);
+                g.fillStyle = arMix(p.c, (i % 2) * -0.15); g.beginPath(); g.moveTo(cx - l, base); g.lineTo(cx, base - a); g.lineTo(cx + l, base); g.closePath(); g.fill();
+                g.fillStyle = "#f4f7fb"; g.beginPath(); g.moveTo(cx - l * 0.3, base - a * 0.7); g.lineTo(cx, base - a); g.lineTo(cx + l * 0.3, base - a * 0.7); g.closePath(); g.fill();
+            }
+        } },
+    cidade_longe: { aba: "ceu", ceu: true, nome: "CIDADE AO LONGE", cor: "#e1e8f5", baixo: true,
+        desenha: (g, x, y, r, p, s, base) => {
+            for (let i = 0; i < 14; i++) {
+                const w = r * (0.4 + c3Hash(s + i) * 0.5), h = r * (0.6 + c3Hash(s * 7 + i) * 1.8), bx = x + (i - 7) * r * 0.75;
+                g.fillStyle = p.c; g.fillRect(bx, base - h, w, h);
+                g.fillStyle = ["#f9a8d4", "#fde68a", "#93c5fd"][i % 3]; g.fillRect(bx, base - h, w, Math.max(1, r * 0.12));
+            }
+        } },
+    ilha_pedra: { aba: "natureza", nome: "ILHA DE PEDRA RACHADA", cor: "#5b86a8", planta: { circ: 50 },
+        desenha: (p, ang) => {
+            const e = arEsc(p);
+            c3Cilindro(p.x, p.z, 0, 16 * e, 50 * e, "#3a2c44", ang, p.c);
+            const a = c3Anel(p.x, p.z, 16 * e, 50 * e, ang);
+            trG.fillStyle = "rgba(255, 255, 255, 0.18)"; trG.beginPath(); trG.ellipse(a.cx - a.rx * 0.25, a.cy - a.ry * 0.2, a.rx * 0.45, a.ry * 0.4, 0, 0, Math.PI * 2); trG.fill();
+            trG.strokeStyle = "#ff8a1e"; trG.lineWidth = Math.max(1, 2 * a.k * e);
+            trG.beginPath(); trG.moveTo(a.cx - a.rx * 0.6, a.cy); trG.lineTo(a.cx - a.rx * 0.1, a.cy + a.ry * 0.3); trG.lineTo(a.cx + a.rx * 0.2, a.cy - a.ry * 0.2); trG.lineTo(a.cx + a.rx * 0.6, a.cy + a.ry * 0.1); trG.stroke();
+        } },
+    // ---- EFEITOS (se mexem: desenhados a cada quadro, por cima do cenário guardado) ----
+    coluna_lava: { aba: "efeitos", anim: true, nome: "COLUNA DE LAVA", cor: "#ffb020", planta: { circ: 14 },
+        desenha: (p, ang, t) => {
+            const b = arBase(p, ang), topo = arBase(p, ang, 260), k = b[3] * arEsc(p), L = 26 * k, x = b[0], y = b[1], fase = arSemente(p);
+            const brilho = 0.75 + Math.sin(t * 3 + fase) * 0.25;
+            trG.fillStyle = "rgba(40, 26, 24, 0.85)";
+            for (let i = 0; i < 7; i++) { const fy = topo[1] + (y - topo[1]) * (i / 9), fx = x + Math.sin(i * 1.7 + fase + t * 0.5) * L * 1.2; trG.beginPath(); trG.arc(fx, fy, L * (1.6 + (6 - i) * 0.35), 0, Math.PI * 2); trG.fill(); }
+            trG.fillStyle = "rgba(70, 50, 55, 0.7)";
+            for (let i = 0; i < 5; i++) { trG.beginPath(); trG.arc(x + (i - 2) * L * 1.4, topo[1] - L * (1 + (i % 2)), L * 1.8, 0, Math.PI * 2); trG.fill(); }
+            const lava = trG.createLinearGradient(x - L, 0, x + L, 0);
+            lava.addColorStop(0, "#b3160d"); lava.addColorStop(0.5, `rgba(255, ${Math.round(150 * brilho)}, 40, 1)`); lava.addColorStop(1, "#b3160d");
+            trG.fillStyle = lava; trG.fillRect(x - L / 2, topo[1], L, y - topo[1]);
+            const altura = y - topo[1];
+            trG.fillStyle = p.c;
+            for (let i = 0; i < 5; i++) { const f = ((i / 5 - t * 0.9 + fase) % 1 + 1) % 1; trG.fillRect(x - L * 0.12 + Math.sin(i * 2 + t * 3) * L * 0.18, topo[1] + altura * f, L * 0.2, altura * 0.1); }
+            trG.fillStyle = "#ff9a2e";
+            for (let i = 0; i < 6; i++) { const u = ((t * 0.8 + i / 6 + fase) % 1 + 1) % 1, lado = i % 2 ? 1 : -1; trG.beginPath(); trG.arc(x + lado * L * (0.3 + u * 2.2), topo[1] - L * 2.2 * u * (1 - u) * 4 + altura * u * u * 0.25, Math.max(1, L * 0.16 * (1 - u * 0.5)), 0, Math.PI * 2); trG.fill(); }
+            trG.fillStyle = "#d4260f"; trG.beginPath(); trG.ellipse(x, y, L * 2.2, L * 0.4, 0, 0, Math.PI * 2); trG.fill();
+        } },
+    arco_lava: { aba: "efeitos", anim: true, nome: "ARCO DE LAVA", cor: "#ffd36b", planta: { ret: [70, 6] },
+        desenha: (p, ang, t) => {
+            const a = arProj(p, -70, 0, 0, ang), b = arProj(p, 70, 0, 0, ang), cima = arProj(p, 0, 190, 0, ang), k = a[3] * arEsc(p);
+            trG.lineCap = "round";
+            trG.strokeStyle = "rgba(255, 90, 20, 0.55)"; trG.lineWidth = Math.max(2, 9 * k);
+            trG.beginPath(); trG.moveTo(a[0], a[1]); trG.quadraticCurveTo(cima[0], cima[1], b[0], b[1]); trG.stroke();
+            trG.strokeStyle = p.c; trG.lineWidth = Math.max(1, 3 * k); trG.stroke();
+            trG.lineCap = "butt";
+            trG.fillStyle = "#fff1b0";
+            for (let i = 0; i < 4; i++) {
+                const u = ((t * 0.45 + i / 4) % 1 + 1) % 1, v = 1 - u;
+                trG.beginPath(); trG.arc(v * v * a[0] + 2 * u * v * cima[0] + u * u * b[0], v * v * a[1] + 2 * u * v * cima[1] + u * u * b[1], Math.max(1.2, 5 * k), 0, Math.PI * 2); trG.fill();
+            }
+        } },
+    brasas: { aba: "efeitos", anim: true, nome: "BRASAS SUBINDO", cor: "#ffb43b", planta: { circ: 30 },
+        desenha: (p, ang, t) => {
+            for (let i = 0; i < 16; i++) {
+                const s = c3Hash(i * 3.3 + arSemente(p) * 10), u = ((t * (0.25 + s * 0.3) + s) % 1 + 1) % 1;
+                const q = arProj(p, (c3Hash(i * 5.1) - 0.5) * 60 + Math.sin(t * 2 + i) * 6, u * 110, (c3Hash(i * 7.7) - 0.5) * 60, ang);
+                trG.globalAlpha = 1 - u; trG.fillStyle = i % 2 ? p.c : "#ff7a1e";
+                trG.fillRect(q[0], q[1], Math.max(1, 2.2 * q[3]), Math.max(1, 4 * q[3]));
+            }
+            trG.globalAlpha = 1;
+        } },
+    fumaca: { aba: "efeitos", anim: true, nome: "FUMAÇA", cor: "#4b4246", planta: { circ: 20 },
+        desenha: (p, ang, t) => {
+            for (let i = 0; i < 8; i++) {
+                const u = ((t * 0.18 + i / 8) % 1 + 1) % 1, q = arProj(p, Math.sin(u * 5 + i) * 12, u * 160, 0, ang), r = (10 + u * 30) * q[3] * arEsc(p);
+                trG.globalAlpha = 0.55 * (1 - u); trG.fillStyle = p.c;
+                trG.beginPath(); trG.arc(q[0], q[1], r, 0, Math.PI * 2); trG.fill();
+            }
+            trG.globalAlpha = 1;
+        } },
+    nuvens_passando: { aba: "efeitos", anim: true, nome: "NUVENS PASSANDO", cor: "#ffffff", planta: { ret: [90, 20] },
+        desenha: (p, ang, t) => {
+            for (let i = 0; i < 4; i++) {
+                const u = ((t * 0.05 + i / 4) % 1 + 1) % 1, q = arProj(p, -90 + u * 180, 14 + (i % 2) * 8, (i - 1.5) * 10, ang), k = q[3] * arEsc(p);
+                trG.globalAlpha = Math.sin(u * Math.PI) * 0.85; trG.fillStyle = p.c;
+                [[-14, 0, 12], [0, -5, 15], [14, 0, 11], [4, 4, 12]].forEach(([dx, dy, r]) => { trG.beginPath(); trG.arc(q[0] + dx * k, q[1] + dy * k, r * k, 0, Math.PI * 2); trG.fill(); });
+            }
+            trG.globalAlpha = 1;
+        } },
+    raio: { aba: "efeitos", anim: true, nome: "RAIO", cor: "#fffbe6", planta: { circ: 10 },
+        desenha: (p, ang, t) => {
+            const fase = arModulo(arSemente(p) * 7, 3.2), ciclo = ((t + fase) % 3.2 + 3.2) % 3.2;
+            if (ciclo > 0.22) return;
+            const b = arBase(p, ang), semente = Math.floor((t + fase) / 3.2);
+            trG.strokeStyle = p.c; trG.lineWidth = 2.2;
+            trG.beginPath();
+            let rx = b[0] + (c3Hash(semente) - 0.5) * 80, ry = 0;
+            trG.moveTo(rx, ry);
+            for (let i = 1; i <= 8; i++) { rx += (c3Hash(semente * 7 + i) - 0.5) * 40; ry = b[1] * i / 8; trG.lineTo(i === 8 ? b[0] : rx, ry); }
+            trG.stroke();
+            trG.fillStyle = `rgba(230, 255, 210, ${0.16 * (1 - ciclo / 0.22)})`; trG.fillRect(0, 0, canvas.width, canvas.height);
+        } },
+    // ---- ENFEITES ----
+    estatua: { aba: "enfeites", nome: "ESTÁTUA", cor: "#b8b2a6", planta: { ret: [10, 10] },
+        desenha: (p, ang) => {
+            arCaixa(p, -10, 10, 0, 12, -10, 10, arMix(p.c, -0.1), ang);
+            const b = arBase(p, ang, 12), k = b[3] * arEsc(p), cor = p.c, esc = arMix(p.c, -0.3);
+            const x = b[0], y = b[1];
+            trG.fillStyle = esc;
+            trG.fillRect(x - 5 * k, y - 18 * k, 4 * k, 18 * k); trG.fillRect(x + 1 * k, y - 18 * k, 4 * k, 18 * k);   // pernas
+            trG.fillStyle = cor;
+            trG.beginPath(); trG.moveTo(x - 8 * k, y - 34 * k); trG.lineTo(x + 8 * k, y - 34 * k); trG.lineTo(x + 6 * k, y - 17 * k); trG.lineTo(x - 6 * k, y - 17 * k); trG.closePath(); trG.fill();   // tronco
+            trG.fillStyle = esc; trG.fillRect(x - 9 * k, y - 30 * k, 18 * k, 5 * k);   // braços cruzados
+            trG.fillStyle = cor; trG.beginPath(); trG.arc(x, y - 39 * k, 5 * k, 0, Math.PI * 2); trG.fill();   // cabeça
+            trG.beginPath(); trG.moveTo(x - 5 * k, y - 41 * k); trG.lineTo(x - 7 * k, y - 49 * k); trG.lineTo(x - 2 * k, y - 44 * k); trG.lineTo(x, y - 51 * k); trG.lineTo(x + 2 * k, y - 44 * k); trG.lineTo(x + 7 * k, y - 49 * k); trG.lineTo(x + 5 * k, y - 41 * k); trG.closePath(); trG.fill();   // cabelo espetado
+        } },
+    simbolo: { aba: "enfeites", nome: "SÍMBOLO", cor: "#ff8c1a", texto: "亀", planta: { circ: 6 },
+        desenha: (p, ang) => {
+            const b = arBase(p, ang), t = arBase(p, ang, 44), k = b[3] * arEsc(p);
+            trG.fillStyle = "#6b4a22"; trG.fillRect(b[0] - 1.6 * k, t[1], 3.2 * k, b[1] - t[1]);
+            trG.fillStyle = p.c; trG.beginPath(); trG.arc(t[0], t[1], 11 * k, 0, Math.PI * 2); trG.fill();
+            trG.fillStyle = "#ffffff"; trG.beginPath(); trG.arc(t[0], t[1], 8.5 * k, 0, Math.PI * 2); trG.fill();
+            trG.fillStyle = "#111111"; trG.font = `bold ${Math.max(4, Math.round(11 * k))}px sans-serif`; trG.textAlign = "center"; trG.textBaseline = "middle";
+            trG.fillText(String(p.txt || "亀").slice(0, 2), t[0], t[1] + 0.5 * k);
+            trG.textBaseline = "alphabetic";
+        } },
+    placa: { aba: "enfeites", nome: "PLACA COM TEXTO", cor: "#8b5a2b", texto: "SAIYAN FIGHT", planta: { ret: [22, 3] },
+        desenha: (p, ang) => {
+            const b = arBase(p, ang), k = b[3] * arEsc(p), x = b[0], y = b[1];
+            trG.fillStyle = "#5a3a1c"; trG.fillRect(x - 18 * k, y - 18 * k, 2.5 * k, 18 * k); trG.fillRect(x + 15.5 * k, y - 18 * k, 2.5 * k, 18 * k);
+            trG.fillStyle = p.c; trG.fillRect(x - 24 * k, y - 32 * k, 48 * k, 16 * k);
+            trG.strokeStyle = arMix(p.c, -0.4); trG.lineWidth = Math.max(0.6, k); trG.strokeRect(x - 24 * k, y - 32 * k, 48 * k, 16 * k);
+            trG.fillStyle = "#ffffff"; trG.font = `bold ${Math.max(4, Math.round(7 * k))}px 'Trebuchet MS', sans-serif`; trG.textAlign = "center"; trG.textBaseline = "middle";
+            trG.fillText(String(p.txt || "").slice(0, 16), x, y - 24 * k, 44 * k);
+            trG.textBaseline = "alphabetic";
+        } },
+    bandeira: { aba: "enfeites", nome: "BANDEIRA", cor: "#e11d2e", planta: { circ: 5 },
+        desenha: (p, ang) => {
+            const b = arBase(p, ang), t = arBase(p, ang, 60), k = b[3] * arEsc(p);
+            trG.strokeStyle = "#d1d5db"; trG.lineWidth = Math.max(1, 2 * k);
+            trG.beginPath(); trG.moveTo(b[0], b[1]); trG.lineTo(t[0], t[1]); trG.stroke();
+            trG.fillStyle = p.c;
+            trG.beginPath(); trG.moveTo(t[0], t[1]); trG.quadraticCurveTo(t[0] + 12 * k, t[1] - 3 * k, t[0] + 24 * k, t[1] + 2 * k); trG.lineTo(t[0] + 24 * k, t[1] + 15 * k); trG.quadraticCurveTo(t[0] + 12 * k, t[1] + 10 * k, t[0], t[1] + 14 * k); trG.closePath(); trG.fill();
+        } },
+    lampiao: { aba: "enfeites", nome: "LAMPIÃO", cor: "#ffe08a", planta: { circ: 5 },
+        desenha: (p, ang) => {
+            const b = arBase(p, ang), t = arBase(p, ang, 40), k = b[3] * arEsc(p);
+            trG.fillStyle = "#374151"; trG.fillRect(b[0] - 1.5 * k, t[1], 3 * k, b[1] - t[1]);
+            const g = trG.createRadialGradient(t[0], t[1], 0, t[0], t[1], 12 * k);
+            g.addColorStop(0, "#ffffff"); g.addColorStop(0.3, p.c); g.addColorStop(1, "rgba(0, 0, 0, 0)");
+            trG.fillStyle = g; trG.beginPath(); trG.arc(t[0], t[1], 12 * k, 0, Math.PI * 2); trG.fill();
+            trG.fillStyle = "#374151"; trG.fillRect(t[0] - 4 * k, t[1] - 6 * k, 8 * k, 2 * k);
+        } },
+    ampulheta: { aba: "enfeites", nome: "AMPULHETA", cor: "#d4a52a", planta: { circ: 18 },
+        desenha: (p, ang) => { const b = arBase(p, ang); trDrawHourglass(b[0], b[1], 0.5, b[3] * 0.35 * arEsc(p)); } },
+    esfera_dragao: { aba: "enfeites", nome: "ESFERA DO DRAGÃO", cor: "#ffb52e", planta: { circ: 8 },
+        desenha: (p, ang) => {
+            arCaixa(p, -7, 7, 0, 10, -7, 7, "#9ca3af", ang);
+            const c = arBase(p, ang, 17), k = c[3] * arEsc(p), r = 7 * k;
+            const g = trG.createRadialGradient(c[0] - r * 0.35, c[1] - r * 0.4, r * 0.1, c[0], c[1], r);
+            g.addColorStop(0, "#fff3c4"); g.addColorStop(0.4, p.c); g.addColorStop(1, arMix(p.c, -0.4));
+            trG.fillStyle = g; trG.beginPath(); trG.arc(c[0], c[1], r, 0, Math.PI * 2); trG.fill();
+            trG.fillStyle = "#e11d2e";
+            [[0, -0.35], [-0.35, 0.05], [0.35, 0.05], [0, 0.4]].forEach(([dx, dy]) => { trG.beginPath(); trG.arc(c[0] + dx * r, c[1] + dy * r, r * 0.16, 0, Math.PI * 2); trG.fill(); });
+        } }
+};
+
+// ---------------- planícies (o chão completo de cada fase) ----------------
+// Escolher uma planície troca o chão base e o céu pelos da fase e coloca embaixo de tudo as peças de chão dela
+// (ilha de areia, lagos, ringue, ruas...). As peças da planície não contam no limite nem no espaço das outras.
+const ARENA_PLANICIES = {
+    kame: { nome: "ILHA DO MESTRE KAME", ceu: { topo: "#4da3e8", horizonte: "#d6efff" }, chao: { tipo: "mar", cor: "#2f86c9" },
+        pecas: [{ t: "areia", x: 0, z: 0, e: 3.6, f: "irregular", c: "#ecd9a0" }, { t: "gramado", x: -30, z: -40, e: 2.2, f: "irregular", c: "#6fbf4a" }] },
+    terra: { nome: "TORNEIO ARTES MARCIAIS", ceu: { topo: "#5aa6e8", horizonte: "#e3f1fb" }, chao: { tipo: "grama", cor: "#6fbf4a" },
+        pecas: [{ t: "piso", x: 0, z: 0, e: 2.2, c: "#e2ddd2" }, { t: "trilha", x: 0, z: -260, e: 1.6, r: 90, c: "#efe4c2" }] },
+    kaio: { nome: "PLANETA DO SR. KAIOH", ceu: { topo: "#f2c94c", horizonte: "#fff3c4" }, chao: { tipo: "grama", cor: "#6ccf5a" },
+        pecas: [0, 1, 2, 3, 4, 5, 6, 7].map(i => { const a = i / 8 * Math.PI * 2; return { t: "estrada", x: Math.cos(a) * 270, z: Math.sin(a) * 270, e: 1.1, r: (a * 180 / Math.PI + 90) % 360, c: "#f1efe6" }; }) },
+    namek: { nome: "PLANETA NAMEK", ceu: { topo: "#3fa58a", horizonte: "#bfe8c9" }, chao: { tipo: "grama", cor: "#5fa36a" },
+        pecas: [{ t: "lago", x: -260, z: -180, e: 1.6, f: "irregular", c: "#4fb3c9" }, { t: "lago", x: 240, z: 120, e: 1.2, f: "oval", c: "#4fb3c9" }, { t: "lago", x: 60, z: -330, e: 2, f: "feijao", c: "#4fb3c9" }] },
+    freeza_ship: { nome: "NAVE DE FREEZA", ceu: { topo: "#4fae8c", horizonte: "#cfeedd" }, chao: { tipo: "grama", cor: "#4f9d6c" },
+        pecas: [{ t: "lago", x: 230, z: -200, e: 2.2, f: "irregular", c: "#5cbad0" }, { t: "lago", x: -280, z: 160, e: 1.4, f: "oval", c: "#5cbad0" }, { t: "terra", x: 0, z: 0, e: 2.4, f: "circulo", c: "#8a9a6a" }] },
+    namek_explosao: { nome: "NAMEK PRESTES A EXPLODIR", ceu: { topo: "#14361f", horizonte: "#d6c070" }, chao: { tipo: "mar", cor: "#14424f" },
+        pecas: [{ t: "lava", x: -220, z: -160, e: 1.4, f: "irregular", c: "#ff5a1f" }, { t: "terra", x: 0, z: 0, e: 2.6, f: "irregular", c: "#5b86a8" }, { t: "lava", x: 260, z: 200, e: 1.1, f: "rio_curvo", c: "#ff5a1f" }] },
+    time_room: { nome: "SALA DO TEMPO", ceu: { topo: "#ffffff", horizonte: "#f2f2ee" }, chao: { tipo: "ladrilho", cor: "#f4f4f2" }, pecas: [] },
+    cell_games: { nome: "TORNEIO DE CELL", ceu: { topo: "#5aa6e8", horizonte: "#e9e0c4" }, chao: { tipo: "terra", cor: "#b99a6a" },
+        pecas: [{ t: "terra", x: -260, z: -200, e: 1.8, f: "irregular", c: "#a5865a" }, { t: "estrada", x: 0, z: 300, e: 2.6, c: "#c8a978" }, { t: "piso", x: 0, z: 0, e: 1.4, c: "#d8d4cc" }] },
+    kaioshin: { nome: "PLANETA SUPREMO KAIOH", ceu: { topo: "#7ec8e3", horizonte: "#f7e1b5" }, chao: { tipo: "grama", cor: "#8fd06b" },
+        pecas: [{ t: "lago", x: 220, z: -220, e: 1.8, f: "oval", c: "#7fd0e8" }, { t: "gramado", x: -200, z: 120, e: 2, f: "irregular", c: "#a6dc7c" }] },
+    plataforma_celestial: { nome: "PLATAFORMA CELESTIAL", ceu: { topo: "#5fb0ea", horizonte: "#e6f4fd" }, chao: { tipo: "nuvens", cor: "#e8f1fb" },
+        pecas: [{ t: "gramado", x: 0, z: 0, e: 4.3, f: "circulo", c: "#a9c9e6" }, { t: "piso", x: 0, z: 0, e: 2.2, c: "#cfe3f2" }] },
+    capital_oeste: { nome: "CAPITAL DO OESTE", ceu: { topo: "#5aa6e8", horizonte: "#cfe8fa" }, chao: { tipo: "grama", cor: "#9ccf7a" },
+        pecas: [{ t: "piso", x: 0, z: 0, e: 4.4, c: "#8d96a3" }, { t: "gramado", x: 0, z: 0, e: 4.6, f: "circulo", c: "#74c454" },
+            { t: "estrada", x: 0, z: -420, e: 4.4, c: "#8d96a3" }, { t: "estrada", x: 0, z: 420, e: 4.4, c: "#8d96a3" }] }
+};
+
+// ---------------- arena: validar / guardar ----------------
+function arenaCorValida(c, padrao) { return typeof c === "string" && /^#[0-9a-f]{6}$/i.test(c) ? c.toLowerCase() : padrao; }
+function arenaNum(v, min, max, padrao) { const n = Number(v); return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : padrao; }
+// limpa uma peça; devolve null se o tipo não existe
+function normalizarPecaArena(q) {
+    if (!q || typeof q !== "object") return null;
+    const def = ARENA_PECAS[q.t];
+    if (!def) return null;
+    const p = { t: q.t, e: Math.round(arenaNum(q.e, 0.3, 3, 1) * 100) / 100, c: arenaCorValida(q.c, def.cor) };
+    if (def.ceu) { p.a = Math.round(arenaNum(q.a, 0, 360, 0)) % 360; p.h = Math.round(arenaNum(q.h, 0, 1, 0.5) * 100) / 100; }
+    else { p.x = Math.round(arenaNum(q.x, -ARENA_RAIO, ARENA_RAIO, 0)); p.z = Math.round(arenaNum(q.z, -ARENA_RAIO, ARENA_RAIO, 0)); p.r = ((Math.round(arenaNum(q.r, -3600, 3600, 0)) % 360) + 360) % 360; }
+    if (def.texto !== undefined) p.txt = typeof q.txt === "string" ? q.txt.slice(0, 16) : def.texto;
+    if (def.forma) {
+        p.f = ARENA_FORMATOS.some(f => f[0] === q.f) ? q.f : "circulo";
+        p.v = Math.round(arenaNum(q.v, 0, 3, 0) * 10) / 10;
+    }
+    if (def.pincel) {
+        p.m = ARENA_PINCEL[q.m] ? q.m : "grama";
+        p.w = Math.round(arenaNum(q.w, 6, 80, 24));
+        const pts = (Array.isArray(q.pts) ? q.pts : []).filter(v => Array.isArray(v) && Number.isFinite(v[0]) && Number.isFinite(v[1]))
+            .slice(0, ARENA_PINCEL_PONTOS).map(v => [Math.round(arenaNum(v[0], -900, 900, 0)), Math.round(arenaNum(v[1], -900, 900, 0))]);
+        p.pts = pts.length ? pts : [[0, 0]];
+    }
+    if (!def.ceu) {
+        const b = arenaNum(q.b, 0, 900, 0);   // empilhada: altura da base (topo da peça de baixo)
+        if (b > 0) p.b = Math.round(b * 10) / 10;
+        if (p.b && Array.isArray(q.al) && q.al.length === 3 && q.al.every(Number.isFinite)) {   // centro alinhado + largura da de baixo
+            p.al = q.al.map(v => Math.round(v * 10) / 10);
+            p.d = Math.round(arenaNum(q.d, -0.9, 0.9, 0) * 10) / 10;   // DESALINHAR (fração da largura da de baixo)
+        }
+        if (Number.isInteger(q.g) && q.g > 0 && q.g < 1000) { p.g = q.g; if (q.fv) p.fv = true; }   // FUNDIR: grupo e quem dá a aparência
+    }
+    if (q.oc) p.oc = true;   // 👁 escondida no editor
+    if (q.tr) p.tr = true;   // 🔒 travada
+    return p;
+}
+function arenaPadrao() {
+    return { id: "", nome: "MINHA ARENA", cor: "#22d3ee", musica: "classico", minion: "saibaman", camera: "media", movimento: "girar", planicie: "",
+        ceu: { topo: "#4f9be0", horizonte: "#cfe8fa" }, chao: { tipo: "grama", cor: ARENA_CHAOS.grama.cor }, pecas: [] };
+}
+function normalizarArena(a) {
+    const d = arenaPadrao();
+    if (!a || typeof a !== "object") return d;
+    const nome = typeof a.nome === "string" ? a.nome.trim().toUpperCase().slice(0, 24) : "";
+    const chaoTipo = a.chao && ARENA_CHAOS[a.chao.tipo] ? a.chao.tipo : "grama";
+    return {
+        id: typeof a.id === "string" && /^arena_[\w]+$/.test(a.id) ? a.id : "",
+        nome: nome || d.nome,
+        cor: arenaCorValida(a.cor, d.cor),
+        musica: typeof a.musica === "string" && typeof BGM_THEMES === "object" && BGM_THEMES[a.musica] ? a.musica : d.musica,
+        minion: typeof a.minion === "string" && a.minion ? a.minion : d.minion,
+        camera: ARENA_CAMERAS[a.camera] ? a.camera : "media",
+        movimento: a.movimento === "seguir" ? "seguir" : "girar",
+        planicie: ARENA_PLANICIES[a.planicie] ? a.planicie : "",
+        ceu: { topo: arenaCorValida(a.ceu && a.ceu.topo, d.ceu.topo), horizonte: arenaCorValida(a.ceu && a.ceu.horizonte, d.ceu.horizonte) },
+        chao: { tipo: chaoTipo, cor: arenaCorValida(a.chao && a.chao.cor, ARENA_CHAOS[chaoTipo].cor) },
+        pecas: (Array.isArray(a.pecas) ? a.pecas : []).map(normalizarPecaArena).filter(Boolean).slice(0, ARENA_PECAS_MAX),
+        // USAR COMO CAPA: ângulo (GIRAR) ou caminho andado (SEGUIR) da foto do card; a luta começa dessa vista
+        hora: ARENA_HORAS.some(h => h[0] === a.hora) ? a.hora : "dia",
+        clima: ARENA_CLIMAS.some(c => c[0] === a.clima) ? a.clima : "nenhum",
+        capa: a.capa && typeof a.capa === "object" && Number.isFinite(a.capa.ang)
+            ? { ang: Math.round(arModulo(a.capa.ang, Math.PI * 2) * 1000) / 1000, andado: Math.round(arenaNum(a.capa.andado, -1e6, 1e6, 0)) } : null
+    };
+}
+function getArenasCriadas() {
+    const l = readJsonStorage("saiyan_arenas", []);
+    return (Array.isArray(l) ? l : []).map(normalizarArena).filter(a => a.id).slice(0, ARENA_MAX);
+}
+function salvarArenasCriadas(lista) { return writeStorage("saiyan_arenas", JSON.stringify(lista.map(normalizarArena))); }
+// céu escuro? (as fases de céu claro ganham placas escuras atrás do placar)
+function arenaCeuClaro(a) {
+    const n = parseInt(arCeuDaHora(a).topo.slice(1), 16), l = (((n >> 16) & 255) * 0.3 + ((n >> 8) & 255) * 0.59 + (n & 255) * 0.11) / 255;
+    return l > 0.35;
+}
+// coloca as arenas criadas na lista de fases (no fim, sempre liberadas)
+function registrarArenasCriadas() {
+    for (let i = FASES_PADRAO.length - 1; i >= 0; i--) if (FASES_PADRAO[i].criada) FASES_PADRAO.splice(i, 1);
+    const lista = getArenasCriadas();
+    if (arenaTeste) lista.push(arenaTeste.arena);   // TESTAR: a arena em edição entra só durante a luta de teste
+    lista.forEach((a, i) => {
+        FASES_PADRAO.push({ id: a.id, nome: a.nome, posicao: 1000 + i, cor: a.cor, musica: a.musica, cenario: "criada",
+            camera: { tipo: a.movimento === "seguir" ? "anda" : "orbita", volta: 10800 }, fundoClaro: arenaCeuClaro(a), minion: a.minion, conquista: null, criada: true, arena: a });
+    });
+    aplicarOrdemDasFases(typeof getOrdemFasesSalva === "function" ? getOrdemFasesSalva() : null);
+    if (typeof atualizarCoresDasFases === "function") atualizarCoresDasFases();
+    if (typeof selectedStage !== "undefined" && !getFaseDef(selectedStage)) selectedStage = STAGE_PROGRESSION[0].id;
+}
+
+// ---------------- espaço de cada peça (para duas não ocuparem o mesmo lugar) ----------------
+// Peças de pé, efeitos e montes (chão com altura) ocupam espaço; pisos planos e o céu não.
+function arenaPegada(p) {
+    const def = ARENA_PECAS[p.t];
+    if (!def || def.ceu || (def.chao && !(p.v > 0))) return null;
+    const e = p.e || 1, y0 = p.b || 0, y1 = y0 + arenaAlturaPeca(p);
+    if (def.forma) return { r: arRaioForma(p, def.forma) * e * 0.92, x: p.x, z: p.z, y0, y1 };
+    if (def.planta && def.planta.ret) return { x: p.x, z: p.z, hw: def.planta.ret[0] * e, hd: def.planta.ret[1] * e, a: (p.r || 0) * Math.PI / 180, y0, y1 };
+    return { r: ((def.planta && def.planta.circ) || 8) * e, x: p.x, z: p.z, y0, y1 };
+}
+// o ponto (x, z) está dentro da pegada g?
+function arenaPontoNaPegada(g, x, z) {
+    if (g.r !== undefined) return Math.hypot(x - g.x, z - g.z) <= g.r;
+    const c = Math.cos(g.a), s = Math.sin(g.a), dx = x - g.x, dz = z - g.z;
+    return Math.abs(dx * c + dz * s) <= g.hw && Math.abs(-dx * s + dz * c) <= g.hd;
+}
+function arPontoNoRet(px, pz, q) {   // ponto do retângulo q mais perto de (px, pz)
+    const c = Math.cos(q.a), s = Math.sin(q.a), dx = px - q.x, dz = pz - q.z;
+    const lx = Math.max(-q.hw, Math.min(q.hw, dx * c + dz * s)), lz = Math.max(-q.hd, Math.min(q.hd, -dx * s + dz * c));
+    return [q.x + lx * c - lz * s, q.z + lx * s + lz * c];
+}
+function arRetCantos(q) {
+    const c = Math.cos(q.a), s = Math.sin(q.a);
+    return [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([u, v]) => [q.x + u * q.hw * c - v * q.hd * s, q.z + u * q.hw * s + v * q.hd * c]);
+}
+function arenaPegadasSeTocam(a, b) {
+    const folga = 1;
+    // uma em cima da outra (ex.: bloco empilhado) não se chocam
+    if (a.y1 !== undefined && b.y1 !== undefined && (a.y1 <= b.y0 + 0.5 || b.y1 <= a.y0 + 0.5)) return false;
+    if (a.r !== undefined && b.r !== undefined) return Math.hypot(a.x - b.x, a.z - b.z) < a.r + b.r - folga;
+    if (a.r !== undefined || b.r !== undefined) {
+        const c = a.r !== undefined ? a : b, q = a.r !== undefined ? b : a, [nx, nz] = arPontoNoRet(c.x, c.z, q);
+        return Math.hypot(c.x - nx, c.z - nz) < c.r - folga;
+    }
+    // dois retângulos: eixos separadores
+    const A = arRetCantos(a), B = arRetCantos(b);
+    for (const q of [a, b]) for (const ang of [q.a, q.a + Math.PI / 2]) {
+        const ax = Math.cos(ang), az = Math.sin(ang), proj = (pts) => pts.map(p => p[0] * ax + p[1] * az);
+        const pa = proj(A), pb = proj(B);
+        if (Math.max(...pa) - folga <= Math.min(...pb) || Math.max(...pb) - folga <= Math.min(...pa)) return false;
+    }
+    return true;
+}
+// a peça i (ou uma peça p fora da lista) invade o espaço de outra?
+// ignorar: índice ou lista de índices que não contam (ex.: as peças arrastadas junto); peças do mesmo grupo de FUSÃO podem se sobrepor
+function arenaPecaColide(pecas, p, ignorar) {
+    const g = arenaPegada(p);
+    if (!g) return false;
+    const pula = Array.isArray(ignorar) ? ignorar : [ignorar];
+    return pecas.some((q, j) => {
+        if (pula.includes(j) || q === p || (p.g && q.g === p.g)) return false;
+        const h = arenaPegada(q);
+        return !!h && arenaPegadasSeTocam(g, h);
+    });
+}
+// índices das peças que se sobrepõem à peça i (sem olhar grupos de fusão)
+function arenaPecasTocando(pecas, i) {
+    const g = arenaPegada(pecas[i]);
+    if (!g) return [];
+    return pecas.map((q, j) => j).filter(j => { if (j === i) return false; const h = arenaPegada(pecas[j]); return !!h && arenaPegadasSeTocam(g, h); });
+}
+
+// ---------------- desenho da arena (luta, ARENAS, prévia do editor) ----------------
+const arCenas = new Map();   // chave -> { passo, canvas, pano, chave }
+// duas chaves: a das peças (camada 3D guardada) e a do céu (faixa 360°). Mudar a cor do céu ou a hora só refaz o
+// céu, e mudar uma peça não refaz o céu — arrastar no seletor de cores refazia tudo a cada movimento e travava.
+function arCenaDe(id, a) {
+    let c = arCenas.get(id);
+    const ceu = (p) => !!ARENA_PECAS[p.t].ceu;
+    const chave = JSON.stringify([a.pecas.filter(p => !ceu(p)), a.planicie, a.camera]);
+    const chavePano = JSON.stringify([a.ceu, a.hora, a.clima, a.camera, a.pecas.filter(ceu)]);
+    if (!c || c.chave !== chave) { c = { passo: null, canvas: c ? c.canvas : null, pano: c && c.chavePano === chavePano ? c.pano : null, chave, chavePano }; arCenas.set(id, c); }
+    else if (c.chavePano !== chavePano) { c.pano = null; c.chavePano = chavePano; }
+    return c;
+}
+// cores do céu conforme a hora (tarde alaranjada, noite escura)
+function arCeuDaHora(a) {
+    if (a.clima === "lava") {   // clima LAVA: céu avermelhado, como Namek prestes a explodir (escurece de noite)
+        const k = a.hora === "noite" ? 0.85 : 0.6;
+        return { topo: arMistura(a.ceu.topo, "#3a0d08", k), horizonte: arMistura(a.ceu.horizonte, "#ff7a2a", k * 0.85) };
+    }
+    if (a.hora === "tarde") return { topo: arMistura(a.ceu.topo, "#ff7a3d", 0.45), horizonte: arMistura(a.ceu.horizonte, "#ffb36b", 0.6) };
+    if (a.hora === "noite") return { topo: arMistura(a.ceu.topo, "#050a1f", 0.85), horizonte: arMistura(a.ceu.horizonte, "#1b2448", 0.75) };
+    return a.ceu;
+}
+function arPanorama(a, cena, cam) {
+    if (c3Valida(cena.pano)) return cena.pano;
+    const W = Math.round(Math.PI * 2 * cam.F), f = c3NovaFaixa(W, cam.HY + 6);
+    if (!f) return null;
+    const { c, g } = f, base = cam.HY + 2, cores = arCeuDaHora(a);
+    const ceu = g.createLinearGradient(0, 0, 0, base);
+    ceu.addColorStop(0, cores.topo); ceu.addColorStop(1, cores.horizonte);
+    g.fillStyle = ceu; g.fillRect(0, 0, W, c.__h);
+    if (a.hora === "noite") {   // estrelas
+        for (let i = 0; i < 260; i++) {
+            const x = c3Hash(i * 1.7) * W, y = c3Hash(i * 3.3) * (base - 6), r = 0.5 + c3Hash(i * 5.1) * 1.1;
+            g.fillStyle = `rgba(255, 255, 255, ${0.35 + c3Hash(i * 7.9) * 0.6})`; g.fillRect(x, y, r, r);
+        }
+    }
+    // peças do céu: as de baixo (morros, cidade) por último, encostadas no horizonte
+    const pecas = a.pecas.filter(p => ARENA_PECAS[p.t].ceu).sort((p, q) => (ARENA_PECAS[p.t].baixo ? 1 : 0) - (ARENA_PECAS[q.t].baixo ? 1 : 0));
+    pecas.forEach((p, i) => {
+        const def = ARENA_PECAS[p.t], x = p.a / 360 * W, r = cam.HY * 0.12 * p.e;
+        const y = def.baixo ? base - 4 - p.h * (cam.HY - 10) : Math.min(base - 4 - p.h * (cam.HY - 10), base - 3 - r);
+        c3NaVolta(W, x, r * 9, xx => def.desenha(g, xx, y, r, p, i + 1, base));
+    });
+    cena.pano = c;
+    return c;
+}
+// detalhes do chão (fixos no mundo) para a luta "andar" sobre ele
+const AR_DETALHES = (() => {
+    const l = [];
+    for (let i = 0; i < 90; i++) { const ang = c3Hash(i * 3.1) * Math.PI * 2, r = 60 + c3Hash(i * 7.7) * 1300; l.push({ x: Math.sin(ang) * r, z: Math.cos(ang) * r, s: c3Hash(i * 5.3) }); }
+    return l;
+})();
+const AR_PERIODO = ARENA_RAIO * 2 + 80;   // no modo SEGUIR a planta se repete para os lados
+function arModulo(v, m) { return ((v % m) + m) % m; }
+// chão: a cor escolhida de verdade (sem clarear/escurecer, para ficar igual ao campo de cor) e, perto do
+// horizonte, uma névoa da cor do horizonte do céu — o chão some no horizonte como planície, sem faixa lisa que
+// parecia um muro (e tampava os planetas baixos)
+function arDesenharNevoaDoHorizonte(a, cam) {
+    const alto = (canvas.height - cam.HY) * 0.34, hz = arCeuDaHora(a).horizonte;
+    const n = parseInt(hz.slice(1), 16), rgb = `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`;
+    const gr = ctx.createLinearGradient(0, cam.HY, 0, cam.HY + alto);
+    gr.addColorStop(0, `rgba(${rgb}, 1)`); gr.addColorStop(0.25, `rgba(${rgb}, 0.85)`); gr.addColorStop(0.55, `rgba(${rgb}, 0.35)`); gr.addColorStop(1, `rgba(${rgb}, 0)`);
+    ctx.fillStyle = gr; ctx.fillRect(0, cam.HY, canvas.width, alto + 2);
+}
+function arDesenharChao(a, ang, cam, desl) {
+    const ch = a.chao, base = ch.cor;
+    ctx.fillStyle = base; ctx.fillRect(0, cam.HY, canvas.width, canvas.height - cam.HY);
+    const lim = cam.D - cam.PERTO * 2, t = arRelogio();
+    if (ch.tipo === "ladrilho") {
+        // as linhas vão até bem longe (somem na névoa do horizonte)
+        // longe as linhas ficam mais fracas (juntas elas viravam uma faixa cinza no horizonte)
+        const ox = arModulo(desl.x, 80), oz = arModulo(desl.z, 80), L = 4000;
+        ctx.strokeStyle = "rgba(90, 95, 110, 0.35)"; ctx.lineWidth = 1; ctx.beginPath();
+        for (let i = -L; i <= L; i += 80) {
+            if (Math.abs(i) > 1600) continue;
+            [[[i - ox, -L], [i - ox, L]], [[-L, i - oz], [L, i - oz]]].forEach(([p0, p1]) => {
+                const seg = c3RecorteChao(p0, p1, ang, lim);
+                if (!seg) return;
+                const A = trProj(seg[0][0], 0, seg[0][1], ang), B = trProj(seg[1][0], 0, seg[1][1], ang);
+                ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]);
+            });
+        }
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(90, 95, 110, 0.12)"; ctx.beginPath();
+        for (let i = -L; i <= L; i += 80) {
+            if (Math.abs(i) <= 1600) continue;
+            [[[i - ox, -L], [i - ox, L]], [[-L, i - oz], [L, i - oz]]].forEach(([p0, p1]) => {
+                const seg = c3RecorteChao(p0, p1, ang, lim);
+                if (!seg) return;
+                const A = trProj(seg[0][0], 0, seg[0][1], ang), B = trProj(seg[1][0], 0, seg[1][1], ang);
+                ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]);
+            });
+        }
+        ctx.stroke();
+        arDesenharNevoaDoHorizonte(a, cam);
+        return;
+    }
+    AR_DETALHES.forEach(d => {
+        const dx = arModulo(d.x - desl.x + 1300, 2600) - 1300, dz = d.z - desl.z;
+        if (trRot(dx, dz, ang)[1] > lim) return;
+        const p = trProj(dx, 0, dz, ang), k = p[3];
+        if (p[1] < cam.HY) return;
+        if (ch.tipo === "grama") { ctx.strokeStyle = arMix(base, -0.3); ctx.lineWidth = Math.max(0.6, 1.2 * k); ctx.beginPath(); ctx.moveTo(p[0] - 3 * k, p[1]); ctx.lineTo(p[0] - 1 * k, p[1] - 6 * k); ctx.moveTo(p[0] + 2 * k, p[1]); ctx.lineTo(p[0] + 3 * k, p[1] - 5 * k); ctx.stroke(); }
+        else if (ch.tipo === "mar") { ctx.strokeStyle = "rgba(255, 255, 255, 0.45)"; ctx.lineWidth = Math.max(0.6, 1.4 * k); const o = Math.sin(t * 1.5 + d.s * 6) * 3 * k; ctx.beginPath(); ctx.arc(p[0] + o, p[1], 6 * k, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke(); }
+        else if (ch.tipo === "nuvens") { ctx.fillStyle = "rgba(255, 255, 255, 0.55)"; ctx.beginPath(); ctx.ellipse(p[0], p[1], 22 * k, 6 * k, 0, 0, Math.PI * 2); ctx.fill(); }
+        else if (ch.tipo === "espaco") { ctx.fillStyle = d.s > 0.5 ? "#ffffff" : "#a5b4fc"; ctx.fillRect(p[0], p[1], 1.2 + d.s, 1.2 + d.s); }
+        else if (ch.tipo === "lava") { ctx.strokeStyle = "rgba(255, 140, 40, 0.75)"; ctx.lineWidth = Math.max(0.8, 2 * k); ctx.beginPath(); ctx.moveTo(p[0] - 10 * k, p[1]); ctx.lineTo(p[0] - 2 * k, p[1] + 2 * k); ctx.lineTo(p[0] + 9 * k, p[1] - 1 * k); ctx.stroke(); }
+        else { ctx.fillStyle = arMix(base, d.s > 0.5 ? -0.25 : 0.2); ctx.beginPath(); ctx.ellipse(p[0], p[1], 3 * k, 1.4 * k, 0, 0, Math.PI * 2); ctx.fill(); }
+    });
+    arDesenharNevoaDoHorizonte(a, cam);
+}
+// posições de uma peça na tela: o centro da vista (desl) vira a origem; no modo SEGUIR a planta se repete de lado
+function arCopiasDaPeca(p, desl, repete) {
+    const z = p.z - desl.z;
+    if (!repete) return [{ x: p.x - desl.x, z }];
+    const x0 = arModulo(p.x - desl.x + AR_PERIODO / 2, AR_PERIODO) - AR_PERIODO / 2;
+    return [x0 - AR_PERIODO, x0, x0 + AR_PERIODO].filter(x => Math.abs(x) < 1350).map(x => ({ x, z }));
+}
+// opts: desl {x, z} (centro da vista), repete (modo SEGUIR), vermelha (índice da peça que invade outra), anima (desenha
+// os efeitos agora: false = deixa para a passada de cada quadro)
+// peça de base de cada peça empilhada (a pilha é desenhada de baixo para cima, na profundidade da peça do chão)
+function arRaizesDasPilhas(pecas) {
+    const raiz = pecas.map((p, i) => i);
+    pecas.forEach((p, i) => {
+        let atual = i, passos = 0;
+        while (pecas[atual].b > 0 && passos++ < 12) {
+            const q = pecas[atual], base = pecas.findIndex((r, j) => j !== atual && !ARENA_PECAS[r.t].ceu && (r.b || 0) < q.b
+                && Math.abs((r.b || 0) + arenaAlturaPeca(r) - q.b) < 2 && arenaPontoNaPegada(arenaPegada(r) || { r: 0, x: r.x, z: r.z }, q.al ? q.al[0] : q.x, q.al ? q.al[1] : q.z));
+            if (base < 0) break;
+            atual = base;
+        }
+        raiz[i] = atual;
+    });
+    return raiz;
+}
+// desenha a peça com a base levantada (empilhada): subir a peça = baixar a câmera do mesmo tanto
+function arDesenharPecaElevada(o, ang, t) {
+    const antes = trCam;
+    if (o.p.b > 0) trCam = Object.assign({}, antes, { H: antes.H - o.p.b });
+    try { o.d.desenha(o.p, ang, t); } catch (e) { /* peça com erro não derruba o cenário */ }
+    finally { trCam = antes; }
+}
+function arDesenharCena(a, ang, cam, opts) {
+    const desl = opts.desl, repete = !!opts.repete;
+    const comPos = (p, pos) => Object.assign({ _s: arSemente(p) }, p, pos);
+    const plan = ARENA_PLANICIES[a.planicie];
+    if (plan) plan.pecas.forEach(p => arCopiasDaPeca(p, desl, repete).forEach(pos => ARENA_PECAS[p.t].desenha(comPos(Object.assign({ r: 0, f: "circulo", v: 0 }, p), pos), ang)));
+    const objs = [], raiz = a.pecas.some(p => p.b > 0) ? arRaizesDasPilhas(a.pecas) : null;
+    const verm = [].concat(opts.vermelha === undefined || opts.vermelha === null ? [] : opts.vermelha);
+    a.pecas.forEach((p, i) => {
+        const d = ARENA_PECAS[p.t];
+        if (d.ceu || (d.anim && !opts.anima) || (p.oc && opts.esconder)) return;
+        const q = verm.includes(i) ? Object.assign({}, p, { c: "#ff3030" }) : p;
+        arCopiasDaPeca(p, desl, repete).forEach(pos => {
+            if (d.chao && !(p.v > 0) && !p.b) { d.desenha(comPos(q, pos), ang); return; }   // piso plano: embaixo de tudo, na ordem
+            const z = trRot(pos.x, pos.z, ang)[1];
+            if (z > cam.CORTE) return;   // perto da câmera demais: tamparia a luta
+            // profundidade para ordenar: a da peça do chão da pilha (empilhadas logo depois dela, de baixo para cima)
+            const r = raiz ? a.pecas[raiz[i]] : p;
+            const zk = r === p ? z : trRot(pos.x + r.x - p.x, pos.z + r.z - p.z, ang)[1];
+            objs.push({ z, zk, p: comPos(q, pos), d, i });
+        });
+    });
+    // FUNDIR (recorte de verdade): cada peça do grupo sai na sua profundidade normal; depois da última do grupo, a
+    // peça escolhida (fv) é desenhada de novo só dentro da região sobreposta (o volume em comum, visto na tela)
+    objs.forEach(o => { o.k = o.zk; o.ult = 0; });
+    objs.filter(o => a.pecas[o.i].g && a.pecas[o.i].fv).forEach(o => {
+        const p = a.pecas[o.i], dx = o.p.x - p.x, dz = o.p.z - p.z;   // deslocamento desta cópia na tela
+        const membros = a.pecas.map((q, j) => j).filter(j => j !== o.i && a.pecas[j].g === p.g);
+        const regioes = arRegioesFundidas(p, membros.map(j => a.pecas[j]), dx, dz, ang);
+        if (!regioes.length) return;
+        let k = o.zk;
+        objs.forEach(u => { if (membros.includes(u.i) && Math.abs(u.p.x - a.pecas[u.i].x - dx) < 1 && Math.abs(u.p.z - a.pecas[u.i].z - dz) < 1) k = Math.max(k, u.zk); });
+        objs.push({ z: o.z, zk: k, k, ult: 1, p: o.p, d: o.d, i: o.i, recorte: regioes });
+    });
+    const t = arRelogio();
+    objs.sort((u, v) => (u.k - v.k) || (u.ult - v.ult) || ((u.p.b || 0) - (v.p.b || 0)) || (u.z - v.z)).forEach(o => {
+        if (o.recorte) {
+            trG.save();
+            trG.beginPath();
+            o.recorte.forEach(r => { r.forEach((q, n) => n ? trG.lineTo(q[0], q[1]) : trG.moveTo(q[0], q[1])); trG.closePath(); });
+            trG.clip();
+            arDesenharPecaElevada(o, ang, t);
+            trG.restore();
+            return;
+        }
+        arDesenharPecaElevada(o, ang, t);
+        if (verm.includes(o.i)) arDesenharPegadaVermelha(o.p, ang);
+    });
+}
+// contorno da pegada (pontos [x, z] do mundo), deslocado para a cópia na tela
+function arContornoPegada(g, dx, dz) {
+    const pts = g.r !== undefined ? Array.from({ length: 20 }, (_, i) => { const t = i / 20 * Math.PI * 2; return [g.x + Math.cos(t) * g.r, g.z + Math.sin(t) * g.r]; }) : arRetCantos(g);
+    return pts.map(q => [q[0] + dx, q[1] + dz]);
+}
+// interseção de dois polígonos convexos (Sutherland–Hodgman)
+function arRecorteConvexo(A, B) {
+    let area = 0;
+    B.forEach((q, i) => { const r = B[(i + 1) % B.length]; area += q[0] * r[1] - r[0] * q[1]; });
+    const lado = area >= 0 ? 1 : -1;
+    let saida = A;
+    for (let i = 0; i < B.length && saida.length; i++) {
+        const e0 = B[i], e1 = B[(i + 1) % B.length], entrada = saida;
+        const dentro = (q) => lado * ((e1[0] - e0[0]) * (q[1] - e0[1]) - (e1[1] - e0[1]) * (q[0] - e0[0])) >= 0;
+        const corte = (p, q) => {
+            const a1 = (e1[0] - e0[0]) * (p[1] - e0[1]) - (e1[1] - e0[1]) * (p[0] - e0[0]), a2 = (e1[0] - e0[0]) * (q[1] - e0[1]) - (e1[1] - e0[1]) * (q[0] - e0[0]);
+            const t = a1 / (a1 - a2);
+            return [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t];
+        };
+        saida = [];
+        entrada.forEach((q, j) => {
+            const p = entrada[(j + entrada.length - 1) % entrada.length];
+            if (dentro(q)) { if (!dentro(p)) saida.push(corte(p, q)); saida.push(q); }
+            else if (dentro(p)) saida.push(corte(p, q));
+        });
+    }
+    return saida;
+}
+// envoltória convexa (pontos da tela)
+function arEnvoltoria(pts) {
+    const p = pts.slice().sort((u, v) => u[0] - v[0] || u[1] - v[1]);
+    if (p.length < 3) return p;
+    const cruz = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+    const baixo = [], cima = [];
+    p.forEach(q => { while (baixo.length >= 2 && cruz(baixo[baixo.length - 2], baixo[baixo.length - 1], q) <= 0) baixo.pop(); baixo.push(q); });
+    p.slice().reverse().forEach(q => { while (cima.length >= 2 && cruz(cima[cima.length - 2], cima[cima.length - 1], q) <= 0) cima.pop(); cima.push(q); });
+    return baixo.slice(0, -1).concat(cima.slice(0, -1));
+}
+// regiões da tela onde a peça escolhida se sobrepõe às outras do grupo (o volume em comum projetado)
+function arRegioesFundidas(p, outras, dx, dz, ang) {
+    const g = arenaPegada(p);
+    if (!g) return [];
+    const A = arContornoPegada(g, dx, dz);
+    const res = [];
+    outras.forEach(q => {
+        const h = arenaPegada(q);
+        if (!h) return;
+        const y0 = Math.max(g.y0, h.y0), y1 = Math.min(g.y1, h.y1);
+        if (y1 <= y0) return;
+        const C = arRecorteConvexo(A, arContornoPegada(h, dx, dz));
+        if (C.length < 3) return;
+        const tela = [];
+        C.forEach(c => { tela.push(trProj(c[0], y0, c[1], ang)); tela.push(trProj(c[0], y1, c[1], ang)); });
+        res.push(arEnvoltoria(tela.map(v => [v[0], v[1]])));
+    });
+    return res;
+}
+// área da peça pintada de vermelho no chão (invadindo outra peça)
+function arDesenharPegadaVermelha(p, ang) {
+    const g = arenaPegada(p);
+    if (!g) return;
+    const pts = g.r !== undefined
+        ? Array.from({ length: 24 }, (_, i) => { const a = i / 24 * Math.PI * 2; return [g.x + Math.cos(a) * g.r, g.z + Math.sin(a) * g.r]; })
+        : arRetCantos(g);
+    trPoly(pts.map(q => trProj(q[0], 1 + (p.b || 0), q[1], ang)));
+    trG.fillStyle = "rgba(255, 30, 30, 0.35)"; trG.fill();
+    trG.strokeStyle = "#ff2a2a"; trG.lineWidth = 2; trG.stroke();
+}
+// efeitos (peças que se mexem): a cada quadro, por cima da camada guardada
+function arDesenharAnimadas(a, ang, cam, opts) {
+    const t = arRelogio();
+    const objs = [];
+    a.pecas.forEach(p => {
+        const d = ARENA_PECAS[p.t];
+        if (!d.anim || (p.oc && opts.esconder)) return;
+        arCopiasDaPeca(p, opts.desl, !!opts.repete).forEach(pos => {
+            const z = trRot(pos.x, pos.z, ang)[1];
+            if (z <= cam.CORTE) objs.push({ z, p: Object.assign({ _s: arSemente(p) }, p, pos), d });
+        });
+    });
+    objs.sort((u, v) => u.z - v.z).forEach(o => arDesenharPecaElevada(o, ang, t));
+}
+// desenha a arena no ctx do jogo. opts: cam (outra câmera), chave (cache), desl, andado (modo SEGUIR), vermelha
+function drawArenaCriada(a, ang, opts) {
+    opts = opts || {};
+    const cam = opts.cam || ARENA_CAMERAS[a.camera] || ARENA_CAMERAS.media, anterior = trCam;
+    const seguir = opts.andado !== undefined;
+    const desl = { x: (opts.desl ? opts.desl.x : 0) + (seguir ? opts.andado : 0), z: opts.desl ? opts.desl.z : 0 };
+    const cena = arCenaDe(opts.chave || a.id || "_previa", a);
+    trCam = cam;
+    try {
+        const pano = arPanorama(a, cena, cam);
+        if (!pano || !c3BlitPanorama(pano, seguir ? 0 : ang, cam.F, cam.CX)) { ctx.fillStyle = arCeuDaHora(a).topo; ctx.fillRect(0, 0, canvas.width, cam.HY + 2); }
+        arDesenharChao(a, ang, cam, desl);
+        const o = { desl, repete: seguir, vermelha: opts.vermelha, esconder: !!opts.esconder };
+        if (seguir || opts.desl) {
+            // a vista anda (SEGUIR) ou está centrada numa peça: desenha direto, sem a camada guardada
+            trG = ctx;
+            arDesenharCena(a, ang, cam, Object.assign({ anima: true }, o));
+        } else {
+            drawCachedOrbitLayer(cena, ang, (g) => arDesenharCena(a, g, cam, o));
+            arDesenharAnimadas(a, ang, cam, o);
+        }
+        trG = ctx;
+        arDesenharHora(a, ang, cam, o);
+        arDesenharClima(a);
+    } finally {
+        trCam = anterior;
+        trG = ctx;
+    }
+}
+// ---- hora do dia: tarde alaranjada, noite escura com lampiões, luzes e lava brilhando ----
+const AR_LUZES = { lampiao: 40, luz_pista: 14, lava: 2, coluna_lava: 60, arco_lava: 40, brasas: 20, cristal: 12 };
+function arDesenharHora(a, ang, cam, o) {
+    if (a.hora !== "tarde" && a.hora !== "noite") return;
+    ctx.fillStyle = a.hora === "noite" ? "rgba(8, 14, 48, 0.5)" : "rgba(255, 120, 40, 0.13)";
+    ctx.fillRect(0, cam.HY - 2, canvas.width, canvas.height - cam.HY + 2);
+    if (a.hora !== "noite") return;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    a.pecas.forEach(p => {
+        const def = ARENA_PECAS[p.t], lava = p.t === "pincel" && p.m === "lava";
+        if (def.ceu || (AR_LUZES[p.t] === undefined && !lava) || (p.oc && o.esconder)) return;
+        const alto = (lava ? 1 : AR_LUZES[p.t]) * (p.e || 1) + (p.b || 0);
+        arCopiasDaPeca(p, o.desl, o.repete).forEach(pos => {
+            if (trRot(pos.x, pos.z, ang)[1] > cam.CORTE) return;
+            const pr = trProj(pos.x, alto, pos.z, ang), k = pr[3];
+            const r = (p.t === "lampiao" || p.t === "luz_pista" ? 34 : lava ? (p.w || 24) * 1.2 : 50) * (p.e || 1) * k;
+            if (!(r > 1)) return;
+            const g = ctx.createRadialGradient(pr[0], pr[1], 0, pr[0], pr[1], r);
+            g.addColorStop(0, p.t === "lampiao" ? "rgba(255, 220, 140, 0.55)" : p.t === "luz_pista" || p.t === "cristal" ? "rgba(140, 210, 255, 0.45)" : "rgba(255, 110, 30, 0.5)");
+            g.addColorStop(1, "rgba(0, 0, 0, 0)");
+            ctx.fillStyle = g; ctx.beginPath(); ctx.arc(pr[0], pr[1], r, 0, Math.PI * 2); ctx.fill();
+        });
+    });
+    ctx.restore();
+}
+// ---- clima: ~60 partículas na tela (chuva, neve, neblina, vento com folhas), sem guardar nada por quadro ----
+function arDesenharClima(a) {
+    const tipo = a.clima;
+    if (!tipo || tipo === "nenhum") return;
+    const t = arRelogio(), W = canvas.width, H = canvas.height;
+    ctx.save();
+    if (tipo === "neblina") {
+        ctx.fillStyle = "rgba(225, 230, 238, 0.22)"; ctx.fillRect(0, 0, W, H);
+        for (let i = 0; i < 5; i++) {
+            const y = H * (0.3 + i * 0.13), x = ((c3Hash(i * 2.3) * W + t * (8 + i * 3)) % (W + 400)) - 200;
+            const g = ctx.createRadialGradient(x, y, 0, x, y, 220);
+            g.addColorStop(0, "rgba(240, 244, 250, 0.35)"); g.addColorStop(1, "rgba(240, 244, 250, 0)");
+            ctx.fillStyle = g; ctx.fillRect(x - 220, y - 60, 440, 120);
+        }
+        ctx.restore();
+        return;
+    }
+    if (tipo === "lava") {
+        // brilho alaranjado embaixo, brasas subindo e gotas de lava caindo com rastro
+        const g = ctx.createLinearGradient(0, H * 0.55, 0, H);
+        g.addColorStop(0, "rgba(255, 90, 20, 0)"); g.addColorStop(1, "rgba(255, 90, 20, 0.22)");
+        ctx.fillStyle = g; ctx.fillRect(0, H * 0.55, W, H * 0.45);
+        for (let i = 0; i < 60; i++) {
+            const sx = c3Hash(i * 1.37), sy = c3Hash(i * 2.71), sv = 0.6 + c3Hash(i * 4.13) * 0.8;
+            if (i < 40) {   // brasas subindo, piscando
+                const y = H - ((sy * H + t * 45 * sv) % (H + 10)), x = ((sx * W + Math.sin(t * 1.6 + i) * 10) % W + W) % W;
+                ctx.fillStyle = `rgba(255, ${150 + Math.round(80 * sv) % 100}, 40, ${0.45 + 0.4 * Math.abs(Math.sin(t * 5 + i))})`;
+                ctx.fillRect(x, y, 1.6 + sv, 1.6 + sv);
+            } else {   // gotas de lava caindo
+                const y = (sy * H + t * 210 * sv) % (H + 40) - 20, x = (sx * (W + 60) + y * 0.18) % (W + 60) - 30;
+                ctx.strokeStyle = "rgba(255, 120, 30, 0.45)"; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 3, y - 14); ctx.stroke();
+                ctx.fillStyle = "#ffcf5a"; ctx.beginPath(); ctx.arc(x, y, 2.4, 0, Math.PI * 2); ctx.fill();
+            }
+        }
+        ctx.restore();
+        return;
+    }
+    if (tipo === "chuva") { ctx.strokeStyle = "rgba(200, 220, 255, 0.55)"; ctx.lineWidth = 1.2; ctx.beginPath(); }
+    for (let i = 0; i < 60; i++) {
+        const sx = c3Hash(i * 1.37), sy = c3Hash(i * 2.71), sv = 0.6 + c3Hash(i * 4.13) * 0.8;
+        if (tipo === "chuva") {
+            const y = (sy * H + t * 520 * sv) % (H + 20) - 10, x = (sx * (W + 60) - y * 0.25 + W) % (W + 60) - 30;
+            ctx.moveTo(x, y); ctx.lineTo(x - 4, y + 14);
+        } else if (tipo === "neve") {
+            const y = (sy * H + t * 40 * sv) % (H + 10) - 5, x = ((sx * W + Math.sin(t * 1.2 + i) * 14) % W + W) % W;
+            ctx.fillStyle = "rgba(255, 255, 255, 0.85)"; ctx.beginPath(); ctx.arc(x, y, 1.2 + sv * 1.3, 0, Math.PI * 2); ctx.fill();
+        } else if (tipo === "vento") {
+            if (i >= 28) break;   // folhas: menos e maiores
+            const x = (sx * (W + 80) + t * 160 * sv) % (W + 80) - 40, y = sy * H * 0.9 + Math.sin(t * 2.4 + i) * 16, gira = t * 4 * sv + i;
+            ctx.save(); ctx.translate(x, y); ctx.rotate(gira);
+            ctx.fillStyle = i % 3 === 0 ? "#c47a2c" : i % 3 === 1 ? "#6aa84f" : "#d9a441";
+            ctx.beginPath(); ctx.ellipse(0, 0, 4.5, 2, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+        }
+    }
+    if (tipo === "chuva") ctx.stroke();
+    ctx.restore();
+}
+function drawArenaCriadaStage(id, scroll) {
+    const f = getFaseDef(id);
+    if (!f || !f.arena) return;
+    const capa = f.arena.capa;   // USAR COMO CAPA: o card e o começo da luta mostram essa vista
+    if (f.arena.movimento === "seguir") drawArenaCriada(f.arena, 0, { andado: getForwardTravel(scroll) + (capa ? capa.andado : 0) });
+    else drawArenaCriada(f.arena, getStageLapAngle(scroll, f.camera.volta || 10800) + (capa ? capa.ang : 0));
+}
+
 
   return {
     /** desenha a arena `id` com o avanço `scroll` (1,5 por quadro, como o antigo) e o relógio `t` em segundos */

@@ -41,6 +41,29 @@ describe('arenas do jogo antigo', () => {
     const menu = fs.readFileSync(path.join(raiz, 'menu.js'), 'utf8');
     const i = menu.indexOf('// ==================== SALA DO TEMPO'), j = menu.indexOf('// ==================== RENDERIZAÇÃO DE ENTIDADES');
     expect(gerado).toContain(menu.slice(i, j));
+    const arenas = fs.readFileSync(path.join(raiz, 'arenas.js'), 'utf8');
+    expect(gerado).toContain(arenas.slice(0, arenas.indexOf('// ---------------- arquivo .arena.json')));
+  });
+
+  it('arena criada no EDITOR DE ARENAS do antigo desenha com todas as peças, horas, climas e movimentos', async () => {
+    const { criarCenariosLegado, definirArenasCriadas } = await import('../src/legado/cenarios-legado.js');
+    const t = fs.readFileSync(path.join(raiz, 'arenas.js'), 'utf8');
+    const tipos = [...t.slice(t.indexOf('const ARENA_PECAS = {'), t.indexOf('const ARENA_PLANICIES')).matchAll(/^ {4}(\w+): \{/gm)].map((m) => m[1]);
+    expect(tipos.length).toBeGreaterThan(50);
+    const pecas = tipos.map((tp, i) => ({ t: tp, x: ((i % 9) - 4) * 80, z: (Math.floor(i / 9) - 3) * 80, a: (i * 37) % 360, h: 0.4, pts: [[0, 0], [40, 20]] }));
+    const lista = [];
+    for (const hora of ['dia', 'tarde', 'noite']) for (const clima of ['nenhum', 'chuva', 'neve', 'neblina', 'vento', 'lava']) for (const movimento of ['girar', 'seguir'])
+      lista.push({ id: `arena_${hora}_${clima}_${movimento}`, nome: 'TESTE', hora, clima, movimento, pecas, planicie: '', camera: 'media' });
+    definirArenasCriadas(lista);
+    const c = canvasFalso();
+    const leg = criarCenariosLegado(c as unknown as HTMLCanvasElement);
+    const g = c.getContext!() as { __chamadas: { n: number } };
+    for (const a of lista) {
+      const antes = g.__chamadas.n;
+      for (const q of [0, 1, 600]) leg.desenhar(a.id, q * 1.5, q / 60);
+      expect(g.__chamadas.n - antes, a.id).toBeGreaterThan(200);
+    }
+    definirArenasCriadas([]);
   });
 
   it('as 11 arenas desenham sem erro em vários momentos (1x e 2x)', async () => {

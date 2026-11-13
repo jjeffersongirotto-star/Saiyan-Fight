@@ -8,12 +8,13 @@ import { T, TF } from '../logica/idioma';
 import { botao, botaoNav, montarTela, painel, ret, texto, cor, Navegacao, type Ret } from '../ui/telas';
 import { ORDEM_PERSONAGENS, PERSONAGENS, chaveDoAtlas } from '../dados/personagens';
 import { mostrarBarraDeCarregamento } from '../ui/barra';
-import { fasesEmOrdem, mudarConfigDasFases, configDasFases, FASES, faseDe } from '../dados/fases';
+import { fasesEmOrdem, mudarConfigDasFases, configDasFases, todasAsFases, faseDe } from '../dados/fases';
 import { faseLiberada } from '../logica/ondas';
 import { lerProgresso } from '../logica/progresso';
 import { MINIONS, trocarPosicao } from '../logica/configFases';
 import { escalaDaAltura } from '../logica/luta';
 import { chaveFoto, fazerFotos } from '../ui/fotoFase';
+import { retratoDe } from '../ui/criados';
 import { cadeado, medalha } from '../ui/esfera';
 import { conquistas, CONQUISTAS, type LinhaRanking } from '../logica/conquistas';
 import { pedirMinion, chaveDoMinion } from '../ui/historia';
@@ -115,7 +116,7 @@ export class Personagens extends Phaser.Scene {
       const r = retCarta(i), p = PERSONAGENS[id];
       const sel = !!this.fase && cfgV?.personagem === id;
       const g = this.add.graphics().fillStyle(sel ? 0x174f78 : 0x061734, sel ? 1 : 0.9).fillRect(r.x, r.y, r.w, r.h).lineStyle(sel ? 3 : 1, sel ? 0xffd23f : 0xe85d04, 1).strokeRect(r.x, r.y, r.w, r.h);
-      const img = this.add.image(r.x + r.w / 2, r.y + 68, 'retratos', id).setOrigin(0.5, 1);
+      const img = this.add.image(r.x + r.w / 2, r.y + 68, ...retratoDe(id)).setOrigin(0.5, 1);
       img.setScale(Math.min((r.w - 12) / img.width, 64 / img.height));
       const nome = texto(this, r.x + r.w / 2, r.y + 82, p.nome, 10, '#ffffff').setOrigin(0.5, 0.75);
       const z = this.add.zone(r.x, r.y, r.w, r.h).setOrigin(0).setInteractive({ useHandCursor: true });
@@ -264,7 +265,7 @@ export class ConfigArenas extends Phaser.Scene {
         const v = configDasFases().viloes[f.id];
         if (v) {
           g.fillStyle(0x000000, 0.55).fillRoundedRect(r.x + r.w - 40, r.y + 5, 35, 46, 6).lineStyle(1, 0xfca5a5, 1).strokeRoundedRect(r.x + r.w - 40, r.y + 5, 35, 46, 6);
-          const img = this.add.image(r.x + r.w - 22.5, r.y + 49, 'retratos', v.personagem).setOrigin(0.5, 1);
+          const img = this.add.image(r.x + r.w - 22.5, r.y + 49, ...retratoDe(v.personagem)).setOrigin(0.5, 1);
           img.setScale(Math.min(31 / img.width, 42 / img.height));
         }
       } else {
@@ -284,7 +285,7 @@ export class ConfigArenas extends Phaser.Scene {
       g.setData('foto', foto);
       foto.setData('livre', livre).setData('w', r.w).setData('h', r.h);
     });
-    fazerFotos(this, FASES.map((f) => f.id), (id) => {
+    fazerFotos(this, todasAsFases().map((f) => f.id), (id) => {
       const img = fotos[id];
       if (!img || !img.active) return;
       img.setTexture(chaveFoto(id, !img.getData('livre'))).setDisplaySize(img.getData('w'), img.getData('h')).setVisible(true);
@@ -320,7 +321,7 @@ export class ConfigArenas extends Phaser.Scene {
     d(texto(this, (L.faseMenos.x + L.faseMenos.w + L.faseMais.x) / 2, L.faseMenos.y + 23, String(p.pos), 18, '#ffffff').setOrigin(0.5, 0.75));
     const atual = ordem.indexOf(p.fase) + 1;
     if (p.pos !== atual) {
-      const outra = FASES.find((f) => f.id === ordem[p.pos - 1]);
+      const outra = todasAsFases().find((f) => f.id === ordem[p.pos - 1]);
       d(texto(this, TELA_L / 2, L.faseMenos.y + L.faseMenos.h + 14, TF('OCUPA O LUGAR DE: {0} (AS OUTRAS ANDAM UMA POSIÇÃO)', outra ? T(outra.nome) : ''), 9, '#fca5a5', { fontStyle: 'normal' }).setOrigin(0.5, 0.75));
     }
     // PERSONAGEM
@@ -330,7 +331,7 @@ export class ConfigArenas extends Phaser.Scene {
       g.fillStyle(0x000000, 0.45).fillRect(330, 154, 44, 56);
       const chave = chaveDoAtlas(v.personagem, v.nivel);
       const usar = (k: string, fr: string) => { const img = this.add.image(352, 208, k, fr).setOrigin(0.5, 1).setDepth(21); img.setScale(Math.min(40 / img.width, 52 / img.height) * (k === 'retratos' ? 1 : 1.25)); };
-      if (v.nivel === 0 || this.textures.exists(chave)) usar(v.nivel === 0 ? 'retratos' : chave, v.nivel === 0 ? v.personagem : 'idle/0');
+      if (v.nivel === 0 || this.textures.exists(chave)) usar(...(v.nivel === 0 ? retratoDe(v.personagem) : [chave, 'idle/0'] as [string, string]));
       else { this.load.atlas(chave, `atlas/${chave}.webp`, `atlas/${chave}.json`); this.load.once(Phaser.Loader.Events.COMPLETE, () => usar(chave, 'idle/0')); this.load.start(); }
       const pp = PERSONAGENS[v.personagem];
       d(texto(this, 384, 176, pp.nome, 12, '#ffffff').setOrigin(0, 0.75));
