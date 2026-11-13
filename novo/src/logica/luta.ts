@@ -360,6 +360,21 @@ function atirar(e: EstadoLuta, l: Lutador, eventos: Evento[]) {
 
 /** andar/voar (diagonal com a mesma velocidade) */
 function andar(e: EstadoLuta, l: Lutador, ent: Entrada) {
+  if (ent.seguir) {
+    // modo MOUSE (antigo: player.x += (alvo - x) * (1 - e^(-18 dt))), a 60 Hz
+    const dx = ent.seguir.x - l.x, dy = ent.seguir.y - l.y;
+    const k = 1 - Math.exp(-18 / 60);
+    l.x += dx * k;
+    l.y += dy * k;
+    l.movX = Math.abs(dx) > 3 ? Math.sign(dx) : 0;
+    l.movY = Math.abs(dy) > 3 ? Math.sign(dy) : 0;
+    return;
+  }
+  if (ent.arrasto) {
+    // modo DESLIZAR: o dedo arrasta o lutador (o teclado, se houver, ainda soma abaixo)
+    l.x += ent.arrasto.x;
+    l.y += ent.arrasto.y;
+  }
   let mx = limitar(ent.x, -1, 1), my = limitar(ent.y, -1, 1);
   const tam = Math.hypot(mx, my);
   if (tam > 1) { mx /= tam; my /= tam; }
@@ -368,6 +383,10 @@ function andar(e: EstadoLuta, l: Lutador, ent: Entrada) {
   l.y += my * v;
   l.movX = mx;
   l.movY = my;
+  if (ent.arrasto && mx === 0 && my === 0) {
+    l.movX = Math.abs(ent.arrasto.x) >= 0.3 ? Math.sign(ent.arrasto.x) : 0;
+    l.movY = Math.abs(ent.arrasto.y) >= 0.3 ? Math.sign(ent.arrasto.y) : 0;
+  }
 }
 
 function clampar(e: EstadoLuta, l: Lutador) {

@@ -1,6 +1,7 @@
 // Carrega só o que o MENU precisa (os botões de toque). Os lutadores são carregados pela própria cena da luta,
 // com a barra, e ficam no cache para as próximas lutas.
 import Phaser from 'phaser';
+import { carregarCriados } from '../ui/criados';
 import { mostrarBarraDeCarregamento } from '../ui/barra';
 import { carregarCenarios } from '../ui/arena';
 
@@ -17,6 +18,8 @@ export class Preload extends Phaser.Scene {
   create(): void {
     // o código das arenas vem em segundo plano enquanto o jogador está nos menus
     carregarCenarios().catch(() => undefined);
-    this.scene.start('Menu');
+    this.scene.launch('AvisoConquista');
+    // personagens e arenas criados nos editores do antigo (só leitura); sem nada criado é instantâneo
+    void carregarCriados(this).catch(() => undefined).finally(() => this.scene.start('Menu'));
   }
 }

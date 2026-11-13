@@ -3,8 +3,8 @@ import { estiloTexto } from './resolucao';
 import { som } from '../audio/som';
 
 /** Botão de menu simples (retângulo arredondado + texto), funciona com mouse e toque. */
-export function criarBotao(cena: Phaser.Scene, x: number, y: number, texto: string, aoClicar: () => void, largura = 320) {
-  const a = 40;
+export function criarBotao(cena: Phaser.Scene, x: number, y: number, texto: string, aoClicar: () => void, largura = 320, altura = 40) {
+  const a = altura;
   const fundo = cena.add.graphics();
   const desenhar = (destaque: boolean) =>
     fundo.clear()

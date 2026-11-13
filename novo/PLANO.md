@@ -22,6 +22,103 @@ do jogo dentro do app, só quando o jogador aperta). O Phaser 4 já saiu (4.2), 
 - Textos sempre em **PT/EN/ES** (`src/logica/idioma.ts`, chave salva `saiyan_idioma`, a mesma do jogo antigo).
 - Imagens: **atlas WebP** por personagem/forma, carregados **por cena** (só o que a tela vai usar).
 
+## Checklist de paridade com o jogo antigo (inventário de 13/11/2026)
+
+Pedido do Jefferson (13/11/2026): "faça o que falta para os 2 ficarem com todas as funções" antes da troca.
+Inventário feito lendo `index.html`, `menu.js` (`handleMenuClick`, `MENU_LAYOUT`, `render`), `gameplay.js`,
+`progress.js`, `database.js`, `arenas.js`, `conjuntos.js`, `arquivos.js`, `mapa.js`, `cenarios3d.js`, `audio.js`,
+`atualizacao.js`, `idiomas.js` e `tv.html`, mais prints de cada tela do antigo (`/workspace/novo-prints/antigo/`).
+
+Legenda: ✅ feito no novo · 🟡 parcial · ❌ falta · ➕ só no novo. A coluna **PR** diz onde entrou.
+
+Contagem: no inventário, 61 itens = 11 ✅ · 12 🟡 · 37 ❌ · 1 ➕. Depois da PR phaser-menus: 46 ✅ · 3 🟡 (A3 editores, A23 mapa 3D,
+B14 resolução automática) · 11 ❌ (A22 tutorial, C1–C10 editores) · 1 ➕.
+Depois da PR phaser-editores: 57 ✅ · 2 🟡 (A23, B14) · 1 ❌ (A22) · 1 ➕.
+Depois da PR phaser-mapa3d: 58 ✅ · 1 🟡 (B14) · 1 ❌ (A22) · 1 ➕.
+Depois da PR novo-editores-nativos: os editores (C1–C10) são do próprio jogo novo (TypeScript, `src/editor/`) — o novo não precisa mais do jogo antigo para nada. Fora do editor de arenas nativo: aba CONJUNTOS, seleção de várias peças, FUNDIR, EMPILHAR e o rascunho automático; no de personagens, tamanho do tiro e efeito de aura (o novo não usa).
+Depois da PR phaser-tutorial: 59 ✅ · 1 🟡 (B14) · 0 ❌ · 1 ➕.
+
+### A. Telas e menus
+
+| # | Função do jogo antigo | Onde no antigo | Status no novo | PR |
+|---|---|---|---|---|
+| A1 | Menu principal: JOGAR, PERSONAGENS, ARENAS, OPÇÕES, RANKING, CONQUISTAS, TUTORIAL | `MENU_LAYOUT.main` | ✅ | phaser-menus |
+| A2 | Fundo do menu (céu, lua, montanhas) e painel Dragon Ball | `drawDragonBallMenuBackdrop` | ✅ (mesmo desenho: céu, lua, montanhas, painel) | phaser-menus |
+| A3 | Esfera de 4 estrelas: perfil JOGADOR + APELIDO (TROCAR FOTO desligado), EDITOR DE PERSONAGENS, EDITOR DE ARENAS, UPDATES | `getEsferaItens` | ✅ | phaser-menus / phaser-editores |
+| A4 | Botão de tela cheia em todas as telas (canto direito) | `drawFullscreenButton` | ✅ | phaser-menus |
+| A5 | ESCOLHA SEU CAMINHO: SINGLEPLAYER (história) / VERSUS | `modeSelect` | ✅ (+ "1 JOGADOR x CPU") | phaser-menus |
+| A6 | PERSONAGENS: abas HERÓIS / VILÕES, cartões, "i" com as formas | `characters` | ✅ | phaser-menus |
+| A7 | ARENAS (cronologia DBZ): quadro de cada fase com POSIÇÃO ◀ ▶ (ordem), VILÃO + FORMA (TROCAR), MINION ◀ ▶, SALVAR/CANCELAR | `stages`, `arenaPainel` | ✅ | phaser-menus |
+| A8 | OPÇÕES DO JOGO: CONTROLES, ÁUDIO, TRANSMITIR PARA A TV, IDIOMAS (também da pausa) | `options_main` | ✅ | phaser-menus |
+| A9 | CONTROLES: CONTROLES PC, TOUCH, JOYSTICK, TESTAR; chave AUTOMÁTICO / PC / TOUCH / JOYSTICK | `options_controls` | ✅ | phaser-menus |
+| A10 | CONTROLES PC: perfil CONTROLE 1 / 2, MODO TECLADO / MOUSE, trocar cada tecla (9 ações) | `options_pc`, `startRemapping` | ✅ | phaser-menus |
+| A11 | TOUCH: ANALÓGICO / DESLIZAR, DUPLO TOQUE = PARRY, VIBRAÇÃO, TIRO CONTÍNUO, ORGANIZAR BOTÕES HUD | `options_touch` | ✅ | phaser-menus |
+| A12 | Editor do HUD de toque (arrastar/tamanho dos botões, SALVAR, PADRÃO) | `options_hud`, `drawHudEditorBar` | ✅ | phaser-menus |
+| A13 | JOYSTICK: trocar botão de cada ação, PADRÃO PS5, SENSIBILIDADE − +, TESTAR | `options_gamepad` | ✅ | phaser-menus |
+| A14 | TESTE DE CONTROLES (Goku de prévia, toques, teclas/botões apertados) | `controls_test` | ✅ | phaser-menus |
+| A15 | VOLUME E ÁUDIO: volume SFX − +, volume BGM − +, ÁUDIO ATIVADO/MUDO, TRILHAS SONORAS | `options_audio` | ✅ | phaser-menus |
+| A16 | TRILHAS SONORAS (11, tocar/pausar) | `options_tracks` | ✅ | fase 2 |
+| A17 | IDIOMAS: PORTUGUÊS / ENGLISH / ESPAÑOL | `options_language` | ✅ | phaser-menus |
+| A18 | Traduções: 864 linhas em `IDIOMA_LINHAS` | `idiomas.js` | ✅ (864 linhas geradas por script + as do novo) | phaser-menus (todas importadas por script) |
+| A19 | TRANSMITIR PARA A TV (Presentation API + WebRTC, `tv.html`) | `transmitirParaTV` | ✅ (mesmo `tv.html`; precisa de navegador com Presentation API) | phaser-menus |
+| A20 | MELHORES PONTUAÇÕES: GERAL / POR FASE (abas por fase) | `ranking` | ✅ | phaser-menus |
+| A21 | CONQUISTAS: 57 medalhas (bronze/prata/ouro/diamante), contador por tipo, rolagem, aviso na luta | `achievements`, `progress.js`, `drawAchievementBanner` | ✅ (57 conquistas) | phaser-menus |
+| A22 | TUTORIAL interativo (7 passos: mover, ki, carregar, parry, transformar, especial, pausar; PULAR/VOLTAR) | `gameplay.js` TUTORIAL_STEPS | ✅ `logica/tutorial.ts` + Luta modo 'tutorial' (passos de verdade, PULAR/CRIAR, instruções por plataforma) | phaser-tutorial; antes escolhe lutador e forma, e TUTORIAL LIVRE (treino sem passos nem conquistas) — novo-editores-nativos |
+| A23 | Mapa da história em "3D" (estrada, árvores, pedras, horizonte por ambiente, placa "ADVERSÁRIOS MAIS FORTES VIRÃO", rolagem ◀ ▶) | `mapa.js`, `render` stage_map | ✅ o mesmo desenho (mapa.js + geometria do game-logic-core via legado), 60 nós, fotos, cadeado animado, arrastar/setas, quadro de modo | phaser-mapa3d |
+| A24 | Escolha do modo da fase NORMAL / DIFÍCIL / SEM LIMITE (com cadeado) | `stageMap` | ✅ | fase 3 |
+| A25 | Escolher o herói antes da fase | `abrirTelaPersonagens("solo")` | ✅ | fase 3 |
+| A26 | PAUSA: CONTINUAR / OPÇÕES / SAIR, contagem 3-2-1 ao voltar, pausa sozinho ao trocar de app | `drawPauseOverlay` | ✅ | phaser-menus |
+| A27 | Fim da fase (vitória/derrota com números) e recorde | `stage_victory`, `gameover` | ✅ | fase 3 |
+| A28 | UPDATES (notas de versão) + setinha ATUALIZAR / BAIXAR APP | `index.html #modal-updates`, `atualizacao.js` | ✅ notas de versão (novas + histórico do antigo); a setinha ATUALIZAR fica na #125 | phaser-menus |
+| A29 | Carregando a luta (barra) | `drawCarregandoLuta` | ✅ | fase 1 |
+| A30 | Janelas de aviso/confirmar do sistema | `showSystemAlert/Confirm` | ✅ | phaser-menus |
+
+### B. Luta, modos e regras
+
+| # | Função | Status | PR |
+|---|---|---|---|
+| B1 | VERSUS melhor de 3, 16 personagens, 47 formas, transformação, choque, Zenkai, parry, especial | ✅ | fases 1–2 |
+| B2 | 1 JOGADOR contra CPU | ➕ (o antigo não tinha) | fase 1 |
+| B3 | Modo história 11 fases, ondas, Saibamans/Cell Jr., itens, chefes | ✅ | fase 3 |
+| B4 | 11 arenas desenhadas | ✅ | fase 4 |
+| B5 | Vilão / forma / minion de cada fase escolhidos pelo jogador (ARENAS) | ✅ | phaser-menus |
+| B6 | Ordem das fases escolhida pelo jogador (`saiyan_ordem_fases`) | ✅ | phaser-menus |
+| B7 | Arena escolhida para o VERSUS | ✅ (tela própria) | fase 4 |
+| B8 | Controle (gamepad PS/Xbox) na luta: J1 e J2, botões trocados, sensibilidade | ✅ | phaser-menus |
+| B9 | Teclas trocadas pelo jogador na luta (`saiyan_controls`) | ✅ | phaser-menus |
+| B10 | Toque: modo DESLIZAR, duplo toque = parry, tiro contínuo (+ dica), HUD editado | ✅ | phaser-menus |
+| B11 | Mouse no PC (clique = ataque, modo MOUSE) | ✅ | phaser-menus |
+| B12 | Vibração liga/desliga | ✅ | phaser-menus |
+| B13 | Volumes SFX/BGM separados | ✅ | phaser-menus |
+| B14 | Baixar resolução sozinho se o celular estiver lento (`vigiarDesempenho`) | 🟡 (só o cenário) | phaser-menus |
+| B15 | Estatísticas para conquistas (`saiyan_stats`: rebatidas, combos, transformações, itens, chefes, Versus...) | ✅ | phaser-menus |
+| B16 | Aviso de conquista na luta | ✅ | phaser-menus |
+| B17 | Ranking geral e por fase (`saiyan_ranking`, `saiyan_stage_ranking`), maior onda (`saiyan_stage_wave_record`, `saiyan_max_wave`, `saiyan_highscore`) | ✅ (geral e por fase, juntando o do antigo) | phaser-menus |
+| B18 | Apelido do jogador (`saiyan_apelido`) no ranking | ✅ | phaser-menus |
+
+### C. Editores e conteúdo do jogador
+
+| # | Função | Status | PR |
+|---|---|---|---|
+| C1 | EDITOR DE PERSONAGENS: lista, + CRIAR NOVO, EDITAR, EXCLUIR | ✅ (editor nativo do novo em `src/editor/`, sem o jogo antigo) | phaser-editores / novo-editores-nativos |
+| C2 | Aba BÁSICO: nome, alinhamento, aura, golpe especial, cor e tamanho do tiro, efeitos de aura/tiro/especial, escala | ✅ (editor nativo do novo em `src/editor/`, sem o jogo antigo) | phaser-editores / novo-editores-nativos |
+| C3 | Aba ANIMAÇÕES E MOVIMENTOS: sprite sheet (arquivo/URL), recorte, cor de fundo e tolerância, quadros por movimento, FPS, espelhar, prévia | ✅ (editor nativo do novo em `src/editor/`, sem o jogo antigo) | phaser-editores / novo-editores-nativos |
+| C4 | Aba TRANSFORMAÇÃO: formas, conjuntos/grupos, cadeado de quadros | ✅ (editor nativo do novo em `src/editor/`: formas/transformações com nome, aura, altura e quadros; os CONJUNTOS do antigo são lidos, não editados) | phaser-editores / novo-editores-nativos |
+| C5 | Exportar / importar personagem `.saiyan.json` | ✅ (editor nativo do novo em `src/editor/`, sem o jogo antigo) | phaser-editores / novo-editores-nativos |
+| C6 | Personagens criados no editor jogáveis (`saiyan_db_v8_8bit` + IndexedDB `saiyan_conjuntos`) | ✅ (os do novo no IndexedDB `saiyan-novo`; os do antigo lidos de `saiyan_db_v8_8bit` + `saiyan_conjuntos`, só leitura — editar cria cópia, excluir esconde em `saiyan-novo-ocultos`) | phaser-editores / novo-editores-nativos |
+| C7 | EDITOR DE ARENAS: 11 abas de peças, céu/chão/hora/clima/música/minion, câmera/ângulo/zoom, grade, desfazer/refazer, seleção (cor, tamanho, giro, espelho, texto...), conjuntos, rascunho, TESTAR | ✅ (editor nativo do novo em `src/editor/`, sem o jogo antigo) | phaser-editores / novo-editores-nativos |
+| C8 | Exportar / importar arena | ✅ (editor nativo do novo em `src/editor/`, sem o jogo antigo) | phaser-editores / novo-editores-nativos |
+| C9 | Arenas criadas jogáveis (`saiyan_arenas`, até 7) no VERSUS, ARENAS e ranking | ✅ (`saiyan-novo-arenas` + as do antigo `saiyan_arenas` só leitura, até 7; desenhadas pelo código do antigo gerado em `src/legado/cenarios-legado.js`) | phaser-editores / novo-editores-nativos |
+| C10 | Conquistas do construtor (criar 1 / 5 personagens) | ✅ (o editor nativo soma `customCharactersCreated` e destrava builder_first / builder_5) | novo-editores-nativos |
+
+### D. Plataforma
+
+| # | Função | Status | PR |
+|---|---|---|---|
+| D1 | Funciona sem internet depois de aberto / no APK | ✅ (APK leva tudo) | fase 7 (PR #125) |
+| D2 | APK com setinha ATUALIZAR só no botão | ✅ na PR #125 | #125 |
+| D3 | Progresso do antigo continua (lê as chaves `saiyan_*`, grava nas suas) | ✅ história, opções, volume, conquistas, estatísticas, ranking, apelido e ARENAS (só leitura das `saiyan_*`) | phaser-menus |
+
 ## Inventário do jogo antigo → onde fica no novo
 
 | Jogo antigo (arquivo, linhas) | O que faz | No novo (cena / módulo) |

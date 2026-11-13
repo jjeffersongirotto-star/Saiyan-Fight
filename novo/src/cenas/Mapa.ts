@@ -1,49 +1,68 @@
-// Mapa do modo história: as 11 fases num caminho (na ordem arrumada no jogo antigo, se houver), com cadeado
-// nas que faltam liberar, marcas de NORMAL/DIFÍCIL completos e os 3 modos de cada fase.
+// MAPA DE FASES do antigo (stage_map do menu.js + mapa.js): um caminho longo em perspectiva rolando na
+// horizontal, com céu, horizonte e objetos de cada trecho (o MESMO desenho do antigo, via legado), a estrada
+// dourada até a última fase liberada, as fases com a foto da arena num círculo, o número, o nome e o estado
+// (NORMAL ✓ / DIFÍCIL ✓ / RECORDE), as fases futuras escuras com cadeado e a placa "ADVERSÁRIOS MAIS FORTES
+// VIRÃO!". Arrastar ou as setas ‹ › rolam; clicar numa fase liberada abre a escolha do modo (NORMAL (ONDAS
+// 1-5) / DIFÍCIL / SEM LIMITE); numa bloqueada, o aviso embaixo. A fase recém-liberada abre o cadeado.
 import Phaser from 'phaser';
-import { ajustarCamera, estiloTexto } from '../ui/resolucao';
-import { TELA_L } from '../logica/constantes';
-import { T } from '../logica/idioma';
+import { ajustarCamera, ESCALA_RENDER } from '../ui/resolucao';
+import { TELA_A, TELA_L } from '../logica/constantes';
+import { T, TF } from '../logica/idioma';
 import { dificilLiberado, faseLiberada, semLimiteLiberado, type ModoFase, type ProgressoFases } from '../logica/ondas';
-import { lerOrdemAntiga, lerProgresso, lerRecordes, type Recordes } from '../logica/progresso';
-import { ordenarFases, type Fase } from '../dados/fases';
-import { formaDoNivel, PERSONAGENS } from '../dados/personagens';
+import { lerProgresso, lerRecordes, type Recordes } from '../logica/progresso';
+import { fasesEmOrdem, type Fase } from '../dados/fases';
 import { mostrarBarraDeCarregamento } from '../ui/barra';
-import { criarBotao } from '../ui/botao';
-import { desenharFundo } from './fundo';
-import { aoApertar } from '../entrada/teclas';
 import { som } from '../audio/som';
-import { ArenaAntiga, carregarCenarios, cenariosProntos } from '../ui/arena';
+import { carregarCenarios, cenariosProntos } from '../ui/arena';
+import { chaveFoto, fazerFotos } from '../ui/fotoFase';
+import { botao, botaoNav, montarTela, ret, texto, type Alvo, type BotaoTela, type Navegacao } from '../ui/telas';
+import { cadeadoAbrindo, inteiroNaTela, limitarRolagem, naTela, PASSO_DAS_SETAS, posicaoNoMapa, RAIO_NO, recordeDeOnda, rolagemParaFase, totalNoMapa } from '../logica/mapa';
+import type { CenariosLegado } from '../legado/cenarios-legado';
 
-const RAIO = 22;
-/** caminho em S: 6 fases em cima (esquerda → direita) e 5 embaixo (direita → esquerda) */
-export function posicaoNoMapa(i: number): { x: number; y: number } {
-  if (i < 6) return { x: 80 + i * 128, y: 78 };
-  return { x: 720 - 64 - (i - 6) * 128, y: 150 };
-}
+export { posicaoNoMapa };
+const R = RAIO_NO;
+const css = (n: number) => `#${n.toString(16).padStart(6, '0')}`;
+
 
 export class Mapa extends Phaser.Scene {
   private fases: Fase[] = [];
   private prog: ProgressoFases = {};
   private recordes: Recordes = {};
-  private foco = 0;
-  private gNos!: Phaser.GameObjects.Graphics;
-  private nome!: Phaser.GameObjects.Text;
-  private detalhe!: Phaser.GameObjects.Text;
-  private retrato!: Phaser.GameObjects.Image;
-  private botoes: { modo: ModoFase; b: ReturnType<typeof criarBotao> }[] = [];
   private inicial: string | undefined;
-  /** a arena da fase focada, ao vivo atrás do mapa */
-  private arena: ArenaAntiga | null = null;
-  private quadro = 0;
+  private liberou: string | undefined;
+  private rolagem = 0;
+  private alvo: number | null = null;
+  private total = 60;
+  private legado: CenariosLegado | null = null;
+  private tex: Phaser.Textures.CanvasTexture | null = null;
+  private nav!: Navegacao;
+  private alvosDasFases: Alvo[] = [];
+  private focoAntes = -1;
+  private escolha: Phaser.GameObjects.Container | null = null;
+  private escolhida: string | null = null;
+  private aviso!: Phaser.GameObjects.Text;
+  private avisoAte = 0;
+  private esq!: BotaoTela;
+  private dir!: BotaoTela;
+  private animT = -1;
+  private arrasto: { x: number; r: number; moveu: boolean } | null = null;
 
   constructor() {
     super('Mapa');
   }
 
-  init(d: { fase?: string } = {}): void {
+  init(d: { fase?: string; liberou?: string } = {}): void {
     this.inicial = d?.fase;
-    this.botoes = [];
+    this.liberou = d?.liberou;
+    this.escolha = null;
+    this.escolhida = null;
+    this.alvo = null;
+    this.legado = null;
+    this.tex = null;
+    this.alvosDasFases = [];
+    this.focoAntes = -1;
+    this.animT = -1;
+    this.arrasto = null;
   }
 
   preload(): void {
@@ -56,66 +75,73 @@ export class Mapa extends Phaser.Scene {
   create(): void {
     som.musica(null);
     ajustarCamera(this);
-    desenharFundo(this);
-    this.arena = null;
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => { this.arena?.destruir(); this.arena = null; });
-    if (!cenariosProntos()) carregarCenarios().then(() => this.sys.isActive() && this.atualizar()).catch(() => undefined);
-    this.add.rectangle(TELA_L / 2, 175, TELA_L, 350, 0x000000, 0.5);
-    this.fases = ordenarFases(lerOrdemAntiga());
+    this.fases = fasesEmOrdem();
     this.prog = lerProgresso();
     this.recordes = lerRecordes();
+    this.total = totalNoMapa(this.fases.length);
     const ids = this.fases.map((f) => f.id);
-    // começa na fase pedida, ou na última liberada
     const pedida = this.inicial ? ids.indexOf(this.inicial) : -1;
-    let ultima = 0;
-    ids.forEach((id, i) => { if (faseLiberada(id, ids, this.prog)) ultima = i; });
-    this.foco = pedida >= 0 && faseLiberada(ids[pedida], ids, this.prog) ? pedida : ultima;
+    const centro = pedida >= 0 ? pedida : this.ultimaLiberada();
+    this.rolagem = rolagemParaFase(centro, this.total);
 
-    this.add.text(TELA_L / 2, 22, T('ESCOLHA A FASE'), estiloTexto({ fontFamily: 'Arial Black, Arial', fontSize: '20px', color: '#ffd23a', stroke: '#8a2b00', strokeThickness: 5 })).setOrigin(0.5);
-    // caminho
-    const linha = this.add.graphics();
-    linha.lineStyle(4, 0xffffff, 0.35);
-    for (let i = 1; i < this.fases.length; i++) {
-      const a = posicaoNoMapa(i - 1), b = posicaoNoMapa(i);
-      linha.lineBetween(a.x, a.y, b.x, b.y);
-    }
-    this.gNos = this.add.graphics();
+    this.nav = montarTela(this, () => this.voltar());
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => { this.tex = null; this.legado = null; });
+    // o desenho do mapa (legado) num canvas que vira textura; até o módulo chegar, fica o fundo dos menus
+    const k = ESCALA_RENDER;
+    const chave = 'mapa-3d';
+    if (this.textures.exists(chave)) this.textures.remove(chave);
+    this.tex = this.textures.createCanvas(chave, TELA_L * k, TELA_A * k)!;
+    this.add.image(0, 0, chave).setOrigin(0).setDisplaySize(TELA_L, TELA_A).setDepth(-10);
+    const tex = this.tex;
+    const pronto = (m: NonNullable<ReturnType<typeof cenariosProntos>>) => {
+      if (this.tex !== tex) return;   // a cena já saiu (ou recomeçou) antes do módulo chegar
+      const l = m.criarCenariosLegado(this.tex.getSourceImage() as HTMLCanvasElement);
+      l.escala(k);
+      l.mapa.traducao((t: string) => T(t));
+      this.legado = l;
+    };
+    const m = cenariosProntos();
+    if (m) pronto(m); else carregarCenarios().then(pronto).catch(() => undefined);
+    fazerFotos(this, ids, () => undefined);
+
+    // as fases entram na navegação do controle (a posição acompanha a rolagem)
     this.fases.forEach((f, i) => {
-      const p = posicaoNoMapa(i);
-      this.add.text(p.x, p.y, String(i + 1), estiloTexto({ fontFamily: 'Arial Black, Arial', fontSize: '15px', color: '#ffffff', stroke: '#000000', strokeThickness: 3 })).setOrigin(0.5).setDepth(2);
-      const zona = this.add.zone(p.x, p.y, RAIO * 2 + 16, RAIO * 2 + 16).setInteractive({ useHandCursor: true });
-      zona.on('pointerover', (pt: Phaser.Input.Pointer) => { if (!pt.wasTouch) this.focar(i); });
-      zona.on('pointerup', () => this.focar(i));
+      const a = this.nav.add({ x: 0, y: posicaoNoMapa(i).y - R, w: R * 2, h: R * 2, acionar: () => this.tocarFase(i) });
+      this.alvosDasFases.push(a);
       void f;
     });
+    this.esq = botao(this, ret(6, 165, 30, 44), '‹', () => this.rolarPara(this.rolagem - PASSO_DAS_SETAS), { cor: '#ffd23f', fonte: 22 });
+    this.dir = botao(this, ret(764, 165, 30, 44), '›', () => this.rolarPara(this.rolagem + PASSO_DAS_SETAS), { cor: '#ffd23f', fonte: 22 });
+    this.aviso = texto(this, TELA_L / 2, TELA_A - 14, '', 11, '#ff5555', { fontFamily: 'monospace', fontStyle: 'bold', backgroundColor: 'rgba(6,10,26,0.85)', padding: { x: 10, y: 3 } })
+      .setOrigin(0.5).setDepth(50).setVisible(false);
 
-    // painel da fase escolhida
-    this.add.rectangle(TELA_L / 2, 252, TELA_L - 40, 104, 0x0d1633, 0.85).setStrokeStyle(2, 0xffd23a, 0.6);
-    this.retrato = this.add.image(76, 300, 'retratos', 'goku').setOrigin(0.5, 103 / 112).setScale(0.62);
-    this.nome = this.add.text(124, 210, '', estiloTexto({ fontFamily: 'Arial Black, Arial', fontSize: '17px', color: '#ffffff' }));
-    this.detalhe = this.add.text(124, 234, '', estiloTexto({ fontFamily: 'Arial', fontSize: '12px', color: '#dfe7ff', lineSpacing: 2, wordWrap: { width: 280 } }));
-    const modos: [ModoFase, string][] = [['normal', 'NORMAL'], ['hard', 'DIFÍCIL'], ['unlimited', 'SEM LIMITE']];
-    modos.forEach(([modo, rotulo], i) => {
-      const b = criarBotao(this, 470 + i * 118, 252, T(rotulo), () => this.jogar(modo), 112);
-      this.botoes.push({ modo, b });
+    // arrastar rola o mapa; um toque sem arrastar escolhe a fase
+    this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer, objs: unknown[]) => {
+      if (this.escolha || objs.length) return;
+      this.arrasto = { x: p.x, r: this.rolagem, moveu: false };
     });
-    criarBotao(this, TELA_L - 70, 22, T('VOLTAR'), () => this.scene.start('Menu'), 110);
+    this.input.on(Phaser.Input.Events.POINTER_MOVE, (p: Phaser.Input.Pointer) => {
+      const a = this.arrasto;
+      if (!a || !p.isDown) return;
+      if (Math.abs(p.x - a.x) > 6) a.moveu = true;
+      if (a.moveu) { this.alvo = null; this.rolagem = limitarRolagem(a.r - (p.x - a.x), this.total); }
+    });
+    this.input.on(Phaser.Input.Events.POINTER_UP, (p: Phaser.Input.Pointer) => {
+      const a = this.arrasto;
+      this.arrasto = null;
+      if (!a || a.moveu || this.escolha) return;
+      this.clicar(p.x, p.y);
+    });
 
-    aoApertar(this, (c, ev) => {
-      const n = this.fases.length;
-      if (c === 'ArrowRight' || c === 'ArrowDown') { ev.preventDefault(); this.focar((this.foco + 1) % n); }
-      else if (c === 'ArrowLeft' || c === 'ArrowUp') { ev.preventDefault(); this.focar((this.foco - 1 + n) % n); }
-      else if (ev.repeat) return;
-      else if (c === 'Enter' || c === 'NumpadEnter' || c === 'Space' || c === 'Digit1' || c === 'KeyF') this.jogar('normal');
-      else if (c === 'Digit2') this.jogar('hard');
-      else if (c === 'Digit3') this.jogar('unlimited');
-      else if (c === 'Escape') this.scene.start('Menu');
-    });
-    this.atualizar();
+    if (this.liberou && ids.includes(this.liberou)) { this.animT = 0; som.tocar('powerup'); }
+    this.posicionarAlvos();
   }
 
-  update(): void {
-    this.arena?.desenhar(this.quadro++);
+  private ultimaLiberada(): number {
+    const ids = this.fases.map((f) => f.id);
+    let u = 0;
+    ids.forEach((id, i) => { if (faseLiberada(id, ids, this.prog)) u = i; });
+    return u;
   }
 
   private liberado(i: number, modo: ModoFase): boolean {
@@ -124,59 +150,213 @@ export class Mapa extends Phaser.Scene {
     return modo === 'normal' || (modo === 'hard' ? dificilLiberado(id, this.prog) : semLimiteLiberado(id, this.prog));
   }
 
-  private focar(i: number): void {
-    this.foco = i;
-    this.atualizar();
+  private voltar(): void {
+    if (this.escolha) { this.fecharEscolha(); return; }
+    this.scene.start('ModoJogo');
+  }
+
+  private rolarPara(r: number): void { this.alvo = limitarRolagem(r, this.total); }
+
+  private avisar(t: string): void {
+    this.aviso.setText(T(t)).setVisible(true);
+    this.avisoAte = this.time.now + 2000;
+  }
+
+  private clicar(x: number, y: number): void {
+    const dentroDo = (i: number) => { const p = posicaoNoMapa(i); return Math.abs(x - (p.x - this.rolagem)) <= R && Math.abs(y - p.y) <= R; };
+    for (let i = 0; i < this.total; i++) {
+      if (!dentroDo(i)) continue;
+      if (i >= this.fases.length) { this.avisar('ADVERSÁRIOS MAIS FORTES VIRÃO! PREPARE-SE'); return; }
+      this.tocarFase(i);
+      return;
+    }
+  }
+
+  private tocarFase(i: number): void {
+    if (!this.liberado(i, 'normal')) { this.avisar('COMPLETE O MODO NORMAL DA FASE ANTERIOR PRA LIBERAR'); som.tocar('menu'); return; }
+    som.tocar('menu');
+    this.abrirEscolha(i);
+  }
+
+  /** o quadro de escolha do modo, por cima do mapa (como o stageChoicePendingId do antigo) */
+  private abrirEscolha(i: number): void {
+    const f = this.fases[i];
+    this.escolhida = f.id;
+    const fundo = this.add.rectangle(0, 0, TELA_L, TELA_A, 0x040814, 0.92).setOrigin(0).setInteractive();
+    const nome = texto(this, TELA_L / 2, 92, T(f.nome), 15, '#ffd23f', { fontFamily: "'Trebuchet MS', sans-serif", fontStyle: 'bold' }).setOrigin(0.5);
+    const sub = texto(this, TELA_L / 2, 114, T('ESCOLHA O MODO'), 11, '#dbe6ff', { fontFamily: "'Trebuchet MS', sans-serif" }).setOrigin(0.5);
+    this.escolha = this.add.container(0, 0, [fundo, nome, sub]).setDepth(100);
+    this.nav.limpar();
+    const voltar = botaoNav(this, this.nav, ret(20, 20, 42, 32), '←', () => this.fecharEscolha(), { cor: '#fff0a6', fonte: 18, prof: 101 });
+    const modos: [ModoFase, string, string, number][] = [
+      ['normal', 'NORMAL (ONDAS 1-5)', '#93c5fd', 130], ['hard', 'DIFÍCIL', '#f87171', 315], ['unlimited', 'SEM LIMITE', '#86efac', 500],
+    ];
+    const bs = [voltar];
+    for (const [modo, rot, c, x] of modos) {
+      const ok = this.liberado(i, modo);
+      const b = botaoNav(this, this.nav, ret(x, 140, 170, 60), ok ? rot : `🔒 ${T(rot)}`, () => this.jogar(modo), { cor: ok ? c : '#64748b', fonte: modo === 'normal' ? 10 : 12, prof: 101 });
+      if (!ok) { b.ligado = false; b.container.setAlpha(0.55); }
+      bs.push(b);
+    }
+    this.escolha.setData('botoes', bs);
+    this.nav.foco = 1;
+    this.esq.container.setVisible(false);
+    this.dir.container.setVisible(false);
+  }
+
+  private fecharEscolha(): void {
+    const bs = (this.escolha?.getData('botoes') ?? []) as BotaoTela[];
+    for (const b of bs) b.container.destroy();
+    this.escolha?.destroy(true);
+    this.escolha = null;
+    this.escolhida = null;
+    this.nav.limpar();
+    // de volta a seta ←, a tela cheia e as fases
+    const v = botaoNav(this, this.nav, ret(20, 20, 42, 32), '←', () => this.voltar(), { cor: '#fff0a6', fonte: 18 });
+    void v;
+    for (const a of this.alvosDasFases) this.nav.add(a);
+    this.focoAntes = -1;
   }
 
   private jogar(modo: ModoFase): void {
-    if (!this.liberado(this.foco, modo)) {
-      this.cameras.main.shake(120, 0.004);
-      return;
-    }
-    this.scene.start('Selecao', { modo: 'historia', fase: this.fases[this.foco].id, modoFase: modo });
+    if (!this.escolhida) return;
+    this.scene.start('Selecao', { modo: 'historia', fase: this.escolhida, modoFase: modo });
   }
 
-  private atualizar(): void {
-    const g = this.gNos.clear();
-    this.fases.forEach((f, i) => {
-      const p = posicaoNoMapa(i);
-      const aberto = this.liberado(i, 'normal');
-      const pr = this.prog[f.id];
-      if (i === this.foco) g.lineStyle(4, 0xffffff, 1).strokeCircle(p.x, p.y, RAIO + 5);
-      g.fillStyle(aberto ? f.cor : 0x3a3f4f, 1).fillCircle(p.x, p.y, RAIO);
-      g.lineStyle(2, 0x000000, 0.6).strokeCircle(p.x, p.y, RAIO);
-      if (!aberto) {
-        // cadeado
-        g.fillStyle(0xd9dde6, 1).fillRect(p.x + 6, p.y + 6, 12, 9);
-        g.lineStyle(2, 0xd9dde6, 1).strokeCircle(p.x + 12, p.y + 5, 4);
-      }
-      // estrelas: NORMAL e DIFÍCIL completos
-      if (pr?.normalDone) g.fillStyle(0xffd23a, 1).fillCircle(p.x - 8, p.y + RAIO + 6, 4);
-      if (pr?.hardDone) g.fillStyle(0xff6a00, 1).fillCircle(p.x + 8, p.y + RAIO + 6, 4);
+  private posicionarAlvos(): void {
+    this.fases.forEach((_, i) => {
+      const a = this.alvosDasFases[i];
+      const x = posicaoNoMapa(i).x - this.rolagem;
+      a.x = inteiroNaTela(x) ? x - R : -9999;
     });
-    const f = this.fases[this.foco];
-    const v = PERSONAGENS[f.vilao.personagem];
-    const forma = f.vilao.nivel > 0 ? ` (${formaDoNivel(f.vilao.personagem, f.vilao.nivel).nome})` : '';
-    this.nome.setText(`${this.foco + 1}. ${T(f.nome)}`).setColor(this.liberado(this.foco, 'normal') ? '#ffffff' : '#9aa3b5');
-    const rec = this.recordes[f.id];
-    const recTxt = (['normal', 'hard', 'unlimited'] as const)
-      .filter((m) => rec?.[m])
-      .map((m) => `${T(m === 'normal' ? 'NORMAL' : m === 'hard' ? 'DIFÍCIL' : 'SEM LIMITE')} ${rec![m]!.pontos}`)
-      .join(' · ');
-    const linhas = [`${T('VILÃO')}: ${v?.nome ?? f.vilao.personagem}${forma}`];
-    if (!this.liberado(this.foco, 'normal')) linhas.push(T('BLOQUEADA') + ' — ' + T('VENÇA O NORMAL DA FASE ANTERIOR'));
-    else if (!this.liberado(this.foco, 'hard')) linhas.push(T('VENÇA O NORMAL PARA LIBERAR O DIFÍCIL'));
-    else if (!this.liberado(this.foco, 'unlimited')) linhas.push(T('VENÇA O DIFÍCIL PARA LIBERAR O SEM LIMITE'));
-    if (recTxt) linhas.push(`${T('RECORDE')}: ${recTxt}`);
-    this.detalhe.setText(linhas.join('\n'));
-    if (this.textures.get('retratos').has(f.vilao.personagem)) this.retrato.setFrame(f.vilao.personagem).setFlipX(true);
-    for (const { modo, b } of this.botoes) b.container.setAlpha(this.liberado(this.foco, modo) ? 1 : 0.35);
-    // fundo: a arena da fase (as bloqueadas também, para dar vontade)
-    const m = cenariosProntos();
-    if (m && this.arena?.id !== f.id) {
-      this.arena?.destruir();
-      this.arena = new ArenaAntiga(this, f.id, m, 'arena-previa');
+  }
+
+  update(_t: number, dms: number): void {
+    const dt = Math.min(0.1, dms / 1000);
+    if (this.alvo !== null) {
+      const d = this.alvo - this.rolagem;
+      if (Math.abs(d) < 1) { this.rolagem = this.alvo; this.alvo = null; }
+      else this.rolagem += d * Math.min(1, dt * 9);
     }
+    // controle: o foco numa fase perto da borda traz a fase para o meio
+    if (!this.escolha && this.nav.foco !== this.focoAntes) {
+      this.focoAntes = this.nav.foco;
+      const i = this.alvosDasFases.indexOf(this.nav.alvos[this.nav.foco]);
+      if (i >= 0) {
+        const x = posicaoNoMapa(i).x - this.rolagem;
+        if (x < 140 || x > TELA_L - 140) this.rolarPara(posicaoNoMapa(i).x - TELA_L / 2);
+      }
+    }
+    this.posicionarAlvos();
+    if (!this.escolha) this.nav.desenhar();
+    if (this.animT >= 0) { this.animT += dt; if (this.animT > 1.5) this.animT = -1; }
+    if (this.aviso.visible && this.time.now > this.avisoAte) this.aviso.setVisible(false);
+    if (!this.escolha) {
+      this.esq.container.setVisible(this.rolagem > 0);
+      this.dir.container.setVisible(this.rolagem < limitarRolagem(Infinity, this.total));
+    }
+    this.desenhar();
+  }
+
+  /** o quadro do mapa: o fundo e a estrada pelo antigo; as fases como no render de "stage_map" */
+  private desenhar(): void {
+    const l = this.legado, tex = this.tex;
+    if (!l || !tex) return;
+    const rol = this.rolagem;
+    l.mapa.desenhar(rol, this.total, this.ultimaLiberada());
+    const ctx = l.mapa.ctx() as CanvasRenderingContext2D;
+    ctx.save();
+    // faixa escura atrás do título
+    const gr = ctx.createLinearGradient(0, 0, 0, 52);
+    gr.addColorStop(0, 'rgba(6, 10, 26, 0.85)');
+    gr.addColorStop(1, 'rgba(6, 10, 26, 0)');
+    ctx.fillStyle = gr;
+    ctx.fillRect(0, 0, TELA_L, 52);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffff00';
+    ctx.font = 'bold 15px monospace';
+    ctx.fillText(T('ESCOLHA A FASE'), TELA_L / 2, 24);
+    ctx.fillStyle = '#cfe0ff';
+    ctx.font = '9px monospace';
+    ctx.fillText(T('COMPLETE O MODO NORMAL (5 ONDAS) PRA LIBERAR A PRÓXIMA FASE'), TELA_L / 2, 38);
+
+    const numero = (x: number, y: number, n: number, cor: string) => {
+      ctx.fillStyle = '#0a1024';
+      ctx.beginPath(); ctx.arc(x - R + 3, y - R + 3, 9, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = cor;
+      ctx.font = 'bold 9px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(String(n), x - R + 3, y - R + 6);
+    };
+    // fases futuras: escuras com cadeado; a primeira leva a placa
+    for (let i = this.fases.length; i < this.total; i++) {
+      const p = posicaoNoMapa(i), x = p.x - rol;
+      if (!naTela(x)) continue;
+      l.mapa.sombra(x, p.y, R);
+      ctx.fillStyle = '#11131c';
+      ctx.beginPath(); ctx.arc(x, p.y, R, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#2c2f3c'; ctx.lineWidth = 2; ctx.stroke();
+      l.mapa.cadeado(x, p.y - 2, R * 0.42, 0);
+      numero(x, p.y, i + 1, '#55586a');
+      if (i === this.fases.length) l.mapa.placa(x, p.y - R - 8);
+    }
+    const foco = this.escolha ? -1 : this.alvosDasFases.indexOf(this.nav.alvos[this.nav.foco]);
+    this.fases.forEach((f, i) => {
+      const p = posicaoNoMapa(i), x = p.x - rol, y = p.y;
+      if (!naTela(x)) return;
+      const aberta = this.liberado(i, 'normal');
+      l.mapa.sombra(x, y, R);
+      const chave = chaveFoto(f.id, !aberta);
+      if (this.textures.exists(chave)) {
+        ctx.save();
+        if (!aberta) ctx.globalAlpha = 0.6;
+        l.mapa.foto(x, y, R - 3, this.textures.get(chave).getSourceImage() as HTMLCanvasElement);
+        ctx.restore();
+      } else {
+        ctx.fillStyle = aberta ? css(f.cor) : '#2a2d38';
+        ctx.beginPath(); ctx.arc(x, y, R - 3, 0, Math.PI * 2); ctx.fill();
+      }
+      const sel = i === foco || f.id === this.escolhida || (foco < 0 && f.id === this.inicial);
+      ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2);
+      ctx.strokeStyle = sel ? '#ffff00' : aberta ? css(f.cor) : '#3a3a48';
+      ctx.lineWidth = sel ? 4 : aberta ? 3 : 2;
+      ctx.stroke();
+      const anim = this.animT >= 0 && f.id === this.liberou ? cadeadoAbrindo(this.animT) : null;
+      if (!aberta) l.mapa.cadeado(x, y - 4, R * 0.42, 0);
+      else if (anim) {
+        ctx.save();
+        ctx.globalAlpha = anim.alfa;
+        ctx.translate(x, y - 4 + anim.queda * anim.queda * 40);
+        ctx.rotate(anim.queda * 0.6);
+        l.mapa.cadeado(0, 0, R * 0.42, anim.aberto);
+        ctx.restore();
+      }
+      numero(x, y, i + 1, aberta ? '#ffffff' : '#6a6a78');
+      const nome = T(f.nome);
+      const rec = recordeDeOnda(this.recordes[f.id]);
+      const linhas = aberta ? (rec > 0 ? 4 : 3) : 1;
+      ctx.font = 'bold 9px monospace';
+      const larg = Math.min(118, ctx.measureText(nome).width) + 10;
+      ctx.fillStyle = 'rgba(8, 12, 30, 0.92)';
+      ctx.fillRect(Math.round(x - larg / 2), Math.round(y + R + 3), Math.round(larg), linhas === 1 ? 12 : linhas * 9 + 5);
+      ctx.fillStyle = aberta ? '#dbe6ff' : '#5a5a68';
+      ctx.textAlign = 'center';
+      ctx.fillText(nome, x, y + R + 12, 116);
+      if (aberta) {
+        const pr = this.prog[f.id] ?? {};
+        ctx.font = '8px monospace';
+        ctx.fillStyle = pr.normalDone ? '#ffd23f' : '#a7f3d0';
+        ctx.fillText(T(pr.normalDone ? 'NORMAL ✓' : 'NORMAL: EM ABERTO'), x, y + R + 23);
+        ctx.fillStyle = pr.hardDone ? '#ffd23f' : pr.normalDone ? '#93c5fd' : '#5a5a68';
+        ctx.fillText(T(pr.hardDone ? 'DIFÍCIL ✓' : pr.normalDone ? 'DIFÍCIL: EM ABERTO' : 'DIFÍCIL: BLOQUEADO'), x, y + R + 32);
+        if (rec > 0) {
+          ctx.fillStyle = '#93c5fd';
+          ctx.font = '7px monospace';
+          ctx.fillText(TF('RECORDE: ONDA {0}', rec), x, y + R + 41);
+        }
+      }
+    });
+    ctx.restore();
+    tex.refresh();
   }
 }

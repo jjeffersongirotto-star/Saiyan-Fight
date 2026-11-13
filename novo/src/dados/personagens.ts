@@ -27,6 +27,8 @@ export interface DadosPersonagem {
   efeitoEspecial: EfeitoEspecial;
   /** formas[0] = normal; formas[n] = n-ésima transformação */
   formas: Forma[];
+  /** feito no EDITOR DE PERSONAGENS do antigo (texturas montadas no jogo, não vêm de public/atlas) */
+  criado?: true;
 }
 
 const f = (forma: string, nome: string, aura: Aura, altura: number): Forma => ({ forma, nome, aura, altura });
@@ -122,6 +124,15 @@ const LISTA: DadosPersonagem[] = [
 export const PERSONAGENS: Record<string, DadosPersonagem> = Object.fromEntries(LISTA.map((p) => [p.id, p]));
 /** na ordem da tela de escolha (a mesma do jogo antigo) */
 export const ORDEM_PERSONAGENS = LISTA.map((p) => p.id);
+/** chaves do characterDB do antigo dos 16 personagens do jogo */
+export const CHAVES_ANTIGAS_PADRAO = new Set(LISTA.map((p) => p.chaveAntiga));
+
+/** Põe (ou troca) os personagens criados no editor do antigo depois dos 16. */
+export function registrarCriados(lista: DadosPersonagem[]): void {
+  for (const id of Object.keys(PERSONAGENS)) if (PERSONAGENS[id].criado) delete PERSONAGENS[id];
+  ORDEM_PERSONAGENS.length = LISTA.length;
+  for (const p of lista) { PERSONAGENS[p.id] = p; ORDEM_PERSONAGENS.push(p.id); }
+}
 
 export const chaveDoAtlas = (id: string, nivel: number) => {
   const p = PERSONAGENS[id];

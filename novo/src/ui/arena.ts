@@ -7,14 +7,21 @@ import Phaser from 'phaser';
 import { TELA_A, TELA_L } from '../logica/constantes';
 import { ESCALA_RENDER } from './resolucao';
 import type { CenariosLegado } from '../legado/cenarios-legado';
+import { TEMAS } from '../dados/temas';
 
 type Modulo = typeof import('../legado/cenarios-legado');
 let promessa: Promise<Modulo> | null = null;
 let pronto: Modulo | null = null;
 
 /** Começa a baixar o código das arenas (um pedaço separado do jogo, ~40 KB comprimido). */
+let arenasCriadas: unknown[] = [];
+/** arenas do EDITOR DE ARENAS do antigo para o desenho do arenas.js (agora ou quando o módulo chegar) */
+export function aplicarArenasCriadas(lista: unknown[]): void {
+  arenasCriadas = lista;
+  pronto?.definirArenasCriadas(lista);
+}
 export function carregarCenarios(): Promise<Modulo> {
-  promessa ??= import('../legado/cenarios-legado.js').then((m) => (pronto = m));
+  promessa ??= import('../legado/cenarios-legado.js').then((m) => { m.definirTemas(Object.keys(TEMAS)); m.definirArenasCriadas(arenasCriadas); return (pronto = m); });
   return promessa;
 }
 export const cenariosProntos = () => pronto;

@@ -23,12 +23,36 @@ function trecho(texto, de, ate, incluirAte = false) {
 const nucleo = trecho(ler('game-logic-core.js'), '// Sala do Tempo: o cenário', 'function getForwardTravel', true);
 const menu = trecho(ler('menu.js'), '// ==================== SALA DO TEMPO', '// ==================== RENDERIZAÇÃO DE ENTIDADES');
 const c3d = ler('cenarios3d.js');
+// MAPA DE FASES em "3D": a geometria do caminho (game-logic-core.js), o desenho (mapa.js inteiro) e o cadeado e a
+// foto redonda das fases (menu.js). Os textos fixos do desenho passam pela tradução do jogo novo.
+const mapaNucleo = trecho(ler('game-logic-core.js'), '// ==================== MAPA DE PROGRESSO (fases em linha)', '// Altura do personagem');
+const funcao = (t, nome) => { const i = t.indexOf(`function ${nome}(`); if (i < 0) throw new Error(`função não achada: ${nome}`); return t.slice(i, t.indexOf('\n}\n', i) + 3); };
+const menuJs = ler('menu.js');
+const mapaJs = ler('mapa.js').replace(/ctx\.fillText\("([^"]+)"/g, 'ctx.fillText(traduzir("$1")');
+const mapaMenu = ['drawPadlock', 'drawStageThumbCircle'].map((n) => funcao(menuJs, n)).join('\n');
+// EDITOR DE ARENAS (arenas.js): só a parte do desenho (peças, céu, chão, hora, clima), até o arquivo .arena.json
+const arenasJs = ler('arenas.js');
+const arenas = trecho(arenasJs, '// arenas.js — EDITOR DE ARENAS', '// ---------------- arquivo .arena.json');
+// para o EDITOR DE ARENAS do jogo novo (que é escrito em TypeScript, sem o antigo): o arquivo .arena.json e o desenho
+// da planta (maquete vista de cima) e da câmera perto de uma peça — as mesmas funções, sem a tela do antigo
+const arquivoArena = trecho(arenasJs, '// ---------------- arquivo .arena.json', '// ---------------- EDITOR DE ARENAS (tela #modal-arena)');
+const linha = (t, inicio) => { const i = t.indexOf(inicio); if (i < 0) throw new Error(`linha não achada: ${inicio}`); return t.slice(i, t.indexOf('\n', i) + 1); };
+const plantaArena = [linha(arenasJs, 'const AR_ARVORES = '), linha(arenasJs, 'const AR_DOMOS = '),
+  ...['arenaDesenharPlantaForma', 'arenaMaqueteChao', 'arenaMaquetePeca', 'arenaRaioPeca', 'arenaCameraPerto'].map((n) => funcao(arenasJs, n))].join('\n');
 
 const saida = `// @ts-nocheck
 // GERADO por novo/scripts/gerar-cenarios-legado.mjs a partir do jogo antigo — NÃO EDITAR À MÃO.
 // Trechos: game-logic-core.js (ângulos), menu.js (Sala do Tempo, Torneio de Cell, Nave de Freeza,
 // drawStageBackground) e cenarios3d.js. O canvas é a "tela" do jogo antigo: 800x350 lógicos, contexto escalado.
 /* eslint-disable */
+// arenas criadas no EDITOR DE ARENAS do antigo (saiyan_arenas, lidas pelo jogo novo): id -> arena
+let arenasDoJogador = new Map();
+// músicas que uma arena pode usar (ids de dados/temas.ts); null = aceita qualquer uma
+let temasDoJogo = null;
+export function definirTemas(ids) { temasDoJogo = ids ? new Set(ids) : null; }
+export function definirArenasCriadas(lista) {
+  arenasDoJogador = new Map((Array.isArray(lista) ? lista : []).filter((a) => a && typeof a.id === 'string').map((a) => [a.id, a]));
+}
 export function criarCenariosLegado(canvasEl) {
   const GAME_WIDTH = 800, GAME_HEIGHT = 350;
   let renderScale = 1;
@@ -41,7 +65,53 @@ export function criarCenariosLegado(canvasEl) {
 ${nucleo}
 ${menu}
 ${c3d}
+  // ---- mapa de fases (game-logic-core.js, mapa.js, menu.js) ----
+  let traduzir = (t) => t;
+  let mapaTotal = 60;
+  function getMapaTotalFases() { return mapaTotal; }
+${mapaNucleo}
+${mapaJs}
+${mapaMenu}
+  // ---- arenas.js (desenho das arenas criadas) ----
+  const BGM_THEMES = new Proxy({}, { get: (_o, k) => (temasDoJogo ? temasDoJogo.has(k) : typeof k === 'string') });
+  const arqErro = (msg, detalhe) => (detalhe === undefined ? msg : msg + ' [' + detalhe + ']');
+  // planta (vista de cima) do editor novo: escala e centro definidos por quem desenha
+  let plantaEscala = 1, plantaCentro = { x: 0, z: 0 }, plantaLado = 320;
+  const arenaMundoParaPlanta = (x, z) => [plantaLado / 2 + (x - plantaCentro.x) * plantaEscala, plantaLado / 2 + (z - plantaCentro.z) * plantaEscala];
+  const readJsonStorage = (_k, padrao) => padrao;
+  const writeStorage = () => false;
+  const normalizadas = new WeakMap();
+  function getFaseDef(id) {
+    const bruta = arenasDoJogador.get(id);
+    if (!bruta) return null;
+    let a = normalizadas.get(bruta);
+    if (!a) { a = normalizarArena(bruta); normalizadas.set(bruta, a); }
+    return { id, arena: a, criada: true, camera: { tipo: a.movimento === 'seguir' ? 'anda' : 'orbita', volta: 10800 } };
+  }
+${arenas}
+${arquivoArena}
+${plantaArena}
   return {
+    /** EDITOR DE ARENAS do jogo novo: as tabelas e funções do arenas.js (peças, planícies, validação, planta) */
+    editor: {
+      PECAS: ARENA_PECAS, PLANICIES: ARENA_PLANICIES, CHAOS: ARENA_CHAOS, CAMERAS: ARENA_CAMERAS, HORAS: ARENA_HORAS, CLIMAS: ARENA_CLIMAS,
+      FORMATOS: ARENA_FORMATOS, PINCEL: ARENA_PINCEL, ABAS: ARENA_ABAS, MAX: ARENA_MAX, PECAS_MAX: ARENA_PECAS_MAX, RAIO: ARENA_RAIO,
+      PINCEL_PONTOS: ARENA_PINCEL_PONTOS, ANIMADAS_MAX: ARENA_ANIMADAS_MAX, GRADE: ARENA_GRADE, FORMATO: ARENA_FORMATO,
+      normalizar: (a) => normalizarArena(a), padrao: () => arenaPadrao(), normalizarPeca: (q) => normalizarPecaArena(q),
+      pegada: (p) => arenaPegada(p), colide: (pecas, p, ignorar) => arenaPecaColide(pecas, p, ignorar), raio: (p) => arenaRaioPeca(p),
+      paraArquivo: (a) => dadosDaArenaParaArquivo(a), validarArquivo: (d) => validarArquivoArena(d), alturaPeca: (p) => arenaAlturaPeca(p),
+      /** desenha a arena \`a\` (já normalizada) neste canvas, com a câmera em \`ang\` (ou andando \`andado\` no SEGUIR) */
+      previa(a, ang, opts) {
+        ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
+        ctx.imageSmoothingEnabled = true;
+        ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+        drawArenaCriada(a, ang, opts || {});
+      },
+      cameraPerto: (p) => arenaCameraPerto(p),
+      /** planta: o chão (g = contexto da planta de lado \`lado\`, escala s px/unidade, centro c) e uma peça já no centro dela */
+      plantaChao(g, a, s, lado, c) { plantaEscala = s; plantaLado = lado; plantaCentro = c || { x: 0, z: 0 }; arenaMaqueteChao(g, a, s); },
+      plantaPeca(g, p, s, cor) { arenaMaquetePeca(g, p, ARENA_PECAS[p.t], s, cor); },
+    },
     /** desenha a arena \`id\` com o avanço \`scroll\` (1,5 por quadro, como o antigo) e o relógio \`t\` em segundos */
     desenhar(id, scroll, t) {
       selectedStage = id;
@@ -50,6 +120,29 @@ ${c3d}
       ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
       ctx.imageSmoothingEnabled = true;
       drawStageBackground();
+    },
+    /** MAPA DE FASES: o desenho do antigo (céu, horizonte, objetos e estrada) com a rolagem \`rolagem\` */
+    mapa: {
+      TOTAL_FASES: MAPA_TOTAL_FASES, NO_R: 26,
+      posicao: (i) => getMapaPosicaoFase(i),
+      limitar: (r, total) => limitarRolagemMapa(r, total),
+      rolagemPara: (i, total) => rolagemParaFase(i, total),
+      traducao(f) { traduzir = f; },
+      desenhar(rolagem, total, acesaAte) {
+        mapaTotal = total;
+        ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
+        drawMapaFundo(rolagem);
+        const de = Math.max(0, Math.floor((rolagem - MAPA_MARGEM_X) / MAPA_PASSO_X) - 1);
+        const ate = Math.min(total - 1, Math.ceil((rolagem + 800 - MAPA_MARGEM_X) / MAPA_PASSO_X) + 1);
+        const pontos = [];
+        for (let i = de; i <= ate; i++) { const p = getMapaPosicaoFase(i); pontos.push({ x: p.x - rolagem, y: p.y }); }
+        drawMapaEstrada(pontos, acesaAte - de);
+      },
+      sombra: (x, y, r) => drawMapaSombraFase(x, y, r),
+      placa: (x, y) => drawMapaPlaca(x, y),
+      cadeado: (x, y, s, aberto) => drawPadlock(x, y, s, aberto || 0),
+      foto: (x, y, r, img) => drawStageThumbCircle(x, y, r, img),
+      ctx: () => ctx,
     },
     /** troca a resolução (pixels reais por pixel do jogo); as imagens guardadas se refazem sozinhas (c3Valida) */
     escala(k) {
