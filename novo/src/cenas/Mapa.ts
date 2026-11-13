@@ -13,6 +13,7 @@ import { criarBotao } from '../ui/botao';
 import { desenharFundo } from './fundo';
 import { aoApertar } from '../entrada/teclas';
 import { som } from '../audio/som';
+import { ArenaAntiga, carregarCenarios, cenariosProntos } from '../ui/arena';
 
 const RAIO = 22;
 /** caminho em S: 6 fases em cima (esquerda → direita) e 5 embaixo (direita → esquerda) */
@@ -32,6 +33,9 @@ export class Mapa extends Phaser.Scene {
   private retrato!: Phaser.GameObjects.Image;
   private botoes: { modo: ModoFase; b: ReturnType<typeof criarBotao> }[] = [];
   private inicial: string | undefined;
+  /** a arena da fase focada, ao vivo atrás do mapa */
+  private arena: ArenaAntiga | null = null;
+  private quadro = 0;
 
   constructor() {
     super('Mapa');
@@ -53,6 +57,9 @@ export class Mapa extends Phaser.Scene {
     som.musica(null);
     ajustarCamera(this);
     desenharFundo(this);
+    this.arena = null;
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => { this.arena?.destruir(); this.arena = null; });
+    if (!cenariosProntos()) carregarCenarios().then(() => this.sys.isActive() && this.atualizar()).catch(() => undefined);
     this.add.rectangle(TELA_L / 2, 175, TELA_L, 350, 0x000000, 0.5);
     this.fases = ordenarFases(lerOrdemAntiga());
     this.prog = lerProgresso();
@@ -105,6 +112,10 @@ export class Mapa extends Phaser.Scene {
       else if (c === 'Escape') this.scene.start('Menu');
     });
     this.atualizar();
+  }
+
+  update(): void {
+    this.arena?.desenhar(this.quadro++);
   }
 
   private liberado(i: number, modo: ModoFase): boolean {
@@ -161,5 +172,11 @@ export class Mapa extends Phaser.Scene {
     this.detalhe.setText(linhas.join('\n'));
     if (this.textures.get('retratos').has(f.vilao.personagem)) this.retrato.setFrame(f.vilao.personagem).setFlipX(true);
     for (const { modo, b } of this.botoes) b.container.setAlpha(this.liberado(this.foco, modo) ? 1 : 0.35);
+    // fundo: a arena da fase (as bloqueadas também, para dar vontade)
+    const m = cenariosProntos();
+    if (m && this.arena?.id !== f.id) {
+      this.arena?.destruir();
+      this.arena = new ArenaAntiga(this, f.id, m, 'arena-previa');
+    }
   }
 }

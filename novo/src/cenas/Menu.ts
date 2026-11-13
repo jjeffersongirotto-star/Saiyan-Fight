@@ -16,6 +16,8 @@ export interface DadosDaLuta {
   /** só no modo história: a fase (id de FASES) e o modo dela */
   fase?: string;
   modoFase?: ModoFase;
+  /** arena (id de FASES): no VERSUS/CPU escolhida na tela Arenas; na história é a da fase */
+  arena?: string;
 }
 
 export class Menu extends Phaser.Scene {

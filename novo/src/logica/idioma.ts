@@ -51,6 +51,8 @@ const LINHAS: Record<string, [string, string]> = {
   'VILÃO': ['VILLAIN', 'VILLANO'],
   // modo história (os nomes das fases e dos itens são os mesmos do idiomas.js do jogo antigo)
   'MODO HISTÓRIA': ['STORY MODE', 'MODO HISTORIA'],
+  'ESCOLHA A ARENA': ['CHOOSE THE ARENA', 'ELIGE LA ARENA'],
+  'ALEATÓRIA': ['RANDOM', 'ALEATORIA'],
   'ESCOLHA A FASE': ['CHOOSE THE STAGE', 'ELIGE LA FASE'],
   'ESCOLHA O SEU HERÓI': ['CHOOSE YOUR HERO', 'ELIGE TU HÉROE'],
   NORMAL: ['NORMAL', 'NORMAL'],

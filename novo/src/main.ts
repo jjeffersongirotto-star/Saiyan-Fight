@@ -2,6 +2,7 @@
 // esticada para caber na tela sem deformar.
 import Phaser from 'phaser';
 import { TELA_A, TELA_L } from './logica/constantes';
+import { Arenas } from './cenas/Arenas';
 import { Boot } from './cenas/Boot';
 import { FimHistoria } from './cenas/FimHistoria';
 import { Luta } from './cenas/Luta';
@@ -24,7 +25,7 @@ const jogo = new Phaser.Game({
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, fullscreenTarget: 'jogo' },
   input: { activePointers: 4 },
   fps: { target: 60 },
-  scene: [Boot, Preload, Menu, Mapa, Selecao, Luta, Vitoria, FimHistoria, Trilhas],
+  scene: [Boot, Preload, Menu, Mapa, Selecao, Arenas, Luta, Vitoria, FimHistoria, Trilhas],
 });
 
 // para testes no navegador (playwright) e depuração
