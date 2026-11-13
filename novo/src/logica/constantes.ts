@@ -116,14 +116,28 @@ export const ITEM_DURACAO_MAX = 1200;        // PICKUP_BUFF_MAX_DURATION (20 s)
 export const BASTAO_BONUS_TIRO = 1;          // POWER_BUFF_ATTACK_BONUS
 export const ESCUDO_INVULNERAVEL = 30;       // o escudo segura um golpe e dá os mesmos 30 quadros
 
-/** Chaves do modo história (true = regra nova). Cada uma é uma diferença do jogo antigo para o Jefferson confirmar. */
+/** Modos da história em que a cura entre ondas pode valer (iguais a ModoFase em ondas.ts). */
+export type ModoCuraEntreOndas = 'normal' | 'hard' | 'unlimited';
+/** false = desligada; senão, só nestes modos e só depois de vencer a onda aPartirDaOnda (número da ONDA X/5). */
+export type CuraEntreOndas =
+  | false
+  | { readonly dificuldades: readonly ModoCuraEntreOndas[]; readonly aPartirDaOnda: number };
+
+/** A cura vale nesta transição? `ondaVencida` é o número que o jogador vê (ONDA X/5; no SEM LIMITE, ONDA X). */
+export function curaEntreOndasAplica(regra: CuraEntreOndas, modo: ModoCuraEntreOndas, ondaVencida: number): boolean {
+  if (!regra) return false;
+  return regra.dificuldades.includes(modo) && ondaVencida >= regra.aPartirDaOnda;
+}
+
+/** Chaves do modo história. Cada uma é uma diferença do jogo antigo. */
 export interface RegrasHistoria {
-  /** NOVA (candidata): +1 de vida para o herói a cada onda nova. Antigo: nada (só o feijão mágico cura). */
-  curaEntreOndas: boolean;
+  /** NOVA: +1 de vida para o herói entre ondas, só nos modos e a partir da onda indicados.
+   *  Padrão (Jefferson): só no DIFÍCIL, depois de vencer a ONDA 2/5 (não depois da 1ª). Antigo: nada. */
+  curaEntreOndas: CuraEntreOndas;
   /** NOVA: o item que cai pousa no chão e fica ITEM_NO_CHAO quadros antes de sumir (piscando no fim).
    *  Antigo: atravessava o chão e sumia. */
   itemPousaNoChao: boolean;
-  /** NOVA: o vilão rebate tiros do herói (chance pela agressividade). Antigo: o vilão nunca rebatia. */
+  /** NOVA: o vilão rebate tiros do herói (chance pela agressividade). Antigo e padrão (Jefferson): o vilão nunca rebatia. */
   vilaoUsaParry: boolean;
   /** NOVA: o vilão junta ki depois da última forma e solta o especial (dano VILAO_ESPECIAL_DANO); responder vira
    *  choque. Antigo: o vilão nunca soltava especial. */
@@ -135,7 +149,8 @@ export interface RegrasHistoria {
   vilaoInvulneravel: boolean;
 }
 export const REGRAS_HISTORIA_NOVAS: Readonly<RegrasHistoria> = {
-  curaEntreOndas: false, vilaoUsaParry: true, vilaoUsaEspecial: true, agressividadeReal: true, vilaoInvulneravel: false,
+  curaEntreOndas: { dificuldades: ['hard'], aPartirDaOnda: 2 },
+  vilaoUsaParry: false, vilaoUsaEspecial: true, agressividadeReal: true, vilaoInvulneravel: false,
   itemPousaNoChao: true,
 };
 export const REGRAS_HISTORIA_ANTIGAS: Readonly<RegrasHistoria> = {

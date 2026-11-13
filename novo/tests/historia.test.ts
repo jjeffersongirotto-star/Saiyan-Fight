@@ -160,14 +160,61 @@ describe('vilão cai, sai voando e volta mais forte', () => {
     rodar(e, C.FIM_RODADA_QUADROS + 2);
     expect(e.vencedorPartida).toBe('p2');
   });
-  it('cura entre ondas (candidata, desligada por padrão): +1 de vida a cada onda nova', () => {
-    for (const curaEntreOndas of [false, true]) {
-      const e = calmo(nova('normal', { curaEntreOndas }));
+  it('cura entre ondas: padrão só no DIFÍCIL, só depois de vencer a ONDA 2/5', () => {
+    expect(C.REGRAS_HISTORIA.curaEntreOndas).toEqual({ dificuldades: ['hard'], aPartirDaOnda: 2 });
+    const r = C.REGRAS_HISTORIA.curaEntreOndas;
+    expect(C.curaEntreOndasAplica(r, 'normal', 2)).toBe(false);
+    expect(C.curaEntreOndasAplica(r, 'unlimited', 5)).toBe(false);
+    expect(C.curaEntreOndasAplica(r, 'hard', 1)).toBe(false);
+    expect(C.curaEntreOndasAplica(r, 'hard', 2)).toBe(true);
+    expect(C.curaEntreOndasAplica(r, 'hard', 3)).toBe(true);
+    expect(C.curaEntreOndasAplica(false, 'hard', 2)).toBe(false);
+  });
+  const proteger = (e: EstadoLuta) => { calmo(e); e.p1.invulneravel = 9999; return e; };
+  it('no DIFÍCIL: após a 1ª luta (ONDA 1/5) não cura; após a 2ª e as seguintes, +1 vida', () => {
+    const e = proteger(nova('hard'));
+    e.p1.vida = 2;
+    const ev1 = derrubar(e);
+    expect(ev1.find((x) => x.tipo === 'novaOnda')).toMatchObject({ passo: 1, curou: false });
+    expect(e.p1.vida).toBe(2);
+    expect(e.historia!.onda).toBe(4); // 2ª luta = NÍVEL 4
+    proteger(e); rodar(e, 60);
+    const ev2 = derrubar(e);
+    expect(ev2.find((x) => x.tipo === 'novaOnda')).toMatchObject({ passo: 2, curou: true });
+    expect(e.p1.vida).toBe(3);
+    e.p1.vida = 1;
+    proteger(e); rodar(e, 60);
+    const ev3 = derrubar(e);
+    expect(ev3.find((x) => x.tipo === 'novaOnda')).toMatchObject({ passo: 3, curou: true });
+    expect(e.p1.vida).toBe(2);
+  });
+  it('no DIFÍCIL, vida já no máximo: curou=false e não passa do teto', () => {
+    const e = proteger(nova('hard'));
+    derrubar(e);
+    proteger(e); rodar(e, 60);
+    expect(e.p1.vida).toBe(3);
+    const ev = derrubar(e);
+    expect(ev.find((x) => x.tipo === 'novaOnda')).toMatchObject({ passo: 2, curou: false });
+    expect(e.p1.vida).toBe(3);
+  });
+  it('no NORMAL e no SEM LIMITE, mesmo com vida baixa, não cura', () => {
+    for (const modo of ['normal', 'unlimited'] as const) {
+      const e = proteger(nova(modo));
       e.p1.vida = 2;
       derrubar(e);
-      expect(e.p1.vida).toBe(curaEntreOndas ? 3 : 2);
+      proteger(e); rodar(e, 60);
+      const ev = derrubar(e);
+      expect(ev.find((x) => x.tipo === 'novaOnda')).toMatchObject({ curou: false });
+      expect(e.p1.vida).toBe(2);
     }
-    expect(C.REGRAS_HISTORIA.curaEntreOndas).toBe(false);
+  });
+  it('chave desligada: no DIFÍCIL também não cura', () => {
+    const e = proteger(nova('hard', { curaEntreOndas: false }));
+    e.p1.vida = 2;
+    derrubar(e);
+    proteger(e); rodar(e, 60);
+    derrubar(e);
+    expect(e.p1.vida).toBe(2);
   });
 });
 
@@ -208,6 +255,7 @@ describe('ataques do vilão (spawnBossAttackPadrao)', () => {
 
 describe('regras novas do vilão (chaves em REGRAS_HISTORIA)', () => {
   it('parry: rebate alguns tiros do herói; com a chave desligada, nunca', () => {
+    expect(C.REGRAS_HISTORIA.vilaoUsaParry).toBe(false);
     for (const vilaoUsaParry of [true, false]) {
       const e = calmo(nova('normal', { vilaoUsaParry }));
       let rebateu = 0;
