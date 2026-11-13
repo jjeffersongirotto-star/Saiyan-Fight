@@ -3,7 +3,7 @@
 // lógica da luta, passoLuta); aí toca o efeito ("MUITO BEM! ISSO MESMO.") por alguns quadros e vem o próximo.
 // Não há adversário: o J2 fica fora da tela, sem agir e sem apanhar; o J1 não perde vida.
 import * as C from './constantes';
-import { alturaDoNivel, criarLuta, passoLuta, tamanhoDaCaixa } from './luta';
+import { alturaDoNivel, criarLuta, nivelMaximo, passoLuta, tamanhoDaCaixa } from './luta';
 import { ENTRADA_VAZIA, type Entrada, type EstadoLuta, type Evento, type FichaLuta } from './tipos';
 
 export const PASSOS_DO_TUTORIAL = [
@@ -29,6 +29,8 @@ export interface EstadoTutorial {
   efeito: number;
   inicio: { x: number; y: number };
   carga: number;
+  /** forma escolhida antes de começar (0 = normal); o passo TRANSFORMAR leva até ela (ou até a 1ª, se for a normal) */
+  nivel: number;
 }
 
 export interface Tutorial { luta: EstadoLuta; t: EstadoTutorial }
@@ -36,17 +38,47 @@ export interface Tutorial { luta: EstadoLuta; t: EstadoTutorial }
 export const passoAtual = (t: EstadoTutorial) => PASSOS_DO_TUTORIAL[t.passo] ?? null;
 
 /** startTutorial: o J1 na esquerda (x 120, y 150 do antigo = centro 144,178), sem ki; o J2 longe */
-export function criarTutorial(ficha: FichaLuta | string, semente = 1): Tutorial {
+export function criarTutorial(ficha: FichaLuta | string, semente = 1, nivel = 0): Tutorial {
   const luta = criarLuta(ficha, ficha, semente);
   const p = luta.p1;
+  const n = Math.max(0, Math.min(Math.floor(nivel) || 0, nivelMaximo(p)));
+  porNoNivel(p, n);
   p.x = p.xAnt = 120 + p.l / 2;
   p.y = p.yAnt = 150 + p.a / 2;
   p.ki = 0;
   p.invulneravel = 0;
   estacionarJ2(luta);
-  const t: EstadoTutorial = { passo: 0, fase: 'esperando', efeito: 0, inicio: { x: p.x, y: p.y }, carga: 0 };
+  const t: EstadoTutorial = { passo: 0, fase: 'esperando', efeito: 0, inicio: { x: p.x, y: p.y }, carga: 0, nivel: n };
   prepararPasso(luta, t);
   return { luta, t };
+}
+
+/** muda a forma na hora (sem animação), mantendo os pés no lugar */
+export function porNoNivel(p: EstadoLuta['p1'], nivel: number): void {
+  if (p.nivel === nivel) return;
+  const pes = p.y + p.a / 2;
+  p.nivel = nivel;
+  p.poder = 0;
+  [p.l, p.a] = tamanhoDaCaixa(alturaDoNivel(p, nivel));
+  p.y = pes - p.a / 2;
+}
+
+/** a forma de onde o passo TRANSFORMAR começa: a anterior à escolhida (ou a normal) */
+export const nivelAntesDeTransformar = (t: Pick<EstadoTutorial, 'nivel'>) => Math.max(0, t.nivel - 1);
+
+// ---- TUTORIAL LIVRE: a mesma arena de treino, sem passos nem instruções, só para testar os botões ----
+export interface Treino { luta: EstadoLuta; nivel: number }
+export function criarTreino(ficha: FichaLuta | string, semente = 1, nivel = 0): Treino {
+  const tu = criarTutorial(ficha, semente, nivel);
+  return { luta: tu.luta, nivel: tu.t.nivel };
+}
+/** Um passo fixo (1/60 s) do TUTORIAL LIVRE: a luta normal, sem adversário e sem perder vida. */
+export function passoTreino(e: EstadoLuta, entrada: Entrada): Evento[] {
+  const eventos = passoLuta(e, { p1: entrada, p2: ENTRADA_VAZIA });
+  estacionarJ2(e);
+  e.p1.vida = e.p1.vidaMax;
+  if (e.fase !== 'luta') { e.fase = 'luta'; e.faseQuadros = 0; }
+  return eventos;
 }
 
 function estacionarJ2(e: EstadoLuta): void {
@@ -68,13 +100,7 @@ export function prepararPasso(e: EstadoLuta, t: EstadoTutorial): void {
   if (s.chave === 'move') t.inicio = { x: p.x, y: p.y };
   else if (s.chave === 'transform') {
     p.ki = C.KI_MAX;
-    if (p.nivel !== 0) {
-      const pes = p.y + p.a / 2;
-      p.nivel = 0;
-      p.poder = 0;
-      [p.l, p.a] = tamanhoDaCaixa(alturaDoNivel(p, 0));
-      p.y = pes - p.a / 2;
-    }
+    porNoNivel(p, nivelAntesDeTransformar(t));
   } else if (s.chave === 'special') p.ki = C.KI_MAX;
   else if (s.chave === 'parry') criarAlvoDoParry(e);
 }

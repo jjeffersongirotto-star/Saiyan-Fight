@@ -16,9 +16,11 @@ import { aoApertar } from '../entrada/teclas';
 import type { ModoFase } from '../logica/ondas';
 
 export interface DadosDaLuta {
-  modo: 'cpu' | 'versus' | 'historia' | 'tutorial';
+  modo: 'cpu' | 'versus' | 'historia' | 'tutorial' | 'treino';
   p1: string;
   p2: string;
+  /** TUTORIAL e TUTORIAL LIVRE: a forma escolhida para o jogador 1 (0 = normal) */
+  nivel?: number;
   /** só no modo história: a fase (id de FASES) e o modo dela */
   fase?: string;
   modoFase?: ModoFase;
@@ -30,7 +32,7 @@ const L = {
   play: ret(190, 95, 180, 36), characters: ret(430, 95, 180, 36),
   stages: ret(190, 150, 180, 36), options: ret(430, 150, 180, 36),
   ranking: ret(190, 205, 180, 36), achievements: ret(430, 205, 180, 36),
-  tutorial: ret(310, 260, 180, 36),
+  tutorial: ret(190, 260, 180, 36), livre: ret(430, 260, 180, 36),
   esfera: ret(12, 12, 40, 40),
 };
 const E = { x: 12, y: 58, w: 216 };
@@ -61,7 +63,9 @@ export class Menu extends Phaser.Scene {
     b(L.options, 'OPÇÕES', () => this.scene.start('Opcoes', { voltar: 'Menu' }));
     b(L.ranking, 'RANKING', () => this.scene.start('Ranking'));
     b(L.achievements, 'CONQUISTAS', () => this.scene.start('Conquistas'));
-    b(L.tutorial, 'TUTORIAL', () => this.scene.start('Luta', { modo: 'tutorial', p1: 'goku', p2: 'goku' } satisfies DadosDaLuta));
+    // TUTORIAL e TUTORIAL LIVRE: antes escolhe o personagem e a forma (Selecao)
+    b(L.tutorial, 'TUTORIAL', () => this.scene.start('Selecao', { modo: 'tutorial' }));
+    b(L.livre, 'TUTORIAL LIVRE', () => this.scene.start('Selecao', { modo: 'treino' }));
     this.add.text(TELA_L - 6, TELA_A - 4, `v${infoVersao().jogo}`, estiloTexto({ fontFamily: 'Arial', fontSize: '10px', color: '#94a3b8' })).setOrigin(1, 1);
 
     // esfera de 4 estrelas

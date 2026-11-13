@@ -38,6 +38,8 @@ export class Selecao extends Phaser.Scene {
   /** modo história: só o herói é escolhido (o vilão é o da fase) */
   private fase: string | undefined;
   private modoFase: ModoFase | undefined;
+  /** TUTORIAL / TUTORIAL LIVRE: depois do personagem, a escolha da forma (quadro por cima) */
+  private quadroForma: { camada: Phaser.GameObjects.Container; id: string; foco: number; molduras: Phaser.GameObjects.Graphics[] } | null = null;
 
   constructor() {
     super('Selecao');
@@ -51,6 +53,7 @@ export class Selecao extends Phaser.Scene {
     this.escolhaP1 = null;
     this.foco = 0;
     this.molduras = [];
+    this.quadroForma = null;
   }
 
   preload(): void {
@@ -93,6 +96,7 @@ export class Selecao extends Phaser.Scene {
       this.focar(Math.min(n - 1, l * COLUNAS + c));
     };
     aoApertar(this, (codigo, ev) => {
+      if (this.quadroForma) { this.teclaDaForma(codigo, ev); return; }
       const m: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1], KeyJ: [-1, 0], KeyL: [1, 0], KeyI: [0, -1], KeyK: [0, 1] };
       if (m[codigo]) { ev.preventDefault(); mover(...m[codigo]); }
       else if (ev.repeat) return;
@@ -112,6 +116,12 @@ export class Selecao extends Phaser.Scene {
   }
 
   private escolher(id: string): void {
+    if (this.quadroForma) return;
+    if (this.modo === 'tutorial' || this.modo === 'treino') {
+      if (PERSONAGENS[id].formas.length <= 1) this.comecarTreino(id, 0);
+      else this.abrirFormas(id);
+      return;
+    }
     if (this.modo === 'historia') {
       const f = faseDe(this.fase ?? '');
       this.scene.start('Luta', { modo: 'historia', p1: id, p2: f.vilao.personagem, fase: f.id, modoFase: this.modoFase ?? 'normal' } satisfies DadosDaLuta);
@@ -126,7 +136,69 @@ export class Selecao extends Phaser.Scene {
     this.scene.start('Arenas', { modo: this.modo, p1: this.escolhaP1!, p2: id } satisfies DadosDaLuta);
   }
 
+  private comecarTreino(id: string, nivel: number): void {
+    this.scene.start('Luta', { modo: this.modo, p1: id, p2: id, nivel } satisfies DadosDaLuta);
+  }
+
+  /** escolha da forma (TUTORIAL / TUTORIAL LIVRE): um botão por forma, na ordem das transformações */
+  private abrirFormas(id: string): void {
+    const p = PERSONAGENS[id], n = p.formas.length;
+    const larg = 300, altB = 26, esp = 5, alt = 58 + n * (altB + esp) + 36;
+    const x0 = (TELA_L - larg) / 2, y0 = Math.max(6, (350 - alt) / 2);
+    const itens: Phaser.GameObjects.GameObject[] = [];
+    const fundo = this.add.rectangle(TELA_L / 2, 175, TELA_L, 350, 0x000000, 0.6).setInteractive();
+    const caixa = this.add.graphics().fillStyle(0x0c1636, 0.97).fillRoundedRect(x0, y0, larg, alt, 12).lineStyle(2, 0xffd23a, 1).strokeRoundedRect(x0, y0, larg, alt, 12);
+    itens.push(fundo, caixa);
+    itens.push(this.add.text(TELA_L / 2, y0 + 16, `${p.nome}: ${T('ESCOLHA A FORMA')}`, estiloTexto({ fontFamily: 'Arial Black, Arial', fontSize: '15px', color: '#ffd23a' })).setOrigin(0.5));
+    itens.push(this.add.text(TELA_L / 2, y0 + 36, T(this.modo === 'tutorial' ? 'NO PASSO TRANSFORMAR VOCÊ SE TRANSFORMA NELA' : 'VOCÊ COMEÇA NELA E PODE SE TRANSFORMAR NAS PRÓXIMAS'),
+      estiloTexto({ fontFamily: 'Arial', fontSize: '10px', color: '#dfe7ff' })).setOrigin(0.5));
+    const molduras: Phaser.GameObjects.Graphics[] = [];
+    p.formas.forEach((f, i) => {
+      const y = y0 + 52 + i * (altB + esp);
+      const g = this.add.graphics();
+      molduras.push(g);
+      const t = this.add.text(TELA_L / 2, y + altB / 2, `${i === 0 ? '' : i + '. '}${f.nome}`, estiloTexto({ fontFamily: 'Arial Black, Arial', fontSize: '13px', color: '#ffffff' })).setOrigin(0.5);
+      const z = this.add.zone(x0 + 14, y, larg - 28, altB).setOrigin(0, 0).setInteractive({ useHandCursor: true });
+      z.on('pointerover', (pt: Phaser.Input.Pointer) => { if (!pt.wasTouch) this.focarForma(i); });
+      z.on('pointerup', () => { som.tocar('menu'); this.comecarTreino(id, i); });
+      itens.push(g, t, z);
+    });
+    const voltar = criarBotao(this, TELA_L / 2, y0 + alt - 20, T('VOLTAR'), () => this.fecharFormas(), 120, 26);
+    itens.push(voltar.container);
+    this.quadroForma = { camada: this.add.container(0, 0, itens).setDepth(500), id, foco: 0, molduras };
+    this.focarForma(0);
+  }
+
+  private focarForma(i: number): void {
+    const q = this.quadroForma;
+    if (!q) return;
+    q.foco = i;
+    const n = q.molduras.length, larg = 300, altB = 26, esp = 5, alt = 58 + n * (altB + esp) + 36;
+    const x0 = (TELA_L - larg) / 2, y0 = Math.max(6, (350 - alt) / 2);
+    q.molduras.forEach((g, k) => {
+      const y = y0 + 52 + k * (altB + esp);
+      g.clear().fillStyle(k === i ? 0xff8a00 : 0x1d2a4d, 1).fillRoundedRect(x0 + 14, y, larg - 28, altB, 8).lineStyle(1.5, 0xffd23a, k === i ? 1 : 0.5).strokeRoundedRect(x0 + 14, y, larg - 28, altB, 8);
+    });
+  }
+
+  private fecharFormas(): void {
+    this.quadroForma?.camada.destroy();
+    this.quadroForma = null;
+  }
+
+  private teclaDaForma(codigo: string, ev: KeyboardEvent): void {
+    const q = this.quadroForma!;
+    const n = q.molduras.length;
+    if (['ArrowUp', 'KeyI', 'ArrowLeft', 'KeyJ'].includes(codigo)) { ev.preventDefault(); this.focarForma((q.foco + n - 1) % n); }
+    else if (['ArrowDown', 'KeyK', 'ArrowRight', 'KeyL'].includes(codigo)) { ev.preventDefault(); this.focarForma((q.foco + 1) % n); }
+    else if (ev.repeat) return;
+    else if (['Enter', 'NumpadEnter', 'Space', 'KeyF', 'KeyU'].includes(codigo)) this.comecarTreino(q.id, q.foco);
+    else if (codigo === 'Escape') this.fecharFormas();
+  }
+
   private voltar(): void {
+    if (this.quadroForma) { this.fecharFormas(); return; }
+    if (this.modo === 'tutorial' || this.modo === 'treino') { this.scene.start('Menu'); return; }
     if (this.modo === 'historia') this.scene.start('Mapa', { fase: this.fase });
     else if (this.escolhendo === 'p2') {
       this.escolhendo = 'p1';
@@ -138,6 +210,7 @@ export class Selecao extends Phaser.Scene {
   private atualizar(): void {
     this.titulo.setText(
       this.modo === 'historia' ? `${T('ESCOLHA O SEU HERÓI')} — ${T(faseDe(this.fase ?? '').nome)}`
+        : this.modo === 'tutorial' ? T('TUTORIAL: ESCOLHA O LUTADOR') : this.modo === 'treino' ? T('TUTORIAL LIVRE: ESCOLHA O LUTADOR')
         : this.escolhendo === 'p1' ? T('JOGADOR 1: ESCOLHA O LUTADOR') : this.modo === 'cpu' ? T('ESCOLHA O ADVERSÁRIO (CPU)') : T('JOGADOR 2: ESCOLHA O LUTADOR'),
     );
     ORDEM_PERSONAGENS.forEach((id, i) => {
