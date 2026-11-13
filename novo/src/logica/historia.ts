@@ -6,8 +6,8 @@
 //    sozinho e transforma; derrotado, sai voando da tela e volta mais forte na onda seguinte;
 //  - herói com 3 de vida, sem Zenkai (no antigo a Zenkai era só do VERSUS) e protegido enquanto o vilão cai;
 //  - Saibamans / Cell Jr. (minions.ts) e itens (itens.ts).
-// Regras NOVAS (chaves em REGRAS_HISTORIA, para o Jefferson confirmar): vilão rebate e solta especial, a
-// agressividade passa a valer, e cura entre ondas (candidata, desligada).
+// Regras NOVAS (chaves em REGRAS_HISTORIA): o vilão solta especial e a agressividade passa a valer; o vilão
+// NÃO rebate (vilaoUsaParry desligada); cura entre ondas só no DIFÍCIL, depois de vencer a ONDA 2/5.
 import * as C from './constantes';
 import { aplicarDano, criarLuta, criarLutador, dentroDoParry, nivelMaximo, passoLuta, podeTransformar, sortear } from './luta';
 import { criarItem, moverItem, encostaNoItem, ITEM_INTERVALO, ITEM_PRIMEIRO, ITENS_MAX, pegarItem, type Item } from './itens';
@@ -384,12 +384,16 @@ function proximaOnda(e: EstadoLuta, eventos: Evento[]) {
     eventos.push({ tipo: 'faseVencida' });
     return;
   }
+  const ondaVencida = h.passo + 1; // ONDA X/5 que acabou (não o nível real do DIFÍCIL)
   h.passo++;
   h.onda = ondaDoPasso(h.modo, h.passo);
   prepararVilao(e, h.onda, true);
   e.tiros.length = 0;
   let curou = false;
-  if (h.regras.curaEntreOndas && e.p1.vida < e.p1.vidaMax) { e.p1.vida++; curou = true; }
+  if (C.curaEntreOndasAplica(h.regras.curaEntreOndas, h.modo, ondaVencida) && e.p1.vida < e.p1.vidaMax) {
+    e.p1.vida++;
+    curou = true;
+  }
   eventos.push({ tipo: 'novaOnda', onda: h.onda, passo: h.passo, curou });
 }
 

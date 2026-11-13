@@ -173,16 +173,20 @@ Igual ao antigo (`gameplay.js` / `game-logic-core.js`):
 - Progresso: lê `saiyan_stage_progress` e `saiyan_ordem_fases` do antigo, mas **grava só em
   `saiyan-novo-progresso`** (e recordes em `saiyan-novo-recordes`): o jogo antigo instalado nunca é estragado.
 
-### Mudanças de propósito — Jefferson confirmar (todas em `REGRAS_HISTORIA`, `constantes.ts`)
+### Mudanças de propósito (`REGRAS_HISTORIA`, `constantes.ts`)
+
+Confirmadas pelo Jefferson (13/11/2026, America/Sao_Paulo):
 
 | Regra | Antigo | Novo (padrão) | Chave |
 |---|---|---|---|
-| Vilão usa parry nos seus tiros | não | sim, chance 8–40% pela agressividade | `vilaoUsaParry` |
+| Vilão usa parry nos seus tiros | não | **não** (a chave existe: chance 8–40% se ligar) | `vilaoUsaParry` |
 | Vilão solta especial (e responde ao seu com choque) | não | sim, da onda 3 em diante, dano 2 | `vilaoUsaEspecial` |
 | Agressividade do vilão | calculada e nunca usada | avança até 140 px, mais parry/especial | `agressividadeReal` |
-| Cura entre ondas (+1 vida) | não | **não** (candidata, desligada) | `curaEntreOndas` |
+| Cura entre ondas (+1 vida) | não | **sim, só no DIFÍCIL, depois de vencer a ONDA 2/5** (não depois da 1ª; não no NORMAL nem no SEM LIMITE) | `curaEntreOndas: { dificuldades:['hard'], aPartirDaOnda: 2 }` |
 | Vilão pisca invulnerável depois de apanhar | não | não | `vilaoInvulneravel` |
 | Item pousa no chão (3 s, pisca no fim) antes de sumir | atravessava o chão | sim | `itemPousaNoChao` |
+
+No VERSUS, a CPU (`entradaDaIA`) é outra IA e **não** usa `vilaoUsaParry`: ela continua podendo rebater; só o vilão da história ficou sem parry. Os jogadores humanos no VERSUS continuam com parry.
 
 `REGRAS_HISTORIA_ANTIGAS` liga tudo como no antigo. Outras escolhas a confirmar:
 - **Vilão de cada fase** (no antigo era escolhido na tela ARENAS, padrão Vegeta): Raditz, Piccolo, Vegeta, Freeza
