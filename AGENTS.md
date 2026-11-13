@@ -59,6 +59,11 @@ Script load order in `index.html` matters: `storage.js` → `idiomas.js` → `au
 
 The active animation states are `idle`, `flyRight`, `flyLeft`, `flyUp`, `flyDown`, the four diagonal states, `parry`, `attackKi`, `chargeKi`, `transform`, and `special` (v0.79: the special beam pose — `setActionState(caster, "special", 40)` in `triggerSpecialAttack`; it plays once and holds the last frame unless a padlock is set; characters/forms without special frames fall back to `attackKi`; procedural pose in `spritePoseFor`; the Vegeta pack has a 5-frame Galick Ho, cropped from the player's images without repainting; `tests/especial-079.test.js`). Every list of states (`SUB_ANIM_KEYS`, `SPRITE_STATES`/`SPRITE_FRAME_COUNTS`, `CONJ_ESTADOS`, the editor buttons and the DUPLICAR select) must stay in sync.
 
+## novo/ — o jogo refeito em Phaser 3 + TypeScript (em andamento)
+- [novo/](novo/) is the rewrite (Vite + TypeScript strict + Phaser 3.90 + Vitest), planned in [novo/PLANO.md](novo/PLANO.md). It has its own `package.json` (`"type": "module"`, never add that to the root one), is NOT served by GitHub Pages, NOT copied into the APK (`copiar-web.js` only takes root files and its `PASTAS`) and NOT part of the `app-bundle` release: players keep the old game until the switch (PLANO.md phase 8).
+- Pure game logic lives in `novo/src/logica/` (no Phaser/DOM/`Math.random`, fixed 1/60 s step) with Vitest tests in `novo/tests/`; Phaser scenes in `novo/src/cenas/` only draw and react to the events `passoLuta` returns. Logical screen stays 800x350 (`ESCALA_RENDER` + camera zoom for sharpness). Visible text goes through `T()` in `novo/src/logica/idioma.ts` (PT/EN/ES).
+- Sprites: `novo/scripts/gerar-atlas.py` turns `conjuntos/<nome>/<forma>.json` into `novo/public/atlas/<nome>-<forma>.webp/.json` (same placement math as `conjEmbrulharQuadro`; rerun it when a pack changes). CI: [.github/workflows/novo.yml](.github/workflows/novo.yml) (tests + build + preview artifact only).
+
 ## Working conventions
 - Scale verification effort to the change: a one-line constant, string, comment, or CSS-only color/spacing tweak needs a syntax check and a quick sanity look, not a full browser/responsive pass. Logic, state, or rendering changes still need real verification — see below.
 - All responses and communication with the user must be in Portuguese.
