@@ -1,5 +1,7 @@
 // Controles de toque do jogador 1: joystick que aparece onde o dedo encosta (metade esquerda) e os botões
 // do jogo antigo à direita (desenhos de icons/botoes/), com vários dedos ao mesmo tempo.
+// Como no jogo antigo não há botão TRANSF.: com o ki cheio (e forma para subir) CARREGAR vira TRANSFORMAR, e só
+// um toque NOVO transforma — o dedo que já estava segurando para carregar precisa soltar antes.
 import Phaser from 'phaser';
 import { TELA_L } from '../logica/constantes';
 import { vetorDoJoystick } from '../logica/entrada';
@@ -33,6 +35,10 @@ export class ControlesToque {
   private joyBase = { x: 0, y: 0 };
   private joyVetor = { x: 0, y: 0 };
   private gatilhos = { especial: false, parry: false };
+  /** dedos que encostaram em CARREGAR desde a última leitura / dedos que já viraram TRANSFORMAR */
+  private novosNoCarregar = new Set<number>();
+  private usadosParaTransformar = new Set<number>();
+  private modoTransformar = false;
   private grafJoy: Phaser.GameObjects.Graphics;
   private visivel = false;
 
@@ -67,6 +73,7 @@ export class ControlesToque {
       b.dedos.add(p.id);
       if (b.nome === 'especial') this.gatilhos.especial = true;
       if (b.nome === 'parry') this.gatilhos.parry = true;
+      if (b.nome === 'carregar') this.novosNoCarregar.add(p.id);
       return;
     }
     if (p.worldX < TELA_L * 0.45 && this.joyDedo === null) {
@@ -82,27 +89,43 @@ export class ControlesToque {
 
   private sobe(p: Phaser.Input.Pointer) {
     for (const b of this.botoes) b.dedos.delete(p.id);
+    this.novosNoCarregar.delete(p.id);
+    this.usadosParaTransformar.delete(p.id);
     if (p.id === this.joyDedo) { this.joyDedo = null; this.joyVetor = { x: 0, y: 0 }; }
   }
 
-  ler(): Entrada {
+  /** podeTransformar: ki cheio e ainda há forma para subir (CARREGAR mostra TRANSFORMAR). */
+  ler(podeTransformar = false): Entrada {
     if (!this.visivel) return { ...ENTRADA_VAZIA };
     const segura = (n: NomeBotao) => this.botoes.some((b) => b.nome === n && b.dedos.size > 0);
+    let transformar = false;
+    if (podeTransformar && this.novosNoCarregar.size > 0) {
+      transformar = true;
+      for (const d of this.novosNoCarregar) this.usadosParaTransformar.add(d);
+    }
+    this.novosNoCarregar.clear();
+    const carregar = this.botoes.some((b) => b.nome === 'carregar' && [...b.dedos].some((d) => !this.usadosParaTransformar.has(d)));
     const ent: Entrada = {
       x: this.joyVetor.x, y: this.joyVetor.y,
-      atacar: segura('atacar'), carregar: segura('carregar'),
-      especial: this.gatilhos.especial, parry: this.gatilhos.parry,
+      atacar: segura('atacar'), carregar: carregar && !transformar,
+      especial: this.gatilhos.especial, parry: this.gatilhos.parry, transformar,
     };
     this.gatilhos.especial = this.gatilhos.parry = false;
     return ent;
   }
 
   /** Redesenha (chamado a cada quadro): botão apertado mais claro, ESPECIAL dourado com o ki cheio. */
-  desenhar(kiCheio: boolean): void {
+  desenhar(kiCheio: boolean, podeTransformar: boolean): void {
     if (!this.visivel) return;
+    if (podeTransformar !== this.modoTransformar) {
+      this.modoTransformar = podeTransformar;
+      const c = this.botoes.find((b) => b.nome === 'carregar')!;
+      c.imagem.setTexture(podeTransformar ? 'botao-transformar' : 'botao-carregar');
+      c.imagem.setScale((c.r * 1.3) / Math.max(c.imagem.width, c.imagem.height));
+    }
     for (const b of this.botoes) {
       const apertado = b.dedos.size > 0;
-      const dourado = b.nome === 'especial' && kiCheio;
+      const dourado = (b.nome === 'especial' && kiCheio) || (b.nome === 'carregar' && podeTransformar);
       b.disco.clear()
         .fillStyle(dourado ? 0xffb400 : apertado ? 0x4a6fd1 : 0x101a33, apertado ? 0.6 : 0.3)
         .fillCircle(b.x, b.y, b.r)

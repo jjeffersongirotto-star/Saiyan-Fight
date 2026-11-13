@@ -3,7 +3,7 @@
 import Phaser from 'phaser';
 import { mostrarBarraDeCarregamento } from '../ui/barra';
 
-export const ICONES_BOTOES = ['ataque', 'carregar', 'especial', 'parry'] as const;
+export const ICONES_BOTOES = ['ataque', 'carregar', 'especial', 'parry', 'transformar'] as const;
 
 export class Preload extends Phaser.Scene {
   constructor() {

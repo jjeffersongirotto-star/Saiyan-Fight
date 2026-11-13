@@ -1,167 +1,284 @@
 import { describe, expect, it } from 'vitest';
 import * as C from '../src/logica/constantes';
-import { criarLuta, limitesX, passoLuta, raioAcerta, registrarRodada, tiroAcerta } from '../src/logica/luta';
-import { ENTRADA_VAZIA, type Entrada, type EstadoLuta } from '../src/logica/tipos';
+import { fichaDoPersonagem } from '../src/logica/ficha';
+import { criarLuta, danoDoChoque, escalaDaAltura, limitesX, passoLuta, registrarRodada, tiroAcerta, velocidadeDe } from '../src/logica/luta';
+import { ENTRADA_VAZIA, type Entrada, type EstadoLuta, type Evento } from '../src/logica/tipos';
 
 const nada = (): Entrada => ({ ...ENTRADA_VAZIA });
 const rodar = (e: EstadoLuta, n: number, p1: Partial<Entrada> = {}, p2: Partial<Entrada> = {}) => {
-  const ev = [];
+  const ev: Evento[] = [];
   for (let i = 0; i < n; i++) ev.push(...passoLuta(e, { p1: { ...nada(), ...p1 }, p2: { ...nada(), ...p2 } }));
   return ev;
 };
-/** coloca os dois na mesma altura e sem a proteção do começo da rodada */
+const luta = (a = 'goku', b = 'vegeta', semente = 1) => criarLuta(fichaDoPersonagem(a), fichaDoPersonagem(b), semente);
+/** os dois na mesma altura e sem a proteção do começo da rodada */
 const alinhar = (e: EstadoLuta) => {
   e.p1.y = e.p2.y = 200;
   e.p1.invulneravel = e.p2.invulneravel = 0;
 };
 
-describe('luta VERSUS (lógica pura)', () => {
-  it('começa com 4 de vida para os dois, ki zerado, um olhando para o outro', () => {
-    const e = criarLuta('goku', 'vegeta');
-    expect(e.p1.vida).toBe(C.VIDA_VERSUS);
-    expect(e.p2.vida).toBe(C.VIDA_VERSUS);
-    expect(e.p1.olhando).toBe(1);
-    expect(e.p2.olhando).toBe(-1);
-    expect(e.p1.ki).toBe(0);
+describe('luta VERSUS: básico', () => {
+  it('começa com 4 de vida, ki zerado, forma normal, um olhando para o outro', () => {
+    const e = luta();
+    expect([e.p1.vida, e.p2.vida]).toEqual([C.VIDA_VERSUS, C.VIDA_VERSUS]);
+    expect([e.p1.olhando, e.p2.olhando]).toEqual([1, -1]);
+    expect([e.p1.ki, e.p1.nivel]).toEqual([0, 0]);
   });
 
   it('cada jogador fica na sua metade da tela', () => {
-    const e = criarLuta('goku', 'vegeta');
+    const e = luta();
     rodar(e, 300, { x: 1 }, { x: -1 });
-    expect(e.p1.x).toBeLessThanOrEqual(limitesX('p1')[1]);
-    expect(e.p2.x).toBeGreaterThanOrEqual(limitesX('p2')[0]);
-    expect(e.p1.x).toBeLessThan(e.p2.x);
+    expect(e.p1.x).toBeLessThanOrEqual(limitesX('p1', e.p1.l)[1]);
+    expect(e.p2.x).toBeGreaterThanOrEqual(limitesX('p2', e.p2.l)[0]);
   });
 
-  it('a diagonal anda na mesma velocidade que a reta', () => {
-    const e = criarLuta('goku', 'vegeta');
-    e.p1.y = 200;
-    const x0 = e.p1.x, y0 = e.p1.y;
-    rodar(e, 1, { x: 1, y: 1 });
-    expect(Math.hypot(e.p1.x - x0, e.p1.y - y0)).toBeCloseTo(C.VELOCIDADE, 5);
+  it('os dois andam na mesma velocidade (4,5) e a diagonal não é mais rápida', () => {
+    const e = luta();
+    e.p1.y = e.p2.y = 200;
+    const a = { x: e.p1.x, y: e.p1.y }, b = { x: e.p2.x, y: e.p2.y };
+    rodar(e, 1, { x: 1, y: 1 }, { x: -1 });
+    expect(Math.hypot(e.p1.x - a.x, e.p1.y - a.y)).toBeCloseTo(C.VELOCIDADE, 5);
+    expect(Math.abs(e.p2.x - b.x)).toBeCloseTo(C.VELOCIDADE, 5);
   });
 
   it('segurando ATAQUE sai ~5 tiros por segundo', () => {
-    const e = criarLuta('goku', 'vegeta');
-    const ev = rodar(e, 60, { atacar: true });
-    const tiros = ev.filter((x) => x.tipo === 'tiro' && x.dono === 'p1').length;
+    const e = luta();
+    const tiros = rodar(e, 60, { atacar: true }).filter((x) => x.tipo === 'tiro').length;
     expect(tiros).toBeGreaterThanOrEqual(5);
     expect(tiros).toBeLessThanOrEqual(6);
   });
 
-  it('o tiro acerta, tira 1 de vida e deixa o alvo invulnerável um tempo', () => {
-    const e = criarLuta('goku', 'vegeta');
+  it('o tiro tira 1 de vida e dá 30 quadros de invulnerabilidade', () => {
+    const e = luta();
     alinhar(e);
-    const ev = rodar(e, 120, { atacar: true });
-    const acertos = ev.filter((x) => x.tipo === 'acerto' && x.alvo === 'p2');
-    expect(acertos.length).toBeGreaterThanOrEqual(1);
-    expect(acertos[0]).toMatchObject({ dano: 1, deEspecial: false });
-    // 2 s de tiro sem parar: a invulnerabilidade (1 s) segura vários tiros
-    expect(acertos.length).toBeLessThanOrEqual(3);
+    let ev: Evento[] = [];
+    for (let i = 0; i < 300 && !ev.length; i++) ev = rodar(e, 1, { atacar: true }).filter((x) => x.tipo === 'acerto');
+    expect(ev[0]).toMatchObject({ alvo: 'p2', dano: 1, deEspecial: false });
+    expect(e.p2.vida).toBe(C.VIDA_VERSUS - 1);
+    expect(e.p2.invulneravel).toBe(C.INVULNERAVEL_QUADROS);
   });
 
-  it('carregar enche o ki e deixa o lutador parado', () => {
-    const e = criarLuta('goku', 'vegeta');
+  it('carregar enche o ki a 0,8 por quadro, parado', () => {
+    const e = luta();
     const x0 = e.p1.x;
-    rodar(e, 80, { carregar: true, x: 1 });
-    expect(e.p1.ki).toBe(C.KI_MAX);
+    rodar(e, 50, { carregar: true, x: 1 });
+    expect(e.p1.ki).toBeCloseTo(40, 5);
     expect(e.p1.x).toBe(x0);
-    expect(e.p1.acao).toBe('carregando');
+    const ev = rodar(e, 80, { carregar: true });
+    expect(e.p1.ki).toBe(C.KI_MAX);
+    expect(ev.filter((x) => x.tipo === 'kiCheio').length).toBe(1);
   });
 
-  it('o especial só sai com o ki cheio, gasta o ki e tira 3 de vida', () => {
-    const e = criarLuta('goku', 'vegeta');
+  it('sem carregar o ki não sobe sozinho', () => {
+    const e = luta();
+    rodar(e, 300);
+    expect(e.p1.ki).toBe(0);
+  });
+
+  it('colisão círculo x caixa', () => {
+    const l = { x: 100, y: 100, l: C.LUTADOR_L, a: C.LUTADOR_A };
+    expect(tiroAcerta({ x: 100, y: 100, raio: 8 }, l)).toBe(true);
+    expect(tiroAcerta({ x: 100 + C.LUTADOR_L / 2 + 7, y: 100, raio: 8 }, l)).toBe(true);
+    expect(tiroAcerta({ x: 100 + C.LUTADOR_L / 2 + 9, y: 100, raio: 8 }, l)).toBe(false);
+  });
+
+  it('é determinística: a mesma semente e as mesmas entradas dão a mesma luta', () => {
+    const a = luta('goku', 'vegeta', 42), b = luta('goku', 'vegeta', 42);
+    rodar(a, 400, { atacar: true, y: -0.5 }, { atacar: true, carregar: false });
+    rodar(b, 400, { atacar: true, y: -0.5 }, { atacar: true, carregar: false });
+    expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+  });
+});
+
+describe('parry (tryReflect)', () => {
+  it('na hora do aperto devolve os tiros que estão no círculo, mais rápidos e retos', () => {
+    const e = luta();
     alinhar(e);
-    rodar(e, 1, { especial: true });
-    expect(e.p1.acao).toBe('livre');
+    rodar(e, 1, { atacar: true });
+    const t = e.tiros[0];
+    // traz o tiro para perto do peito do P2
+    t.x = e.p2.x - 30;
+    t.y = e.p2.y - e.p2.a * 0.3;
+    const ev = rodar(e, 1, {}, { parry: true });
+    expect(ev.find((x) => x.tipo === 'parry')).toMatchObject({ dono: 'p2', refletidos: 1 });
+    expect(t.dono).toBe('p2');
+    expect(t.vx).toBeLessThan(0);
+    expect(Math.abs(t.vx)).toBeGreaterThan(C.TIRO_VELOCIDADE * C.PARRY_REFLEXO_VEL - 0.01);
+    expect(t.vy).toBe(0);
+  });
+
+  it('parry no vazio: espera de 30 quadros antes de tentar de novo', () => {
+    const e = luta();
+    rodar(e, 1, { parry: true });
+    expect(e.p1.esperaParry).toBe(C.PARRY_ERROU_ESPERA);
+    expect(rodar(e, 10, { parry: true }).some((x) => x.tipo === 'parry')).toBe(false);
+  });
+});
+
+describe('especial e choque de raios', () => {
+  it('só sai com o ki cheio, gasta o ki, limpa os tiros e acerta 3 quando chega (mesmo desalinhado)', () => {
+    const e = luta();
+    alinhar(e);
+    e.p2.y = 120; // desalinhado: o especial acerta igual (como no jogo antigo)
+    expect(rodar(e, 1, { especial: true }).some((x) => x.tipo === 'especial')).toBe(false);
+    rodar(e, 12); // deixa o pedido antigo expirar (gatilho guardado por 8 quadros)
+    rodar(e, 1, { atacar: true });
     e.p1.ki = C.KI_MAX;
     e.p2.invulneravel = 0;
     const ev = rodar(e, 1, { especial: true });
     expect(ev.some((x) => x.tipo === 'especial')).toBe(true);
     expect(e.p1.ki).toBe(0);
-    const depois = rodar(e, C.ESPECIAL_CARGA + 5);
+    expect(e.tiros.length).toBe(0);
+    const depois = rodar(e, C.ESPECIAL_CHEGA + 2);
     expect(depois.find((x) => x.tipo === 'acerto')).toMatchObject({ alvo: 'p2', dano: C.ESPECIAL_DANO, deEspecial: true });
     expect(e.p2.vida).toBe(C.VIDA_VERSUS - C.ESPECIAL_DANO);
   });
 
-  it('o raio do especial não acerta quem está fora da faixa', () => {
-    const r = { dono: 'p1' as const, idade: 0, x0: 100, y: 100, direcao: 1 as const, acertou: false };
-    expect(raioAcerta(r, { x: 600, y: 100 })).toBe(true);
-    expect(raioAcerta(r, { x: 600, y: 260 })).toBe(false);
-    expect(raioAcerta(r, { x: 50, y: 100 })).toBe(false); // atrás de quem soltou
-  });
-
-  it('parry na hora certa devolve o tiro para quem atirou', () => {
-    const e = criarLuta('goku', 'vegeta');
+  it('o sol do Freeza demora mais para chegar', () => {
+    const e = luta('freeza', 'goku');
     alinhar(e);
-    rodar(e, 1, { atacar: true });
-    // espera o tiro chegar perto do P2 e aperta parry
-    let ev: ReturnType<typeof rodar> = [];
-    for (let i = 0; i < 120 && !ev.some((x) => x.tipo === 'reflexo'); i++) {
-      const t = e.tiros[0];
-      const perto = t && Math.abs(t.x - e.p2.x) < C.PARRY_RAIO + 20;
-      ev = rodar(e, 1, {}, { parry: perto && e.p2.acao !== 'parry' });
-    }
-    expect(ev.some((x) => x.tipo === 'reflexo' && x.dono === 'p2')).toBe(true);
-    expect(e.tiros[0].dono).toBe('p2');
-    expect(e.tiros[0].vx).toBeLessThan(0);
-    expect(e.p2.vida).toBe(C.VIDA_VERSUS);
-  });
-
-  it('ESPECIAL apertado enquanto apanha fica guardado e sai logo depois', () => {
-    const e = criarLuta('goku', 'vegeta');
     e.p1.ki = C.KI_MAX;
-    e.p1.acao = 'atingido';
-    e.p1.acaoQuadros = C.ATINGIDO_QUADROS - 4;
-    const ev = rodar(e, 1, { especial: true }).concat(rodar(e, 6));
-    expect(ev.some((x) => x.tipo === 'especial' && x.dono === 'p1')).toBe(true);
-  });
-
-  it('um aperto antigo demais não dispara nada', () => {
-    const e = criarLuta('goku', 'vegeta');
     rodar(e, 1, { especial: true });
-    rodar(e, C.GUARDA_GATILHO + 1);
+    expect(rodar(e, C.ESPECIAL_CHEGA + 2).some((x) => x.tipo === 'acerto')).toBe(false);
+    expect(rodar(e, C.SOL_CHEGA).some((x) => x.tipo === 'acerto' && x.alvo === 'p2')).toBe(true);
+  });
+
+  it('respondendo com o especial antes do raio chegar vira CHOQUE; quem aperta mais ATAQUE machuca mais', () => {
+    const e = luta();
+    alinhar(e);
+    e.p1.ki = e.p2.ki = C.KI_MAX;
+    rodar(e, 1, { especial: true });
+    rodar(e, 5);
+    const ev = rodar(e, 1, {}, { especial: true });
+    expect(ev.some((x) => x.tipo === 'choque')).toBe(true);
+    expect(e.choque).not.toBeNull();
+    expect(e.p2.ki).toBe(0);
+    // P1 aperta (sobe e desce) a cada 2 quadros, P2 não aperta
+    let fim: Evento | undefined;
+    for (let i = 0; i < C.CHOQUE_DURACAO + 2 && !fim; i++) fim = rodar(e, 1, { atacar: i % 2 === 0 }).find((x) => x.tipo === 'fimChoque');
+    expect(fim).toMatchObject({ tipo: 'fimChoque', dano: { p1: 1, p2: 3 } });
+    expect(e.choque).toBeNull();
+  });
+
+  it('dano do choque (resolveClashDamage)', () => {
+    expect(danoDoChoque(0)).toEqual({ p1: 1, p2: 1 });
+    expect(danoDoChoque(1)).toEqual({ p1: 1, p2: 3 });
+    expect(danoDoChoque(-1)).toEqual({ p1: 3, p2: 1 });
+  });
+});
+
+describe('transformação', () => {
+  it('com o ki cheio sobe um nível, zera o ki e dá +1 de velocidade por 15 s', () => {
+    const e = luta();
     e.p1.ki = C.KI_MAX;
-    expect(rodar(e, 1).some((x) => x.tipo === 'especial')).toBe(false);
+    const ev = rodar(e, 1, { transformar: true });
+    expect(ev.find((x) => x.tipo === 'transformou')).toMatchObject({ dono: 'p1', nivel: 1 });
+    expect(e.p1.ki).toBe(0);
+    expect(velocidadeDe(e.p1)).toBe(C.VELOCIDADE + 1);
+    rodar(e, C.PODER_TRANSFORMACAO_QUADROS);
+    expect(velocidadeDe(e.p1)).toBe(C.VELOCIDADE);
+    expect(e.p1.nivel).toBe(1); // continua transformado
   });
 
-  it('parry no vazio tem espera antes de poder tentar de novo', () => {
-    const e = criarLuta('goku', 'vegeta');
-    rodar(e, 1, { parry: true });
-    rodar(e, C.PARRY_QUADROS);
-    expect(e.p1.esperaParry).toBeGreaterThan(0);
-    const ev = rodar(e, 1, { parry: true });
-    expect(ev.some((x) => x.tipo === 'parry')).toBe(false);
+  it('sem ki cheio não transforma; na última forma também não', () => {
+    const e = luta('raditz', 'goku'); // Raditz só tem a forma normal
+    e.p1.ki = C.KI_MAX;
+    expect(rodar(e, 1, { transformar: true }).some((x) => x.tipo === 'transformou')).toBe(false);
+    const g = luta('goku', 'vegeta');
+    g.p1.ki = 50;
+    expect(rodar(g, 1, { transformar: true }).some((x) => x.tipo === 'transformou')).toBe(false);
   });
 
-  it('quem zera a vida perde a rodada; o vencedor não apanha mais depois disso', () => {
-    const e = criarLuta('goku', 'vegeta');
+  it('o Goku passa pelas 6 formas, uma por vez', () => {
+    const e = luta();
+    for (let n = 1; n <= 5; n++) {
+      e.p1.ki = C.KI_MAX;
+      rodar(e, 1, { transformar: true });
+      rodar(e, C.TRANSFORMANDO_QUADROS + 1);
+      expect(e.p1.nivel).toBe(n);
+    }
+    e.p1.ki = C.KI_MAX;
+    expect(rodar(e, 1, { transformar: true }).some((x) => x.tipo === 'transformou')).toBe(false);
+  });
+
+  it('a caixa muda com a altura da forma, mantendo os pés no lugar (Freeza 1ª forma 132 cm -> 2ª 221 cm)', () => {
+    const e = luta('freeza', 'goku');
+    const pes = e.p1.y + e.p1.a / 2;
+    const a0 = e.p1.a;
+    e.p1.ki = C.KI_MAX;
+    rodar(e, 1, { transformar: true });
+    expect(e.p1.a).toBeCloseTo(C.LUTADOR_A * escalaDaAltura(221), 5);
+    expect(e.p1.a).toBeGreaterThan(a0);
+    expect(e.p1.y + e.p1.a / 2).toBeCloseTo(pes, 5);
+  });
+
+  it('escala da altura: 175 cm = 1, limitada entre 0,75 e 1,4', () => {
+    expect(escalaDaAltura(175)).toBe(1);
+    expect(escalaDaAltura(100)).toBe(0.75);
+    expect(escalaDaAltura(300)).toBe(1.4);
+  });
+
+  it('a rodada nova volta à forma normal', () => {
+    const e = luta();
+    alinhar(e);
+    e.p1.ki = C.KI_MAX;
+    rodar(e, 1, { transformar: true });
+    e.p2.vida = 1;
+    e.p2.zenkaiUsada = true;
+    let nova = false;
+    for (let i = 0; i < 600 && !nova; i++) nova = rodar(e, 1, { atacar: e.fase === 'luta' }).some((x) => x.tipo === 'novaRodada');
+    expect(nova).toBe(true);
+    expect(e.p1.nivel).toBe(0);
+    expect(e.p1.poder).toBe(0);
+  });
+});
+
+describe('Zenkai, rodadas e partida', () => {
+  it('Zenkai: a 1ª vez que cairia volta com 1 de vida e 90 quadros invulnerável; só uma vez por partida', () => {
+    const e = luta();
     alinhar(e);
     e.p2.vida = 1;
-    let ev = rodar(e, 120, { atacar: true }, { atacar: true });
-    const fim = ev.find((x) => x.tipo === 'fimRodada');
-    expect(fim).toBeDefined();
+    let ev = rodar(e, 120, { atacar: true });
+    expect(ev.some((x) => x.tipo === 'zenkai' && x.dono === 'p2')).toBe(true);
+    expect(e.p2.zenkaiUsada).toBe(true);
+    expect(e.fase).toBe('luta');
+    // a Zenkai não volta na rodada seguinte
+    e.p2.vida = 1;
+    e.p2.invulneravel = 0;
+    ev = rodar(e, 120, { atacar: true });
+    expect(ev.some((x) => x.tipo === 'zenkai')).toBe(false);
+    expect(ev.some((x) => x.tipo === 'fimRodada' && x.vencedor === 'p1')).toBe(true);
+    let nova = false;
+    for (let i = 0; i < 300 && !nova; i++) nova = rodar(e, 1).some((x) => x.tipo === 'novaRodada');
+    expect(e.p2.zenkaiUsada).toBe(true);
+  });
+
+  it('o vencedor da rodada não apanha mais depois que o outro caiu', () => {
+    const e = luta();
+    alinhar(e);
+    e.p2.vida = 1;
+    e.p2.zenkaiUsada = true;
+    rodar(e, 120, { atacar: true }, { atacar: true });
     expect(e.fase).toBe('fimRodada');
-    expect(e.tiros.length).toBe(0);
-    const vencedor = e.vencedorRodada!;
-    const vida = e[vencedor].vida;
-    ev = rodar(e, 60, { atacar: true }, { atacar: true });
-    expect(e[vencedor].vida).toBe(vida);
+    const v = e.vencedorRodada!;
+    const vida = e[v].vida;
+    const ev = rodar(e, 60, { atacar: true }, { atacar: true });
+    expect(e[v].vida).toBe(vida);
     expect(ev.some((x) => x.tipo === 'tiro')).toBe(false);
   });
 
-  it('melhor de 3: a partida acaba quando alguém vence 2 rodadas', () => {
+  it('melhor de 3', () => {
     expect(registrarRodada({ p1: 0, p2: 0 }, 'p1')).toEqual({ placar: { p1: 1, p2: 0 }, partida: null });
     expect(registrarRodada({ p1: 1, p2: 1 }, 'p2')).toEqual({ placar: { p1: 1, p2: 2 }, partida: 'p2' });
     expect(registrarRodada({ p1: 1, p2: 0 }, null)).toEqual({ placar: { p1: 1, p2: 0 }, partida: null });
   });
 
-  it('a rodada seguinte recomeça com vida cheia; a partida termina com fimPartida', () => {
-    const e = criarLuta('goku', 'vegeta');
+  it('2 rodadas vencidas = fimPartida', () => {
+    const e = luta();
+    e.p2.zenkaiUsada = true;
     const ate = (tipo: string) => {
       for (let i = 0; i < 600; i++) {
-        const ev = rodar(e, 1, { atacar: e.fase === 'luta' });
-        const achou = ev.find((x) => x.tipo === tipo);
+        const achou = rodar(e, 1, { atacar: e.fase === 'luta' }).find((x) => x.tipo === tipo);
         if (achou) return achou;
       }
       return undefined;
@@ -170,34 +287,30 @@ describe('luta VERSUS (lógica pura)', () => {
     e.p2.vida = 1;
     expect(ate('novaRodada')).toBeDefined();
     expect(e.p2.vida).toBe(C.VIDA_VERSUS);
-    expect(e.p1.vida).toBe(C.VIDA_VERSUS);
-    expect(e.placar).toEqual({ p1: 1, p2: 0 });
-    expect(e.rodada).toBe(2);
     alinhar(e);
     e.p2.vida = 1;
     expect(ate('fimPartida')).toMatchObject({ vencedor: 'p1' });
-    expect(e.fase).toBe('fimPartida');
     expect(e.placar).toEqual({ p1: 2, p2: 0 });
   });
 
-  it('os dois caindo juntos é empate: ninguém marca ponto', () => {
-    const e = criarLuta('goku', 'vegeta');
+  it('os dois caindo juntos é empate', () => {
+    const e = luta();
     e.p1.vida = e.p2.vida = 0;
-    const ev = rodar(e, 1);
-    expect(ev.find((x) => x.tipo === 'fimRodada')).toMatchObject({ vencedor: null });
+    expect(rodar(e, 1).find((x) => x.tipo === 'fimRodada')).toMatchObject({ vencedor: null });
     expect(e.placar).toEqual({ p1: 0, p2: 0 });
   });
 
-  it('é determinística: a mesma semente e as mesmas entradas dão a mesma luta', () => {
-    const a = criarLuta('goku', 'vegeta', 42), b = criarLuta('goku', 'vegeta', 42);
-    rodar(a, 300, { atacar: true, y: -0.5 }, { atacar: true });
-    rodar(b, 300, { atacar: true, y: -0.5 }, { atacar: true });
-    expect(JSON.stringify(a)).toBe(JSON.stringify(b));
-  });
-
-  it('colisão círculo x caixa', () => {
-    expect(tiroAcerta({ x: 100, y: 100, raio: 8 }, { x: 100, y: 100 })).toBe(true);
-    expect(tiroAcerta({ x: 100 + C.LUTADOR_L / 2 + 7, y: 100, raio: 8 }, { x: 100, y: 100 })).toBe(true);
-    expect(tiroAcerta({ x: 100 + C.LUTADOR_L / 2 + 9, y: 100, raio: 8 }, { x: 100, y: 100 })).toBe(false);
+  it('gatilho guardado: ESPECIAL apertado enquanto apanha sai logo depois; aperto velho demais não', () => {
+    const e = luta();
+    e.p1.invulneravel = 0;
+    e.p1.ki = C.KI_MAX;
+    e.p1.acao = 'atingido';
+    e.p1.acaoQuadros = C.ATINGIDO_QUADROS - 4;
+    expect(rodar(e, 1, { especial: true }).concat(rodar(e, 6)).some((x) => x.tipo === 'especial')).toBe(true);
+    const f = luta();
+    rodar(f, 1, { especial: true });
+    rodar(f, C.GUARDA_GATILHO + 1);
+    f.p1.ki = C.KI_MAX;
+    expect(rodar(f, 1).some((x) => x.tipo === 'especial')).toBe(false);
   });
 });

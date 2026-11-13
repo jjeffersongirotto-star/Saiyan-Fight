@@ -58,8 +58,11 @@ describe('poses', () => {
     expect(poseDoLutador(e.p1).movimento).toBe('attackKi');
     e.p1.acao = 'carregando';
     expect(poseDoLutador(e.p1).movimento).toBe('chargeKi');
-    e.p1.acao = 'parry';
+    e.p1.acao = 'livre';
+    e.p1.poseParry = 3;
     expect(poseDoLutador(e.p1).movimento).toBe('parry');
+    e.p1.acao = 'transformando';
+    expect(poseDoLutador(e.p1).movimento).toBe('transform');
     e.p1.acao = 'especial';
     expect(poseDoLutador(e.p1).movimento).toBe('special');
   });
@@ -68,7 +71,8 @@ describe('poses', () => {
 describe('entrada', () => {
   it('teclado do J1 e do J2 (event.code)', () => {
     const e1 = entradaDoTeclado(TECLAS_P1, new Set(['ArrowRight', 'ArrowUp', 'KeyF']), new Set(['KeyQ']));
-    expect(e1).toEqual({ x: 1, y: -1, atacar: true, carregar: false, especial: true, parry: false });
+    expect(e1).toEqual({ x: 1, y: -1, atacar: true, carregar: false, especial: true, parry: false, transformar: false });
+    expect(entradaDoTeclado(TECLAS_P1, new Set(), new Set(['KeyA'])).transformar).toBe(true);
     const e2 = entradaDoTeclado(TECLAS_P2, new Set(['Numpad1', 'KeyO']), new Set(['KeyP']));
     expect(e2).toMatchObject({ x: -1, carregar: true, parry: true });
   });
@@ -95,11 +99,23 @@ describe('CPU', () => {
     e.quadro = 40; // fora da pausa de ritmo
     expect(entradaDaIA(e, 'p2').atacar).toBe(true);
   });
-  it('ki cheio e alinhada: solta o especial', () => {
+  it('ki cheio: transforma enquanto houver forma; na última, especial', () => {
     const e = criarLuta('goku', 'vegeta');
     e.p1.y = e.p2.y = 200;
     e.p2.ki = 100;
+    expect(entradaDaIA(e, 'p2').transformar).toBe(true);
+    e.p2.nivel = e.p2.alturas.length - 1;
     expect(entradaDaIA(e, 'p2').especial).toBe(true);
+  });
+  it('responde ao especial do outro com o próprio (choque) e aperta ATAQUE no choque', () => {
+    const e = criarLuta('goku', 'vegeta');
+    e.p2.ki = 100;
+    e.raios.push({ dono: 'p1', idade: 3, duracao: 40, chega: 18, sol: false, acertou: false });
+    expect(entradaDaIA(e, 'p2').especial).toBe(true);
+    e.raios.length = 0;
+    e.choque = { idade: 0, apertos: { p1: 0, p2: 0 }, empurrao: 0 };
+    const apertos = Array.from({ length: 12 }, (_, i) => { e.quadro = i; return entradaDaIA(e, 'p2').atacar; });
+    expect(apertos.some(Boolean) && apertos.some((a) => !a)).toBe(true);
   });
   it('fora da luta não aperta nada', () => {
     const e = criarLuta('goku', 'vegeta');

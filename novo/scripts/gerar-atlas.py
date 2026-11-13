@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Gera os atlas de textura (WebP + JSON no formato "hash" do Phaser) a partir dos pacotes do jogo antigo.
 
-Uso (da pasta novo/):  python3 scripts/gerar-atlas.py goku/normal vegeta/normal
+Uso (da pasta novo/):  python3 scripts/gerar-atlas.py            (todas as formas + retratos)
+       python3 scripts/gerar-atlas.py goku/normal retratos   (só essas)
 
 Lê ../conjuntos/<nome>/<forma>.json (cada quadro = [x, y, w, h, webp em base64] no recorte original) e faz a
 MESMA conta de posição do conjEmbrulharQuadro (conjuntos.js): desenho 96x112, pés na linha 103, centro em x=48.
@@ -86,6 +87,7 @@ def gerar(nome, forma):
             "movimentos": {e: len(q) for e, q in estados.items()},
             "fps": d.get("fps", 12), "fpsMov": d.get("fpsMov", {}),
             "mao": (d.get("mao") or {}).get(forma),
+            "dedo": (d.get("dedo") or {}).get(forma),
             "loop": (d.get("loop") or {}).get(forma, {}),
         },
     }
@@ -95,7 +97,50 @@ def gerar(nome, forma):
     print(f"{base}: {len(pedacos)} quadros, atlas {largura}x{altura}, {tam_antigo // 1024} KB (JSON antigo) -> {tam_novo // 1024} KB")
 
 
+def gerar_retratos():
+    """Primeiro quadro parado de cada personagem (../conjuntos/retratos.json) num atlas pequeno para a tela de
+    escolha: a seleção não precisa baixar nenhum pacote inteiro (igual ao conjRetratoUrl do jogo antigo)."""
+    d = json.load(open(os.path.join(RAIZ_ANTIGA, "conjuntos", "retratos.json"), encoding="utf-8"))
+    celulas = {nome: quadro_na_celula(r, r["q"], "idle") for nome, r in d.items()}
+    cw, ch = next(iter(celulas.values())).size
+    por_linha = 8
+    linhas = math.ceil(len(celulas) / por_linha)
+    atlas = Image.new("RGBA", (cw * por_linha, ch * linhas), (0, 0, 0, 0))
+    frames = {}
+    for i, (nome, cel) in enumerate(celulas.items()):
+        x, y = (i % por_linha) * cw, (i // por_linha) * ch
+        atlas.paste(cel, (x, y))
+        frames[nome] = {"frame": {"x": x, "y": y, "w": cw, "h": ch}, "rotated": False, "trimmed": False,
+                        "spriteSourceSize": {"x": 0, "y": 0, "w": cw, "h": ch}, "sourceSize": {"w": cw, "h": ch}}
+    os.makedirs(SAIDA, exist_ok=True)
+    atlas.save(os.path.join(SAIDA, "retratos.webp"), "WEBP", quality=QUALIDADE, alpha_quality=90, method=6)
+    json.dump({"frames": frames, "meta": {"image": "retratos.webp", "size": {"w": atlas.width, "h": atlas.height}, "scale": "1"}},
+              open(os.path.join(SAIDA, "retratos.json"), "w", encoding="utf-8"), separators=(",", ":"))
+    print(f"retratos: {len(celulas)} personagens, {os.path.getsize(os.path.join(SAIDA, 'retratos.webp')) // 1024} KB")
+
+
+def todas_as_formas():
+    pasta = os.path.join(RAIZ_ANTIGA, "conjuntos")
+    return sorted(f"{n}/{f[:-5]}" for n in os.listdir(pasta) if os.path.isdir(os.path.join(pasta, n))
+                  for f in os.listdir(os.path.join(pasta, n)) if f.endswith(".json"))
+
+
+def _gerar(arg):
+    n, f = arg.split("/")
+    gerar(n, f)
+
+
 if __name__ == "__main__":
-    for arg in sys.argv[1:] or ["goku/normal", "vegeta/normal"]:
-        n, f = arg.split("/")
-        gerar(n, f)
+    # sem argumentos (ou "todos"): as 47 formas + os retratos, em paralelo
+    args = sys.argv[1:]
+    if not args or args == ["todos"]:
+        from multiprocessing import Pool
+        gerar_retratos()
+        with Pool() as pool:
+            pool.map(_gerar, todas_as_formas())
+    else:
+        for arg in args:
+            if arg == "retratos":
+                gerar_retratos()
+            else:
+                _gerar(arg)

@@ -10,17 +10,19 @@ export interface MapaTeclas {
   carregar: string[];
   especial: string[];
   parry: string[];
+  transformar: string[];
 }
 
 // event.code (posição física da tecla, igual em qualquer layout). J1 = padrão do jogo antigo (setas, S, Q, Espaço;
 // o ataque com o mouse vira F). J2 = teclado numérico do jogo antigo + IJKL para notebook sem teclado numérico.
 export const TECLAS_P1: MapaTeclas = {
   cima: ['ArrowUp'], baixo: ['ArrowDown'], esquerda: ['ArrowLeft'], direita: ['ArrowRight'],
-  atacar: ['KeyF'], carregar: ['KeyS'], especial: ['KeyQ'], parry: ['Space'],
+  atacar: ['KeyF'], carregar: ['KeyS'], especial: ['KeyQ'], parry: ['Space'], transformar: ['KeyA'],
 };
 export const TECLAS_P2: MapaTeclas = {
   cima: ['Numpad5', 'KeyI'], baixo: ['Numpad2', 'KeyK'], esquerda: ['Numpad1', 'KeyJ'], direita: ['Numpad3', 'KeyL'],
   atacar: ['Enter', 'KeyU'], carregar: ['NumpadEnter', 'KeyO'], especial: ['Numpad7', 'KeyY'], parry: ['Numpad0', 'KeyP'],
+  transformar: ['Numpad9', 'KeyH'],
 };
 /** Teclas que o jogo usa: o navegador não deve rolar a página nem fazer outra coisa com elas. */
 export const TECLAS_DO_JOGO = new Set(Object.values({ ...TECLAS_P1 }).flat().concat(Object.values(TECLAS_P2).flat()));
@@ -36,6 +38,7 @@ export function entradaDoTeclado(m: MapaTeclas, segurando: ReadonlySet<string>, 
     carregar: algum(m.carregar, segurando),
     especial: algum(m.especial, apertadas),
     parry: algum(m.parry, apertadas),
+    transformar: algum(m.transformar, apertadas),
   };
 }
 
@@ -53,6 +56,6 @@ export function juntarEntradas(a: Entrada, b: Entrada): Entrada {
   return {
     x: eixo(a.x, b.x), y: eixo(a.y, b.y),
     atacar: a.atacar || b.atacar, carregar: a.carregar || b.carregar,
-    especial: a.especial || b.especial, parry: a.parry || b.parry,
+    especial: a.especial || b.especial, parry: a.parry || b.parry, transformar: a.transformar || b.transformar,
   };
 }

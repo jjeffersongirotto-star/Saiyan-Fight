@@ -4,6 +4,7 @@ import { TELA_A, TELA_L } from '../logica/constantes';
 import { definirIdioma, IDIOMAS, idiomaAtual, T } from '../logica/idioma';
 import { criarBotao } from '../ui/botao';
 import { desenharFundo } from './fundo';
+import { aoApertar } from '../entrada/teclas';
 
 export interface DadosDaLuta {
   modo: 'cpu' | 'versus';
@@ -25,7 +26,7 @@ export class Menu extends Phaser.Scene {
       .setOrigin(0.5);
     this.add.text(TELA_L / 2, 104, `${T('PRÉVIA PHASER')} v${__VERSAO__}`, estiloTexto({ fontFamily: 'Arial', fontSize: '14px', color: '#ffffff' })).setOrigin(0.5);
 
-    const lutar = (modo: DadosDaLuta['modo']) => this.scene.start('Luta', { modo, p1: 'goku', p2: 'vegeta' } satisfies DadosDaLuta);
+    const lutar = (modo: DadosDaLuta['modo']) => this.scene.start('Selecao', { modo });
     criarBotao(this, TELA_L / 2, 156, T('1 JOGADOR (CONTRA A CPU)'), () => lutar('cpu'));
     criarBotao(this, TELA_L / 2, 206, T('2 JOGADORES (VERSUS)'), () => lutar('versus'));
     criarBotao(this, TELA_L / 2 - 85, 256, `${T('IDIOMA')}: ${idiomaAtual().toUpperCase()}`, () => {
@@ -35,12 +36,15 @@ export class Menu extends Phaser.Scene {
     criarBotao(this, TELA_L / 2 + 85, 256, T('TELA CHEIA'), () => this.alternarTelaCheia(), 150);
 
     const estilo = estiloTexto({ fontFamily: 'Arial', fontSize: '11px', color: '#dfe7ff' });
-    this.add.text(TELA_L / 2, 300, T('J1: setas mover · F atacar · S carregar · Q especial · Espaço parry'), estilo).setOrigin(0.5);
-    this.add.text(TELA_L / 2, 318, T('J2: IJKL mover · U atacar · O carregar · Y especial · P parry (ou teclado numérico)'), estilo).setOrigin(0.5);
+    this.add.text(TELA_L / 2, 300, T('J1: setas mover · F atacar · S carregar · A transformar · Q especial · Espaço parry'), estilo).setOrigin(0.5);
+    this.add.text(TELA_L / 2, 318, T('J2: IJKL mover · U atacar · O carregar · H transformar · Y especial · P parry (ou teclado numérico)'), estilo).setOrigin(0.5);
 
-    this.input.keyboard?.on('keydown-ONE', () => lutar('cpu'));
-    this.input.keyboard?.on('keydown-TWO', () => lutar('versus'));
-    this.input.keyboard?.on('keydown-ENTER', () => lutar('cpu'));
+    let foi = false;
+    aoApertar(this, (c) => {
+      if (foi) return;
+      const modo = ({ Digit1: 'cpu', Numpad1: 'cpu', Enter: 'cpu', NumpadEnter: 'cpu', Digit2: 'versus', Numpad2: 'versus' } as const)[c];
+      if (modo) { foi = true; lutar(modo); }
+    });
   }
 
   private alternarTelaCheia(): void {

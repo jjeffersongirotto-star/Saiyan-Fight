@@ -23,14 +23,25 @@ const LINHAS: Record<string, [string, string]> = {
   ESPECIAL: ['SPECIAL', 'ESPECIAL'],
   PARRY: ['PARRY', 'PARRY'],
   'GIRE O CELULAR': ['TURN YOUR PHONE', 'GIRA EL CELULAR'],
-  'J1: setas mover · F atacar · S carregar · Q especial · Espaço parry': [
-    'P1: arrows move · F attack · S charge · Q special · Space parry',
-    'J1: flechas mover · F atacar · S cargar · Q especial · Espacio parry',
+  'J1: setas mover · F atacar · S carregar · A transformar · Q especial · Espaço parry': [
+    'P1: arrows move · F attack · S charge · A transform · Q special · Space parry',
+    'J1: flechas mover · F atacar · S cargar · A transformar · Q especial · Espacio parry',
   ],
-  'J2: IJKL mover · U atacar · O carregar · Y especial · P parry (ou teclado numérico)': [
-    'P2: IJKL move · U attack · O charge · Y special · P parry (or numpad)',
-    'J2: IJKL mover · U atacar · O cargar · Y especial · P parry (o teclado numérico)',
+  'J2: IJKL mover · U atacar · O carregar · H transformar · Y especial · P parry (ou teclado numérico)': [
+    'P2: IJKL move · U attack · O charge · H transform · Y special · P parry (or numpad)',
+    'J2: IJKL mover · U atacar · O cargar · H transformar · Y especial · P parry (o teclado numérico)',
   ],
+  'CHOQUE! APERTE ATAQUE!': ['CLASH! MASH ATTACK!', '¡CHOQUE! ¡APRIETA ATAQUE!'],
+  'TROCAR PERSONAGENS': ['CHANGE FIGHTERS', 'CAMBIAR PERSONAJES'],
+  'JOGADOR 1: ESCOLHA O LUTADOR': ['PLAYER 1: CHOOSE YOUR FIGHTER', 'JUGADOR 1: ELIGE TU LUCHADOR'],
+  'JOGADOR 2: ESCOLHA O LUTADOR': ['PLAYER 2: CHOOSE YOUR FIGHTER', 'JUGADOR 2: ELIGE TU LUCHADOR'],
+  'ESCOLHA O ADVERSÁRIO (CPU)': ['CHOOSE THE OPPONENT (CPU)', 'ELIGE EL RIVAL (CPU)'],
+  FORMAS: ['FORMS', 'FORMAS'],
+  'ALEATÓRIO': ['RANDOM', 'ALEATORIO'],
+  VOLTAR: ['BACK', 'VOLVER'],
+  'HERÓI': ['HERO', 'HÉROE'],
+  'ANTI-HERÓI': ['ANTI-HERO', 'ANTIHÉROE'],
+  'VILÃO': ['VILLAIN', 'VILLANO'],
 };
 
 let atual: Idioma = 'pt';

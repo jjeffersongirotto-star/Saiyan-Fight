@@ -9,7 +9,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "atlas": "python3 scripts/gerar-atlas.py goku/normal vegeta/normal"
+    "atlas": "python3 scripts/gerar-atlas.py"
   },
   "dependencies": {
     "phaser": "3.90.0"

@@ -28,12 +28,13 @@ export interface Pose {
   espelhar: boolean;
 }
 
-/** Pose de um lutador neste passo. Prioridade igual à da luta antiga: especial > parry > carregar > tiro > voo. */
+/** Pose de um lutador neste passo. Prioridade igual à da luta antiga: especial > transformar > parry > carregar > tiro > voo. */
 export function poseDoLutador(l: Lutador): Pose {
   const espelhar = l.olhando === -1;
   let movimento: Movimento;
   if (l.acao === 'especial') movimento = 'special';
-  else if (l.acao === 'parry') movimento = 'parry';
+  else if (l.acao === 'transformando') movimento = 'transform';
+  else if (l.poseParry > 0) movimento = 'parry';
   else if (l.acao === 'carregando') movimento = 'chargeKi';
   else if (l.acao === 'caido' || l.acao === 'atingido') movimento = 'flyLeft'; // recuando
   else if (l.acao === 'vitoria') movimento = 'idle';

@@ -6,6 +6,7 @@ import { Boot } from './cenas/Boot';
 import { Luta } from './cenas/Luta';
 import { Menu } from './cenas/Menu';
 import { Preload } from './cenas/Preload';
+import { Selecao } from './cenas/Selecao';
 import { Vitoria } from './cenas/Vitoria';
 import { ESCALA_RENDER } from './ui/resolucao';
 
@@ -20,7 +21,7 @@ const jogo = new Phaser.Game({
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, fullscreenTarget: 'jogo' },
   input: { activePointers: 4 },
   fps: { target: 60 },
-  scene: [Boot, Preload, Menu, Luta, Vitoria],
+  scene: [Boot, Preload, Menu, Selecao, Luta, Vitoria],
 });
 
 // para testes no navegador (playwright) e depuração

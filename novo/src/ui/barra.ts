@@ -13,11 +13,14 @@ export function mostrarBarraDeCarregamento(cena: Phaser.Scene): void {
     .text(TELA_L / 2, y - 28, `${T('CARREGANDO')} 0%`, estiloTexto({ fontFamily: 'Arial Black, Arial', fontSize: '18px', color: '#ffd23a' }))
     .setOrigin(0.5)
     .setDepth(1001);
-  cena.load.on(Phaser.Loader.Events.PROGRESS, (p: number) => {
+  const progresso = (p: number) => {
     barra.clear().fillStyle(0xff8a00, 1).fillRoundedRect(x, y, Math.max(a, l * p), a, 6);
     texto.setText(`${T('CARREGANDO')} ${Math.round(p * 100)}%`);
-  });
+  };
+  cena.load.on(Phaser.Loader.Events.PROGRESS, progresso);
+  // o carregador continua vivo (a luta baixa formas no fundo): solta o ouvinte junto com a barra
   cena.load.once(Phaser.Loader.Events.COMPLETE, () => {
+    cena.load.off(Phaser.Loader.Events.PROGRESS, progresso);
     fundo.destroy();
     barra.destroy();
     texto.destroy();
