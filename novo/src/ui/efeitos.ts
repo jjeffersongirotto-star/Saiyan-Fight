@@ -7,10 +7,10 @@ import { EFEITOS, type NomeEfeito } from '../dados/efeitos';
 import type { Aura } from '../dados/personagens';
 import * as C from '../logica/constantes';
 import {
-  auraDoLutador, auraForte, caminhoDoSol, corDoRaio, efeitoDaAura, efeitoDoEspecial, efeitoDoTiro, ESCUDO_FRACAO_VISIVEL, meioDoChoqueX,
-  PALETAS_AURA, PARRY_ONDA_QUADROS, quadroDoEfeito, quadroUnico, suavizarAura,
+  auraDoLutador, caminhoDoSol, corDoRaio, efeitoDaAura, efeitoDoEspecial, efeitoDoTiro, ESCUDO_FRACAO_VISIVEL, pontoDoChoque,
+  PALETAS_AURA, PARRY_ONDA_QUADROS, quadroDoEfeito, quadroUnico,
 } from '../logica/efeitos';
-import { centroDoParry } from '../logica/luta';
+import { circuloDoParry } from '../logica/luta';
 import type { EstadoLuta, Lutador, Raio, Tiro } from '../logica/tipos';
 
 export const ATLAS_EFEITOS = 'efeitos';
@@ -92,7 +92,6 @@ class EfeitosDoLutador {
   private raiosKi: Phaser.GameObjects.Graphics;
   private escudo: Phaser.GameObjects.Image;
   private onda: Phaser.GameObjects.Image;
-  private nivelAura = 0;
   private faseLabareda = 0;
   private semente: number;
   /** quadros que faltam da onda do parry */
@@ -115,8 +114,7 @@ class EfeitosDoLutador {
   /** `pes` = onde o sprite está (origem nos pés); `kAltura` = escala da altura da forma. */
   desenhar(l: Lutador, pes: Ponto, kAltura: number, relogio: number, dtSeg: number): void {
     const visivel = l.acao !== 'caido';
-    this.nivelAura = suavizarAura(this.nivelAura, auraForte(l), dtSeg);
-    const k = this.nivelAura;
+    const k = l.nivelAura; // a lógica suaviza (o círculo do parry usa o mesmo nível)
     const corpoL = 96 * kAltura, corpoA = 112 * kAltura * 0.9;
     const aura = auraDoLutador(l.personagem, l.nivel, l.poder);
     const nome = efeitoDaAura(aura, k > 0.5);
@@ -158,7 +156,7 @@ class EfeitosDoLutador {
     // onda do parry "(" virada para o adversário, uma vez
     const q = this.ondaQuadros > 0 ? quadroUnico('parry_onda', 1 - this.ondaQuadros / PARRY_ONDA_QUADROS) : null;
     if (visivel && q !== null) {
-      const c = centroDoParry(l), r = C.PARRY_RAIO, dh = r * 2.1, e = EFEITOS.parry_onda;
+      const c = circuloDoParry(l), r = c.r, dh = r * 2.1, e = EFEITOS.parry_onda;
       this.onda.setFrame(quadro('parry_onda', q)).setPosition(c.x + l.olhando * r * 0.45, c.y);
       this.onda.setDisplaySize((dh * e.w) / e.h, dh).setFlipX(l.olhando < 0).setVisible(true);
     } else this.onda.setVisible(false);
@@ -304,11 +302,12 @@ export class EfeitosDaLuta {
     const ch = e.choque;
     if (!ch) { this.choqueImg.setVisible(false); return; }
     const m1 = mao(e.p1), m2 = mao(e.p2);
-    const meioX = meioDoChoqueX(ch.empurrao);
-    const py = (m1.y + m2.y) / 2;
-    const x1 = Math.min(m1.x, meioX - 40), x2 = Math.max(m2.x, meioX + 40);
+    const pc = pontoDoChoque(m1, m2, ch.empurrao);
+    const meioX = pc.x, py = pc.y;
     this.choqueImg.setFrame(quadro('raio_pontas', quadroDoEfeito('raio_pontas', relogio)));
-    this.choqueImg.setPosition(x1 - 20, py).setDisplaySize(x2 - x1 + 40, 60).setAlpha(1).setVisible(true);
+    // começa 20 antes da mão de J1 e vai até 20 depois da mão de J2, girado na linha entre as duas
+    this.choqueImg.setPosition(m1.x - Math.cos(pc.ang) * 20, m1.y - Math.sin(pc.ang) * 20).setRotation(pc.ang)
+      .setDisplaySize(Math.max(80, pc.dist + 40), 60).setAlpha(1).setVisible(true);
     const g = this.grafRaios;
     const explode = 30 + Math.sin((C.CHOQUE_DURACAO - ch.idade) * 0.9) * 10;
     for (let i = 6; i >= 1; i--) g.fillStyle(i > 3 ? 0xfff3b0 : 0xffffff, 0.22).fillCircle(meioX, py, (explode * i) / 6);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as C from '../src/logica/constantes';
 import { fichaDoPersonagem } from '../src/logica/ficha';
-import { bonusDoComboDeParry, centroDoParry, criarLuta, danoDoChoque, escalaDaAltura, limitesX, passoLuta, registrarRodada, tiroAcerta, velocidadeDe } from '../src/logica/luta';
+import { bonusDoComboDeParry, centroDoParry, circuloDoParry, criarLuta, danoDoChoque, escalaDaAltura, limitesX, passoLuta, registrarRodada, tiroAcerta, velocidadeDe } from '../src/logica/luta';
 import { ARREMESSO_ATORDOADO, ARREMESSO_VX, ARREMESSO_VY, podeSerAgarrado } from '../src/logica/minions';
 import { poseDoLutador } from '../src/logica/animacao';
 import { ENTRADA_VAZIA, type Entrada, type EstadoLuta, type Evento, type IdJogador } from '../src/logica/tipos';
@@ -632,5 +632,29 @@ describe('regras do herói da história valem para os dois (VERSUS)', () => {
       expect(ev.some((x) => x.tipo === 'zenkai' && x.dono === id)).toBe(true);
       expect(e[id].invulneravel).toBe(C.ZENKAI_INVULNERAVEL);
     }
+  });
+});
+
+describe('círculo do parry cresce com a aura (getParryCircle)', () => {
+  it('calmo ~75 (aura do corpo + 6), forte maior; nunca menor que PARRY_RAIO; maior para quem é mais alto', () => {
+    const e = luta();
+    const calmo = circuloDoParry(e.p1).r;
+    expect(calmo).toBeGreaterThan(C.PARRY_RAIO);
+    expect(calmo).toBeCloseTo(112 * 0.9 * 1.18 * 0.58 + C.PARRY_MARGEM_AURA, 3);
+    rodar(e, 60, { carregar: true });
+    expect(e.p1.nivelAura).toBeGreaterThan(0.99);
+    expect(circuloDoParry(e.p1).r).toBeGreaterThan(calmo + 4);
+    const baixinho = luta('gotenks', 'goku');
+    expect(circuloDoParry(baixinho.p1).r).toBeGreaterThanOrEqual(C.PARRY_RAIO);
+    expect(circuloDoParry(baixinho.p1).r).toBeLessThan(calmo);
+  });
+
+  it.each(['p1', 'p2'] as const)('%s: rebate um tiro a 65 do centro (fora do raio fixo antigo de 56)', (id) => {
+    const e = luta();
+    alinhar(e);
+    const l = e[id], c = circuloDoParry(l), dono = id === 'p1' ? 'p2' : 'p1';
+    e.tiros.push({ id: 999, dono, x: c.x + l.olhando * 65, y: c.y, vx: 0, vy: 0, raio: C.TIRO_RAIO, dano: 1, refletido: false, atirador: dono });
+    const ev = id === 'p1' ? rodar(e, 1, { parry: true }) : rodar(e, 1, {}, { parry: true });
+    expect(ev.find((x) => x.tipo === 'parry')).toMatchObject({ refletidos: 1 });
   });
 });

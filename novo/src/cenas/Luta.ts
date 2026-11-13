@@ -25,6 +25,7 @@ import { aoApertar } from '../entrada/teclas';
 import { som, vibrar } from '../audio/som';
 import { CHANCE_SOM_CARREGANDO, TEMA_DA_LUTA } from '../logica/musica';
 import { EfeitosDaLuta, pedirEfeitos } from '../ui/efeitos';
+import { criarBotao } from '../ui/botao';
 
 export class Luta extends Phaser.Scene {
   private dados!: DadosDaLuta;
@@ -41,6 +42,11 @@ export class Luta extends Phaser.Scene {
   private textoChoque!: Phaser.GameObjects.Text;
   private flash = { cor: 0xffffff, quadros: 0, max: 1 };
   private carregandoNoFundo = false;
+  private pausado = false;
+  private camadaPausa: Phaser.GameObjects.Container | null = null;
+  private textoChoqueAtual = '';
+  /** faíscas do impacto: um emissor só (antes eram 12–20 retângulos + tweens novos a cada acerto) */
+  private faiscas!: Phaser.GameObjects.Particles.ParticleEmitter;
 
   constructor() {
     super('Luta');
@@ -85,8 +91,17 @@ export class Luta extends Phaser.Scene {
 
     this.toque = new ControlesToque(this);
     this.teclado.ligar();
-    aoApertar(this, (c) => { if (c === 'Escape') this.scene.start('Menu'); });
+    this.pausado = false;
+    this.camadaPausa = null;
+    this.textoChoqueAtual = '';
+    this.criarFaiscas();
+    this.criarBotaoDePausa();
+    aoApertar(this, (c) => { if (c === 'Escape') (this.pausado ? this.continuar() : this.pausar()); });
+    // celular: trocou de app / apagou a tela no meio da luta = pausa (na volta ninguém leva tiro sem ver)
+    const aoEsconder = () => this.pausar();
+    this.game.events.on(Phaser.Core.Events.HIDDEN, aoEsconder);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.game.events.off(Phaser.Core.Events.HIDDEN, aoEsconder);
       this.teclado.desligar();
       this.toque.destruir();
       this.efeitos.destruir();
@@ -108,7 +123,57 @@ export class Luta extends Phaser.Scene {
     return { p1, p2 };
   }
 
+  private criarFaiscas(): void {
+    if (!this.textures.exists('faisca-px')) {
+      const g = this.make.graphics({ x: 0, y: 0 }, false).fillStyle(0xffffff, 1).fillRect(0, 0, 4, 4);
+      g.generateTexture('faisca-px', 4, 4);
+      g.destroy();
+    }
+    this.faiscas = this.add.particles(0, 0, 'faisca-px', {
+      speed: { min: 28 / 0.38, max: 84 / 0.38 }, lifespan: 380, alpha: { start: 1, end: 0 }, scale: { min: 0.5, max: 1.25 },
+      emitting: false,
+    }).setDepth(30);
+  }
+
+  /** botão II no meio de cima (toque e mouse); ESC também pausa */
+  private criarBotaoDePausa(): void {
+    const x = C.TELA_L / 2, y = 18;
+    const g = this.add.graphics().setDepth(880);
+    g.fillStyle(0x101a33, 0.55).fillCircle(x, y, 13).lineStyle(2, 0xffd23a, 0.8).strokeCircle(x, y, 13);
+    g.fillStyle(0xffffff, 0.9).fillRect(x - 5, y - 6, 3, 12).fillRect(x + 2, y - 6, 3, 12);
+    const zona = this.add.zone(x, y, 44, 36).setInteractive().setDepth(881);
+    zona.on('pointerup', () => (this.pausado ? this.continuar() : this.pausar()));
+  }
+
+  private pausar(): void {
+    if (this.pausado || this.estado.fase === 'fimPartida') return;
+    this.pausado = true;
+    this.toque.soltarTudo();
+    this.tweens.pauseAll();
+    this.time.paused = true;
+    const fundo = this.add.rectangle(C.TELA_L / 2, C.TELA_A / 2, C.TELA_L, C.TELA_A, 0x000000, 0.6).setInteractive();
+    const titulo = this.add.text(C.TELA_L / 2, 105, T('PAUSA'), estiloTexto({ fontFamily: 'Arial Black, Arial', fontSize: '34px', color: '#ffd23a', stroke: '#8a2b00', strokeThickness: 7 })).setOrigin(0.5);
+    const b1 = criarBotao(this, C.TELA_L / 2, 175, T('CONTINUAR'), () => this.continuar(), 260);
+    const b2 = criarBotao(this, C.TELA_L / 2, 228, T('MENU'), () => this.scene.start('Menu'), 260);
+    this.camadaPausa = this.add.container(0, 0, [fundo, titulo, b1.container, b2.container]).setDepth(2000);
+  }
+
+  private continuar(): void {
+    if (!this.pausado) return;
+    this.pausado = false;
+    this.camadaPausa?.destroy();
+    this.camadaPausa = null;
+    this.tweens.resumeAll();
+    this.time.paused = false;
+    this.relogio.zerar();
+    // apertos feitos durante a pausa não valem
+    this.teclado.ler('p1');
+    this.teclado.ler('p2');
+    this.toque.soltarTudo();
+  }
+
   update(_t: number, dt: number): void {
+    if (this.pausado) return;
     const passos = this.relogio.avancar(dt);
     for (let i = 0; i < passos; i++) {
       const eventos = passoLuta(this.estado, this.lerEntradas());
@@ -238,11 +303,8 @@ export class Luta extends Phaser.Scene {
 
   /** faíscas do impacto (createImpactParticles): voam para todo lado e somem */
   private particulas(x: number, y: number, cor: number, n: number): void {
-    for (let i = 0; i < n; i++) {
-      const ang = Math.random() * Math.PI * 2, vel = 2 + Math.random() * 4;
-      const p = this.add.rectangle(x, y, 2 + Math.random() * 3, 2 + Math.random() * 3, cor).setDepth(30);
-      this.tweens.add({ targets: p, x: x + Math.cos(ang) * vel * 14, y: y + Math.sin(ang) * vel * 14, alpha: 0, duration: 380, onComplete: () => p.destroy() });
-    }
+    this.faiscas.setParticleTint(cor);
+    this.faiscas.explode(n, x, y);
   }
 
   private mostrarAviso(texto: string, ms: number, tamanho = 34): void {
@@ -307,8 +369,10 @@ export class Luta extends Phaser.Scene {
   private desenharPlacarDoChoque(): void {
     const g = this.grafChoque.clear();
     const ch = this.estado.choque;
-    if (!ch) { this.textoChoque.setText(''); return; }
-    this.textoChoque.setText(`${ch.apertos.p1}   ${T('CHOQUE! APERTE ATAQUE!')}   ${ch.apertos.p2}`);
+    // setText redesenha a textura do texto: só quando muda (antes era a cada quadro)
+    const texto = ch ? `${ch.apertos.p1}   ${T('CHOQUE! APERTE ATAQUE!')}   ${ch.apertos.p2}` : '';
+    if (texto !== this.textoChoqueAtual) { this.textoChoque.setText(texto); this.textoChoqueAtual = texto; }
+    if (!ch) return;
     const w = 160, x = C.TELA_L / 2 - w / 2, y = 94;
     g.fillStyle(0xffffff, 0.9).fillRect(x, y, w, 6);
     g.fillStyle(0xfff3b0, 1).fillRect(x, y, w * Math.max(0, 1 - ch.idade / C.CHOQUE_DURACAO), 6);

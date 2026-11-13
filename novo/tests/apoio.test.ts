@@ -78,6 +78,8 @@ describe('entrada', () => {
     const e1 = entradaDoTeclado(TECLAS_P1, new Set(['ArrowRight', 'ArrowUp', 'KeyF']), new Set(['KeyQ']));
     expect(e1).toEqual({ x: 1, y: -1, atacar: true, carregar: false, especial: true, parry: false, transformar: false });
     expect(entradaDoTeclado(TECLAS_P1, new Set(), new Set(['KeyA'])).transformar).toBe(true);
+    // F apertado e solto antes da leitura: ainda conta como ATAQUE neste quadro
+    expect(entradaDoTeclado(TECLAS_P1, new Set(), new Set(['KeyF'])).atacar).toBe(true);
     const e2 = entradaDoTeclado(TECLAS_P2, new Set(['Numpad1', 'KeyO']), new Set(['KeyP']));
     expect(e2).toMatchObject({ x: -1, carregar: true, parry: true });
   });

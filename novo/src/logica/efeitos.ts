@@ -100,6 +100,13 @@ export function caminhoDoSol(passou: number, dedo: Ponto, frente: Ponto, alvo: P
 /** Ponto de encontro do choque na tela (drawSpecialBeams): meio da tela deslocado pelo empurrão. */
 export const meioDoChoqueX = (empurrao: number) => C.TELA_L / 2 + Math.max(-1, Math.min(1, empurrao)) * (C.TELA_L / 2 - 60);
 
+/** Agora os dois andam no choque: o raio liga as duas mãos (pode ficar inclinado) e o ponto de encontro fica na
+ *  mesma fração do caminho que o meioDoChoqueX ocupa na tela (empurrão 0 = no meio das mãos). */
+export function pontoDoChoque(m1: { x: number; y: number }, m2: { x: number; y: number }, empurrao: number) {
+  const f = (meioDoChoqueX(empurrao) - 60) / (C.TELA_L - 120);
+  return { x: m1.x + (m2.x - m1.x) * f, y: m1.y + (m2.y - m1.y) * f, ang: Math.atan2(m2.y - m1.y, m2.x - m1.x), dist: Math.hypot(m2.x - m1.x, m2.y - m1.y) };
+}
+
 /** Escudo/onda do parry: o parry_onda toca uma vez em 10 quadros (parryHighlightTimer). */
 export const PARRY_ONDA_QUADROS = 10;
 /** A esfera de escudo_azul.png ocupa 91% do quadro. */

@@ -18,6 +18,8 @@ const LINHAS: Record<string, [string, string]> = {
   'VENCEU A PARTIDA!': ['WINS THE MATCH!', '¡GANA LA PARTIDA!'],
   'JOGAR DE NOVO': ['PLAY AGAIN', 'JUGAR DE NUEVO'],
   MENU: ['MENU', 'MENÚ'],
+  PAUSA: ['PAUSED', 'PAUSA'],
+  CONTINUAR: ['RESUME', 'CONTINUAR'],
   ATAQUE: ['ATTACK', 'ATAQUE'],
   CARREGAR: ['CHARGE', 'CARGAR'],
   ESPECIAL: ['SPECIAL', 'ESPECIAL'],

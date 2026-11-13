@@ -4,6 +4,7 @@
 // transformação com o ki cheio (sobe um nível, +velocidade por 15 s), Zenkai 1x por partida, choque de raios.
 import * as C from './constantes';
 import { arremessarAgarrados, destruirAgarrados } from './minions';
+import { auraForte, suavizarAura } from './efeitos';
 import type { Choque, Entrada, Evento, EstadoLuta, FichaLuta, IdJogador, Lutador, Raio, Tiro } from './tipos';
 
 /** Sorteio determinístico (mulberry32): o mesmo começo dá sempre a mesma luta — bom para testes e replays. */
@@ -56,7 +57,7 @@ export function criarLutador(id: IdJogador, ficha: FichaLuta | string): Lutador 
     olhando: id === 'p1' ? 1 : -1,
     vida: C.VIDA_VERSUS, vidaMax: C.VIDA_VERSUS, ki: 0, nivel: 0, poder: 0,
     acao: 'livre', acaoQuadros: 0, poseTiro: 0, poseParry: 0, esperaTiro: 0, esperaParry: 0,
-    invulneravel: C.INVULNERAVEL_INICIO, poseAtingido: 0, ondaParry: 0, emEspecial: false,
+    invulneravel: C.INVULNERAVEL_INICIO, poseAtingido: 0, ondaParry: 0, nivelAura: 0, emEspecial: false,
     comboParry: 0, comboParryQuadros: 0, ultimoBonusParry: 0, zenkaiUsada: false, atacarAntes: false,
     pedidoEspecial: 0, pedidoParry: 0, pedidoTransformar: 0,
   };
@@ -106,10 +107,19 @@ export function tiroAcerta(t: { x: number; y: number; raio: number }, l: { x: nu
 }
 
 /** Centro do círculo do parry: na altura do peito (getParryCircle sem aura medida). */
-export const centroDoParry = (l: Lutador) => ({ x: l.x, y: l.y - l.a * 0.3 });
+/** Círculo do parry (getParryCircle): cresce com a aura desenhada (auraForma de drawKiAura), nunca menor que
+ *  PARRY_RAIO. A aura é medida pelo corpo desenhado (96 x 112·0,9 na escala da altura) e pelo nível da aura
+ *  (0 = calma, 1 = forte: carregando, transformando ou com o poder). Vale igual para os dois. */
+export function circuloDoParry(l: Lutador): { x: number; y: number; r: number } {
+  const ka = l.a / C.LUTADOR_A, k = l.nivelAura;
+  const w = 96 * ka * 0.5 * (1 + 0.4 * k), h = 112 * ka * 0.9 * (1.18 + 0.12 * k);
+  const pes = l.y + l.a / 2;
+  return { x: l.x, y: pes - h * 0.52, r: Math.max(C.PARRY_RAIO, Math.max(w * 0.95, h * 0.58) + C.PARRY_MARGEM_AURA) };
+}
+export const centroDoParry = (l: Lutador) => { const c = circuloDoParry(l); return { x: c.x, y: c.y }; };
 export const dentroDoParry = (t: Tiro, l: Lutador) => {
-  const c = centroDoParry(l);
-  return Math.hypot(t.x - c.x, t.y - c.y) < C.PARRY_RAIO;
+  const c = circuloDoParry(l);
+  return Math.hypot(t.x - c.x, t.y - c.y) < c.r;
 };
 /** De onde sai o tiro/raio (a mão, um pouco acima do meio da caixa). */
 export const maoDe = (l: Lutador) => ({ x: l.x + l.olhando * (l.l / 2 + 10), y: l.y - l.a * 0.08 });
@@ -206,6 +216,7 @@ function passoLutador(e: EstadoLuta, l: Lutador, ent: Entrada, eventos: Evento[]
   if (l.poder > 0) l.poder--;
   if (l.comboParryQuadros > 0 && --l.comboParryQuadros === 0) { l.comboParry = 0; l.ultimoBonusParry = 0; }
   l.acaoQuadros++;
+  l.nivelAura = suavizarAura(l.nivelAura, auraForte(l), 1 / 60);
   l.emEspecial = !!e.choque || e.raios.some((r) => r.dono === l.id);
   const apertouAtaque = ent.atacar && !l.atacarAntes;
   l.atacarAntes = ent.atacar;

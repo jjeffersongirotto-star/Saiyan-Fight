@@ -34,7 +34,8 @@ export function entradaDoTeclado(m: MapaTeclas, segurando: ReadonlySet<string>, 
   return {
     x: (algum(m.direita, segurando) ? 1 : 0) - (algum(m.esquerda, segurando) ? 1 : 0),
     y: (algum(m.baixo, segurando) ? 1 : 0) - (algum(m.cima, segurando) ? 1 : 0),
-    atacar: algum(m.atacar, segurando),
+    // aperto rápido (desce e sobe no mesmo quadro) também vale: senão o toque curto no choque se perdia
+    atacar: algum(m.atacar, segurando) || algum(m.atacar, apertadas),
     carregar: algum(m.carregar, segurando),
     especial: algum(m.especial, apertadas),
     parry: algum(m.parry, apertadas),

@@ -125,3 +125,17 @@ describe('sol do Freeza e choque', () => {
     expect(meioDoChoqueX(-5)).toBe(60);
   });
 });
+
+describe('pontoDoChoque (os dois andam no choque)', () => {
+  it('liga as mãos; empurrão 0 = meio; ±1 perto de cada mão; inclinado se estão em alturas diferentes', async () => {
+    const { pontoDoChoque } = await import('../src/logica/efeitos');
+    const a = { x: 100, y: 200 }, b = { x: 700, y: 100 };
+    const m = pontoDoChoque(a, b, 0);
+    expect(m.x).toBeCloseTo(400, 5);
+    expect(m.y).toBeCloseTo(150, 5);
+    expect(pontoDoChoque(a, b, 1).x).toBeCloseTo(700, 5);
+    expect(pontoDoChoque(a, b, -1).x).toBeCloseTo(100, 5);
+    expect(m.ang).toBeLessThan(0);
+    expect(m.dist).toBeCloseTo(Math.hypot(600, 100), 5);
+  });
+});

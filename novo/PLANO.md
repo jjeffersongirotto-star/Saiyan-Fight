@@ -136,7 +136,23 @@ nova, `false` = como no antigo), com testes dos dois jeitos.
   com o super ataque, senzu), minions/ondas/chefes (fase 3), pontos/conquistas/estatísticas, o ki 1,4 do
   tutorial, a agressividade da CPU e o tiro automático do toque (camada de entrada). **Diferença que sobra, não é
   do herói:** no antigo o círculo do parry crescia com a aura desenhada (`getParryCircle`, para os dois); no novo
-  é fixo (56) — fica para quando o desenho da aura for igual.
+  era fixo (56) — **corrigido**: agora `circuloDoParry()` cresce com a aura como no antigo (veja abaixo).
+
+### Polimento da noite de 13/11/2026 (QA)
+
+- **Círculo do parry como no antigo** (`getParryCircle`): centro e raio pela forma da aura desenhada
+  (`auraForma`), mínimo 56; calmo ≈ 75, carregando/transformado maior, menor para quem é baixo (Gotenks). O nível
+  da aura (`nivelAura`) passou para a lógica, e o desenho usa o mesmo número. Vale para os dois.
+- **Choque com os dois andando**: o raio de duas pontas agora liga as duas mãos (gira se estão em alturas
+  diferentes) e o encontro fica na fração do caminho pelo empurrão (`pontoDoChoque`).
+- **Aperto rápido não se perde**: ATAQUE apertado e solto entre duas leituras conta (teclado e toque); antes o
+  toque curto no choque podia não contar.
+- **Toque**: dedo que escorrega de um botão para outro (ex.: ATAQUE → ESPECIAL) aperta o novo sem levantar.
+- **Pausa**: botão II no meio de cima e ESC (antes ESC saía direto para o menu). CONTINUAR / MENU. Trocar de app
+  ou apagar a tela no celular pausa sozinho. Apertos feitos durante a pausa não valem.
+- **Desempenho**: as faíscas de impacto são um emissor de partículas só (antes 12–20 retângulos + tweens novos a
+  cada acerto); o texto do choque só é redesenhado quando muda. Medido no navegador: 60 fps no celular emulado.
+- **Simulação CPU x CPU** (`tests/simulacao.test.ts`): 16 partidas inteiras, todas terminam, ninguém congela.
 
 ## Plano das imagens (medido nesta PR)
 

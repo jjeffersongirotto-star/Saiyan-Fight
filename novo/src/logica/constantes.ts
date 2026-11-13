@@ -37,7 +37,8 @@ export const POSE_TIRO_QUADROS = 18;
 
 // parry (tryReflect): na hora do aperto, devolve os tiros do outro que estão dentro do círculo
 export const PARRY_POSE_QUADROS = 14;
-export const PARRY_RAIO = 56;         // PARRY_RADIUS
+export const PARRY_RAIO = 56;         // PARRY_RADIUS (o mínimo; cresce com a aura)
+export const PARRY_MARGEM_AURA = 6;   // PARRY_AURA_MARGIN
 export const PARRY_ERROU_ESPERA = 30; // PARRY_WHIFF_COOLDOWN
 export const PARRY_REFLEXO_VEL = 1.4;
 

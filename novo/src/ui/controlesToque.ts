@@ -34,7 +34,7 @@ export class ControlesToque {
   private joyDedo: number | null = null;
   private joyBase = { x: 0, y: 0 };
   private joyVetor = { x: 0, y: 0 };
-  private gatilhos = { especial: false, parry: false };
+  private gatilhos = { especial: false, parry: false, atacar: false };
   /** dedos que encostaram em CARREGAR desde a última leitura / dedos que já viraram TRANSFORMAR */
   private novosNoCarregar = new Set<number>();
   private usadosParaTransformar = new Set<number>();
@@ -68,12 +68,9 @@ export class ControlesToque {
   private desce(p: Phaser.Input.Pointer) {
     if (p.wasTouch && !this.visivel) this.mostrar(true);
     if (!this.visivel) return;
-    const b = this.botoes.find((bt) => Phaser.Math.Distance.Between(p.worldX, p.worldY, bt.x, bt.y) <= bt.r + 10);
+    const b = this.botaoEm(p.worldX, p.worldY);
     if (b) {
-      b.dedos.add(p.id);
-      if (b.nome === 'especial') this.gatilhos.especial = true;
-      if (b.nome === 'parry') this.gatilhos.parry = true;
-      if (b.nome === 'carregar') this.novosNoCarregar.add(p.id);
+      this.apertar(b, p.id);
       return;
     }
     if (p.worldX < TELA_L * 0.45 && this.joyDedo === null) {
@@ -83,8 +80,32 @@ export class ControlesToque {
     }
   }
 
+  private botaoEm(x: number, y: number): Botao | undefined {
+    return this.botoes.find((bt) => Phaser.Math.Distance.Between(x, y, bt.x, bt.y) <= bt.r + 10);
+  }
+
+  private apertar(b: Botao, dedo: number) {
+    b.dedos.add(dedo);
+    if (b.nome === 'especial') this.gatilhos.especial = true;
+    if (b.nome === 'parry') this.gatilhos.parry = true;
+    if (b.nome === 'atacar') this.gatilhos.atacar = true; // toque curto entre duas leituras também atira
+    if (b.nome === 'carregar') this.novosNoCarregar.add(dedo);
+  }
+
   private move(p: Phaser.Input.Pointer) {
-    if (p.id === this.joyDedo) this.joyVetor = vetorDoJoystick(p.worldX - this.joyBase.x, p.worldY - this.joyBase.y, RAIO_JOYSTICK);
+    if (p.id === this.joyDedo) {
+      this.joyVetor = vetorDoJoystick(p.worldX - this.joyBase.x, p.worldY - this.joyBase.y, RAIO_JOYSTICK);
+      return;
+    }
+    // dedo que escorrega de um botão para outro (ex.: de ATAQUE para ESPECIAL) aperta o novo sem levantar
+    const atual = this.botoes.find((b) => b.dedos.has(p.id));
+    if (!atual || !p.isDown) return;
+    const novo = this.botaoEm(p.worldX, p.worldY);
+    if (!novo || novo === atual) return;
+    atual.dedos.delete(p.id);
+    this.novosNoCarregar.delete(p.id);
+    this.usadosParaTransformar.delete(p.id);
+    this.apertar(novo, p.id);
   }
 
   private sobe(p: Phaser.Input.Pointer) {
@@ -107,10 +128,10 @@ export class ControlesToque {
     const carregar = this.botoes.some((b) => b.nome === 'carregar' && [...b.dedos].some((d) => !this.usadosParaTransformar.has(d)));
     const ent: Entrada = {
       x: this.joyVetor.x, y: this.joyVetor.y,
-      atacar: segura('atacar'), carregar: carregar && !transformar,
+      atacar: segura('atacar') || this.gatilhos.atacar, carregar: carregar && !transformar,
       especial: this.gatilhos.especial, parry: this.gatilhos.parry, transformar,
     };
-    this.gatilhos.especial = this.gatilhos.parry = false;
+    this.gatilhos.especial = this.gatilhos.parry = this.gatilhos.atacar = false;
     return ent;
   }
 
@@ -140,6 +161,16 @@ export class ControlesToque {
         .lineStyle(2, 0xffd23a, 0.6).strokeCircle(this.joyBase.x, this.joyBase.y, RAIO_JOYSTICK)
         .fillStyle(0xffd23a, 0.6).fillCircle(kx, ky, 22);
     }
+  }
+
+  /** Solta todos os dedos (pausa: o dedo que estava no botão não fica "preso" apertado na volta). */
+  soltarTudo(): void {
+    for (const b of this.botoes) b.dedos.clear();
+    this.novosNoCarregar.clear();
+    this.usadosParaTransformar.clear();
+    this.gatilhos.especial = this.gatilhos.parry = this.gatilhos.atacar = false;
+    this.joyDedo = null;
+    this.joyVetor = { x: 0, y: 0 };
   }
 
   destruir(): void {

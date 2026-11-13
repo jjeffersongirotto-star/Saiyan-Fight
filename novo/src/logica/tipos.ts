@@ -53,6 +53,8 @@ export interface Lutador {
   invulneravel: number;
   /** quadros da pose de "apanhou" (só o desenho: apanhar não trava, como o herói do jogo antigo) */
   poseAtingido: number;
+  /** nível da aura 0..1 (kiAuraLevel): o desenho e o círculo do parry crescem com ele */
+  nivelAura: number;
   /** quadros do brilho do parry (parryHighlightTimer): enquanto dura, segurar ATAQUE não atira */
   ondaParry: number;
   /** o próprio raio (ou o choque) está na tela: pose de especial */
