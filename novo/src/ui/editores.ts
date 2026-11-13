@@ -22,8 +22,14 @@ export function abrirEditor(cena: Phaser.Scene, qual: QualEditor): void {
   const jogo = cena.game;
   som.musica(null);
   jogo.loop.sleep(); // o jogo para enquanto o editor está aberto
+  // e não recebe os toques/teclas do editor (senão um toque em VOLTAR no canto apertava a tela cheia do jogo por baixo)
+  const entrada = jogo.input;
+  entrada.enabled = false;
+  if (entrada.keyboard) entrada.keyboard.enabled = false;
   const fechar = (testarArena?: string) => {
     aberto = false;
+    entrada.enabled = true;
+    if (entrada.keyboard) entrada.keyboard.enabled = true;
     jogo.loop.wake();
     void carregarCriados(cena).then((r) => {
       if (!cena.sys.isActive()) return;

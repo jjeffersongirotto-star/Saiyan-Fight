@@ -362,7 +362,7 @@ export class EditorDeArenas {
     const def = this.ed.PECAS[tipo];
     if (!def) return;
     if (this.pecas.length >= this.ed.PECAS_MAX) { this.aviso('LIMITE DE PEÇAS: APAGUE ALGUMA ANTES.'); return; }
-    if (def.ceu !== this.modoCeu) return;
+    if (!!def.ceu !== this.modoCeu) return;
     const base: Record<string, unknown> = { t: tipo, c: def.cor, e: 1, txt: def.texto };
     if (def.ceu) { const [a, h] = plantaParaCeu(px, py, L); Object.assign(base, { a, h }); } else Object.assign(base, { x, z });
     const p = this.ed.normalizarPeca(base) as Peca | null;

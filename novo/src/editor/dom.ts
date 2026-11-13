@@ -126,5 +126,8 @@ export function camadaDoEditor(id: string): HTMLDivElement {
   c.addEventListener('pointerdown', (e) => e.stopPropagation());
   c.addEventListener('keydown', (e) => e.stopPropagation());
   (document.fullscreenElement ?? document.body).appendChild(c);
+  // entrou/saiu da tela cheia com o editor aberto: leva o editor junto (fora dela, nada aparece por cima)
+  const seguir = () => { if (!c.isConnected) { document.removeEventListener('fullscreenchange', seguir); return; } (document.fullscreenElement ?? document.body).appendChild(c); };
+  document.addEventListener('fullscreenchange', seguir);
   return c;
 }
