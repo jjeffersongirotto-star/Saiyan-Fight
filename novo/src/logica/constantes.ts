@@ -105,3 +105,62 @@ export const REGRAS_ANTIGAS: Readonly<Regras> = {
 /** as regras que o jogo usa (troque aqui, ou peça na criarLuta) */
 export const REGRAS: Readonly<Regras> = REGRAS_NOVAS;
 export const VELOCIDADE_J2_ANTIGA = 4;
+
+// ---------- MODO HISTÓRIA (fase 3) ----------
+export const VIDA_HISTORIA = 3;              // player.hp = 3 fora do VERSUS
+/** o herói vai até x = 450 (BOUNDS.PLAYER_MAX_X, canto esquerdo da caixa) — não só até o meio */
+export const HISTORIA_HEROI_MAX_X = 450;
+export const NUVEM_VELOCIDADE = 1.4;         // CLOUD_SPEED_MULTIPLIER
+export const ITEM_DURACAO = 480;             // PICKUP_BUFF_DURATION (8 s)
+export const ITEM_DURACAO_MAX = 1200;        // PICKUP_BUFF_MAX_DURATION (20 s)
+export const BASTAO_BONUS_TIRO = 1;          // POWER_BUFF_ATTACK_BONUS
+export const ESCUDO_INVULNERAVEL = 30;       // o escudo segura um golpe e dá os mesmos 30 quadros
+
+/** Modos da história em que a cura entre ondas pode valer (iguais a ModoFase em ondas.ts). */
+export type ModoCuraEntreOndas = 'normal' | 'hard' | 'unlimited';
+/** false = desligada; senão, só nestes modos e só depois de vencer a onda aPartirDaOnda (número da ONDA X/5). */
+export type CuraEntreOndas =
+  | false
+  | { readonly dificuldades: readonly ModoCuraEntreOndas[]; readonly aPartirDaOnda: number };
+
+/** A cura vale nesta transição? `ondaVencida` é o número que o jogador vê (ONDA X/5; no SEM LIMITE, ONDA X). */
+export function curaEntreOndasAplica(regra: CuraEntreOndas, modo: ModoCuraEntreOndas, ondaVencida: number): boolean {
+  if (!regra) return false;
+  return regra.dificuldades.includes(modo) && ondaVencida >= regra.aPartirDaOnda;
+}
+
+/** Chaves do modo história. Cada uma é uma diferença do jogo antigo. */
+export interface RegrasHistoria {
+  /** NOVA: +1 de vida para o herói entre ondas, só nos modos e a partir da onda indicados.
+   *  Padrão (Jefferson): só no DIFÍCIL, depois de vencer a ONDA 2/5 (não depois da 1ª). Antigo: nada. */
+  curaEntreOndas: CuraEntreOndas;
+  /** NOVA: o item que cai pousa no chão e fica ITEM_NO_CHAO quadros antes de sumir (piscando no fim).
+   *  Antigo: atravessava o chão e sumia. */
+  itemPousaNoChao: boolean;
+  /** NOVA: o vilão rebate tiros do herói (chance pela agressividade). Antigo e padrão (Jefferson): o vilão nunca rebatia. */
+  vilaoUsaParry: boolean;
+  /** NOVA: o vilão junta ki depois da última forma e solta o especial (dano VILAO_ESPECIAL_DANO); responder vira
+   *  choque. Antigo: o vilão nunca soltava especial. */
+  vilaoUsaEspecial: boolean;
+  /** NOVA: a agressividade (getWaveParams) passa a valer: chega mais perto, rebate mais, junta ki mais rápido.
+   *  Antigo: era calculada mas nada usava. */
+  agressividadeReal: boolean;
+  /** NOVA: o vilão também fica 30 quadros invulnerável depois de apanhar. Antigo (false): não ficava (só o herói). */
+  vilaoInvulneravel: boolean;
+}
+export const REGRAS_HISTORIA_NOVAS: Readonly<RegrasHistoria> = {
+  curaEntreOndas: { dificuldades: ['hard'], aPartirDaOnda: 2 },
+  vilaoUsaParry: false, vilaoUsaEspecial: true, agressividadeReal: true, vilaoInvulneravel: false,
+  itemPousaNoChao: true,
+};
+export const REGRAS_HISTORIA_ANTIGAS: Readonly<RegrasHistoria> = {
+  curaEntreOndas: false, vilaoUsaParry: false, vilaoUsaEspecial: false, agressividadeReal: false, vilaoInvulneravel: false,
+  itemPousaNoChao: false,
+};
+/** quadros que o item fica parado no chão (regra itemPousaNoChao); pisca no último segundo */
+export const ITEM_NO_CHAO = 180;
+export const REGRAS_HISTORIA: Readonly<RegrasHistoria> = REGRAS_HISTORIA_NOVAS;
+/** dano do especial do VILÃO no modo história (o herói tem 3 de vida: 3 seria morte na hora) */
+export const VILAO_ESPECIAL_DANO = 2;
+/** o vilão só usa o especial a partir desta onda */
+export const VILAO_ESPECIAL_ONDA_MIN = 3;

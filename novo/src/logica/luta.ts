@@ -3,7 +3,7 @@
 // Regras do jogo antigo (gameplay.js): tiro 1, especial 3 com o ki cheio, parry devolve os tiros por perto,
 // transformação com o ki cheio (sobe um nível, +velocidade por 15 s), Zenkai 1x por partida, choque de raios.
 import * as C from './constantes';
-import { arremessarAgarrados, destruirAgarrados } from './minions';
+import { arremessarAgarrados, destruirAgarrados, tiroNosMinions } from './minions';
 import { auraForte, suavizarAura } from './efeitos';
 import type { Choque, Entrada, Evento, EstadoLuta, FichaLuta, IdJogador, Lutador, Raio, Tiro } from './tipos';
 
@@ -32,11 +32,14 @@ export const nivelMaximo = (l: Pick<Lutador, 'alturas'>) => Math.max(0, l.altura
 /** J2 com as regras antigas (REGRAS.j2IgualAoJ1 = false)? */
 const j2Antigo = (r: C.Regras | undefined, l: Lutador) => !!r && !r.j2IgualAoJ1 && l.id === 'p2';
 export const velocidadeDe = (l: Lutador, regras?: C.Regras) =>
-  j2Antigo(regras, l) ? C.VELOCIDADE_J2_ANTIGA : C.VELOCIDADE + (l.poder > 0 ? C.PODER_BONUS_VELOCIDADE : 0);
+  (j2Antigo(regras, l) ? C.VELOCIDADE_J2_ANTIGA : C.VELOCIDADE + (l.poder > 0 ? C.PODER_BONUS_VELOCIDADE : 0)) *
+  (l.nuvem > 0 ? C.NUVEM_VELOCIDADE : 1); // nuvem voadora (modo história)
 
 /** Faixa de X permitida para o centro de cada jogador: cada um na sua metade da tela. */
-export function limitesX(id: IdJogador, largura = C.LUTADOR_L): [number, number] {
+export function limitesX(id: IdJogador, largura = C.LUTADOR_L, historia = false): [number, number] {
   const meia = largura / 2;
+  // no modo história o herói vai além do meio (BOUNDS.PLAYER_MAX_X = 450)
+  if (id === 'p1' && historia) return [C.MARGEM_X + meia, C.HISTORIA_HEROI_MAX_X + meia];
   return id === 'p1' ? [C.MARGEM_X + meia, C.MEIO_X - meia] : [C.MEIO_X + meia, C.TELA_L - C.MARGEM_X - meia];
 }
 export function limitesY(altura = C.LUTADOR_A): [number, number] {
@@ -57,7 +60,7 @@ export function criarLutador(id: IdJogador, ficha: FichaLuta | string): Lutador 
     olhando: id === 'p1' ? 1 : -1,
     vida: C.VIDA_VERSUS, vidaMax: C.VIDA_VERSUS, ki: 0, nivel: 0, poder: 0,
     acao: 'livre', acaoQuadros: 0, poseTiro: 0, poseParry: 0, esperaTiro: 0, esperaParry: 0,
-    invulneravel: C.INVULNERAVEL_INICIO, poseAtingido: 0, ondaParry: 0, nivelAura: 0, emEspecial: false,
+    invulneravel: C.INVULNERAVEL_INICIO, escudo: false, nuvem: 0, bastao: 0, poseAtingido: 0, ondaParry: 0, nivelAura: 0, emEspecial: false,
     comboParry: 0, comboParryQuadros: 0, ultimoBonusParry: 0, zenkaiUsada: false, atacarAntes: false,
     pedidoEspecial: 0, pedidoParry: 0, pedidoTransformar: 0,
   };
@@ -69,7 +72,7 @@ export function criarLuta(p1: FichaLuta | string, p2: FichaLuta | string, sement
     quadro: 0, rodada: 1, placar: { p1: 0, p2: 0 }, fase: 'luta', faseQuadros: 0,
     vencedorRodada: null, vencedorPartida: null,
     p1: criarLutador('p1', p1), p2: criarLutador('p2', p2),
-    tiros: [], raios: [], choque: null, minions: [], proximoId: 1, semente,
+    tiros: [], raios: [], choque: null, minions: [], historia: null, proximoId: 1, semente,
   };
 }
 
@@ -126,13 +129,24 @@ export const maoDe = (l: Lutador) => ({ x: l.x + l.olhando * (l.l / 2 + 10), y: 
 
 /** Regra nova (Jefferson): na pose de transformar (movimento travado) ninguém machuca — tiro, especial, choque. */
 export const podeApanhar = (e: EstadoLuta, l: Lutador) =>
-  e.fase === 'luta' && l.invulneravel <= 0 && l.acao !== 'caido' && l.acao !== 'transformando';
+  e.fase === 'luta' && l.invulneravel <= 0 && l.acao !== 'caido' && l.acao !== 'transformando' &&
+  // modo história: com o vilão caindo/voltando ninguém se machuca (protegerHeroiAposVitoria)
+  // (e no mesmo quadro em que o vilão chegou a 0, como o protegerHeroiAposVitoria no meio do laço dos tiros)
+  (!e.historia || (e.historia.vilao === 'lutando' && e.p2.vida > 0));
 export const podeTransformar = (l: Lutador) => l.ki >= C.KI_MAX && l.nivel < nivelMaximo(l);
 
 /** Dano em quem pode apanhar. Chegando a 0: Zenkai (1 vez por partida) devolve 1 de vida e um tempo invulnerável. */
-function aplicarDano(e: EstadoLuta, alvo: Lutador, dano: number, deEspecial: boolean, direcao: number, eventos: Evento[]) {
+export function aplicarDano(e: EstadoLuta, alvo: Lutador, dano: number, deEspecial: boolean, direcao: number, eventos: Evento[]) {
+  // cápsula (modo história): segura o golpe inteiro e dá o mesmo tempo invulnerável
+  if (alvo.escudo) {
+    alvo.escudo = false;
+    alvo.invulneravel = C.ESCUDO_INVULNERAVEL;
+    eventos.push({ tipo: 'escudo', dono: alvo.id });
+    return;
+  }
   alvo.vida = Math.max(0, alvo.vida - dano);
-  alvo.invulneravel = j2Antigo(e.regras, alvo) ? 0 : C.INVULNERAVEL_QUADROS;
+  const vilaoSemProtecao = !!e.historia && alvo.id === 'p2' && !e.historia.regras.vilaoInvulneravel;
+  alvo.invulneravel = j2Antigo(e.regras, alvo) || vilaoSemProtecao ? 0 : C.INVULNERAVEL_QUADROS;
   alvo.poseAtingido = C.ATINGIDO_QUADROS;
   // apanhar zera o combo de parry (como o herói antigo: parryCombo = 0)
   alvo.comboParry = 0;
@@ -187,7 +201,10 @@ function soltarEspecial(e: EstadoLuta, l: Lutador, eventos: Evento[]) {
 function acertarRaio(e: EstadoLuta, r: Raio, eventos: Evento[]) {
   r.acertou = true;
   const alvo = e[outro(r.dono)];
-  if (podeApanhar(e, alvo)) aplicarDano(e, alvo, C.ESPECIAL_DANO, true, e[r.dono].olhando, eventos);
+  // modo história: o especial do vilão tira VILAO_ESPECIAL_DANO; com o bastão mágico, SUPER ATAQUE (x2)
+  const base = e.historia && r.dono === 'p2' ? C.VILAO_ESPECIAL_DANO : C.ESPECIAL_DANO;
+  const dano = e[r.dono].bastao > 0 ? base * 2 : base;
+  if (podeApanhar(e, alvo)) aplicarDano(e, alvo, dano, true, e[r.dono].olhando, eventos);
 }
 
 /** O outro já tem um raio no ar que ainda não chegou: soltar o especial agora vira CHOQUE (resolveBeamClash). */
@@ -212,6 +229,8 @@ function passoLutador(e: EstadoLuta, l: Lutador, ent: Entrada, eventos: Evento[]
   if (l.poseTiro > 0) l.poseTiro--;
   if (l.poseParry > 0) l.poseParry--;
   if (l.poseAtingido > 0) l.poseAtingido--;
+  if (l.nuvem > 0) l.nuvem--;
+  if (l.bastao > 0) l.bastao--;
   if (l.ondaParry > 0) l.ondaParry--;
   if (l.poder > 0) l.poder--;
   if (l.comboParryQuadros > 0 && --l.comboParryQuadros === 0) { l.comboParry = 0; l.ultimoBonusParry = 0; }
@@ -226,16 +245,16 @@ function passoLutador(e: EstadoLuta, l: Lutador, ent: Entrada, eventos: Evento[]
   l.pedidoParry = ent.parry ? guarda : Math.max(0, l.pedidoParry - 1);
   l.pedidoTransformar = ent.transformar ? guarda : Math.max(0, l.pedidoTransformar - 1);
 
-  if (l.acao === 'caido' || l.acao === 'vitoria') return clampar(l);
+  if (l.acao === 'caido' || l.acao === 'vitoria') return clampar(e, l);
   if (e.fase !== 'luta') {
     if (l.acao !== 'livre') { l.acao = 'livre'; l.acaoQuadros = 0; }
-    return clampar(l);
+    return clampar(e, l);
   }
   if (l.acao === 'transformando') {
     if (l.acaoQuadros >= C.TRANSFORMANDO_QUADROS) { l.acao = 'livre'; l.acaoQuadros = 0; }
     else {
       if (!e.regras.transformacaoTravaMovimento) andar(e, l, ent);
-      return clampar(l);
+      return clampar(e, l);
     }
   }
 
@@ -260,7 +279,7 @@ function passoLutador(e: EstadoLuta, l: Lutador, ent: Entrada, eventos: Evento[]
   if (l.pedidoTransformar > 0 && podeTransformar(l)) {
     l.pedidoTransformar = 0;
     transformar(e, l, eventos);
-    return clampar(l);
+    return clampar(e, l);
   }
   if (l.pedidoParry > 0 && l.esperaParry <= 0) {
     l.pedidoParry = 0;
@@ -279,7 +298,7 @@ function passoLutador(e: EstadoLuta, l: Lutador, ent: Entrada, eventos: Evento[]
   // tiro de ki: aperto novo sempre; segurando, ~5 por segundo fora da carga, do brilho do parry e sem raio na tela
   const segurandoPode = !ent.carregar && l.ondaParry <= 0 && e.raios.length === 0;
   if (!noChoque && ent.atacar && (apertouAtaque || segurandoPode) && l.esperaTiro <= 0 && e.tiros.length < C.TIROS_MAX) atirar(e, l, eventos);
-  clampar(l);
+  clampar(e, l);
 }
 
 function ganharKi(l: Lutador, quanto: number, eventos: Evento[]) {
@@ -308,6 +327,7 @@ function rebater(l: Lutador, e: EstadoLuta, eventos: Evento[]) {
     t.vy = 0;
     t.dono = l.id;
     t.refletido = true;
+    t.teleguiado = false;
     refletidos++;
   }
   let bonusKi = 0;
@@ -331,7 +351,7 @@ function atirar(e: EstadoLuta, l: Lutador, eventos: Evento[]) {
     id: e.proximoId++, dono: l.id,
     x: m.x, y: m.y + (sortear(e) - 0.5) * 20,
     vx: l.olhando * C.TIRO_VELOCIDADE, vy: (sortear(e) - 0.5) * 2,
-    raio: C.TIRO_RAIO, dano: C.TIRO_DANO, refletido: false, atirador: l.id,
+    raio: C.TIRO_RAIO, dano: C.TIRO_DANO + (l.bastao > 0 ? C.BASTAO_BONUS_TIRO : 0), refletido: false, atirador: l.id,
   });
   l.esperaTiro = C.TIRO_INTERVALO;
   l.poseTiro = C.POSE_TIRO_QUADROS;
@@ -350,8 +370,10 @@ function andar(e: EstadoLuta, l: Lutador, ent: Entrada) {
   l.movY = my;
 }
 
-function clampar(l: Lutador) {
-  const [x0, x1] = limitesX(l.id, l.l);
+function clampar(e: EstadoLuta, l: Lutador) {
+  // modo história: o vilão sai voando da tela ao cair e volta voando (historia.ts cuida da posição)
+  if (e.historia && l.id === 'p2' && e.historia.vilao !== 'lutando') return;
+  const [x0, x1] = limitesX(l.id, l.l, !!e.historia);
   const [y0, y1] = limitesY(l.a);
   l.x = limitar(l.x, x0, x1);
   l.y = limitar(l.y, y0, y1);
@@ -360,8 +382,10 @@ function clampar(l: Lutador) {
 function passoTiros(e: EstadoLuta, eventos: Evento[]) {
   const ficam: Tiro[] = [];
   for (const t of e.tiros) {
+    if (t.teleguiado) { const alvoY = e[outro(t.dono)].y; t.vy += t.y < alvoY ? 0.15 : t.y > alvoY ? -0.15 : 0; }
     t.x += t.vx;
     t.y += t.vy;
+    if (e.historia && t.dono === 'p1' && tiroNosMinions(e, t, eventos)) continue;
     if (t.x < -50 || t.x > C.TELA_L + 50 || t.y < -50 || t.y > C.TELA_A + 50) continue;
     const alvo = e[outro(t.dono)];
     if (tiroAcerta(t, alvo)) {
@@ -437,7 +461,7 @@ export function passoLuta(e: EstadoLuta, entradas: Record<IdJogador, Entrada>): 
       passoTiros(e, eventos);
       passoRaios(e, eventos);
     }
-    verificarFimDaRodada(e, eventos);
+    if (!e.historia) verificarFimDaRodada(e, eventos); // o modo história decide o fim em historia.ts
   } else if (e.fase === 'fimRodada' && e.faseQuadros >= C.FIM_RODADA_QUADROS) {
     if (e.vencedorPartida) {
       e.fase = 'fimPartida';

@@ -3,7 +3,9 @@
 import Phaser from 'phaser';
 import { TELA_A, TELA_L } from './logica/constantes';
 import { Boot } from './cenas/Boot';
+import { FimHistoria } from './cenas/FimHistoria';
 import { Luta } from './cenas/Luta';
+import { Mapa } from './cenas/Mapa';
 import { Menu } from './cenas/Menu';
 import { Preload } from './cenas/Preload';
 import { Selecao } from './cenas/Selecao';
@@ -22,7 +24,7 @@ const jogo = new Phaser.Game({
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, fullscreenTarget: 'jogo' },
   input: { activePointers: 4 },
   fps: { target: 60 },
-  scene: [Boot, Preload, Menu, Selecao, Luta, Vitoria, Trilhas],
+  scene: [Boot, Preload, Menu, Mapa, Selecao, Luta, Vitoria, FimHistoria, Trilhas],
 });
 
 // para testes no navegador (playwright) e depuração

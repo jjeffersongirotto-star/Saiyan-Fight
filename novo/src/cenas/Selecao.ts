@@ -11,6 +11,8 @@ import { desenharFundo } from './fundo';
 import type { DadosDaLuta } from './Menu';
 import { aoApertar } from '../entrada/teclas';
 import { som } from '../audio/som';
+import { faseDe } from '../dados/fases';
+import type { ModoFase } from '../logica/ondas';
 
 const COLUNAS = 8, CARTA_L = 84, CARTA_A = 92, ESP = 8;
 const X0 = (TELA_L - (COLUNAS * CARTA_L + (COLUNAS - 1) * ESP)) / 2, Y0 = 46;
@@ -24,13 +26,18 @@ export class Selecao extends Phaser.Scene {
   private titulo!: Phaser.GameObjects.Text;
   private info!: Phaser.GameObjects.Text;
   private formas!: Phaser.GameObjects.Text;
+  /** modo história: só o herói é escolhido (o vilão é o da fase) */
+  private fase: string | undefined;
+  private modoFase: ModoFase | undefined;
 
   constructor() {
     super('Selecao');
   }
 
-  init(d: { modo: DadosDaLuta['modo'] }): void {
+  init(d: { modo: DadosDaLuta['modo']; fase?: string; modoFase?: ModoFase }): void {
     this.modo = d.modo;
+    this.fase = d.fase;
+    this.modoFase = d.modoFase;
     this.escolhendo = 'p1';
     this.escolhaP1 = null;
     this.foco = 0;
@@ -95,6 +102,11 @@ export class Selecao extends Phaser.Scene {
   }
 
   private escolher(id: string): void {
+    if (this.modo === 'historia') {
+      const f = faseDe(this.fase ?? '');
+      this.scene.start('Luta', { modo: 'historia', p1: id, p2: f.vilao.personagem, fase: f.id, modoFase: this.modoFase ?? 'normal' } satisfies DadosDaLuta);
+      return;
+    }
     if (this.escolhendo === 'p1') {
       this.escolhaP1 = id;
       this.escolhendo = 'p2';
@@ -105,7 +117,8 @@ export class Selecao extends Phaser.Scene {
   }
 
   private voltar(): void {
-    if (this.escolhendo === 'p2') {
+    if (this.modo === 'historia') this.scene.start('Mapa', { fase: this.fase });
+    else if (this.escolhendo === 'p2') {
       this.escolhendo = 'p1';
       this.escolhaP1 = null;
       this.atualizar();
@@ -114,7 +127,8 @@ export class Selecao extends Phaser.Scene {
 
   private atualizar(): void {
     this.titulo.setText(
-      this.escolhendo === 'p1' ? T('JOGADOR 1: ESCOLHA O LUTADOR') : this.modo === 'cpu' ? T('ESCOLHA O ADVERSÁRIO (CPU)') : T('JOGADOR 2: ESCOLHA O LUTADOR'),
+      this.modo === 'historia' ? `${T('ESCOLHA O SEU HERÓI')} — ${T(faseDe(this.fase ?? '').nome)}`
+        : this.escolhendo === 'p1' ? T('JOGADOR 1: ESCOLHA O LUTADOR') : this.modo === 'cpu' ? T('ESCOLHA O ADVERSÁRIO (CPU)') : T('JOGADOR 2: ESCOLHA O LUTADOR'),
     );
     ORDEM_PERSONAGENS.forEach((id, i) => {
       const { x, y } = this.posicao(i);

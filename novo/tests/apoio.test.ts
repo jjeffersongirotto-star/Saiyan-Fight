@@ -132,6 +132,26 @@ describe('CPU', () => {
 });
 
 describe('idiomas', () => {
+  it("todo T('...') escrito no código tem tradução (o HUD não mistura línguas)", async () => {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const { FASES } = await import('../src/dados/fases');
+    const { NOME_DO_ITEM } = await import('../src/logica/itens');
+    const cad = new Set(textosCadastrados());
+    const faltam: string[] = [];
+    const varrer = (dir: string) => {
+      for (const n of fs.readdirSync(dir)) {
+        const p = path.join(dir, n);
+        if (fs.statSync(p).isDirectory()) varrer(p);
+        else if (p.endsWith('.ts')) for (const m of fs.readFileSync(p, 'utf8').matchAll(/\bT\('((?:[^'\\]|\\.)*)'\)/g)) if (!cad.has(m[1])) faltam.push(`${n}: ${m[1]}`);
+      }
+    };
+    varrer(path.join(__dirname, '../src'));
+    expect(cad.size).toBeGreaterThan(80);
+    for (const f of FASES) if (!cad.has(f.nome)) faltam.push(`fase: ${f.nome}`);
+    for (const t of Object.values(NOME_DO_ITEM)) if (!cad.has(t)) faltam.push(`item: ${t}`);
+    expect(faltam).toEqual([]);
+  });
   it('todo texto cadastrado existe em EN e ES (e é diferente de vazio)', () => {
     for (const id of ['en', 'es'] as const) {
       definirIdioma(id, false);
