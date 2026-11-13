@@ -37,7 +37,7 @@ import { modoEfetivo, mudarOpcoes, opcoes } from '../logica/opcoes';
 
 const mudarOpcoesSemPerder = () => mudarOpcoes((o) => { o.dicaTiroVista = true; });
 import { conquistas, RastreioDaLuta } from '../logica/conquistas';
-import { criarTutorial, passoTutorial, marcarFeito, avancarPasso, passoAtual, instrucoesDoPasso, PASSOS_DO_TUTORIAL, type EstadoTutorial } from '../logica/tutorial';
+import { criarTreino, passoTreino, nivelAntesDeTransformar, criarTutorial, passoTutorial, marcarFeito, avancarPasso, passoAtual, instrucoesDoPasso, PASSOS_DO_TUTORIAL, type EstadoTutorial } from '../logica/tutorial';
 import { TF } from '../logica/idioma';
 import { nomeDaTecla, NOMES_BOTOES } from '../logica/opcoes';
 
@@ -83,6 +83,8 @@ export class Luta extends Phaser.Scene {
   private dicaTiroSeg = 0;
   /** TUTORIAL: o passo a passo (null nas lutas) e o balão com PULAR / VOLTAR AO MENU */
   private tutorial: EstadoTutorial | null = null;
+  /** TUTORIAL LIVRE: a arena de treino sem passos (sair pela pausa) */
+  private treino = false;
   private uiTutorial: { g: Phaser.GameObjects.Graphics; titulo: Phaser.GameObjects.Text; sub: Phaser.GameObjects.Text; pular: ReturnType<typeof botao>; voltar: ReturnType<typeof botao>; ki: Phaser.GameObjects.Graphics; chave: string } | null = null;
   private criarAntes = false;
 
@@ -93,13 +95,17 @@ export class Luta extends Phaser.Scene {
   init(d: DadosDaLuta): void {
     this.dados = d;
     this.fase = d.modo === 'historia' ? faseDe(d.fase ?? '') : null;
-    this.idArena = this.fase?.id ?? (d.modo === 'tutorial' ? 'terra' : d.arena ? faseDe(d.arena).id : null);
+    this.idArena = this.fase?.id ?? (d.modo === 'tutorial' || d.modo === 'treino' ? 'terra' : d.arena ? faseDe(d.arena).id : null);
   }
 
   preload(): void {
     // começo da luta: forma normal + a 1ª transformação de cada um (o resto vem durante a luta)
     const nivelP2 = this.fase?.vilao.nivel ?? 0; // na história o vilão pode começar transformado (Freeza na nave)
-    const chaves = formasNecessarias([{ personagem: this.dados.p1, nivel: 0 }, { personagem: this.dados.p2, nivel: nivelP2 }]);
+    const semRival = this.dados.modo === 'tutorial' || this.dados.modo === 'treino';
+    const n1 = semRival ? Math.max(0, this.dados.nivel ?? 0) : 0;
+    const chaves = formasNecessarias(semRival
+      ? [{ personagem: this.dados.p1, nivel: n1 }, { personagem: this.dados.p1, nivel: nivelAntesDeTransformar({ nivel: n1 }) }]
+      : [{ personagem: this.dados.p1, nivel: 0 }, { personagem: this.dados.p2, nivel: nivelP2 }]);
     liberarFormas(this, new Set(chaves));
     const faltam = pedirFormas(this, chaves) + (pedirEfeitos(this) ? 1 : 0) + (this.fase && pedirMinion(this, this.fase.minion) ? 1 : 0);
     if (faltam > 0) mostrarBarraDeCarregamento(this);
@@ -112,11 +118,13 @@ export class Luta extends Phaser.Scene {
     const semente = Date.now() | 0;
     this.tutorial = null;
     this.uiTutorial = null;
+    this.treino = this.dados.modo === 'treino';
     if (this.dados.modo === 'tutorial') {
-      const tu = criarTutorial(fichaDoPersonagem(this.dados.p1), semente);
+      const tu = criarTutorial(fichaDoPersonagem(this.dados.p1), semente, this.dados.nivel ?? 0);
       this.tutorial = tu.t;
       this.estado = tu.luta;
-    } else this.estado = this.fase
+    } else if (this.treino) this.estado = criarTreino(fichaDoPersonagem(this.dados.p1), semente, this.dados.nivel ?? 0).luta;
+    else this.estado = this.fase
       ? criarHistoria(fichaDoPersonagem(this.dados.p1), fichaDoPersonagem(this.dados.p2), this.fase, this.dados.modoFase ?? 'normal', semente)
       : criarLuta(fichaDoPersonagem(this.dados.p1), fichaDoPersonagem(this.dados.p2), semente);
     for (const k of formasDaLuta(this.estado)) criarAnimacoes(this, k);
@@ -140,6 +148,7 @@ export class Luta extends Phaser.Scene {
       .setDepth(850);
     if (this.fase) this.mostrarAviso(`${T(this.fase.nome)}\n${rotuloDaOnda(this.estado.historia!.modo, 0, this.estado.historia!.onda)}`, 1600, 26);
     else if (this.tutorial) { this.hud.esconder(); this.sprites.p2.setVisible(false); }
+    else if (this.treino) { this.hud.esconder(); this.sprites.p2.setVisible(false); this.mostrarAviso(T('TUTORIAL LIVRE'), 1200, 26); this.criarDicaDoTreino(); }
     else this.mostrarAviso(`${T('RODADA')} 1 — ${T('LUTEM!')}`, 1200);
     som.musica(this.fase?.musica ?? (this.idArena ? faseDe(this.idArena).musica : TEMA_DA_LUTA));
 
@@ -153,7 +162,7 @@ export class Luta extends Phaser.Scene {
     this.padAntes = { p1: INTENCAO_VAZIA, p2: INTENCAO_VAZIA };
     this.pausaPadAntes = this.voltarPadAntes = true; // o botão que abriu a luta ainda pode estar apertado
     this.ponteiro = null;
-    this.rastreio = new RastreioDaLuta(conquistas(), this.dados.modo);
+    this.rastreio = new RastreioDaLuta(conquistas(), this.dados.modo === 'treino' ? 'tutorial' : this.dados.modo);
     this.input.on(Phaser.Input.Events.POINTER_MOVE, (p: Phaser.Input.Pointer) => { if (!p.wasTouch) this.ponteiro = { x: p.worldX, y: p.worldY }; });
     // voltou das OPÇÕES (pausa → OPÇÕES): teclas, botões e HUD podem ter mudado
     this.events.on(Phaser.Scenes.Events.RESUME, () => {
@@ -168,7 +177,7 @@ export class Luta extends Phaser.Scene {
     this.criarFaiscas();
     this.criarBotaoDePausa();
     // (no tutorial o P também pausa, como no antigo)
-    aoApertar(this, (c) => { if ((c === 'Escape' || (c === 'KeyP' && this.tutorial)) && !this.scene.isPaused()) (this.pausado ? this.continuar() : this.pausar()); });
+    aoApertar(this, (c) => { if ((c === 'Escape' || (c === 'KeyP' && (this.tutorial || this.treino))) && !this.scene.isPaused()) (this.pausado ? this.continuar() : this.pausar()); });
     this.criarAntes = true;
     if (this.tutorial) this.criarBalaoDoTutorial();
     // celular: trocou de app / apagou a tela no meio da luta = pausa (na volta ninguém leva tiro sem ver)
@@ -381,9 +390,10 @@ export class Luta extends Phaser.Scene {
     for (let i = 0; i < passos; i++) {
       const entradas = this.lerEntradas();
       const eventos = this.tutorial ? passoTutorial(this.estado, this.tutorial, entradas.p1)
+        : this.treino ? passoTreino(this.estado, entradas.p1)
         : this.estado.historia ? passoHistoria(this.estado, entradas.p1) : passoLuta(this.estado, entradas);
       this.efeitos.passo();
-      if (!this.tutorial) this.rastreio.passo(this.estado, eventos);
+      if (!this.tutorial && !this.treino) this.rastreio.passo(this.estado, eventos); // treino não vale conquista
       for (const ev of eventos) this.aoEvento(ev);
       // carregando ki: o "zumbido" do jogo antigo (charge em ~20% dos quadros)
       for (const id of ['p1', 'p2'] as const) if (this.estado[id].acao === 'carregando' && Math.random() < CHANCE_SOM_CARREGANDO) som.tocar('charge');
@@ -392,6 +402,20 @@ export class Luta extends Phaser.Scene {
     this.cuidarDasFormas();
     this.desenhar(this.relogio.alfa, dt / 1000);
     if (this.tutorial) this.atualizarBalaoDoTutorial();
+  }
+
+  /** TUTORIAL LIVRE: só um aviso de como sair e a barra de ki (para ver quando dá para transformar/especial) */
+  private kiTreino: Phaser.GameObjects.Graphics | null = null;
+  private criarDicaDoTreino(): void {
+    this.add.text(C.TELA_L / 2, C.TELA_A - 8, T('TESTE OS BOTÕES À VONTADE. PARA SAIR: PAUSA → SAIR PARA MENU'),
+      estiloTexto({ fontFamily: 'Arial', fontSize: '11px', color: '#fff0a6', stroke: '#000000', strokeThickness: 3 })).setOrigin(0.5, 1).setDepth(850);
+    this.kiTreino = this.add.graphics().setDepth(850);
+  }
+  private desenharKiDoTreino(e: EstadoLuta): void {
+    const g = this.kiTreino;
+    if (!g) return;
+    const w = 160, x = 60, y = 14, k = Math.max(0, Math.min(1, e.p1.ki / C.KI_MAX));
+    g.clear().fillStyle(0x000000, 0.55).fillRoundedRect(x - 2, y - 2, w + 4, 12, 4).fillStyle(k >= 1 ? 0xffd23a : 0x3fa9ff, 1).fillRoundedRect(x, y, Math.max(2, w * k), 8, 3);
   }
 
   /** getTutorialUiLayout / drawTutorialScreen: balão abaixo do ícone de pausa, PULAR à esquerda, barra de ki */
@@ -669,7 +693,7 @@ export class Luta extends Phaser.Scene {
     const e = this.estado;
     this.dtSeg = Math.min(0.1, dtSeg);
     this.desenharLutador(e.p1, alfa);
-    if (!this.tutorial) this.desenharLutador(e.p2, alfa);
+    if (!this.tutorial && !this.treino) this.desenharLutador(e.p2, alfa);
 
     this.arena?.desenhar(e.quadro);
     const relogio = e.quadro / 60;
@@ -684,7 +708,8 @@ export class Luta extends Phaser.Scene {
     }
 
     this.historia?.desenhar(e, this.dtSeg);
-    if (!this.tutorial) this.hud.desenhar(e);
+    if (!this.tutorial && !this.treino) this.hud.desenhar(e);
+    else if (this.treino) this.desenharKiDoTreino(e);
     this.toque.desenhar(e.p1.ki >= C.KI_MAX, podeTransformar(e.p1), this.dtSeg);
   }
 

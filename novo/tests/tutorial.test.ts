@@ -108,3 +108,56 @@ describe('tutorial (TUTORIAL_STEPS do antigo)', () => {
       for (const [f] of instrucoesDoPasso(p.chave, { ...c, plataforma: pl, modoToque: tq, duploToqueParry: d, tiroContinuo: d })) expect(cad.has(f), f).toBe(true);
   });
 });
+
+describe('tutorial com personagem e forma escolhidos', () => {
+  it('começa na forma escolhida e o passo TRANSFORMAR vai da anterior até ela', async () => {
+    const { avancarPasso: av, criarTutorial: ct, passoAtual: pa } = await import('../src/logica/tutorial');
+    const tu = ct(fichaDoPersonagem('vegeta'), 3, 2);
+    expect(tu.t.nivel).toBe(2);
+    expect(tu.luta.p1.nivel).toBe(2);
+    while (pa(tu.t)?.chave !== 'transform') av(tu.luta, tu.t);
+    expect(tu.luta.p1.nivel).toBe(1);
+    expect(tu.luta.p1.ki).toBe(C.KI_MAX);
+    passoTutorial(tu.luta, tu.t, ent({ transformar: true }));
+    expect(tu.luta.p1.nivel).toBe(2);
+    expect(tu.t.fase).toBe('efeito');
+  });
+  it('forma normal escolhida: TRANSFORMAR vai da normal para a 1ª; nível fora da lista é limitado', async () => {
+    const { criarTutorial: ct, avancarPasso: av, passoAtual: pa } = await import('../src/logica/tutorial');
+    const tu = ct(fichaDoPersonagem('goku'), 3, 0);
+    while (pa(tu.t)?.chave !== 'transform') av(tu.luta, tu.t);
+    expect(tu.luta.p1.nivel).toBe(0);
+    expect(ct(fichaDoPersonagem('goku'), 3, 99).t.nivel).toBe(fichaDoPersonagem('goku').alturas.length - 1);
+    expect(ct(fichaDoPersonagem('goku'), 3, -4).t.nivel).toBe(0);
+  });
+});
+
+describe('TUTORIAL LIVRE (treino sem passos)', () => {
+  it('sem adversário, sem perder vida, na forma escolhida, e dá para transformar e soltar especial', async () => {
+    const { criarTreino, passoTreino } = await import('../src/logica/tutorial');
+    const tr = criarTreino(fichaDoPersonagem('goku'), 5, 1);
+    const e = tr.luta;
+    expect(e.p1.nivel).toBe(1);
+    expect(e.p2.x).toBeLessThan(0);
+    e.p1.vida = 1;
+    passoTreino(e, ent({ x: 1 }));
+    expect(e.p1.vida).toBe(e.p1.vidaMax);
+    e.p1.ki = C.KI_MAX;
+    const evs = [];
+    for (let i = 0; i < 5; i++) evs.push(...passoTreino(e, ent({ transformar: i === 0 })));
+    expect(evs.some((v) => v.tipo === 'transformou')).toBe(true);
+    expect(e.p1.nivel).toBe(2);
+    for (let i = 0; i < 600; i++) passoTreino(e, ENTRADA_VAZIA);
+    expect(e.fase).toBe('luta'); // nunca acaba sozinho: sai pela pausa
+    expect(e.p2.x).toBeLessThan(0);
+  });
+  it('o menu tem TUTORIAL e TUTORIAL LIVRE, e os dois passam pela escolha de personagem e forma', async () => {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const menu = fs.readFileSync(path.join(__dirname, '../src/cenas/Menu.ts'), 'utf8');
+    expect(menu).toMatch(/'TUTORIAL',\s*\(\) => this\.scene\.start\('Selecao', \{ modo: 'tutorial' \}\)/);
+    expect(menu).toMatch(/'TUTORIAL LIVRE',\s*\(\) => this\.scene\.start\('Selecao', \{ modo: 'treino' \}\)/);
+    const luta = fs.readFileSync(path.join(__dirname, '../src/cenas/Luta.ts'), 'utf8');
+    expect(luta).toMatch(/if \(!this\.tutorial && !this\.treino\) this\.rastreio\.passo/); // treino não dá conquista
+  });
+});

@@ -5,6 +5,9 @@
 /* eslint-disable */
 // arenas criadas no EDITOR DE ARENAS do antigo (saiyan_arenas, lidas pelo jogo novo): id -> arena
 let arenasDoJogador = new Map();
+// músicas que uma arena pode usar (ids de dados/temas.ts); null = aceita qualquer uma
+let temasDoJogo = null;
+export function definirTemas(ids) { temasDoJogo = ids ? new Set(ids) : null; }
 export function definirArenasCriadas(lista) {
   arenasDoJogador = new Map((Array.isArray(lista) ? lista : []).filter((a) => a && typeof a.id === 'string').map((a) => [a.id, a]));
 }
@@ -3637,6 +3640,11 @@ function drawStageThumbCircle(cx, cy, r, img, g = ctx) {
 }
 
   // ---- arenas.js (desenho das arenas criadas) ----
+  const BGM_THEMES = new Proxy({}, { get: (_o, k) => (temasDoJogo ? temasDoJogo.has(k) : typeof k === 'string') });
+  const arqErro = (msg, detalhe) => (detalhe === undefined ? msg : msg + ' [' + detalhe + ']');
+  // planta (vista de cima) do editor novo: escala e centro definidos por quem desenha
+  let plantaEscala = 1, plantaCentro = { x: 0, z: 0 }, plantaLado = 320;
+  const arenaMundoParaPlanta = (x, z) => [plantaLado / 2 + (x - plantaCentro.x) * plantaEscala, plantaLado / 2 + (z - plantaCentro.z) * plantaEscala];
   const readJsonStorage = (_k, padrao) => padrao;
   const writeStorage = () => false;
   const normalizadas = new WeakMap();
@@ -4837,7 +4845,158 @@ function drawArenaCriadaStage(id, scroll) {
 }
 
 
+// ---------------- arquivo .arena.json ----------------
+function dadosDaArenaParaArquivo(a) {
+    const n = normalizarArena(a), arena = Object.assign({}, n);
+    delete arena.id;
+    return { formato: ARENA_FORMATO, versao: 1, arena };
+}
+function validarArquivoArena(dados) {
+    if (!dados || typeof dados !== "object" || dados.formato !== ARENA_FORMATO || !dados.arena || typeof dados.arena !== "object") return { erro: "ESTE ARQUIVO NÃO É DE ARENA DO SAIYAN FIGHT." };
+    if (!(Number(dados.versao) >= 1)) return { erro: arqErro("VERSÃO DO ARQUIVO INVÁLIDA", dados.versao) };
+    if (Number(dados.versao) > 1) return { erro: "ARQUIVO FEITO POR UMA VERSÃO MAIS NOVA DO JOGO. ATUALIZE O JOGO." };
+    const a = dados.arena;
+    if (typeof a.nome !== "string" || !a.nome.trim()) return { erro: "FALTA O NOME DA ARENA (nome)." };
+    if (a.chao !== undefined && (!a.chao || !ARENA_CHAOS[a.chao.tipo])) return { erro: arqErro("TIPO DE CHÃO DESCONHECIDO", a.chao && a.chao.tipo) };
+    if (a.camera !== undefined && !ARENA_CAMERAS[a.camera]) return { erro: arqErro("CÂMERA DESCONHECIDA", a.camera) };
+    if (a.movimento !== undefined && a.movimento !== "girar" && a.movimento !== "seguir") return { erro: arqErro("MOVIMENTO DESCONHECIDO", a.movimento) };
+    if (a.planicie !== undefined && a.planicie !== "" && !ARENA_PLANICIES[a.planicie]) return { erro: arqErro("PLANÍCIE DESCONHECIDA", a.planicie) };
+    if (a.hora !== undefined && !ARENA_HORAS.some(h => h[0] === a.hora)) return { erro: arqErro("HORA DO DIA DESCONHECIDA", a.hora) };
+    if (a.clima !== undefined && !ARENA_CLIMAS.some(c => c[0] === a.clima)) return { erro: arqErro("CLIMA DESCONHECIDO", a.clima) };
+    if (a.pecas !== undefined && !Array.isArray(a.pecas)) return { erro: "LISTA DE PEÇAS INVÁLIDA (pecas)." };
+    const pecas = a.pecas || [];
+    if (pecas.length > ARENA_PECAS_MAX) return { erro: arqErro("PEÇAS DEMAIS (MÁXIMO 80)", pecas.length) };
+    const ruim = pecas.find(q => !q || typeof q !== "object" || !ARENA_PECAS[q.t]);
+    if (ruim) return { erro: arqErro("PEÇA DESCONHECIDA", ruim && ruim.t) };
+    const n = normalizarArena(a);
+    n.id = "";
+    return { arena: n };
+}
+
+
+const AR_ARVORES = { coqueiro: 1, palmeira: 1, arvore: 1, arbusto: 1, cipreste: 1 };
+
+const AR_DOMOS = { domo: 1, casa_domo: 1, torre: 1, torre_mirante: 1, capsula: 1, casco_nave: 1 };
+
+function arenaDesenharPlantaForma(g, p, def, s) {
+    const pts = arFormaPontos(p.f, def.forma, arSemente(p));
+    g.beginPath();
+    pts.forEach((q, i) => { const x = q[0] * s * p.e, y = q[1] * s * p.e; i ? g.lineTo(x, y) : g.moveTo(x, y); });
+    g.closePath();
+}
+
+function arenaMaqueteChao(g, a, s) {
+    const ch = a.chao, base = ch.cor, R = ARENA_RAIO;
+    const [x0, y0] = arenaMundoParaPlanta(-R, -R), [x1, y1] = arenaMundoParaPlanta(R, R);
+    g.fillStyle = base; g.fillRect(x0, y0, x1 - x0, y1 - y0);
+    if (ch.tipo === "ladrilho") {
+        g.strokeStyle = "rgba(90, 95, 110, 0.35)"; g.lineWidth = 1; g.beginPath();
+        for (let v = -R; v <= R; v += 80) { const [a1, b1] = arenaMundoParaPlanta(v, -R), [a2, b2] = arenaMundoParaPlanta(v, R), [c1, d1] = arenaMundoParaPlanta(-R, v), [c2, d2] = arenaMundoParaPlanta(R, v); g.moveTo(a1, b1); g.lineTo(a2, b2); g.moveTo(c1, d1); g.lineTo(c2, d2); }
+        g.stroke();
+        return;
+    }
+    AR_DETALHES.forEach(d => {
+        if (Math.abs(d.x) > R || Math.abs(d.z) > R) return;
+        const [px, py] = arenaMundoParaPlanta(d.x, d.z), k = Math.max(0.6, s * 2.2);
+        if (ch.tipo === "grama") { g.strokeStyle = arMix(base, -0.3); g.lineWidth = 1; g.beginPath(); g.moveTo(px - 2 * k, py + 1.5 * k); g.lineTo(px - k, py - 1.5 * k); g.moveTo(px + k, py + 1.5 * k); g.lineTo(px + 1.5 * k, py - 1.5 * k); g.stroke(); }
+        else if (ch.tipo === "mar") { g.strokeStyle = "rgba(255, 255, 255, 0.5)"; g.lineWidth = 1; g.beginPath(); g.arc(px, py, 3 * k, Math.PI * 1.15, Math.PI * 1.85); g.stroke(); }
+        else if (ch.tipo === "nuvens") { g.fillStyle = "rgba(255, 255, 255, 0.6)"; g.beginPath(); g.ellipse(px, py, 7 * k, 3 * k, 0, 0, Math.PI * 2); g.fill(); }
+        else if (ch.tipo === "espaco") { g.fillStyle = d.s > 0.5 ? "#ffffff" : "#a5b4fc"; g.fillRect(px, py, 1.2, 1.2); }
+        else if (ch.tipo === "lava") { g.strokeStyle = "rgba(255, 140, 40, 0.8)"; g.lineWidth = 1.2; g.beginPath(); g.moveTo(px - 4 * k, py); g.lineTo(px, py + k); g.lineTo(px + 4 * k, py - k); g.stroke(); }
+        else { g.fillStyle = arMix(base, d.s > 0.5 ? -0.25 : 0.2); g.beginPath(); g.ellipse(px, py, 1.6 * k, k, 0, 0, Math.PI * 2); g.fill(); }
+    });
+}
+
+function arenaMaquetePeca(g, p, def, s, cor) {
+    const e = (p.e || 1) * s, c = cor || p.c, borda = arMix(c, -0.35);
+    g.lineWidth = 1;
+    if (def.pincel) {
+        g.strokeStyle = c; g.lineWidth = Math.max(2, (p.w || 24) * e); g.lineCap = g.lineJoin = "round";
+        g.beginPath(); (p.pts || [[0, 0]]).forEach((q, k) => { const x = q[0] * e, y = q[1] * e; k ? g.lineTo(x, y) : g.moveTo(x, y); });
+        if ((p.pts || []).length < 2) g.lineTo(0.01, 0);
+        g.stroke();
+        return;
+    }
+    if (def.forma) {
+        const pts = arFormaPontos(p.f, def.forma, arSemente(p));
+        const contorno = (k) => { g.beginPath(); pts.forEach((q, n) => { const x = q[0] * e * k, y = q[1] * e * k; n ? g.lineTo(x, y) : g.moveTo(x, y); }); g.closePath(); };
+        contorno(1); g.fillStyle = c; g.fill();
+        if (p.v > 0) { for (let k = 1; k <= Math.ceil(p.v); k++) { contorno(1 - k * 0.22); g.fillStyle = arMix(c, 0.08 * k); g.fill(); } contorno(1); g.strokeStyle = borda; g.stroke(); }
+        if (p.t === "lava") { contorno(0.55); g.fillStyle = "#ffc04d"; g.fill(); }
+        return;
+    }
+    if (def.planta && def.planta.ret) {
+        const w = def.planta.ret[0] * e, d = def.planta.ret[1] * e;
+        if (p.t === "predio") { g.fillStyle = "#eef2f7"; g.fillRect(-w, -d, w * 2, d * 2); g.fillStyle = c; g.fillRect(-w * 0.84, -d * 0.8, w * 1.68, d * 1.6); }
+        else if (p.t === "ringue") {
+            g.fillStyle = arMix(c, -0.15); g.fillRect(-w * 1.07, -d * 1.07, w * 2.14, d * 2.14); g.fillStyle = c; g.fillRect(-w, -d, w * 2, d * 2);
+            g.strokeStyle = "rgba(90, 90, 100, 0.45)"; g.beginPath(); for (let k = -3; k <= 3; k++) { g.moveTo(k * w / 4, -d); g.lineTo(k * w / 4, d); g.moveTo(-w, k * d / 4); g.lineTo(w, k * d / 4); } g.stroke();
+        } else if (p.t === "escada") {
+            for (let k = 0; k < 4; k++) { g.fillStyle = arMix(c, 0.06 * k); g.fillRect(-w, -d + k * d / 2, w * 2, d * 2 - k * d / 2); }
+        } else if (p.t === "pilar") { g.fillStyle = c; g.fillRect(-w, -d, w * 2, d * 2); g.fillStyle = arMix(c, 0.15); g.fillRect(-w * 0.66, -d * 0.66, w * 1.32, d * 1.32); }
+        else if (p.t === "portao") { g.fillStyle = "#2b2b2b"; g.fillRect(-w * 1.15, -d, w * 2.3, d * 2); g.fillStyle = c; g.fillRect(-w * 0.9, -d * 0.6, w * 0.2, d * 1.2); g.fillRect(w * 0.7, -d * 0.6, w * 0.2, d * 1.2); }
+        else { g.fillStyle = c; g.fillRect(-w, -d, w * 2, d * 2); if (def.chao) return; }
+        g.strokeStyle = borda; g.strokeRect(-w, -d, w * 2, d * 2);
+        return;
+    }
+    const r = Math.max(2.5, ((def.planta && def.planta.circ) || 8) * e);
+    if (AR_ARVORES[p.t]) {
+        g.fillStyle = arMix(c, -0.25); g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.fill();
+        g.fillStyle = c; g.beginPath(); g.arc(-r * 0.15, -r * 0.15, r * 0.75, 0, Math.PI * 2); g.fill();
+        g.fillStyle = arMix(c, 0.25); g.beginPath(); g.arc(-r * 0.3, -r * 0.3, r * 0.3, 0, Math.PI * 2); g.fill();
+    } else if (AR_DOMOS[p.t]) {
+        const gr = g.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
+        gr.addColorStop(0, arMix(c, 0.45)); gr.addColorStop(1, arMix(c, -0.15));
+        g.fillStyle = gr; g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.fill(); g.strokeStyle = borda; g.stroke();
+    } else if (p.t === "cristal") {
+        g.fillStyle = c; g.beginPath(); g.moveTo(0, -r); g.lineTo(r * 0.7, 0); g.lineTo(0, r); g.lineTo(-r * 0.7, 0); g.closePath(); g.fill(); g.strokeStyle = borda; g.stroke();
+    } else if (def.anim) {
+        const gr = g.createRadialGradient(0, 0, 0, 0, 0, r * 1.3);
+        gr.addColorStop(0, "#ffffff"); gr.addColorStop(0.4, c); gr.addColorStop(1, "rgba(0, 0, 0, 0)");
+        g.fillStyle = gr; g.beginPath(); g.arc(0, 0, r * 1.3, 0, Math.PI * 2); g.fill();
+    } else {
+        g.fillStyle = c; g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.fill();
+        g.fillStyle = arMix(c, 0.2); g.beginPath(); g.arc(-r * 0.25, -r * 0.25, r * 0.45, 0, Math.PI * 2); g.fill();
+        g.strokeStyle = borda; g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.stroke();
+    }
+}
+
+function arenaRaioPeca(p) {
+    const def = ARENA_PECAS[p.t];
+    if (def.pincel) return (Math.max(0, ...(p.pts || [[0, 0]]).map(q => Math.hypot(q[0], q[1]))) + (p.w || 24) / 2) * (p.e || 1);
+    return (def.forma ? arRaioForma(p, def.forma) : def.planta ? (def.planta.circ || Math.max(...def.planta.ret)) : 30) * (p.e || 1);
+}
+
+function arenaCameraPerto(p) {
+    const def = ARENA_PECAS[p.t], e = p.e || 1;
+    const raio = arenaRaioPeca(p);
+    const alto = AR_ALTURAS[p.t] || 40;
+    const D = Math.max(170, Math.min(900, Math.max(raio * 3.4, alto * e * 2.4) + 110));
+    // peça empilhada: a câmera sobe junto (a peça fica no mesmo lugar da tela)
+    return { CX: 400, HY: 70, D, H: Math.max(60, D * 0.36) + (p.b || 0), F: 560, PERTO: 20, CORTE: D * 0.5 };
+}
+
   return {
+    /** EDITOR DE ARENAS do jogo novo: as tabelas e funções do arenas.js (peças, planícies, validação, planta) */
+    editor: {
+      PECAS: ARENA_PECAS, PLANICIES: ARENA_PLANICIES, CHAOS: ARENA_CHAOS, CAMERAS: ARENA_CAMERAS, HORAS: ARENA_HORAS, CLIMAS: ARENA_CLIMAS,
+      FORMATOS: ARENA_FORMATOS, PINCEL: ARENA_PINCEL, ABAS: ARENA_ABAS, MAX: ARENA_MAX, PECAS_MAX: ARENA_PECAS_MAX, RAIO: ARENA_RAIO,
+      PINCEL_PONTOS: ARENA_PINCEL_PONTOS, ANIMADAS_MAX: ARENA_ANIMADAS_MAX, GRADE: ARENA_GRADE, FORMATO: ARENA_FORMATO,
+      normalizar: (a) => normalizarArena(a), padrao: () => arenaPadrao(), normalizarPeca: (q) => normalizarPecaArena(q),
+      pegada: (p) => arenaPegada(p), colide: (pecas, p, ignorar) => arenaPecaColide(pecas, p, ignorar), raio: (p) => arenaRaioPeca(p),
+      paraArquivo: (a) => dadosDaArenaParaArquivo(a), validarArquivo: (d) => validarArquivoArena(d), alturaPeca: (p) => arenaAlturaPeca(p),
+      /** desenha a arena `a` (já normalizada) neste canvas, com a câmera em `ang` (ou andando `andado` no SEGUIR) */
+      previa(a, ang, opts) {
+        ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
+        ctx.imageSmoothingEnabled = true;
+        ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+        drawArenaCriada(a, ang, opts || {});
+      },
+      cameraPerto: (p) => arenaCameraPerto(p),
+      /** planta: o chão (g = contexto da planta de lado `lado`, escala s px/unidade, centro c) e uma peça já no centro dela */
+      plantaChao(g, a, s, lado, c) { plantaEscala = s; plantaLado = lado; plantaCentro = c || { x: 0, z: 0 }; arenaMaqueteChao(g, a, s); },
+      plantaPeca(g, p, s, cor) { arenaMaquetePeca(g, p, ARENA_PECAS[p.t], s, cor); },
+    },
     /** desenha a arena `id` com o avanço `scroll` (1,5 por quadro, como o antigo) e o relógio `t` em segundos */
     desenhar(id, scroll, t) {
       selectedStage = id;

@@ -33,6 +33,7 @@ Contagem: no inventário, 61 itens = 11 ✅ · 12 🟡 · 37 ❌ · 1 ➕. Depoi
 B14 resolução automática) · 11 ❌ (A22 tutorial, C1–C10 editores) · 1 ➕.
 Depois da PR phaser-editores: 57 ✅ · 2 🟡 (A23, B14) · 1 ❌ (A22) · 1 ➕.
 Depois da PR phaser-mapa3d: 58 ✅ · 1 🟡 (B14) · 1 ❌ (A22) · 1 ➕.
+Depois da PR novo-editores-nativos: os editores (C1–C10) são do próprio jogo novo (TypeScript, `src/editor/`) — o novo não precisa mais do jogo antigo para nada. Fora do editor de arenas nativo: aba CONJUNTOS, seleção de várias peças, FUNDIR, EMPILHAR e o rascunho automático; no de personagens, tamanho do tiro e efeito de aura (o novo não usa).
 Depois da PR phaser-tutorial: 59 ✅ · 1 🟡 (B14) · 0 ❌ · 1 ➕.
 
 ### A. Telas e menus
@@ -60,7 +61,7 @@ Depois da PR phaser-tutorial: 59 ✅ · 1 🟡 (B14) · 0 ❌ · 1 ➕.
 | A19 | TRANSMITIR PARA A TV (Presentation API + WebRTC, `tv.html`) | `transmitirParaTV` | ✅ (mesmo `tv.html`; precisa de navegador com Presentation API) | phaser-menus |
 | A20 | MELHORES PONTUAÇÕES: GERAL / POR FASE (abas por fase) | `ranking` | ✅ | phaser-menus |
 | A21 | CONQUISTAS: 57 medalhas (bronze/prata/ouro/diamante), contador por tipo, rolagem, aviso na luta | `achievements`, `progress.js`, `drawAchievementBanner` | ✅ (57 conquistas) | phaser-menus |
-| A22 | TUTORIAL interativo (7 passos: mover, ki, carregar, parry, transformar, especial, pausar; PULAR/VOLTAR) | `gameplay.js` TUTORIAL_STEPS | ✅ `logica/tutorial.ts` + Luta modo 'tutorial' (passos de verdade, PULAR/CRIAR, instruções por plataforma) | phaser-tutorial |
+| A22 | TUTORIAL interativo (7 passos: mover, ki, carregar, parry, transformar, especial, pausar; PULAR/VOLTAR) | `gameplay.js` TUTORIAL_STEPS | ✅ `logica/tutorial.ts` + Luta modo 'tutorial' (passos de verdade, PULAR/CRIAR, instruções por plataforma) | phaser-tutorial; antes escolhe lutador e forma, e TUTORIAL LIVRE (treino sem passos nem conquistas) — novo-editores-nativos |
 | A23 | Mapa da história em "3D" (estrada, árvores, pedras, horizonte por ambiente, placa "ADVERSÁRIOS MAIS FORTES VIRÃO", rolagem ◀ ▶) | `mapa.js`, `render` stage_map | ✅ o mesmo desenho (mapa.js + geometria do game-logic-core via legado), 60 nós, fotos, cadeado animado, arrastar/setas, quadro de modo | phaser-mapa3d |
 | A24 | Escolha do modo da fase NORMAL / DIFÍCIL / SEM LIMITE (com cadeado) | `stageMap` | ✅ | fase 3 |
 | A25 | Escolher o herói antes da fase | `abrirTelaPersonagens("solo")` | ✅ | fase 3 |
@@ -97,16 +98,16 @@ Depois da PR phaser-tutorial: 59 ✅ · 1 🟡 (B14) · 0 ❌ · 1 ➕.
 
 | # | Função | Status | PR |
 |---|---|---|---|
-| C1 | EDITOR DE PERSONAGENS: lista, + CRIAR NOVO, EDITAR, EXCLUIR | ✅ (editor do próprio jogo antigo, aberto por cima do novo numa moldura) | phaser-editores |
-| C2 | Aba BÁSICO: nome, alinhamento, aura, golpe especial, cor e tamanho do tiro, efeitos de aura/tiro/especial, escala | ✅ (editor do próprio jogo antigo, aberto por cima do novo numa moldura) | phaser-editores |
-| C3 | Aba ANIMAÇÕES E MOVIMENTOS: sprite sheet (arquivo/URL), recorte, cor de fundo e tolerância, quadros por movimento, FPS, espelhar, prévia | ✅ (editor do próprio jogo antigo, aberto por cima do novo numa moldura) | phaser-editores |
-| C4 | Aba TRANSFORMAÇÃO: formas, conjuntos/grupos, cadeado de quadros | ✅ (editor do próprio jogo antigo, aberto por cima do novo numa moldura) | phaser-editores |
-| C5 | Exportar / importar personagem `.saiyan.json` | ✅ (editor do próprio jogo antigo, aberto por cima do novo numa moldura) | phaser-editores |
-| C6 | Personagens criados no editor jogáveis (`saiyan_db_v8_8bit` + IndexedDB `saiyan_conjuntos`) | ✅ (lidos de `saiyan_db_v8_8bit` + IndexedDB `saiyan_conjuntos`, só leitura; ORIGINAL e CONJUNTOS, formas e transformações) | phaser-editores |
-| C7 | EDITOR DE ARENAS: 11 abas de peças, céu/chão/hora/clima/música/minion, câmera/ângulo/zoom, grade, desfazer/refazer, seleção (cor, tamanho, giro, espelho, texto...), conjuntos, rascunho, TESTAR | ✅ (editor do próprio jogo antigo, aberto por cima do novo numa moldura) | phaser-editores |
-| C8 | Exportar / importar arena | ✅ (editor do próprio jogo antigo, aberto por cima do novo numa moldura) | phaser-editores |
-| C9 | Arenas criadas jogáveis (`saiyan_arenas`, até 7) no VERSUS, ARENAS e ranking | ✅ (desenhadas pelo `arenas.js` do antigo; VERSUS, ARENAS, mapa e ranking) | phaser-editores |
-| C10 | Conquistas do construtor (criar 1 / 5 personagens) | ✅ (o editor do antigo destrava; o novo lê as medalhas do antigo) | phaser-editores |
+| C1 | EDITOR DE PERSONAGENS: lista, + CRIAR NOVO, EDITAR, EXCLUIR | ✅ (editor nativo do novo em `src/editor/`, sem o jogo antigo) | phaser-editores / novo-editores-nativos |
+| C2 | Aba BÁSICO: nome, alinhamento, aura, golpe especial, cor e tamanho do tiro, efeitos de aura/tiro/especial, escala | ✅ (editor nativo do novo em `src/editor/`, sem o jogo antigo) | phaser-editores / novo-editores-nativos |
+| C3 | Aba ANIMAÇÕES E MOVIMENTOS: sprite sheet (arquivo/URL), recorte, cor de fundo e tolerância, quadros por movimento, FPS, espelhar, prévia | ✅ (editor nativo do novo em `src/editor/`, sem o jogo antigo) | phaser-editores / novo-editores-nativos |
+| C4 | Aba TRANSFORMAÇÃO: formas, conjuntos/grupos, cadeado de quadros | ✅ (editor nativo do novo em `src/editor/`: formas/transformações com nome, aura, altura e quadros; os CONJUNTOS do antigo são lidos, não editados) | phaser-editores / novo-editores-nativos |
+| C5 | Exportar / importar personagem `.saiyan.json` | ✅ (editor nativo do novo em `src/editor/`, sem o jogo antigo) | phaser-editores / novo-editores-nativos |
+| C6 | Personagens criados no editor jogáveis (`saiyan_db_v8_8bit` + IndexedDB `saiyan_conjuntos`) | ✅ (os do novo no IndexedDB `saiyan-novo`; os do antigo lidos de `saiyan_db_v8_8bit` + `saiyan_conjuntos`, só leitura — editar cria cópia, excluir esconde em `saiyan-novo-ocultos`) | phaser-editores / novo-editores-nativos |
+| C7 | EDITOR DE ARENAS: 11 abas de peças, céu/chão/hora/clima/música/minion, câmera/ângulo/zoom, grade, desfazer/refazer, seleção (cor, tamanho, giro, espelho, texto...), conjuntos, rascunho, TESTAR | ✅ (editor nativo do novo em `src/editor/`, sem o jogo antigo) | phaser-editores / novo-editores-nativos |
+| C8 | Exportar / importar arena | ✅ (editor nativo do novo em `src/editor/`, sem o jogo antigo) | phaser-editores / novo-editores-nativos |
+| C9 | Arenas criadas jogáveis (`saiyan_arenas`, até 7) no VERSUS, ARENAS e ranking | ✅ (`saiyan-novo-arenas` + as do antigo `saiyan_arenas` só leitura, até 7; desenhadas pelo código do antigo gerado em `src/legado/cenarios-legado.js`) | phaser-editores / novo-editores-nativos |
+| C10 | Conquistas do construtor (criar 1 / 5 personagens) | ✅ (o editor nativo soma `customCharactersCreated` e destrava builder_first / builder_5) | novo-editores-nativos |
 
 ### D. Plataforma
 

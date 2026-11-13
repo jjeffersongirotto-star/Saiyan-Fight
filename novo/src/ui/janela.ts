@@ -53,7 +53,7 @@ function abrir(titulo: string, msg: string, botoes: Botao[], campo?: { valor: st
   }
   fundo.appendChild(caixa);
   fundo.addEventListener('pointerdown', (e) => e.stopPropagation());
-  document.body.appendChild(fundo);
+  (document.fullscreenElement ?? document.body).appendChild(fundo); // em tela cheia, só o que está dentro dela aparece
   aberta = fundo;
   let foco = 0;
   const marcar = () => els.forEach((e, i) => e.classList.toggle('sf-foco', i === foco));
