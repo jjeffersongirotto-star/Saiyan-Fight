@@ -8,6 +8,7 @@
 //    copiar de outro movimento (normal ou espelhado), fps e a prévia animada;
 //  - TRANSFORMAÇÕES: adicionar, renomear, aura, altura, subir/descer, remover, copiar os quadros da anterior.
 // Salva no IndexedDB do novo (ui/armazemCriados.ts). Um personagem do antigo editado aqui vira uma cópia no novo.
+import { conquistas } from '../logica/conquistas';
 import { T, TF } from '../logica/idioma';
 import { MOVIMENTOS, type Movimento } from '../logica/animacao';
 import {
@@ -172,9 +173,16 @@ export class EditorDePersonagens {
     const p = this.p!;
     const prob = problemasDoPersonagem(p);
     if (prob.length) { avisar('FALTA ALGO', prob.map((x) => T(x)).join('\n')); return; }
+    const primeiraVez = !p.salvo && !p.chaveAntiga;
     p.salvo = p.salvo || Date.now();
     const ok = await salvarPersonagemNoNovo(p);
-    if (!ok) { avisar('EDITOR', 'NÃO DEU PARA SALVAR (MEMÓRIA DO NAVEGADOR CHEIA?).'); return; }
+    if (!ok) { p.salvo = primeiraVez ? 0 : p.salvo; avisar('EDITOR', 'NÃO DEU PARA SALVAR (MEMÓRIA DO NAVEGADOR CHEIA?).'); return; }
+    if (primeiraVez) { // conquistas do construtor (Fábrica de Guerreiros / Elenco Próprio), como no editor antigo
+      const c = conquistas();
+      c.somar('customCharactersCreated', 1);
+      c.destravar('builder_first');
+      c.checarLimiares();
+    }
     p.origem = p.chaveAntiga ? 'antigo' : 'novo';
     this.mudou = false;
     avisar('SALVO!', TF('{0} JÁ PODE SER ESCOLHIDO NAS LUTAS.', p.nome));

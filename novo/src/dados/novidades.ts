@@ -5,6 +5,17 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.6',
+    titulo: 'EDITORES DO JOGO NOVO E TUTORIAL LIVRE',
+    itens: [
+      'EDITOR DE PERSONAGENS refeito no jogo novo (não abre mais o jogo antigo): nome, alinhamento, cor da aura, ataque especial, cor e animação do tiro e do especial, altura; animação de cada movimento por sprite sheet (arquivo, link ou imagens soltas), com grade, apagar o fundo, escolher quadros, mover, clonar, espelhar e copiar de outro movimento; e as transformações, cada uma com nome, aura, altura e quadros.',
+      'EDITOR DE ARENAS refeito no jogo novo: prévia 3D girando, planta para colocar, arrastar e girar as peças (construção, nave, natureza, chão, pincel, planícies, céu, efeitos, enfeites), dados da arena (céu, chão, hora, clima, câmera, música, minion), desfazer/refazer, grade, ver a peça de perto, usar como capa e TESTAR numa luta.',
+      'O que você cria agora fica guardado no jogo novo. Os personagens e arenas feitos no jogo antigo aparecem nos editores e nas lutas; ao editar, uma cópia fica no novo e o antigo não muda. EXPORTAR e IMPORTAR ARQUIVO usam o mesmo arquivo do jogo antigo.',
+      'TUTORIAL: antes de começar, escolha o lutador e a forma; no passo TRANSFORMAR você se transforma nela.',
+      'TUTORIAL LIVRE: uma arena de treino sem passos e sem adversário para testar os botões à vontade (não conta conquistas). Para sair: PAUSA → SAIR PARA MENU.',
+    ],
+  },
+  {
     versao: '0.5',
     titulo: 'TUTORIAL INTERATIVO',
     itens: [
