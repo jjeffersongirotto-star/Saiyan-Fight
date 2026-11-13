@@ -58,5 +58,19 @@ export function juntarEntradas(a: Entrada, b: Entrada): Entrada {
     x: eixo(a.x, b.x), y: eixo(a.y, b.y),
     atacar: a.atacar || b.atacar, carregar: a.carregar || b.carregar,
     especial: a.especial || b.especial, parry: a.parry || b.parry, transformar: a.transformar || b.transformar,
+    ...(a.arrasto || b.arrasto ? { arrasto: { x: (a.arrasto?.x ?? 0) + (b.arrasto?.x ?? 0), y: (a.arrasto?.y ?? 0) + (b.arrasto?.y ?? 0) } } : {}),
+    ...(a.seguir || b.seguir ? { seguir: a.seguir ?? b.seguir } : {}),
+  };
+}
+
+/** Teclas trocadas pelo jogador (OPÇÕES → CONTROLES PC) → mapa da luta. As teclas extras do novo (F para o ataque
+ *  do J1, IJKL/UOHYP para o J2 sem teclado numérico) continuam valendo quando ninguém as usou para outra coisa. */
+export function mapaDasTeclas(t: Record<'up' | 'down' | 'left' | 'right' | 'attack' | 'charge' | 'transform' | 'parry' | 'special', string>, extras: MapaTeclas | null, ocupadas: ReadonlySet<string> = new Set()): MapaTeclas {
+  const usadas = new Set([...Object.values(t), ...ocupadas]);
+  const com = (principal: string, extra: string[] = []) => [principal, ...extra.filter((c) => c !== principal && !usadas.has(c))].filter((c) => c && !c.startsWith('Mouse'));
+  return {
+    cima: com(t.up, extras?.cima), baixo: com(t.down, extras?.baixo), esquerda: com(t.left, extras?.esquerda), direita: com(t.right, extras?.direita),
+    atacar: com(t.attack, extras?.atacar), carregar: com(t.charge, extras?.carregar), especial: com(t.special, extras?.especial),
+    parry: com(t.parry, extras?.parry), transformar: com(t.transform, extras?.transformar),
   };
 }

@@ -4,6 +4,8 @@
 // o Vegeta). Aqui cada fase tem um vilão padrão (MUDANÇA para o Jefferson confirmar; a tabela é fácil de trocar).
 import type { IdTema } from './temas';
 import type { ModeloMinion } from '../logica/minions';
+import { lerConfigFases, salvarConfigFases, type ConfigFases } from '../logica/configFases';
+import { ORDEM_PERSONAGENS, PERSONAGENS } from './personagens';
 
 export interface Fase {
   id: string;
@@ -35,7 +37,32 @@ export const FASES: Fase[] = [
   f('capital_oeste', 'CAPITAL DO OESTE', '#facc15', 'capital', 'saibaman', 'broly', 0, ['#ff9a5b', '#ffe0b0'], ['#9aa0a8', '#6d727a']),
 ];
 
-export const faseDe = (id: string): Fase => FASES.find((x) => x.id === id) ?? FASES[0];
+/** a fase como está na tabela (sem as escolhas do jogador em ARENAS) */
+export const fasePadrao = (id: string): Fase => FASES.find((x) => x.id === id) ?? FASES[0];
+
+// escolhas do jogador em ARENAS (vilão + forma, minion, ordem): lidas uma vez, trocadas pela tela ARENAS
+let cfg: ConfigFases | null = null;
+export function configDasFases(): ConfigFases {
+  cfg ??= lerConfigFases((k) => ORDEM_PERSONAGENS.find((id) => PERSONAGENS[id].chaveAntiga === k) ?? null, (id) => !!PERSONAGENS[id]);
+  return cfg;
+}
+export function mudarConfigDasFases(f: (c: ConfigFases) => void): void {
+  const c = configDasFases();
+  f(c);
+  salvarConfigFases(c);
+}
+export const esquecerConfigDasFases = () => { cfg = null; };
+
+/** a fase com o vilão/forma e o minion escolhidos em ARENAS */
+export function faseDe(id: string): Fase {
+  const base = fasePadrao(id);
+  const c = configDasFases();
+  const v = c.viloes[base.id];
+  const vilao = v && PERSONAGENS[v.personagem] ? { personagem: v.personagem, nivel: Math.min(v.nivel, PERSONAGENS[v.personagem].formas.length - 1) } : base.vilao;
+  return { ...base, vilao, minion: c.minions[base.id] ?? base.minion };
+}
+/** as fases na ordem do mapa (a escolhida em ARENAS) */
+export const fasesEmOrdem = (): Fase[] => ordenarFases(configDasFases().ordem).map((f) => faseDe(f.id));
 
 /** Ordem salva no jogo antigo (ARENAS: saiyan_ordem_fases); ids que faltam entram no fim (ordenarFases). */
 export function ordenarFases(ordemSalva: unknown): Fase[] {

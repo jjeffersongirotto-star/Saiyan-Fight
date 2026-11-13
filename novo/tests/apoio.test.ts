@@ -143,7 +143,19 @@ describe('idiomas', () => {
       for (const n of fs.readdirSync(dir)) {
         const p = path.join(dir, n);
         if (fs.statSync(p).isDirectory()) varrer(p);
-        else if (p.endsWith('.ts')) for (const m of fs.readFileSync(p, 'utf8').matchAll(/\bT\('((?:[^'\\]|\\.)*)'\)/g)) if (!cad.has(m[1])) faltam.push(`${n}: ${m[1]}`);
+        else if (p.endsWith('.ts')) {
+          const src = fs.readFileSync(p, 'utf8');
+          // T('...') e TF('...'), e os rótulos que os botões/painéis/chaves das telas traduzem por dentro
+          const padroes = [
+            /\bTF?\('((?:[^'\\]|\\.)*)'[,)]/g,
+            /\bbotao(?:Nav)?\(this,(?: [\w.]+,)? (?:ret\([^)]*\)|[\w.]+), '((?:[^'\\]|\\.)+)'/g,
+            /\bpainel\(this, [^']*'((?:[^'\\]|\\.)+)'/g,
+            /\bpainel\(this, [^']*'(?:[^'\\]|\\.)+', '((?:[^'\\]|\\.)+)'/g,
+            /\b(?:titulo|avisar|pedirTexto|confirmar)\((?:this, )?'((?:[^'\\]|\\.)+)'/g,
+            /label: '((?:[^'\\]|\\.)+)'/g,
+          ];
+          for (const re of padroes) for (const m of src.matchAll(re)) if (!cad.has(m[1]) && !/^[-+−◀▶✕←↑↓]$/.test(m[1])) faltam.push(`${n}: ${m[1]}`);
+        }
       }
     };
     varrer(path.join(__dirname, '../src'));

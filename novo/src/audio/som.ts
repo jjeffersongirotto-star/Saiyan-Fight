@@ -2,10 +2,17 @@
 // As contas (notas, passos, qual som) ficam em logica/musica.ts. O navegador só deixa ligar o áudio depois de um
 // toque/tecla: o contexto é criado no 1º toque em qualquer lugar (criar na hora da luta engasgava o celular).
 import { TEMAS, type IdTema } from '../dados/temas';
+import { opcoes } from '../logica/opcoes';
 import { duracaoDoPasso, SONS, tocarPasso, type NomeSom, type NotaTocada } from '../logica/musica';
 
 const CHAVE_PREFS = 'saiyan-novo-som';
-interface Prefs { mudo: boolean; volEfeitos: number; volMusica: number }
+export interface Prefs { mudo: boolean; volEfeitos: number; volMusica: number }
+
+/** 1ª vez no novo: começa com o volume/mudo que o jogador já tinha no jogo antigo (só leitura) */
+export function prefsDoAntigo(padrao: Prefs, ler: (k: string) => string | null): Prefs {
+  const n = (v: string | null, p: number) => { const x = v === null ? NaN : Number(v); return Number.isFinite(x) ? Math.max(0, Math.min(1, x)) : p; };
+  return { mudo: ler('saiyan_mute') === 'true' || (ler('saiyan_mute') === null && padrao.mudo), volEfeitos: n(ler('saiyan_sfx_vol'), padrao.volEfeitos), volMusica: n(ler('saiyan_bgm_vol'), padrao.volMusica) };
+}
 
 class Audio {
   private ctx: AudioContext | null = null;
@@ -20,6 +27,7 @@ class Audio {
     try {
       const salvo = JSON.parse(localStorage.getItem(CHAVE_PREFS) ?? 'null');
       if (salvo) this.prefs = { ...this.prefs, ...salvo };
+      else this.prefs = prefsDoAntigo(this.prefs, (k) => localStorage.getItem(k));
     } catch { /* sem localStorage: fica o padrão */ }
     if (typeof document !== 'undefined') {
       const eventos = ['pointerdown', 'touchstart', 'keydown'] as const;
@@ -57,6 +65,13 @@ class Audio {
     this.prefs.mudo = !this.prefs.mudo;
     this.salvar();
     return this.prefs.mudo;
+  }
+
+  /** VOLUME SFX / BGM (de 10 em 10%, como no antigo) */
+  mudarVolume(qual: 'volEfeitos' | 'volMusica', delta: number): number {
+    this.prefs[qual] = Math.round(Math.max(0, Math.min(1, this.prefs[qual] + delta)) * 10) / 10;
+    this.salvar();
+    return this.prefs[qual];
   }
 
   /** efeito sonoro (playSound) */
@@ -165,7 +180,8 @@ class Audio {
 /** um só para o jogo todo (as cenas trocam a trilha) */
 export const som = new Audio();
 
-/** vibração curta no celular (vibrate do jogo antigo); ignora onde não tem */
+/** vibração curta no celular (vibrate do jogo antigo); desligada em OPÇÕES → TOUCH → VIBRAÇÃO; ignora onde não tem */
 export function vibrar(padrao: number | number[]): void {
+  if (!opcoes().vibracao) return;
   try { navigator.vibrate?.(padrao); } catch { /* ignora */ }
 }

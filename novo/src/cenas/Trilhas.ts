@@ -1,17 +1,17 @@
-// TRILHAS SONORAS (Opções > Áudio do jogo antigo): ouvir cada uma das 11 músicas. Só uma toca por vez — tocar
-// outra pausa a anterior; tocar a mesma de novo pausa. Sair da tela para a música.
+// TRILHAS SONORAS (OPÇÕES → ÁUDIO → ♪ TRILHAS SONORAS do jogo antigo): uma linha por fase (2 colunas de 6) com o
+// nome da música, a fase e o botão ▶ TOCAR / ❚❚ PAUSAR. Só uma toca por vez. Sair da tela para a música.
 import Phaser from 'phaser';
-import { ajustarCamera, estiloTexto } from '../ui/resolucao';
-import { TELA_A, TELA_L } from '../logica/constantes';
+import { ajustarCamera } from '../ui/resolucao';
+import { TELA_L } from '../logica/constantes';
 import { T } from '../logica/idioma';
 import { FASE_DO_TEMA, ORDEM_TEMAS, TEMAS, type IdTema } from '../dados/temas';
 import { som } from '../audio/som';
-import { criarBotao } from '../ui/botao';
-import { desenharFundo } from './fundo';
-import { aoApertar } from '../entrada/teclas';
+import { botao, montarTela, painel, ret, texto, type BotaoTela } from '../ui/telas';
+
+export const retLinhaTrilha = (i: number) => ret(86 + Math.floor(i / 6) * 322, 90 + (i % 6) * 38, 306, 35);
 
 export class Trilhas extends Phaser.Scene {
-  private botoes: { id: IdTema; desenhar: (d: boolean) => void; rotulo: Phaser.GameObjects.Text }[] = [];
+  private linhas: { id: IdTema; g: Phaser.GameObjects.Graphics; nome: Phaser.GameObjects.Text; b: BotaoTela; i: number }[] = [];
   private aviso!: Phaser.GameObjects.Text;
 
   constructor() {
@@ -20,21 +20,19 @@ export class Trilhas extends Phaser.Scene {
 
   create(): void {
     ajustarCamera(this);
-    desenharFundo(this);
-    this.add.rectangle(TELA_L / 2, TELA_A / 2, TELA_L, TELA_A, 0x000000, 0.45);
-    this.add.text(TELA_L / 2, 26, T('TRILHAS SONORAS'), estiloTexto({ fontFamily: 'Arial Black, Arial', fontSize: '24px', color: '#ffd23a', stroke: '#8a2b00', strokeThickness: 5 })).setOrigin(0.5);
-    this.aviso = this.add.text(TELA_L / 2, 52, '', estiloTexto({ fontFamily: 'Arial', fontSize: '12px', color: '#dfe7ff' })).setOrigin(0.5);
-    this.botoes = [];
-    ORDEM_TEMAS.forEach((id, i) => {
-      const col = i % 2, lin = Math.floor(i / 2);
-      const x = TELA_L / 2 + (col === 0 ? -195 : 195), y = 86 + lin * 40;
-      const b = criarBotao(this, x, y, '', () => this.alternar(id), 380);
-      b.rotulo.setFontSize(13);
-      this.botoes.push({ id, desenhar: b.desenhar, rotulo: b.rotulo });
+    const nav = montarTela(this, () => this.scene.start('OpcoesAudio'));
+    painel(this, 70, 46, 660, 280, 'TRILHAS SONORAS', 'Toque para ouvir a música de cada fase');
+    this.linhas = ORDEM_TEMAS.map((id, i) => {
+      const r = retLinhaTrilha(i);
+      const g = this.add.graphics();
+      const nome = texto(this, r.x + 10, r.y + 15, '', 12, '#e2e8f0', { fontFamily: "'Segoe UI', sans-serif" }).setOrigin(0, 0.75);
+      texto(this, r.x + 10, r.y + 29, `${T('Fase')} ${i + 1}: ${T(FASE_DO_TEMA[id])}`, 10, '#94a3b8', { fontFamily: "'Segoe UI', sans-serif", fontStyle: 'normal' }).setOrigin(0, 0.75);
+      const rb = ret(r.x + r.w - 92, r.y + 4, 84, 27);
+      const b = botao(this, rb, '', () => this.alternar(id));
+      nav.add({ ...rb, acionar: b.acionar });
+      return { id, g, nome, b, i };
     });
-    // a última linha tem uma trilha só: o VOLTAR fica ao lado dela
-    criarBotao(this, TELA_L / 2 + 195, 86 + 5 * 40, T('VOLTAR'), () => this.scene.start('Menu'), 380);
-    aoApertar(this, (c) => { if (c === 'Escape') this.scene.start('Menu'); });
+    this.aviso = texto(this, TELA_L / 2, 320, '', 12, '#fca5a5', { fontFamily: "'Segoe UI', sans-serif", fontStyle: 'normal' }).setOrigin(0.5, 0.75);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => som.musica(null));
     this.atualizar();
   }
@@ -46,11 +44,13 @@ export class Trilhas extends Phaser.Scene {
   }
 
   private atualizar(): void {
-    this.aviso.setText(T(som.mudo ? 'SOM DESLIGADO NO MENU' : 'TOQUE NUMA TRILHA PARA OUVIR (DE NOVO PARA PAUSAR)'));
-    for (const b of this.botoes) {
-      const tocando = som.musicaAtual === b.id;
-      b.rotulo.setText(`${tocando ? '❚❚' : '▶'}  ${TEMAS[b.id].nome} · ${FASE_DO_TEMA[b.id]}`);
-      b.desenhar(tocando);
+    this.aviso.setText(som.mudo ? T('O áudio está mutado: ative em VOLUME E ÁUDIO para ouvir') : som.prefs.volMusica <= 0 ? T('O volume BGM está em 0%: aumente para ouvir') : '');
+    for (const l of this.linhas) {
+      const tocando = som.musicaAtual === l.id, r = retLinhaTrilha(l.i);
+      l.g.clear().fillStyle(tocando ? 0xfde68a : 0x0f172a, tocando ? 0.18 : 0.55).fillRect(r.x, r.y, r.w, r.h).lineStyle(tocando ? 2 : 1, tocando ? 0xfde68a : 0x94a3b8, tocando ? 1 : 0.4).strokeRect(r.x, r.y, r.w, r.h);
+      l.nome.setText((tocando ? '♪ ' : '') + TEMAS[l.id].nome).setColor(tocando ? '#fde68a' : '#e2e8f0');
+      l.b.texto(T(tocando ? '❚❚ PAUSAR' : '▶ TOCAR'));
+      l.b.corTexto(tocando ? '#fca5a5' : '#86efac');
     }
   }
 }
