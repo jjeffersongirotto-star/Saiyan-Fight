@@ -146,7 +146,8 @@ class EfeitosDoLutador {
 
     // escudo da Zenkai (escudo_azul, um pouco maior que a aura)
     if (this.escudoLigado && l.invulneravel <= 0) this.escudoLigado = false;
-    if (visivel && this.escudoLigado) {
+    // a cápsula do modo história usa a mesma bolha (até segurar um golpe)
+    if (visivel && (this.escudoLigado || l.escudo)) {
       const raio = Math.max(caixa.rx, caixa.ry) + 8, rEsc = raio / ESCUDO_FRACAO_VISIVEL;
       const e = EFEITOS.escudo_azul;
       this.escudo.setFrame(quadro('escudo_azul', quadroDoEfeito('escudo_azul', relogio)));

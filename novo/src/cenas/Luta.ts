@@ -11,7 +11,7 @@ import { entradaDaIA } from '../logica/ia';
 import { T } from '../logica/idioma';
 import { criarLuta, escalaDaAltura, alturaDoNivel, maoDe, passoLuta, podeTransformar } from '../logica/luta';
 import { interpolar, RelogioFixo } from '../logica/relogio';
-import type { Entrada, EstadoLuta, Evento, IdJogador, Lutador } from '../logica/tipos';
+import { ENTRADA_VAZIA, type Entrada, type EstadoLuta, type Evento, type IdJogador, type Lutador } from '../logica/tipos';
 import { formaDoNivel, PERSONAGENS } from '../dados/personagens';
 import { Teclado } from '../entrada/teclado';
 import { mostrarBarraDeCarregamento } from '../ui/barra';
@@ -26,6 +26,10 @@ import { som, vibrar } from '../audio/som';
 import { CHANCE_SOM_CARREGANDO, TEMA_DA_LUTA } from '../logica/musica';
 import { EfeitosDaLuta, pedirEfeitos } from '../ui/efeitos';
 import { criarBotao } from '../ui/botao';
+import { faseDe, type Fase } from '../dados/fases';
+import { criarHistoria, passoHistoria } from '../logica/historia';
+import { DesenhoHistoria, NOME_DO_ITEM, pedirMinion } from '../ui/historia';
+import type { DadosDoFimHistoria } from './FimHistoria';
 
 export class Luta extends Phaser.Scene {
   private dados!: DadosDaLuta;
@@ -47,6 +51,9 @@ export class Luta extends Phaser.Scene {
   private textoChoqueAtual = '';
   /** faíscas do impacto: um emissor só (antes eram 12–20 retângulos + tweens novos a cada acerto) */
   private faiscas!: Phaser.GameObjects.Particles.ParticleEmitter;
+  /** modo história: a fase e o desenho dos minions/itens (null nos outros modos) */
+  private fase: Fase | null = null;
+  private historia: DesenhoHistoria | null = null;
 
   constructor() {
     super('Luta');
@@ -54,20 +61,25 @@ export class Luta extends Phaser.Scene {
 
   init(d: DadosDaLuta): void {
     this.dados = d;
+    this.fase = d.modo === 'historia' ? faseDe(d.fase ?? '') : null;
   }
 
   preload(): void {
     // começo da luta: forma normal + a 1ª transformação de cada um (o resto vem durante a luta)
-    const chaves = formasNecessarias([{ personagem: this.dados.p1, nivel: 0 }, { personagem: this.dados.p2, nivel: 0 }]);
+    const nivelP2 = this.fase?.vilao.nivel ?? 0; // na história o vilão pode começar transformado (Freeza na nave)
+    const chaves = formasNecessarias([{ personagem: this.dados.p1, nivel: 0 }, { personagem: this.dados.p2, nivel: nivelP2 }]);
     liberarFormas(this, new Set(chaves));
-    const faltam = pedirFormas(this, chaves) + (pedirEfeitos(this) ? 1 : 0);
+    const faltam = pedirFormas(this, chaves) + (pedirEfeitos(this) ? 1 : 0) + (this.fase && pedirMinion(this, this.fase.minion) ? 1 : 0);
     if (faltam > 0) mostrarBarraDeCarregamento(this);
   }
 
   create(): void {
     ajustarCamera(this);
-    desenharFundo(this);
-    this.estado = criarLuta(fichaDoPersonagem(this.dados.p1), fichaDoPersonagem(this.dados.p2), Date.now() | 0);
+    desenharFundo(this, this.fase ?? undefined);
+    const semente = Date.now() | 0;
+    this.estado = this.fase
+      ? criarHistoria(fichaDoPersonagem(this.dados.p1), fichaDoPersonagem(this.dados.p2), this.fase, this.dados.modoFase ?? 'normal', semente)
+      : criarLuta(fichaDoPersonagem(this.dados.p1), fichaDoPersonagem(this.dados.p2), semente);
     for (const k of formasDaLuta(this.estado)) criarAnimacoes(this, k);
     this.relogio.zerar();
     this.carregandoNoFundo = false;
@@ -78,6 +90,7 @@ export class Luta extends Phaser.Scene {
     this.grafTela = this.add.graphics().setDepth(840);
     this.sprites = { p1: this.criarSprite('p1'), p2: this.criarSprite('p2') };
     this.hud = new Hud(this, this.dados.modo === 'cpu' ? ' (CPU)' : '');
+    this.historia = this.fase ? new DesenhoHistoria(this, this.fase.minion) : null;
     this.aviso = this.add
       .text(C.TELA_L / 2, 130, '', estiloTexto({ fontFamily: 'Arial Black, Arial', fontSize: '34px', color: '#ffd23a', stroke: '#8a2b00', strokeThickness: 7 }))
       .setOrigin(0.5)
@@ -86,8 +99,9 @@ export class Luta extends Phaser.Scene {
       .text(C.TELA_L / 2, 78, '', estiloTexto({ fontFamily: 'Arial Black, Arial', fontSize: '18px', color: '#ffffff', stroke: '#000000', strokeThickness: 4 }))
       .setOrigin(0.5)
       .setDepth(850);
-    this.mostrarAviso(`${T('RODADA')} 1 — ${T('LUTEM!')}`, 1200);
-    som.musica(TEMA_DA_LUTA);
+    if (this.fase) this.mostrarAviso(`${T(this.fase.nome)}\n${T('ONDA')} 1`, 1600, 26);
+    else this.mostrarAviso(`${T('RODADA')} 1 — ${T('LUTEM!')}`, 1200);
+    som.musica(this.fase?.musica ?? TEMA_DA_LUTA);
 
     this.toque = new ControlesToque(this);
     this.teclado.ligar();
@@ -105,6 +119,7 @@ export class Luta extends Phaser.Scene {
       this.teclado.desligar();
       this.toque.destruir();
       this.efeitos.destruir();
+      this.historia?.destruir();
       this.load.off(Phaser.Loader.Events.FILE_COMPLETE);
     });
   }
@@ -119,7 +134,7 @@ export class Luta extends Phaser.Scene {
   private lerEntradas(): Record<IdJogador, Entrada> {
     const p1 = juntarEntradas(this.teclado.ler('p1'), this.toque.ler(podeTransformar(this.estado.p1)));
     const tecladoP2 = this.teclado.ler('p2');
-    const p2 = this.dados.modo === 'cpu' ? entradaDaIA(this.estado, 'p2') : tecladoP2;
+    const p2 = this.dados.modo === 'cpu' ? entradaDaIA(this.estado, 'p2') : this.dados.modo === 'historia' ? ENTRADA_VAZIA : tecladoP2;
     return { p1, p2 };
   }
 
@@ -176,7 +191,8 @@ export class Luta extends Phaser.Scene {
     if (this.pausado) return;
     const passos = this.relogio.avancar(dt);
     for (let i = 0; i < passos; i++) {
-      const eventos = passoLuta(this.estado, this.lerEntradas());
+      const entradas = this.lerEntradas();
+      const eventos = this.estado.historia ? passoHistoria(this.estado, entradas.p1) : passoLuta(this.estado, entradas);
       this.efeitos.passo();
       for (const ev of eventos) this.aoEvento(ev);
       // carregando ki: o "zumbido" do jogo antigo (charge em ~20% dos quadros)
@@ -240,6 +256,7 @@ export class Luta extends Phaser.Scene {
         break;
       case 'especial':
         this.cameras.main.shake(500, 0.006);
+        if (this.estado.historia && ev.dono === 'p1' && this.estado.p1.bastao > 0) this.mostrarAviso(T('SUPER ATAQUE!'), 800, 24);
         break;
       case 'choque':
         this.piscarTela(0xffffff, 18);
@@ -251,6 +268,10 @@ export class Luta extends Phaser.Scene {
         break;
       case 'fimRodada': {
         const v = ev.vencedor;
+        if (this.estado.historia) {
+          this.mostrarAviso(v === 'p1' ? T('FASE COMPLETA!') : T('FIM DE JOGO'), 2200);
+          break;
+        }
         this.mostrarAviso(v ? `${PERSONAGENS[this.estado[v].personagem].nome} ${T('VENCEU')}!` : T('EMPATE'), 2200);
         break;
       }
@@ -259,11 +280,52 @@ export class Luta extends Phaser.Scene {
         break;
       case 'fimPartida': {
         const venc = this.estado[ev.vencedor];
+        const h = this.estado.historia;
+        if (h) {
+          const heroi = this.estado.p1;
+          this.time.delayedCall(200, () =>
+            this.scene.start('FimHistoria', {
+              luta: this.dados, resultado: h.resultado ?? 'derrota', pontos: h.pontos, onda: h.onda, passo: h.passo, stats: h.stats,
+              segundos: Math.round(this.estado.quadro / 60), atlas: this.sprites.p1.texture.key, altura: alturaDoNivel(heroi, heroi.nivel),
+            } satisfies DadosDoFimHistoria),
+          );
+          break;
+        }
         this.time.delayedCall(200, () =>
           this.scene.start('Vitoria', {
             luta: this.dados, vencedor: ev.vencedor, placar: this.estado.placar, atlas: this.sprites[ev.vencedor].texture.key, altura: alturaDoNivel(venc, venc.nivel),
           } satisfies DadosDaVitoria),
         );
+        break;
+      }
+      // ---- modo história ----
+      case 'minionExplodiu':
+        this.historia?.explodir(ev.x, ev.y);
+        this.cameras.main.shake(ev.machucou ? 220 : 120, ev.machucou ? 0.01 : 0.005);
+        break;
+      case 'minionAcertado':
+        this.particulas(ev.x, ev.y, 0x9dff6a, ev.morreu ? 14 : 6);
+        if (ev.morreu) this.historia?.explodir(ev.x, ev.y);
+        break;
+      case 'minionAgarrou':
+        this.mostrarAviso(T('AGARRADO! CARREGUE OU DÊ PARRY!'), 900, 18);
+        break;
+      case 'item':
+        this.particulas(ev.x, ev.y, 0xfff3b0, 12);
+        this.mostrarAviso(T(NOME_DO_ITEM[ev.item]), 800, 20);
+        break;
+      case 'escudo':
+        this.faisca(this.estado[ev.dono].x, this.estado[ev.dono].y, 0x7fe9ff, 4);
+        break;
+      case 'vilaoCaiu':
+        this.piscarTela(0xffffff, 16);
+        this.cameras.main.shake(350, 0.012);
+        this.mostrarAviso(`+${ev.pontos}`, 700, 30);
+        break;
+      case 'novaOnda': {
+        const v = this.estado.p2;
+        const cura = ev.curou ? ` (+1 ${T('VIDA')})` : '';
+        this.mostrarAviso(`${T('ONDA')} ${ev.passo + 1}\n${PERSONAGENS[v.personagem].nome} ${T('VOLTOU MAIS FORTE!')}${cura}`, 1500, 22);
         break;
       }
       default:
@@ -288,6 +350,13 @@ export class Luta extends Phaser.Scene {
       case 'kiCheio': som.tocar('max_ki'); break;
       case 'zenkai': som.tocar('powerup'); vibrar([60, 30, 60, 30, 160]); break;
       case 'novaRodada': som.tocar('powerup'); break;
+      case 'item': som.tocar('powerup'); vibrar(40); break;
+      case 'escudo': som.tocar('reflect'); break;
+      case 'minionAgarrou': vibrar([40, 30, 40]); break;
+      case 'minionExplodiu': som.tocar('hit'); if (ev.machucou) vibrar(140); break;
+      case 'minionAcertado': if (ev.morreu) som.tocar('hit'); break;
+      case 'vilaoCaiu': som.tocar('super'); break;
+      case 'novaOnda': som.tocar('powerup'); break;
       default: break;
     }
   }
@@ -361,6 +430,7 @@ export class Luta extends Phaser.Scene {
       this.flash.quadros--;
     }
 
+    this.historia?.desenhar(e, this.dtSeg);
     this.hud.desenhar(e);
     this.toque.desenhar(e.p1.ki >= C.KI_MAX, podeTransformar(e.p1));
   }

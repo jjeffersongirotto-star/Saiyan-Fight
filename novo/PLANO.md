@@ -65,7 +65,7 @@ do jogo dentro do app, só quando o jogador aperta). O Phaser 4 já saiu (4.2), 
 |---|---|---|---|
 | 1 | **Base + fatia jogável** (esta PR) | Vite/TS/Phaser/Vitest, Boot/Preload com barra, menu, VERSUS Goku x Vegeta (andar/voar, tiro, carregar, especial, parry, vida, rodadas, vitória), teclado + toque, CPU simples, atlas WebP, CI | feito |
 | 2 | **Luta completa** | todos os 16 personagens e 47 formas em atlas, transformação, auras e efeitos de `efeitos/`, choque de raios, Zenkai, alturas, sons | feito (ver abaixo) |
-| 3 | **Modo história** | ondas, Saibamans/Cell Jr. (com a regra nova do arremesso ao transformar), itens (cápsula = escudo), vilão com IA e padrões, 3 modos por fase, mapa de fases | 2 semanas |
+| 3 | **Modo história** | ondas, Saibamans/Cell Jr. (com a regra nova do arremesso ao transformar), itens (cápsula = escudo), vilão com IA e padrões, 3 modos por fase, mapa de fases | 1ª versão jogável (ver abaixo) |
 | 4 | **Arenas** | as 11 arenas portadas (primeiro o mesmo desenho em canvas, depois camadas com cache) | 1–2 semanas |
 | 5 | **Menus e progresso** | opções, idiomas (todas as linhas), conquistas, ranking, tutorial, pausa, teste de controles, editor de HUD, controle (gamepad) | 1–2 semanas |
 | 6 | **Editores** | editor de personagens (sprite sheet) e editor de arenas, importar/exportar | 2–3 semanas |
@@ -153,6 +153,45 @@ nova, `false` = como no antigo), com testes dos dois jeitos.
 - **Desempenho**: as faíscas de impacto são um emissor de partículas só (antes 12–20 retângulos + tweens novos a
   cada acerto); o texto do choque só é redesenhado quando muda. Medido no navegador: 60 fps no celular emulado.
 - **Simulação CPU x CPU** (`tests/simulacao.test.ts`): 16 partidas inteiras, todas terminam, ninguém congela.
+
+## Fase 3 — modo história (branch `phaser-historia`, 1ª versão)
+
+Lógica pura em `src/logica/historia.ts` (+ `ondas.ts`, `itens.ts`, `minions.ts`, `progresso.ts`), reaproveitando
+`passoLuta` (o vilão é o `p2`, comandado por `entradaDoVilao`). Telas: Menu → **MODO HISTÓRIA** → `Mapa` (11 fases,
+cadeados, NORMAL / DIFÍCIL / SEM LIMITE) → `Selecao` (só o herói) → `Luta` → `FimHistoria`.
+
+Igual ao antigo (`gameplay.js` / `game-logic-core.js`):
+- 5 lutas por modo; NORMAL = ondas 1-5, DIFÍCIL = 2-4-6-8-10, SEM LIMITE = 1, 2, 3… sem fim. O vilão derrotado sai
+  voando e volta mais forte (vida 4 + onda − 1, tiros mais rápidos, padrões novos a partir da onda 2, transforma da
+  onda 3 em diante). Herói com 3 de vida, sem Zenkai. Pontos: +5 vilão no tiro, +3 no especial, +1 minion.
+- Saibaman / Cell Jr. (na fase do Cell): brotam do chão, voam, dão o bote, agarram 40 quadros e explodem (a explosão
+  ignora escudo e piscada). CARREGAR solta fraco, PARRY arremessa até o vilão (tira 1 dele). Especial destrói os
+  agarrados; transformar arremessa (regra nova da fase 2).
+- Itens caindo na metade do herói: feijão (+1 vida), cápsula (escudo que segura um golpe), nuvem (velocidade x1,4),
+  bastão (+1 no tiro e especial x2). Nuvem/bastão 8 s por item, até 20 s.
+- Herói protegido assim que o vilão cai (mesmo no mesmo quadro: tiro do vilão que chega depois não conta).
+- Progresso: lê `saiyan_stage_progress` e `saiyan_ordem_fases` do antigo, mas **grava só em
+  `saiyan-novo-progresso`** (e recordes em `saiyan-novo-recordes`): o jogo antigo instalado nunca é estragado.
+
+### Mudanças de propósito — Jefferson confirmar (todas em `REGRAS_HISTORIA`, `constantes.ts`)
+
+| Regra | Antigo | Novo (padrão) | Chave |
+|---|---|---|---|
+| Vilão usa parry nos seus tiros | não | sim, chance 8–40% pela agressividade | `vilaoUsaParry` |
+| Vilão solta especial (e responde ao seu com choque) | não | sim, da onda 3 em diante, dano 2 | `vilaoUsaEspecial` |
+| Agressividade do vilão | calculada e nunca usada | avança até 140 px, mais parry/especial | `agressividadeReal` |
+| Cura entre ondas (+1 vida) | não | **não** (candidata, desligada) | `curaEntreOndas` |
+| Vilão pisca invulnerável depois de apanhar | não | não | `vilaoInvulneravel` |
+
+`REGRAS_HISTORIA_ANTIGAS` liga tudo como no antigo. Outras escolhas a confirmar:
+- **Vilão de cada fase** (no antigo era escolhido na tela ARENAS, padrão Vegeta): Raditz, Piccolo, Vegeta, Freeza
+  (1ª forma), Freeza 3ª forma na nave, Freeza forma final em Namek explodindo, Androide 17, Cell (com Cell Jr.), Buu,
+  Androide 18, Broly — tabela em `src/dados/fases.ts`.
+- Céu/chão pintados com as cores de cada fase (as arenas de verdade entram na fase 4) e a música de cada fase.
+- Tela de fim com números (pontos, onda, tempo, ataques, rebatidas, golpes, minions, itens) e recorde por fase.
+- Minion não afunda mais no chão balançando (o antigo podia).
+
+Falta (próximas PRs): arenas desenhadas, diálogos/cutscenes, tutorial, conquistas, ranking, escolher o vilão.
 
 ## Plano das imagens (medido nesta PR)
 

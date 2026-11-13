@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import * as C from '../src/logica/constantes';
 import { fichaDoPersonagem } from '../src/logica/ficha';
 import { bonusDoComboDeParry, centroDoParry, circuloDoParry, criarLuta, danoDoChoque, escalaDaAltura, limitesX, passoLuta, registrarRodada, tiroAcerta, velocidadeDe } from '../src/logica/luta';
-import { ARREMESSO_ATORDOADO, ARREMESSO_VX, ARREMESSO_VY, podeSerAgarrado } from '../src/logica/minions';
+import { ARREMESSO_ATORDOADO, ARREMESSO_VX, ARREMESSO_VY, criarMinion, podeSerAgarrado } from '../src/logica/minions';
+const agarrado = (x: number, y: number, agarrando: 'p1' | 'p2' | null) => ({ ...criarMinion(0, x, y, 2), x, y, agarrando, fase: agarrando ? ('agarrar' as const) : ('voar' as const) });
 import { poseDoLutador } from '../src/logica/animacao';
 import { ENTRADA_VAZIA, type Entrada, type EstadoLuta, type Evento, type IdJogador } from '../src/logica/tipos';
 
@@ -429,9 +430,9 @@ describe('regra nova: invulnerável na pose de transformar', () => {
     const e = luta();
     e.p1.ki = C.KI_MAX;
     e.minions.push(
-      { x: e.p1.x + 15, y: e.p1.y, vx: 0, vy: 0, agarrando: 'p1', atordoado: 0 },
-      { x: e.p1.x - 15, y: e.p1.y, vx: 0, vy: 0, agarrando: 'p1', atordoado: 0 },
-      { x: e.p1.x + 200, y: e.p1.y, vx: 0, vy: 0, agarrando: null, atordoado: 0 },
+      agarrado(e.p1.x + 15, e.p1.y, 'p1'),
+      agarrado(e.p1.x - 15, e.p1.y, 'p1'),
+      agarrado(e.p1.x + 200, e.p1.y, null),
     );
     const ev = rodar(e, 1, { transformar: true });
     expect(ev.find((x) => x.tipo === 'transformou')).toMatchObject({ arremessados: 2 });
@@ -596,9 +597,9 @@ describe('regras do herói da história valem para os dois (VERSUS)', () => {
     const l = e[id];
     l.ki = C.KI_MAX;
     e.minions.push(
-      { x: l.x, y: l.y, vx: 0, vy: 0, agarrando: id, atordoado: 0 },
-      { x: l.x, y: l.y, vx: 0, vy: 0, agarrando: outro(id), atordoado: 0 },
-      { x: 400, y: 100, vx: 0, vy: 0, agarrando: null, atordoado: 0 },
+      agarrado(l.x, l.y, id),
+      agarrado(l.x, l.y, outro(id)),
+      agarrado(400, 100, null),
     );
     const ev = rodarSo(e, id, 1, { especial: true });
     expect(ev.find((x) => x.tipo === 'especial')).toMatchObject({ agarradosDestruidos: 1 });

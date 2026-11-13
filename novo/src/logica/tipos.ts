@@ -1,5 +1,6 @@
 import type { MinionAgarravel } from './minions';
 import type { Regras } from './constantes';
+import type { DadosHistoria } from './historia';
 export type IdJogador = 'p1' | 'p2';
 
 /** O que cada jogador está apertando NESTE passo. atacar/carregar = segurando; especial/parry/transformar = acabou de apertar. */
@@ -53,6 +54,11 @@ export interface Lutador {
   invulneravel: number;
   /** quadros da pose de "apanhou" (só o desenho: apanhar não trava, como o herói do jogo antigo) */
   poseAtingido: number;
+  /** cápsula: segura o próximo golpe (só no modo história) */
+  escudo: boolean;
+  /** quadros restantes da nuvem voadora (velocidade x1,4) e do bastão mágico (+1 no tiro, especial x2) */
+  nuvem: number;
+  bastao: number;
   /** nível da aura 0..1 (kiAuraLevel): o desenho e o círculo do parry crescem com ele */
   nivelAura: number;
   /** quadros do brilho do parry (parryHighlightTimer): enquanto dura, segurar ATAQUE não atira */
@@ -70,6 +76,8 @@ export interface Lutador {
   pedidoTransformar: number;
 }
 
+export type TipoItem = 'senzu' | 'capsula' | 'nuvem' | 'bastao';
+
 export interface Tiro {
   id: number;
   dono: IdJogador;
@@ -82,6 +90,10 @@ export interface Tiro {
   refletido: boolean;
   /** quem atirou (o desenho do tiro continua o dele depois do parry, como no jogo antigo) */
   atirador: IdJogador;
+  /** tiro do vilão que persegue o herói (padrão HOMING do modo história) */
+  teleguiado?: boolean;
+  /** bola de poder do vilão do modo história (desenho 50% maior) */
+  doVilao?: boolean;
 }
 
 export interface Raio {
@@ -116,7 +128,20 @@ export type Evento =
   | { tipo: 'fimChoque'; dano: Record<IdJogador, number> }
   | { tipo: 'fimRodada'; vencedor: IdJogador | null }
   | { tipo: 'novaRodada'; rodada: number }
-  | { tipo: 'fimPartida'; vencedor: IdJogador };
+  | { tipo: 'fimPartida'; vencedor: IdJogador }
+  // modo história
+  | { tipo: 'escudo'; dono: IdJogador }
+  | { tipo: 'item'; item: TipoItem; x: number; y: number }
+  | { tipo: 'itemNasceu'; item: TipoItem }
+  | { tipo: 'minionNasceu'; x: number }
+  | { tipo: 'minionAcertado'; x: number; y: number; morreu: boolean }
+  | { tipo: 'minionAgarrou'; dono: IdJogador }
+  | { tipo: 'minionArremessado'; forte: boolean }
+  | { tipo: 'minionExplodiu'; x: number; y: number; machucou: boolean }
+  | { tipo: 'vilaoCaiu'; onda: number; pontos: number }
+  | { tipo: 'novaOnda'; onda: number; passo: number; curou: boolean }
+  | { tipo: 'faseVencida' }
+  | { tipo: 'ataqueVilao'; padrao: string };
 
 export interface EstadoLuta {
   /** as diferenças em relação ao jogo antigo que estão ligadas nesta luta (constantes.ts) */
@@ -135,6 +160,8 @@ export interface EstadoLuta {
   choque: Choque | null;
   /** minions na tela (Fase 3: modo história; no VERSUS fica vazia) */
   minions: MinionAgarravel[];
+  /** modo história (null no VERSUS / contra a CPU) */
+  historia: DadosHistoria | null;
   proximoId: number;
   semente: number;
 }

@@ -43,6 +43,8 @@ export class Hud {
         const p = l.poder / PODER_TRANSFORMACAO_QUADROS;
         g.fillStyle(0xff8a00, 0.9).fillRect(esq ? kx : kx + kl * (1 - p), y + 25, kl * p, 2);
       }
+      // modo história: sem rodadas nem Zenkai (a onda e os pontos ficam no meio, em ui/historia.ts)
+      if (e.historia) continue;
       // rodadas vencidas + bolinha da Zenkai (some quando foi usada)
       for (let r = 0; r < RODADAS_PARA_VENCER; r++) {
         const cx = esq ? x0 + larg - 8 - r * 16 : x0 + 8 + r * 16;
