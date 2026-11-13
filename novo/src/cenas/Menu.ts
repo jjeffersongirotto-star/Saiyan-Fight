@@ -6,6 +6,7 @@ import { criarBotao } from '../ui/botao';
 import { desenharFundo } from './fundo';
 import { aoApertar } from '../entrada/teclas';
 import { som } from '../audio/som';
+import { abrirJogoAntigo, avisarQueOJogoAbriu, infoVersao } from '../app/plataforma';
 
 import type { ModoFase } from '../logica/ondas';
 
@@ -32,7 +33,17 @@ export class Menu extends Phaser.Scene {
     this.add
       .text(TELA_L / 2, 62, 'SAIYAN FIGHT', estiloTexto({ fontFamily: 'Arial Black, Arial', fontSize: '46px', color: '#ffd23a', stroke: '#8a2b00', strokeThickness: 8 }))
       .setOrigin(0.5);
-    this.add.text(TELA_L / 2, 104, `${T('PRÉVIA PHASER')} v${__VERSAO__}`, estiloTexto({ fontFamily: 'Arial', fontSize: '14px', color: '#ffffff' })).setOrigin(0.5);
+    this.add.text(TELA_L / 2, 104, `v${infoVersao().jogo}`, estiloTexto({ fontFamily: 'Arial', fontSize: '14px', color: '#ffffff' })).setOrigin(0.5);
+    // cantos de cima: ATUALIZAÇÕES (versão + setinha ATUALIZAR do app) e o jogo antigo, que continua no site
+    const pequeno = (x: number, texto: string, acao: () => void) => {
+      const b = criarBotao(this, x, 24, texto, acao, 150);
+      b.rotulo.setFontSize(12);
+      return b;
+    };
+    pequeno(86, T('JOGO ANTIGO'), () => abrirJogoAntigo());
+    pequeno(TELA_L - 86, T('⟳ ATUALIZAÇÕES'), () => this.scene.start('Atualizacoes'));
+    // app Android: o jogo abriu de verdade, avisa o plugin de atualização (senão ele volta ao pacote anterior)
+    avisarQueOJogoAbriu();
 
     const lutar = (modo: DadosDaLuta['modo']) => (modo === 'historia' ? this.scene.start('Mapa') : this.scene.start('Selecao', { modo }));
     criarBotao(this, TELA_L / 2, 144, T('MODO HISTÓRIA'), () => lutar('historia'));
@@ -59,6 +70,7 @@ export class Menu extends Phaser.Scene {
       if (foi) return;
       const modo = ({ Digit1: 'cpu', Numpad1: 'cpu', Enter: 'cpu', NumpadEnter: 'cpu', Digit2: 'versus', Numpad2: 'versus', KeyH: 'historia', Digit3: 'historia', Numpad3: 'historia' } as const)[c];
       if (modo) { foi = true; lutar(modo); }
+      else if (c === 'KeyU') { foi = true; this.scene.start('Atualizacoes'); }
     });
   }
 

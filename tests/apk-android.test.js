@@ -127,18 +127,31 @@ const rotulo = () => run("document.getElementById('btn-atualizar-rotulo') && doc
     check("Android no navegador: BAIXAR APP abre o APK de releases/latest",
         context.__navegou[context.__navegou.length - 1] === "https://github.com/jjeffersongirotto-star/Saiyan-Fight/releases/latest/download/Saiyan-Fight.apk");
 
-    // cópia para www/: arquivos do jogo + versao-apk.js antes do atualizacao.js
-    execFileSync(process.execPath, [path.join(RAIZ, "scripts/android/copiar-web.js")], { env: Object.assign({}, process.env, { SAIYAN_APK_PATCH: "7" }), stdio: "ignore" });
+    // cópia para www/ (v0.121): o JOGO NOVO construído (novo/dist) + versao-apk.js antes do script do jogo.
+    // Aqui um dist de mentira (o build de verdade é conferido no CI do jogo novo); SAIYAN_DIST aponta para ele.
+    const distFalso = fs.mkdtempSync(path.join(require("os").tmpdir(), "dist-novo-"));
+    fs.mkdirSync(path.join(distFalso, "assets"));
+    fs.writeFileSync(path.join(distFalso, "index.html"), '<!doctype html><html><head><script type="module" crossorigin src="./assets/index-x.js"></script></head><body><div id="jogo"></div></body></html>');
+    fs.writeFileSync(path.join(distFalso, "assets/index-x.js"), "console.log('jogo novo')");
+    execFileSync(process.execPath, [path.join(RAIZ, "scripts/android/copiar-web.js")], { env: Object.assign({}, process.env, { SAIYAN_APK_PATCH: "7", SAIYAN_DIST: distFalso }), stdio: "ignore" });
     const www = path.join(RAIZ, "www");
-    const faltando = ["index.html", "tv.html", "manifest.webmanifest", "menu.js", "atualizacao.js", "icons/icon-512.png", "fases/indice.json", "conjuntos/retratos.json"]
-        .filter(f => !fs.existsSync(path.join(www, f)));
-    check("www/ tem os arquivos do jogo", faltando.length === 0, faltando.join(", "));
-    check("www/ não leva testes nem o projeto Android", !fs.existsSync(path.join(www, "tests")) && !fs.existsSync(path.join(www, "android")));
+    const faltando = ["index.html", "assets/index-x.js", "versao-apk.js", "versao-apk.json"].filter(f => !fs.existsSync(path.join(www, f)));
+    check("www/ tem o jogo novo construído", faltando.length === 0, faltando.join(", "));
+    check("www/ não leva o jogo antigo, testes nem o projeto Android", !fs.existsSync(path.join(www, "menu.js")) && !fs.existsSync(path.join(www, "tests")) && !fs.existsSync(path.join(www, "android")));
     const html = fs.readFileSync(path.join(www, "index.html"), "utf8");
-    check("index.html do APK carrega versao-apk.js logo antes do atualizacao.js", /<script src="versao-apk\.js"><\/script>\s*<script src="atualizacao\.js"><\/script>/.test(html));
+    check("index.html do APK carrega versao-apk.js antes do script do jogo", /<script src="versao-apk\.js"><\/script>\s*<script type="module"/.test(html));
+    // site: jogo novo na raiz e o antigo inteiro em antigo/
+    const site = fs.mkdtempSync(path.join(require("os").tmpdir(), "site-"));
+    execFileSync(process.execPath, [path.join(RAIZ, "scripts/montar-site.js"), site], { env: Object.assign({}, process.env, { SAIYAN_DIST: distFalso }), stdio: "ignore" });
+    const faltaSite = ["index.html", "assets/index-x.js", "antigo/index.html", "antigo/menu.js", "antigo/atualizacao.js", "antigo/icons/icon-512.png", "antigo/fases/indice.json", "antigo/conjuntos/retratos.json"]
+        .filter(f => !fs.existsSync(path.join(site, f)));
+    check("site: jogo novo na raiz e o jogo antigo em antigo/", faltaSite.length === 0, faltaSite.join(", "));
+    check("site: o jogo antigo continua sem versao-apk.js", !fs.readFileSync(path.join(site, "antigo/index.html"), "utf8").includes("versao-apk.js"));
+    fs.rmSync(site, { recursive: true, force: true });
+    fs.rmSync(distFalso, { recursive: true, force: true });
     const v = JSON.parse(fs.readFileSync(path.join(www, "versao-apk.json"), "utf8"));
     check("versão do APK = major.minor do package.json + patch", v.versao === pkg.version.split(".").slice(0, 2).join(".") + ".7" && v.codigo % 10000 === 7);
-    check("versao-apk.js leva a versão do jogo (UPDATES) e o build", /VERSAO_JOGO_NO_APK = "0\.\d+"/.test(fs.readFileSync(path.join(www, "versao-apk.js"), "utf8")) && /BUILD_WEB = 7;/.test(fs.readFileSync(path.join(www, "versao-apk.js"), "utf8")) && v.nativoMinimo === pkg.version.split(".").slice(0, 2).join(".") + ".0");
+    check("versao-apk.js leva a versão do jogo novo (novo/package.json) e o build", /VERSAO_JOGO_NO_APK = "0\.\d+"/.test(fs.readFileSync(path.join(www, "versao-apk.js"), "utf8")) && /BUILD_WEB = 7;/.test(fs.readFileSync(path.join(www, "versao-apk.js"), "utf8")) && v.nativoMinimo === pkg.version.split(".").slice(0, 2).join(".") + ".0");
     // pacote .zip + latest.json (o que a CI publica na Release app-bundle)
     const saida = fs.mkdtempSync(path.join(require("os").tmpdir(), "pacote-web-"));
     let python = true;

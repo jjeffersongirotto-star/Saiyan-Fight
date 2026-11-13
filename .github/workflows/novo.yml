@@ -1,13 +1,11 @@
-# Saiyan Fight NOVO (pasta novo/: Phaser 3 + TypeScript + Vite). Só confere e gera uma PRÉVIA para baixar:
-# NÃO publica no GitHub Pages (o site continua sendo o jogo antigo da raiz) e NÃO mexe no APK nem na
-# Release "app-bundle" da setinha ATUALIZAR — o app instalado não recebe o jogo novo por aqui.
+# Saiyan Fight NOVO (pasta novo/: Phaser 3 + TypeScript + Vite) — desde a v0.121 é o jogo publicado.
+# Aqui só confere (testes + tsc estrito + build) em todo push/PR e guarda uma prévia para baixar. Quem publica é o
+# pages.yml (site) e o android.yml (APK e Release "app-bundle" da setinha ATUALIZAR).
 name: Jogo novo (Phaser)
 
 on:
   push:
-    paths: ['novo/**', '.github/workflows/novo.yml']
   pull_request:
-    paths: ['novo/**', '.github/workflows/novo.yml']
   workflow_dispatch:
 
 permissions:

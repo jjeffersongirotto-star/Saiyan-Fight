@@ -6,7 +6,6 @@ export const CHAVE_IDIOMA = 'saiyan_idioma';
 
 const LINHAS: Record<string, [string, string]> = {
   CARREGANDO: ['LOADING', 'CARGANDO'],
-  'PRÉVIA PHASER': ['PHASER PREVIEW', 'VISTA PREVIA PHASER'],
   '1 JOGADOR (CONTRA A CPU)': ['1 PLAYER (VS CPU)', '1 JUGADOR (CONTRA LA CPU)'],
   '2 JOGADORES (VERSUS)': ['2 PLAYERS (VERSUS)', '2 JUGADORES (VERSUS)'],
   IDIOMA: ['LANGUAGE', 'IDIOMA'],
@@ -99,6 +98,28 @@ const LINHAS: Record<string, [string, string]> = {
   'PLANETA SUPREMO KAIOH': ["SUPREME KAI'S PLANET", 'PLANETA DEL SUPREMO KAIO'],
   'PLATAFORMA CELESTIAL': ['CELESTIAL LOOKOUT', 'PLATAFORMA CELESTIAL'],
   'CAPITAL DO OESTE': ['WEST CITY', 'CAPITAL DEL OESTE'],
+  'ATUALIZAÇÕES': ["UPDATES", "ACTUALIZACIONES"],
+  '⟳ ATUALIZAÇÕES': ["⟳ UPDATES", "⟳ ACTUALIZACIONES"],
+  '⟳ ATUALIZAR': ["⟳ UPDATE", "⟳ ACTUALIZAR"],
+  ATUALIZAR: ["UPDATE", "ACTUALIZAR"],
+  'VERSÃO': ["VERSION", "VERSIÓN"],
+  APP: ["APP", "APP"],
+  'BAIXAR APP': ["GET THE APP", "DESCARGAR APP"],
+  'JOGO ANTIGO': ["OLD GAME", "JUEGO ANTIGUO"],
+  'VERIFICANDO...': ["CHECKING...", "VERIFICANDO..."],
+  'JÁ ESTÁ ATUALIZADO': ["ALREADY UP TO DATE", "YA ESTÁ ACTUALIZADO"],
+  'SEM CONEXÃO': ["NO CONNECTION", "SIN CONEXIÓN"],
+  'ERRO AO ATUALIZAR': ["UPDATE FAILED", "ERROR AL ACTUALIZAR"],
+  'BAIXANDO...': ["DOWNLOADING...", "DESCARGANDO..."],
+  'ATUALIZANDO...': ["UPDATING...", "ACTUALIZANDO..."],
+  'ATUALIZAR AGORA?': ["UPDATE NOW?", "¿ACTUALIZAR AHORA?"],
+  'NOVA VERSÃO': ["NEW VERSION", "NUEVA VERSIÓN"],
+  'AGORA NÃO': ["NOT NOW", "AHORA NO"],
+  BAIXAR: ["DOWNLOAD", "DESCARGAR"],
+  'Saiu a versão': ["New version", "Salió la versión"],
+  'O jogo baixa a versão nova e reinicia; o progresso continua salvo.': ["The game downloads it and restarts; your progress stays saved.", "El juego descarga la versión nueva y se reinicia; el progreso sigue guardado."],
+  'Esta versão do jogo precisa do app novo. Baixar o APK agora? Depois é só instalar por cima: o progresso continua salvo.': ["This version needs the new app. Download the APK now? Just install it over the old one: your progress stays saved.", "Esta versión necesita la app nueva. ¿Descargar el APK ahora? Luego instálalo encima: el progreso sigue guardado."],
+  'NO SITE O JOGO JÁ ABRE SEMPRE NA VERSÃO MAIS NOVA': ["ON THE WEBSITE THE GAME ALWAYS OPENS IN THE LATEST VERSION", "EN EL SITIO EL JUEGO SIEMPRE ABRE EN LA VERSIÓN MÁS NUEVA"],
 };
 
 let atual: Idioma = 'pt';
