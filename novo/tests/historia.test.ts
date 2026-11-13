@@ -435,3 +435,32 @@ describe('desenho dos minions', () => {
     expect(poseDoMinion(m, 0).celula).toBe(6);
   });
 });
+
+describe('ajustes da noite (itens no chão, rótulo da onda)', () => {
+  it('com itemPousaNoChao o item para no chão, fica ITEM_NO_CHAO quadros e some', async () => {
+    const { moverItem, ITEM_Y_CHAO } = await import('../src/logica/itens');
+    const it = { ...criarItem(1, [0, 0.5, 0]), y: ITEM_Y_CHAO - 1 };
+    let q = 0;
+    while (!moverItem(it, true) && q < 1000) q++;
+    expect(it.y).toBe(ITEM_Y_CHAO);
+    expect(q).toBeGreaterThanOrEqual(C.ITEM_NO_CHAO - 2);
+    const antigo = { ...criarItem(2, [0, 0.5, 0]), y: ITEM_Y_CHAO - 1 };
+    let n = 0;
+    while (!moverItem(antigo, false) && n < 1000) n++;
+    expect(antigo.y).toBeGreaterThan(C.TELA_A); // como no antigo: atravessa o chão
+    expect(n).toBeLessThan(80);
+  });
+  it('herói pega o item parado no chão', () => {
+    const e = calmo(nova());
+    e.historia!.itens.push({ ...criarItem(9, [0.1, 0, 0]), x: e.p1.x, y: C.CHAO_Y - 12, noChao: 30 });
+    e.p1.y = C.CHAO_Y - e.p1.a / 2;
+    rodar(e, 2);
+    expect(e.historia!.itens.length).toBe(0);
+  });
+  it('rótulo: NORMAL "ONDA 3/5", DIFÍCIL com o nível real, SEM LIMITE sem total', async () => {
+    const { rotuloDaOnda } = await import('../src/logica/ondas');
+    expect(rotuloDaOnda('normal', 2, 3)).toBe('ONDA 3/5');
+    expect(rotuloDaOnda('hard', 2, 6)).toBe('ONDA 3/5 · NÍVEL 6');
+    expect(rotuloDaOnda('unlimited', 6, 7)).toBe('ONDA 7');
+  });
+});

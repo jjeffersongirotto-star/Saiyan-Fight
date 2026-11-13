@@ -120,6 +120,9 @@ export const ESCUDO_INVULNERAVEL = 30;       // o escudo segura um golpe e dá o
 export interface RegrasHistoria {
   /** NOVA (candidata): +1 de vida para o herói a cada onda nova. Antigo: nada (só o feijão mágico cura). */
   curaEntreOndas: boolean;
+  /** NOVA: o item que cai pousa no chão e fica ITEM_NO_CHAO quadros antes de sumir (piscando no fim).
+   *  Antigo: atravessava o chão e sumia. */
+  itemPousaNoChao: boolean;
   /** NOVA: o vilão rebate tiros do herói (chance pela agressividade). Antigo: o vilão nunca rebatia. */
   vilaoUsaParry: boolean;
   /** NOVA: o vilão junta ki depois da última forma e solta o especial (dano VILAO_ESPECIAL_DANO); responder vira
@@ -133,10 +136,14 @@ export interface RegrasHistoria {
 }
 export const REGRAS_HISTORIA_NOVAS: Readonly<RegrasHistoria> = {
   curaEntreOndas: false, vilaoUsaParry: true, vilaoUsaEspecial: true, agressividadeReal: true, vilaoInvulneravel: false,
+  itemPousaNoChao: true,
 };
 export const REGRAS_HISTORIA_ANTIGAS: Readonly<RegrasHistoria> = {
   curaEntreOndas: false, vilaoUsaParry: false, vilaoUsaEspecial: false, agressividadeReal: false, vilaoInvulneravel: false,
+  itemPousaNoChao: false,
 };
+/** quadros que o item fica parado no chão (regra itemPousaNoChao); pisca no último segundo */
+export const ITEM_NO_CHAO = 180;
 export const REGRAS_HISTORIA: Readonly<RegrasHistoria> = REGRAS_HISTORIA_NOVAS;
 /** dano do especial do VILÃO no modo história (o herói tem 3 de vida: 3 seria morte na hora) */
 export const VILAO_ESPECIAL_DANO = 2;

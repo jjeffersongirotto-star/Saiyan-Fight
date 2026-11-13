@@ -8,8 +8,10 @@ import * as C from '../logica/constantes';
 import { T } from '../logica/idioma';
 import { ITEM_TAM } from '../logica/itens';
 import { MINION_A, MINION_ESCALA_DESENHO, poseDoMinion, type ModeloMinion } from '../logica/minions';
-import { ONDAS_POR_MODO } from '../logica/ondas';
 import type { EstadoLuta, TipoItem } from '../logica/tipos';
+
+import { rotuloDaOnda } from '../logica/ondas';
+export { rotuloDaOnda };
 
 export const chaveDoMinion = (m: ModeloMinion) => `minion-${m}`;
 
@@ -96,6 +98,9 @@ export class DesenhoHistoria {
       // os pés ficam no mesmo lugar da caixa (o desenho é 1,3x maior); brotando, sai de dentro do chão
       s.setFrame(p.celula).setFlipX(p.espelhar);
       s.setPosition(m.x, m.y + MINION_A / 2 + p.afundado * 40);
+      // brotando: corta o que estaria abaixo do chão (antes aparecia por baixo da linha do chão)
+      if (p.afundado > 0) s.setCrop(0, 0, 144, Math.max(0, 144 - (p.afundado * 40) / MINION_ESCALA_DESENHO));
+      else if (s.isCropped) s.setCrop();
       s.setAlpha(p.afundado > 0 ? 1 - p.afundado * 0.6 : 1);
       // agarrado e prestes a explodir: pisca vermelho
       if (m.fase === 'agarrar' && m.explode < 20 && Math.floor(m.explode / 3) % 2 === 0) s.setTintFill(0xff3b30);
@@ -111,6 +116,8 @@ export class DesenhoHistoria {
     // itens caindo (com um brilho pulsando em volta)
     const g = this.g.clear();
     for (const it of h.itens) {
+      // no chão, pisca no último segundo antes de sumir
+      if (it.noChao > C.ITEM_NO_CHAO - 60 && Math.floor(it.noChao / 5) % 2 === 0) continue;
       const pulso = 0.25 + 0.15 * Math.sin(e.quadro * 0.15 + it.id);
       g.fillStyle(0xffffff, pulso).fillCircle(it.x, it.y, ITEM_TAM * 0.75);
       desenharIcone(g, it.tipo, it.x, it.y);
@@ -127,8 +134,7 @@ export class DesenhoHistoria {
     }
 
     // alto da tela: onda e pontos; abaixo da barra do herói, os itens ativos com o tempo que falta
-    const total = h.modo === 'unlimited' ? '∞' : String(ONDAS_POR_MODO);
-    const t = `${T('ONDA')} ${Math.min(h.passo + 1, h.modo === 'unlimited' ? 999 : ONDAS_POR_MODO)}/${total}   ${T('PONTOS')} ${h.pontos}`;
+    const t = `${rotuloDaOnda(h.modo, h.passo, h.onda)}   ${T('PONTOS')} ${h.pontos}`;
     if (t !== this.textoAtual) { this.texto.setText(t); this.textoAtual = t; }
     const gh = this.gHud.clear(), heroi = e.p1;
     let x = 24;

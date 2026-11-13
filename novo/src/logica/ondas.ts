@@ -1,6 +1,8 @@
 // Ondas e modos do modo história (game-logic-core.js: getWaveParams, getAvailableBossPatterns, modos NORMAL /
 // DIFÍCIL / SEM LIMITE e a liberação das fases). Tudo puro.
 
+import { T } from './idioma';
+
 export type ModoFase = 'normal' | 'hard' | 'unlimited';
 
 /** a partir desta onda velocidade/frequência/vida param de crescer (WAVE_DIFFICULTY_CAP) */
@@ -81,3 +83,11 @@ export function juntarProgresso(a: ProgressoFases, b: ProgressoFases): Progresso
   }
   return r;
 }
+
+/** "ONDA 3/5" no NORMAL; no DIFÍCIL mostra também a força real ("ONDA 3/5 · NÍVEL 6"); SEM LIMITE só "ONDA 7". */
+export function rotuloDaOnda(modo: ModoFase, passo: number, onda: number): string {
+  if (modo === 'unlimited') return `${T('ONDA')} ${passo + 1}`;
+  const base = `${T('ONDA')} ${Math.min(passo + 1, ONDAS_POR_MODO)}/${ONDAS_POR_MODO}`;
+  return modo === 'hard' ? `${base} · ${T('NÍVEL')} ${onda}` : base;
+}
+

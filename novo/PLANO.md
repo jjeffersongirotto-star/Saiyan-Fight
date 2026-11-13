@@ -182,6 +182,7 @@ Igual ao antigo (`gameplay.js` / `game-logic-core.js`):
 | Agressividade do vilão | calculada e nunca usada | avança até 140 px, mais parry/especial | `agressividadeReal` |
 | Cura entre ondas (+1 vida) | não | **não** (candidata, desligada) | `curaEntreOndas` |
 | Vilão pisca invulnerável depois de apanhar | não | não | `vilaoInvulneravel` |
+| Item pousa no chão (3 s, pisca no fim) antes de sumir | atravessava o chão | sim | `itemPousaNoChao` |
 
 `REGRAS_HISTORIA_ANTIGAS` liga tudo como no antigo. Outras escolhas a confirmar:
 - **Vilão de cada fase** (no antigo era escolhido na tela ARENAS, padrão Vegeta): Raditz, Piccolo, Vegeta, Freeza
@@ -189,7 +190,8 @@ Igual ao antigo (`gameplay.js` / `game-logic-core.js`):
   Androide 18, Broly — tabela em `src/dados/fases.ts`.
 - Céu/chão pintados com as cores de cada fase (as arenas de verdade entram na fase 4) e a música de cada fase.
 - Tela de fim com números (pontos, onda, tempo, ataques, rebatidas, golpes, minions, itens) e recorde por fase.
-- Minion não afunda mais no chão balançando (o antigo podia).
+- Minion não afunda mais no chão balançando (o antigo podia); brotando, o desenho é cortado na linha do chão.
+- HUD no DIFÍCIL: "ONDA 3/5 · NÍVEL 6" (luta do modo + força real); SEM LIMITE: "ONDA 7".
 
 Falta (próximas PRs): arenas desenhadas, diálogos/cutscenes, tutorial, conquistas, ranking, escolher o vilão.
 

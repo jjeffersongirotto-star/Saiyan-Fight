@@ -10,7 +10,7 @@
 // agressividade passa a valer, e cura entre ondas (candidata, desligada).
 import * as C from './constantes';
 import { aplicarDano, criarLuta, criarLutador, dentroDoParry, nivelMaximo, passoLuta, podeTransformar, sortear } from './luta';
-import { criarItem, encostaNoItem, ITEM_INTERVALO, ITEM_PRIMEIRO, ITENS_MAX, pegarItem, type Item } from './itens';
+import { criarItem, moverItem, encostaNoItem, ITEM_INTERVALO, ITEM_PRIMEIRO, ITENS_MAX, pegarItem, type Item } from './itens';
 import {
   AGARRAR_QUADROS, criarMinion, deveInvestir, encostaNoLutador, investir, MINION_INTERVALO, MINIONS_MAX, minionAtivo, moverMinion,
   podeSerAgarrado, soltarMinion,
@@ -341,14 +341,14 @@ function passoItens(e: EstadoLuta, eventos: Evento[]) {
   }
   for (let i = h.itens.length - 1; i >= 0; i--) {
     const it = h.itens[i];
-    it.y += it.vy;
+    const sumiu = moverItem(it, h.regras.itemPousaNoChao);
     if (heroi.acao !== 'caido' && encostaNoItem(it, heroi)) {
       pegarItem(heroi, it, eventos);
       h.stats.itens[it.tipo]++;
       h.itens.splice(i, 1);
       continue;
     }
-    if (it.y > C.TELA_A + 30) h.itens.splice(i, 1);
+    if (sumiu) h.itens.splice(i, 1);
   }
 }
 

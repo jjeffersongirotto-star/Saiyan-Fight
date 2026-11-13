@@ -28,7 +28,7 @@ import { EfeitosDaLuta, pedirEfeitos } from '../ui/efeitos';
 import { criarBotao } from '../ui/botao';
 import { faseDe, type Fase } from '../dados/fases';
 import { criarHistoria, passoHistoria } from '../logica/historia';
-import { DesenhoHistoria, NOME_DO_ITEM, pedirMinion } from '../ui/historia';
+import { DesenhoHistoria, NOME_DO_ITEM, pedirMinion, rotuloDaOnda } from '../ui/historia';
 import type { DadosDoFimHistoria } from './FimHistoria';
 
 export class Luta extends Phaser.Scene {
@@ -99,7 +99,7 @@ export class Luta extends Phaser.Scene {
       .text(C.TELA_L / 2, 78, '', estiloTexto({ fontFamily: 'Arial Black, Arial', fontSize: '18px', color: '#ffffff', stroke: '#000000', strokeThickness: 4 }))
       .setOrigin(0.5)
       .setDepth(850);
-    if (this.fase) this.mostrarAviso(`${T(this.fase.nome)}\n${T('ONDA')} 1`, 1600, 26);
+    if (this.fase) this.mostrarAviso(`${T(this.fase.nome)}\n${rotuloDaOnda(this.estado.historia!.modo, 0, this.estado.historia!.onda)}`, 1600, 26);
     else this.mostrarAviso(`${T('RODADA')} 1 — ${T('LUTEM!')}`, 1200);
     som.musica(this.fase?.musica ?? TEMA_DA_LUTA);
 
@@ -325,7 +325,7 @@ export class Luta extends Phaser.Scene {
       case 'novaOnda': {
         const v = this.estado.p2;
         const cura = ev.curou ? ` (+1 ${T('VIDA')})` : '';
-        this.mostrarAviso(`${T('ONDA')} ${ev.passo + 1}\n${PERSONAGENS[v.personagem].nome} ${T('VOLTOU MAIS FORTE!')}${cura}`, 1500, 22);
+        this.mostrarAviso(`${rotuloDaOnda(this.estado.historia!.modo, ev.passo, ev.onda)}\n${PERSONAGENS[v.personagem].nome} ${T('VOLTOU MAIS FORTE!')}${cura}`, 1500, 22);
         break;
       }
       default:
