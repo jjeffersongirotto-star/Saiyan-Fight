@@ -122,7 +122,7 @@ export class Selecao extends Phaser.Scene {
       this.escolhendo = 'p1';
       this.escolhaP1 = null;
       this.atualizar();
-    } else this.scene.start('Menu');
+    } else this.scene.start('ModoJogo');
   }
 
   private atualizar(): void {

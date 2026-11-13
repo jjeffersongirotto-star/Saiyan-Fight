@@ -6,15 +6,16 @@ import { TELA_A, TELA_L } from '../logica/constantes';
 import { T } from '../logica/idioma';
 import { escalaDaAltura } from '../logica/luta';
 import { dificilLiberado, faseLiberada, semLimiteLiberado, type ModoFase } from '../logica/ondas';
-import { lerOrdemAntiga, lerProgresso, salvarModoCompleto, salvarRecorde } from '../logica/progresso';
+import { lerProgresso, salvarModoCompleto, salvarRecorde } from '../logica/progresso';
 import type { EstatisticasHistoria } from '../logica/historia';
-import { faseDe, ordenarFases } from '../dados/fases';
+import { faseDe, fasesEmOrdem } from '../dados/fases';
 import { criarBotao } from '../ui/botao';
 import { metaDoAtlas } from '../ui/formas';
 import { desenharIcone } from '../ui/historia';
 import type { DadosDaLuta } from './Menu';
 import { aoApertar } from '../entrada/teclas';
 import { som } from '../audio/som';
+import { conquistas } from '../logica/conquistas';
 
 export interface DadosDoFimHistoria {
   luta: DadosDaLuta;
@@ -49,7 +50,7 @@ export class FimHistoria extends Phaser.Scene {
     ajustarCamera(this);
     const fase = faseDe(d.luta.fase ?? '');
     const modo = d.luta.modoFase ?? 'normal';
-    const ordem = ordenarFases(lerOrdemAntiga()).map((f) => f.id);
+    const ordem = fasesEmOrdem().map((f) => f.id);
     const venceu = d.resultado === 'vitoria';
     let novidades: string[] = [];
     if (venceu) {
@@ -58,6 +59,10 @@ export class FimHistoria extends Phaser.Scene {
     }
     const ondaFinal = modo === 'unlimited' ? d.passo + 1 : d.passo + (venceu ? 1 : 0);
     const recorde = salvarRecorde(fase.id, modo, d.pontos, ondaFinal);
+    // RANKING (geral e da fase) e as conquistas de fase, como saveRankingScore / checkStageModeAchievements do antigo
+    const c = conquistas();
+    c.registrarPontuacao(fase.id, { score: d.pontos, date: new Date().toLocaleDateString(), tempo: d.segundos, golpes: d.stats.golpes, apelido: c.apelido() || undefined });
+    if (venceu) c.checarFases(ordem, lerProgresso());
 
     this.add.rectangle(TELA_L / 2, TELA_A / 2, TELA_L, TELA_A, 0x0a0f1f, 1);
     this.add.rectangle(TELA_L / 2, TELA_A / 2, TELA_L, TELA_A, fase.cor, 0.12);

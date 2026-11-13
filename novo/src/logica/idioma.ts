@@ -1,5 +1,7 @@
 // Textos em PT/EN/ES. O texto em português é a chave (como IDIOMA_LINHAS no jogo antigo) e o idioma escolhido
 // fica salvo na mesma chave do jogo antigo (saiyan_idioma), então quem já escolheu EN/ES continua igual.
+import { LINHAS_LEGADO } from '../legado/idiomas-legado';
+
 export type Idioma = 'pt' | 'en' | 'es';
 export const IDIOMAS: Idioma[] = ['pt', 'en', 'es'];
 export const CHAVE_IDIOMA = 'saiyan_idioma';
@@ -99,6 +101,58 @@ const LINHAS: Record<string, [string, string]> = {
   'PLANETA SUPREMO KAIOH': ["SUPREME KAI'S PLANET", 'PLANETA DEL SUPREMO KAIO'],
   'PLATAFORMA CELESTIAL': ['CELESTIAL LOOKOUT', 'PLATAFORMA CELESTIAL'],
   'CAPITAL DO OESTE': ['WEST CITY', 'CAPITAL DEL OESTE'],
+  // atualização (tela ATUALIZAÇÕES / app)
+  'ATUALIZAÇÕES': ['UPDATES', 'ACTUALIZACIONES'],
+  '⟳ ATUALIZAR': ['⟳ UPDATE', '⟳ ACTUALIZAR'],
+  'VERSÃO': ['VERSION', 'VERSIÓN'],
+  APP: ['APP', 'APP'],
+  'BAIXAR APP': ['GET THE APP', 'DESCARGAR APP'],
+  'JOGO ANTIGO': ['OLD GAME', 'JUEGO ANTIGUO'],
+  'VERIFICANDO...': ['CHECKING...', 'VERIFICANDO...'],
+  'SEM CONEXÃO': ['NO CONNECTION', 'SIN CONEXIÓN'],
+  'BAIXANDO...': ['DOWNLOADING...', 'DESCARGANDO...'],
+  'NOVA VERSÃO': ['NEW VERSION', 'NUEVA VERSIÓN'],
+  'AGORA NÃO': ['NOT NOW', 'AHORA NO'],
+  BAIXAR: ['DOWNLOAD', 'DESCARGAR'],
+  'Saiu a versão': ['New version', 'Salió la versión'],
+  'O jogo baixa a versão nova e reinicia; o progresso continua salvo.': ['The game downloads it and restarts; your progress stays saved.', 'El juego descarga la versión nueva y se reinicia; el progreso sigue guardado.'],
+  'Esta versão do jogo precisa do app novo. Baixar o APK agora? Depois é só instalar por cima: o progresso continua salvo.': ['This version needs the new app. Download the APK now? Just install it over the old one: your progress stays saved.', 'Esta versión necesita la app nueva. ¿Descargar el APK ahora? Luego instálalo encima: el progreso sigue guardado.'],
+  'NO SITE O JOGO JÁ ABRE SEMPRE NA VERSÃO MAIS NOVA': ['ON THE WEBSITE THE GAME ALWAYS OPENS IN THE LATEST VERSION', 'EN EL SITIO EL JUEGO SIEMPRE ABRE EN LA VERSIÓN MÁS NUEVA'],
+  // telas do menu (com número no meio: TF)
+  'APERTE O BOTÃO PARA: {0}': ['PRESS THE BUTTON FOR: {0}', 'PULSA EL BOTÓN PARA: {0}'],
+  'CONECTE UM CONTROLE E APERTE UM BOTÃO': ['CONNECT A CONTROLLER AND PRESS A BUTTON', 'CONECTA UN MANDO Y PULSA UN BOTÓN'],
+  'CONTROLES CONECTADOS: {0}': ['CONTROLLERS CONNECTED: {0}', 'MANDOS CONECTADOS: {0}'],
+  'DUPLO TOQUE PARRY': ['DOUBLE TAP PARRY', 'DOBLE TOQUE PARRY'],
+  'ESC OU CLIQUE CANCELA  |  {0}s': ['ESC OR CLICK CANCELS  |  {0}s', 'ESC O CLIC CANCELA  |  {0}s'],
+  'NO COMANDO: JOGADOR {0}': ['IN CONTROL: PLAYER {0}', 'AL MANDO: JUGADOR {0}'],
+  'OPAC. {0}%': ['OPAC. {0}%', 'OPAC. {0}%'],
+  'TAMANHO {0}%': ['SIZE {0}%', 'TAMAÑO {0}%'],
+  PC: ['PC', 'PC'],
+  'PRESSIONE...': ['PRESS...', 'PULSA...'],
+  'TIRO CONTÍNUO (DEDO NO ANALÓGICO)': ['AUTO FIRE (FINGER ON STICK)', 'DISPARO CONTINUO (DEDO EN EL ANALÓGICO)'],
+  'VIBRAÇÃO': ['VIBRATION', 'VIBRACIÓN'],
+  ATIVADO: ['ON', 'ACTIVADO'],
+  ATIVADA: ['ON', 'ACTIVADA'],
+  DESATIVADO: ['OFF', 'DESACTIVADO'],
+  DESATIVADA: ['OFF', 'DESACTIVADA'],
+  'SHIFT DIR.': ['RIGHT SHIFT', 'SHIFT DER.'],
+  'CTRL DIR.': ['RIGHT CTRL', 'CTRL DER.'],
+  'ENTER NUM': ['NUMPAD ENTER', 'ENTER NUM'],
+  'VOLUME BGM: {0}%': ['MUSIC VOLUME: {0}%', 'VOLUMEN BGM: {0}%'],
+  'VOLUME SFX: {0}%': ['SFX VOLUME: {0}%', 'VOLUMEN SFX: {0}%'],
+  '{0} FICOU COM O BOTÃO ANTERIOR': ['{0} GOT THE PREVIOUS BUTTON', '{0} QUEDÓ CON EL BOTÓN ANTERIOR'],
+  '1 JOGADOR x CPU': ['1 PLAYER vs CPU', '1 JUGADOR vs CPU'],
+  'FASE {0}': ['STAGE {0}', 'FASE {0}'],
+  GOLPES: ['HITS', 'GOLPES'],
+  SCORE: ['SCORE', 'PUNTOS'],
+  'OCUPA O LUGAR DE: {0} (AS OUTRAS ANDAM UMA POSIÇÃO)': ['TAKES THE PLACE OF: {0} (THE OTHERS MOVE ONE SPOT)', 'OCUPA EL LUGAR DE: {0} (LAS DEMÁS SE MUEVEN UN LUGAR)'],
+  'TOTAL: {0}/{1}': ['TOTAL: {0}/{1}', 'TOTAL: {0}/{1}'],
+  '{0} BLOQUEADA — COMPLETE O NORMAL DA FASE ANTERIOR': ['{0} LOCKED — CLEAR NORMAL ON THE PREVIOUS STAGE', '{0} BLOQUEADA — COMPLETA EL NORMAL DE LA FASE ANTERIOR'],
+  Fase: ['Stage', 'Fase'],
+  EDITOR: ['EDITOR', 'EDITOR'],
+  'O EDITOR CHEGA NA PRÓXIMA ETAPA (PR phaser-editores).': ['THE EDITOR COMES IN THE NEXT STEP.', 'EL EDITOR LLEGA EN LA PRÓXIMA ETAPA.'],
+  'O TUTORIAL CHEGA NA PRÓXIMA ETAPA (PR phaser-tutorial).': ['THE TUTORIAL COMES IN THE NEXT STEP.', 'EL TUTORIAL LLEGA EN LA PRÓXIMA ETAPA.'],
+  'HISTÓRICO DO JOGO ANTIGO': ['OLD GAME HISTORY', 'HISTORIAL DEL JUEGO ANTIGUO'],
 };
 
 let atual: Idioma = 'pt';
@@ -125,7 +179,18 @@ export function carregarIdioma(): Idioma {
 /** Traduz um texto em português. Sem linha cadastrada: devolve o próprio texto (os testes pegam isso). */
 export function T(texto: string): string {
   if (atual === 'pt') return texto;
-  const linha = LINHAS[texto];
+  const linha = LINHAS[texto] ?? legado().get(texto);
   return linha ? linha[atual === 'en' ? 0 : 1] : texto;
 }
-export const textosCadastrados = () => Object.keys(LINHAS);
+export const textosCadastrados = () => [...new Set([...Object.keys(LINHAS), ...legado().keys()])];
+
+/** as 864 linhas do jogo antigo (idiomas.js, importadas por script); as do novo têm prioridade */
+let mapaLegado: Map<string, [string, string]> | null = null;
+function legado(): Map<string, [string, string]> {
+  mapaLegado ??= new Map(LINHAS_LEGADO.map(([pt, en, es]) => [pt, [en, es]]));
+  return mapaLegado;
+}
+/** Traduz e troca {0}, {1}... pelos valores (para textos com número no meio). */
+export function TF(texto: string, ...v: (string | number)[]): string {
+  return T(texto).replace(/\{(\d+)\}/g, (_, i) => String(v[Number(i)] ?? ''));
+}

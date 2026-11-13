@@ -25,12 +25,18 @@ import { aoApertar } from '../entrada/teclas';
 import { som, vibrar } from '../audio/som';
 import { CHANCE_SOM_CARREGANDO, TEMA_DA_LUTA } from '../logica/musica';
 import { EfeitosDaLuta, pedirEfeitos } from '../ui/efeitos';
-import { criarBotao } from '../ui/botao';
 import { faseDe, type Fase } from '../dados/fases';
 import { criarHistoria, passoHistoria } from '../logica/historia';
 import { DesenhoHistoria, NOME_DO_ITEM, pedirMinion, rotuloDaOnda } from '../ui/historia';
 import type { DadosDoFimHistoria } from './FimHistoria';
 import { ArenaAntiga, carregarCenarios, cenariosProntos } from '../ui/arena';
+import { botao, ret, Navegacao, texto } from '../ui/telas';
+import { donosDosControles, entradaDoControle, INTENCAO_VAZIA, type Intencao } from '../logica/controle';
+import { intencaoDe, padsConectados, ultimaEntrada, marcarEntrada } from '../entrada/controles';
+import { modoEfetivo, mudarOpcoes, opcoes } from '../logica/opcoes';
+
+const mudarOpcoesSemPerder = () => mudarOpcoes((o) => { o.dicaTiroVista = true; });
+import { conquistas, RastreioDaLuta } from '../logica/conquistas';
 
 export class Luta extends Phaser.Scene {
   private dados!: DadosDaLuta;
@@ -58,6 +64,20 @@ export class Luta extends Phaser.Scene {
   /** a arena do jogo antigo (null enquanto o código dela não chegou ou se a luta não tem arena) */
   private arena: ArenaAntiga | null = null;
   private idArena: string | null = null;
+  /** o que vale conquista nesta luta (só o jogador 1, como no antigo) */
+  private rastreio!: RastreioDaLuta;
+  /** intenção do controle no passo anterior (gatilhos só no aperto novo) */
+  private padAntes: Record<IdJogador, Intencao> = { p1: INTENCAO_VAZIA, p2: INTENCAO_VAZIA };
+  private pausaPadAntes = false;
+  private voltarPadAntes = false;
+  /** MODO MOUSE: onde o ponteiro está (o lutador segue) */
+  private ponteiro: { x: number; y: number } | null = null;
+  /** pausa automática (trocou de app) e a contagem 3-2-1 ao voltar */
+  private pausaAuto = false;
+  private contagem = 0;
+  private navPausa: Navegacao | null = null;
+  private dicaTiro: Phaser.GameObjects.Container | null = null;
+  private dicaTiroSeg = 0;
 
   constructor() {
     super('Luta');
@@ -113,12 +133,29 @@ export class Luta extends Phaser.Scene {
     this.teclado.ligar();
     this.pausado = false;
     this.camadaPausa = null;
+    this.pausaAuto = false;
+    this.contagem = 0;
+    this.navPausa = null;
+    this.padAntes = { p1: INTENCAO_VAZIA, p2: INTENCAO_VAZIA };
+    this.pausaPadAntes = this.voltarPadAntes = true; // o botão que abriu a luta ainda pode estar apertado
+    this.ponteiro = null;
+    this.rastreio = new RastreioDaLuta(conquistas(), this.dados.modo);
+    this.input.on(Phaser.Input.Events.POINTER_MOVE, (p: Phaser.Input.Pointer) => { if (!p.wasTouch) this.ponteiro = { x: p.worldX, y: p.worldY }; });
+    // voltou das OPÇÕES (pausa → OPÇÕES): teclas, botões e HUD podem ter mudado
+    this.events.on(Phaser.Scenes.Events.RESUME, () => {
+      this.teclado.recarregar();
+      this.toque.recarregar();
+      this.teclado.soltar();
+      if (this.pausado) { this.camadaPausa?.destroy(); this.camadaPausa = null; this.mostrarPausa(); }
+    });
+    this.dicaTiro = null;
+    this.dicaTiroSeg = 0;
     this.textoChoqueAtual = '';
     this.criarFaiscas();
     this.criarBotaoDePausa();
-    aoApertar(this, (c) => { if (c === 'Escape') (this.pausado ? this.continuar() : this.pausar()); });
+    aoApertar(this, (c) => { if (c === 'Escape' && !this.scene.isPaused()) (this.pausado ? this.continuar() : this.pausar()); });
     // celular: trocou de app / apagou a tela no meio da luta = pausa (na volta ninguém leva tiro sem ver)
-    const aoEsconder = () => this.pausar();
+    const aoEsconder = () => this.pausar(true);
     this.game.events.on(Phaser.Core.Events.HIDDEN, aoEsconder);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.game.events.off(Phaser.Core.Events.HIDDEN, aoEsconder);
@@ -158,10 +195,24 @@ export class Luta extends Phaser.Scene {
     return this.add.sprite(0, 0, chave, 'idle/0').setOrigin(0.5, 103 / 112).setDepth(10);
   }
 
+  /** intenção atual do controle de cada jogador (getGamepadAssignments: 1º controle = J1, 2º = J2) */
+  private intencoes(): Record<IdJogador, Intencao> {
+    const pads = padsConectados();
+    const d = donosDosControles(pads, this.dados.modo === 'versus', this.toque.ativo);
+    return { p1: d.p1 ? intencaoDe(d.p1) : INTENCAO_VAZIA, p2: d.p2 ? intencaoDe(d.p2) : INTENCAO_VAZIA };
+  }
+
   private lerEntradas(): Record<IdJogador, Entrada> {
-    const p1 = juntarEntradas(this.teclado.ler('p1'), this.toque.ler(podeTransformar(this.estado.p1)));
+    const it = this.intencoes();
+    const pad = (id: IdJogador) => { const e = entradaDoControle(it[id], this.padAntes[id]); this.padAntes[id] = it[id]; return e; };
+    if (Object.values(it.p1.acoes).some(Boolean) || it.p1.ax || it.p1.ay) marcarEntrada('joystick');
+    let p1 = juntarEntradas(juntarEntradas(this.teclado.ler('p1'), this.toque.ler(podeTransformar(this.estado.p1))), pad('p1'));
+    // MODO MOUSE (OPÇÕES → CONTROLES PC): o lutador do J1 segue o ponteiro
+    const o = opcoes();
+    if (o.modoPc === 'mouse' && this.ponteiro && modoEfetivo(o, ultimaEntrada(), this.toque.ativo) === 'pc' && p1.x === 0 && p1.y === 0) p1 = { ...p1, seguir: { ...this.ponteiro } };
     const tecladoP2 = this.teclado.ler('p2');
-    const p2 = this.dados.modo === 'cpu' ? entradaDaIA(this.estado, 'p2') : this.dados.modo === 'historia' ? ENTRADA_VAZIA : tecladoP2;
+    const padP2 = pad('p2');
+    const p2 = this.dados.modo === 'cpu' ? entradaDaIA(this.estado, 'p2') : this.dados.modo === 'historia' ? ENTRADA_VAZIA : juntarEntradas(tecladoP2, padP2);
     return { p1, p2 };
   }
 
@@ -185,26 +236,78 @@ export class Luta extends Phaser.Scene {
     g.fillStyle(0xffffff, 0.9).fillRect(x - 5, y - 6, 3, 12).fillRect(x + 2, y - 6, 3, 12);
     const zona = this.add.zone(x, y, 44, 36).setInteractive().setDepth(881);
     zona.on('pointerup', () => (this.pausado ? this.continuar() : this.pausar()));
+    zona.on('pointerdown', (p: Phaser.Input.Pointer) => p.event.stopPropagation());
   }
 
-  private pausar(): void {
-    if (this.pausado || this.estado.fase === 'fimPartida') return;
+  /** pauseGame: congela a luta e mostra CONTINUAR / OPÇÕES / SAIR PARA MENU (auto = trocou de app) */
+  private pausar(auto = false): void {
+    if (this.estado.fase === 'fimPartida') return;
+    if (this.pausado) { if (auto) { this.pausaAuto = true; this.contagem = 0; this.camadaPausa?.destroy(); this.camadaPausa = null; this.mostrarPausa(); } return; }
     this.pausado = true;
+    this.pausaAuto = auto;
+    this.contagem = 0;
     this.toque.soltarTudo();
+    this.teclado.soltar();
     this.tweens.pauseAll();
     this.time.paused = true;
-    const fundo = this.add.rectangle(C.TELA_L / 2, C.TELA_A / 2, C.TELA_L, C.TELA_A, 0x000000, 0.6).setInteractive();
-    const titulo = this.add.text(C.TELA_L / 2, 105, T('PAUSA'), estiloTexto({ fontFamily: 'Arial Black, Arial', fontSize: '34px', color: '#ffd23a', stroke: '#8a2b00', strokeThickness: 7 })).setOrigin(0.5);
-    const b1 = criarBotao(this, C.TELA_L / 2, 175, T('CONTINUAR'), () => this.continuar(), 260);
-    const b2 = criarBotao(this, C.TELA_L / 2, 228, T('MENU'), () => this.scene.start('Menu'), 260);
-    this.camadaPausa = this.add.container(0, 0, [fundo, titulo, b1.container, b2.container]).setDepth(2000);
+    this.mostrarPausa();
   }
 
+  private mostrarPausa(): void {
+    this.navPausa?.limpar();
+    this.navPausa ??= new Navegacao(this, null);
+    this.navPausa.ativa = true;
+    const fundo = this.add.rectangle(C.TELA_L / 2, C.TELA_A / 2, C.TELA_L, C.TELA_A, 0x000000, 0.7).setInteractive();
+    // pausa automática: tocar em qualquer lugar continua
+    fundo.on('pointerup', () => { if (this.pausaAuto && this.contagem <= 0) this.continuar(); });
+    const itens: Phaser.GameObjects.GameObject[] = [fundo];
+    if (this.pausaAuto) {
+      itens.push(texto(this, C.TELA_L / 2, 62, T('PAUSADO AUTOMATICAMENTE'), 18, '#fbbf24').setOrigin(0.5, 0.75));
+      itens.push(texto(this, C.TELA_L / 2, 86, T('TOQUE OU CLIQUE EM QUALQUER LUGAR PARA CONTINUAR'), 12, '#e2e8f0', { fontStyle: 'normal' }).setOrigin(0.5, 0.75));
+    }
+    const b = (r: ReturnType<typeof ret>, t: string, f: () => void) => {
+      const x = botao(this, r, t, f, { prof: 2001 });
+      this.navPausa!.add({ ...r, acionar: x.acionar });
+      itens.push(x.container);
+    };
+    b(ret(300, 110, 200, 35), 'CONTINUAR', () => this.continuar());
+    b(ret(300, 160, 200, 35), 'OPÇÕES', () => this.abrirOpcoes());
+    b(ret(300, 210, 200, 35), 'SAIR PARA MENU', () => this.scene.start('Menu'));
+    this.camadaPausa = this.add.container(0, 0, itens).setDepth(2000);
+  }
+
+  private abrirOpcoes(): void {
+    if (this.contagem > 0) return;
+    this.navPausa!.ativa = false;
+    this.scene.launch('Opcoes', { voltar: 'Luta' });
+    this.scene.pause();
+  }
+
+  /** requestResume: no celular e depois da pausa automática conta 3-2-1 (dá tempo de pôr os dedos) */
   private continuar(): void {
-    if (!this.pausado) return;
+    if (!this.pausado || this.contagem > 0) return;
+    if (this.pausaAuto || this.toque.ativo) {
+      this.contagem = 3;
+      this.camadaPausa?.destroy();
+      const fundo = this.add.rectangle(C.TELA_L / 2, C.TELA_A / 2, C.TELA_L, C.TELA_A, 0x000000, 0.7).setInteractive();
+      const n = this.add.text(C.TELA_L / 2, 190, '3', estiloTexto({ fontFamily: "'Courier New', monospace", fontStyle: 'bold', fontSize: '72px', color: '#fff0a6' })).setOrigin(0.5, 0.75);
+      const t = texto(this, C.TELA_L / 2, 225, T('PREPARE-SE...'), 14, '#e2e8f0').setOrigin(0.5, 0.75);
+      this.camadaPausa = this.add.container(0, 0, [fundo, n, t]).setDepth(2000);
+      this.camadaPausa.setData('n', n);
+      this.navPausa?.limpar();
+      return;
+    }
+    this.retomar();
+  }
+
+  private retomar(): void {
     this.pausado = false;
+    this.pausaAuto = false;
+    this.contagem = 0;
     this.camadaPausa?.destroy();
     this.camadaPausa = null;
+    this.navPausa?.limpar();
+    if (this.navPausa) this.navPausa.ativa = false;
     this.tweens.resumeAll();
     this.time.paused = false;
     this.relogio.zerar();
@@ -212,15 +315,56 @@ export class Luta extends Phaser.Scene {
     this.teclado.ler('p1');
     this.teclado.ler('p2');
     this.toque.soltarTudo();
+    this.padAntes = this.intencoes();
+  }
+
+  /** pausa pelo controle (OPTIONS) e BOLA continua; durante a contagem só o relógio anda */
+  private vigiarPausa(dt: number): void {
+    const it = this.intencoes();
+    const pausa = it.p1.acoes.pause || it.p2.acoes.pause, voltar = it.p1.voltar || it.p2.voltar;
+    if (pausa && !this.pausaPadAntes) { if (this.pausado) this.continuar(); else this.pausar(); }
+    else if (this.pausado && voltar && !this.voltarPadAntes && this.navPausa?.ativa) this.continuar();
+    this.pausaPadAntes = pausa;
+    this.voltarPadAntes = voltar;
+    if (this.contagem > 0) {
+      this.contagem -= dt / 1000;
+      const n = this.camadaPausa?.getData('n') as Phaser.GameObjects.Text | undefined;
+      if (this.contagem <= 0) this.retomar();
+      else n?.setText(String(Math.ceil(this.contagem)));
+    }
+  }
+
+  /** drawAutofireHint: "APOIE O DEDO NO ANALÓGICO PARA ATIRAR SEM PARAR" (some depois de 2 s segurando ou 10 s) */
+  private dicaDoTiroContinuo(dt: number): void {
+    const o = opcoes();
+    if (o.dicaTiroVista || !o.tiroContinuo || !this.toque.ativo || this.estado.fase === 'fimPartida') { this.dicaTiro?.setVisible(false); return; }
+    this.dicaTiroSeg += dt;
+    if (this.toque.seguradoSeg >= 2 || this.dicaTiroSeg >= 10) {
+      mudarOpcoesSemPerder();
+      this.dicaTiro?.destroy();
+      this.dicaTiro = null;
+      return;
+    }
+    if (!this.dicaTiro) {
+      const g = this.add.graphics().fillStyle(0x030d23, 0.85).fillRect(180, 294, 330, 44).lineStyle(2, 0xffd23f, 1).strokeRect(180, 294, 330, 44);
+      const alvo = o.modoToque === 'swipe' ? 'NA TELA' : 'NO ANALÓGICO';
+      const t1 = texto(this, 345, 312, T(`APOIE O DEDO ${alvo}`), 12, '#fff0a6').setOrigin(0.5, 0.75);
+      const t2 = texto(this, 345, 328, T('PARA ATIRAR SEM PARAR'), 12, '#fff0a6').setOrigin(0.5, 0.75);
+      this.dicaTiro = this.add.container(0, 0, [g, t1, t2]).setDepth(870);
+    }
+    this.dicaTiro.setVisible(true).setAlpha(0.75 + Math.sin(this.dicaTiroSeg * 5) * 0.25);
   }
 
   update(_t: number, dt: number): void {
+    this.vigiarPausa(dt);
     if (this.pausado) return;
+    this.dicaDoTiroContinuo(dt / 1000);
     const passos = this.relogio.avancar(dt);
     for (let i = 0; i < passos; i++) {
       const entradas = this.lerEntradas();
       const eventos = this.estado.historia ? passoHistoria(this.estado, entradas.p1) : passoLuta(this.estado, entradas);
       this.efeitos.passo();
+      this.rastreio.passo(this.estado, eventos);
       for (const ev of eventos) this.aoEvento(ev);
       // carregando ki: o "zumbido" do jogo antigo (charge em ~20% dos quadros)
       for (const id of ['p1', 'p2'] as const) if (this.estado[id].acao === 'carregando' && Math.random() < CHANCE_SOM_CARREGANDO) som.tocar('charge');
@@ -460,7 +604,7 @@ export class Luta extends Phaser.Scene {
 
     this.historia?.desenhar(e, this.dtSeg);
     this.hud.desenhar(e);
-    this.toque.desenhar(e.p1.ki >= C.KI_MAX, podeTransformar(e.p1));
+    this.toque.desenhar(e.p1.ki >= C.KI_MAX, podeTransformar(e.p1), this.dtSeg);
   }
 
   /** placar de apertos do choque + tempo que falta (para deixar claro que é para apertar ATAQUE sem parar) */

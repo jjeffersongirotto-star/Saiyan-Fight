@@ -17,6 +17,7 @@ export class Preload extends Phaser.Scene {
   create(): void {
     // o código das arenas vem em segundo plano enquanto o jogador está nos menus
     carregarCenarios().catch(() => undefined);
+    this.scene.launch('AvisoConquista');
     this.scene.start('Menu');
   }
 }

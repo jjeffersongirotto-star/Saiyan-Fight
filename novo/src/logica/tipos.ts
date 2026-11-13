@@ -12,6 +12,10 @@ export interface Entrada {
   especial: boolean;
   parry: boolean;
   transformar: boolean;
+  /** modo DESLIZAR do toque: o dedo arrasta o lutador (px lógicos neste passo), como o touchmove do antigo */
+  arrasto?: { x: number; y: number };
+  /** modo MOUSE do PC: o lutador segue o ponteiro (centro do lutador vai até este ponto) */
+  seguir?: { x: number; y: number };
 }
 
 // Como o herói do jogo antigo: apanhar e soltar o especial NÃO travam o lutador (só a pose de transformar trava).

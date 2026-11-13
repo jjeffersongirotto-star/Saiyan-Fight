@@ -5,8 +5,8 @@ import { ajustarCamera, estiloTexto } from '../ui/resolucao';
 import { TELA_L } from '../logica/constantes';
 import { T } from '../logica/idioma';
 import { dificilLiberado, faseLiberada, semLimiteLiberado, type ModoFase, type ProgressoFases } from '../logica/ondas';
-import { lerOrdemAntiga, lerProgresso, lerRecordes, type Recordes } from '../logica/progresso';
-import { ordenarFases, type Fase } from '../dados/fases';
+import { lerProgresso, lerRecordes, type Recordes } from '../logica/progresso';
+import { fasesEmOrdem, type Fase } from '../dados/fases';
 import { formaDoNivel, PERSONAGENS } from '../dados/personagens';
 import { mostrarBarraDeCarregamento } from '../ui/barra';
 import { criarBotao } from '../ui/botao';
@@ -61,7 +61,7 @@ export class Mapa extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => { this.arena?.destruir(); this.arena = null; });
     if (!cenariosProntos()) carregarCenarios().then(() => this.sys.isActive() && this.atualizar()).catch(() => undefined);
     this.add.rectangle(TELA_L / 2, 175, TELA_L, 350, 0x000000, 0.5);
-    this.fases = ordenarFases(lerOrdemAntiga());
+    this.fases = fasesEmOrdem();
     this.prog = lerProgresso();
     this.recordes = lerRecordes();
     const ids = this.fases.map((f) => f.id);
@@ -99,7 +99,7 @@ export class Mapa extends Phaser.Scene {
       const b = criarBotao(this, 470 + i * 118, 252, T(rotulo), () => this.jogar(modo), 112);
       this.botoes.push({ modo, b });
     });
-    criarBotao(this, TELA_L - 70, 22, T('VOLTAR'), () => this.scene.start('Menu'), 110);
+    criarBotao(this, TELA_L - 70, 22, T('VOLTAR'), () => this.scene.start('ModoJogo'), 110);
 
     aoApertar(this, (c, ev) => {
       const n = this.fases.length;
@@ -109,7 +109,7 @@ export class Mapa extends Phaser.Scene {
       else if (c === 'Enter' || c === 'NumpadEnter' || c === 'Space' || c === 'Digit1' || c === 'KeyF') this.jogar('normal');
       else if (c === 'Digit2') this.jogar('hard');
       else if (c === 'Digit3') this.jogar('unlimited');
-      else if (c === 'Escape') this.scene.start('Menu');
+      else if (c === 'Escape') this.scene.start('ModoJogo');
     });
     this.atualizar();
   }
