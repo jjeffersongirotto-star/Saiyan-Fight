@@ -22,6 +22,8 @@ import { desenharFundo } from './fundo';
 import type { DadosDaLuta } from './Menu';
 import type { DadosDaVitoria } from './Vitoria';
 import { aoApertar } from '../entrada/teclas';
+import { som, vibrar } from '../audio/som';
+import { CHANCE_SOM_CARREGANDO, TEMA_DA_LUTA } from '../logica/musica';
 import { EfeitosDaLuta, pedirEfeitos } from '../ui/efeitos';
 
 export class Luta extends Phaser.Scene {
@@ -79,6 +81,7 @@ export class Luta extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(850);
     this.mostrarAviso(`${T('RODADA')} 1 — ${T('LUTEM!')}`, 1200);
+    som.musica(TEMA_DA_LUTA);
 
     this.toque = new ControlesToque(this);
     this.teclado.ligar();
@@ -111,6 +114,8 @@ export class Luta extends Phaser.Scene {
       const eventos = passoLuta(this.estado, this.lerEntradas());
       this.efeitos.passo();
       for (const ev of eventos) this.aoEvento(ev);
+      // carregando ki: o "zumbido" do jogo antigo (charge em ~20% dos quadros)
+      for (const id of ['p1', 'p2'] as const) if (this.estado[id].acao === 'carregando' && Math.random() < CHANCE_SOM_CARREGANDO) som.tocar('charge');
       if (this.estado.fase === 'fimPartida') return;
     }
     this.cuidarDasFormas();
@@ -136,6 +141,7 @@ export class Luta extends Phaser.Scene {
   }
 
   private aoEvento(ev: Evento): void {
+    this.somDoEvento(ev);
     switch (ev.tipo) {
       case 'acerto': {
         const s = this.sprites[ev.alvo];
@@ -197,6 +203,27 @@ export class Luta extends Phaser.Scene {
       }
       default:
         break;
+    }
+  }
+
+  /** sons e vibração de cada acontecimento (os mesmos playSound/vibrate do jogo antigo) */
+  private somDoEvento(ev: Evento): void {
+    const meu = (id: IdJogador) => id === 'p1' || this.dados.modo === 'versus';
+    switch (ev.tipo) {
+      case 'tiro': som.tocar('shoot'); break;
+      case 'apertoChoque': som.tocar('shoot'); break;
+      case 'acerto': som.tocar('hit'); break;
+      case 'parry':
+        if (ev.refletidos > 0) { som.tocar('reflect'); if (meu(ev.dono)) vibrar(45); }
+        break;
+      case 'especial': som.tocar('super'); if (meu(ev.dono)) vibrar([80, 40, 160]); break;
+      case 'choque': som.tocar('super'); break;
+      case 'fimChoque': som.tocar('hit'); break;
+      case 'transformou': som.tocar('transform'); if (meu(ev.dono)) vibrar([60, 40, 120]); break;
+      case 'kiCheio': som.tocar('max_ki'); break;
+      case 'zenkai': som.tocar('powerup'); vibrar([60, 30, 60, 30, 160]); break;
+      case 'novaRodada': som.tocar('powerup'); break;
+      default: break;
     }
   }
 

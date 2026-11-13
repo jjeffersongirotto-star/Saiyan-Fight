@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as C from '../src/logica/constantes';
 import { fichaDoPersonagem } from '../src/logica/ficha';
 import { criarLuta, danoDoChoque, escalaDaAltura, limitesX, passoLuta, registrarRodada, tiroAcerta, velocidadeDe } from '../src/logica/luta';
+import { ARREMESSO_ATORDOADO, ARREMESSO_VX, ARREMESSO_VY } from '../src/logica/minions';
 import { ENTRADA_VAZIA, type Entrada, type EstadoLuta, type Evento } from '../src/logica/tipos';
 
 const nada = (): Entrada => ({ ...ENTRADA_VAZIA });
@@ -375,5 +376,67 @@ describe('chaves das diferenças (REGRAS) — regra antiga quando desligada', ()
     e.p1.acaoQuadros = C.ATINGIDO_QUADROS - 4;
     expect(rodar(e, 1, { especial: true }).concat(rodar(e, 6)).some((x) => x.tipo === 'especial')).toBe(false);
     expect(rodar(e, 1, { especial: true }).some((x) => x.tipo === 'especial')).toBe(true);
+  });
+});
+
+describe('regra nova: invulnerável na pose de transformar', () => {
+  const transformando = () => {
+    const e = luta();
+    alinhar(e);
+    e.p2.ki = C.KI_MAX;
+    rodar(e, 1, {}, { transformar: true });
+    expect(e.p2.acao).toBe('transformando');
+    return e;
+  };
+
+  it('tiro encosta e some, sem dano', () => {
+    const e = transformando();
+    rodar(e, 1, { atacar: true });
+    const t = e.tiros[0];
+    t.x = e.p2.x - 10; t.y = e.p2.y; t.vy = 0;
+    const ev = rodar(e, 1);
+    expect(ev.some((x) => x.tipo === 'acerto')).toBe(false);
+    expect(e.tiros.length).toBe(0);
+    expect(e.p2.vida).toBe(C.VIDA_VERSUS);
+  });
+
+  it('especial que chega durante a pose não machuca; depois da pose volta a machucar', () => {
+    const e = transformando();
+    e.p1.ki = C.KI_MAX;
+    rodar(e, 1, { especial: true });
+    const ev = rodar(e, C.ESPECIAL_CHEGA + 1);
+    expect(e.p2.acao).toBe('transformando'); // 18 quadros < 45 da pose
+    expect(ev.some((x) => x.tipo === 'acerto')).toBe(false);
+    expect(e.p2.vida).toBe(C.VIDA_VERSUS);
+    rodar(e, C.TRANSFORMANDO_QUADROS + C.ESPECIAL_DURACAO);
+    expect(e.p2.acao).toBe('livre');
+    e.p1.ki = C.KI_MAX;
+    rodar(e, 1, { especial: true });
+    expect(rodar(e, C.ESPECIAL_CHEGA + 1).some((x) => x.tipo === 'acerto' && x.alvo === 'p2')).toBe(true);
+  });
+
+  it('também vale com o dano do especial na hora (regra antiga do dano)', () => {
+    const e = criarLuta(fichaDoPersonagem('goku'), fichaDoPersonagem('vegeta'), 1, { ...C.REGRAS_NOVAS, danoDoEspecialNaChegada: false });
+    alinhar(e);
+    e.p2.ki = C.KI_MAX;
+    rodar(e, 1, {}, { transformar: true });
+    e.p1.ki = C.KI_MAX;
+    expect(rodar(e, 1, { especial: true }).some((x) => x.tipo === 'acerto')).toBe(false);
+  });
+
+  it('ao transformar, os minions agarrados são arremessados para longe (gancho da Fase 3)', () => {
+    const e = luta();
+    e.p1.ki = C.KI_MAX;
+    e.minions.push(
+      { x: e.p1.x + 15, y: e.p1.y, vx: 0, vy: 0, agarrando: 'p1', atordoado: 0 },
+      { x: e.p1.x - 15, y: e.p1.y, vx: 0, vy: 0, agarrando: 'p1', atordoado: 0 },
+      { x: e.p1.x + 200, y: e.p1.y, vx: 0, vy: 0, agarrando: null, atordoado: 0 },
+    );
+    const ev = rodar(e, 1, { transformar: true });
+    expect(ev.find((x) => x.tipo === 'transformou')).toMatchObject({ arremessados: 2 });
+    const [a, b, c] = e.minions;
+    expect(a).toMatchObject({ agarrando: null, vx: ARREMESSO_VX, vy: ARREMESSO_VY, atordoado: ARREMESSO_ATORDOADO });
+    expect(b.vx).toBe(-ARREMESSO_VX);
+    expect(c).toMatchObject({ vx: 0, atordoado: 0 }); // quem não estava agarrado fica como estava
   });
 });

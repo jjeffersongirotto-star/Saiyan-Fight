@@ -71,8 +71,9 @@ export const INVULNERAVEL_INICIO = 60;  // começo de cada rodada
 /** quadros que um aperto de ESPECIAL/PARRY/TRANSFORMAR fica guardado (com REGRAS.guardaGatilho ligada) */
 export const GUARDA_GATILHO = 8;
 
-// ==================== DIFERENÇAS DO JOGO ANTIGO (ainda sem a palavra final do Jefferson) ====================
-// Cada uma liga/desliga aqui. `true` = regra nova; `false` = como era no jogo antigo.
+// ==================== DIFERENÇAS DO JOGO ANTIGO (confirmadas pelo Jefferson em 13/11/2026) ====================
+// As 4 ficam ligadas por padrão. Cada uma ainda liga/desliga aqui: `true` = regra nova; `false` = como no antigo.
+// (Regra nova, sem chave: na pose de transformar o lutador não leva dano nenhum — podeApanhar em luta.ts.)
 export interface Regras {
   /** J2 com as regras do J1. false = J2 como no antigo: velocidade 4, sem invulnerabilidade depois de apanhar,
    *  e a transformação não dá o +1 de velocidade (no antigo só deixava a CPU mais agressiva) */

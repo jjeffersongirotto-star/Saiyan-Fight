@@ -5,6 +5,7 @@ import { definirIdioma, IDIOMAS, idiomaAtual, T } from '../logica/idioma';
 import { criarBotao } from '../ui/botao';
 import { desenharFundo } from './fundo';
 import { aoApertar } from '../entrada/teclas';
+import { som } from '../audio/som';
 
 export interface DadosDaLuta {
   modo: 'cpu' | 'versus';
@@ -29,11 +30,17 @@ export class Menu extends Phaser.Scene {
     const lutar = (modo: DadosDaLuta['modo']) => this.scene.start('Selecao', { modo });
     criarBotao(this, TELA_L / 2, 156, T('1 JOGADOR (CONTRA A CPU)'), () => lutar('cpu'));
     criarBotao(this, TELA_L / 2, 206, T('2 JOGADORES (VERSUS)'), () => lutar('versus'));
-    criarBotao(this, TELA_L / 2 - 85, 256, `${T('IDIOMA')}: ${idiomaAtual().toUpperCase()}`, () => {
+    // fora da luta não toca música (como no jogo antigo: o BGM é só da luta)
+    som.musica(null);
+    criarBotao(this, TELA_L / 2 - 258, 256, `${T('IDIOMA')}: ${idiomaAtual().toUpperCase()}`, () => {
       definirIdioma(IDIOMAS[(IDIOMAS.indexOf(idiomaAtual()) + 1) % IDIOMAS.length]);
       this.scene.restart();
-    }, 150);
-    criarBotao(this, TELA_L / 2 + 85, 256, T('TELA CHEIA'), () => this.alternarTelaCheia(), 150);
+    }, 165);
+    criarBotao(this, TELA_L / 2 - 86, 256, T('TELA CHEIA'), () => this.alternarTelaCheia(), 165);
+    const botaoSom = criarBotao(this, TELA_L / 2 + 86, 256, T(som.mudo ? 'SOM: DESLIGADO' : 'SOM: LIGADO'), () => {
+      botaoSom.rotulo.setText(T(som.alternarMudo() ? 'SOM: DESLIGADO' : 'SOM: LIGADO'));
+    }, 165);
+    criarBotao(this, TELA_L / 2 + 258, 256, T('TRILHAS SONORAS'), () => this.scene.start('Trilhas'), 165);
 
     const estilo = estiloTexto({ fontFamily: 'Arial', fontSize: '11px', color: '#dfe7ff' });
     this.add.text(TELA_L / 2, 300, T('J1: setas mover · F atacar · S carregar · A transformar · Q especial · Espaço parry'), estilo).setOrigin(0.5);

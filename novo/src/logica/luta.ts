@@ -3,6 +3,7 @@
 // Regras do jogo antigo (gameplay.js): tiro 1, especial 3 com o ki cheio, parry devolve os tiros por perto,
 // transformação com o ki cheio (sobe um nível, +velocidade por 15 s), Zenkai 1x por partida, choque de raios.
 import * as C from './constantes';
+import { arremessarAgarrados } from './minions';
 import type { Choque, Entrada, Evento, EstadoLuta, FichaLuta, IdJogador, Lutador, Raio, Tiro } from './tipos';
 
 /** Sorteio determinístico (mulberry32): o mesmo começo dá sempre a mesma luta — bom para testes e replays. */
@@ -66,7 +67,7 @@ export function criarLuta(p1: FichaLuta | string, p2: FichaLuta | string, sement
     quadro: 0, rodada: 1, placar: { p1: 0, p2: 0 }, fase: 'luta', faseQuadros: 0,
     vencedorRodada: null, vencedorPartida: null,
     p1: criarLutador('p1', p1), p2: criarLutador('p2', p2),
-    tiros: [], raios: [], choque: null, proximoId: 1, semente,
+    tiros: [], raios: [], choque: null, minions: [], proximoId: 1, semente,
   };
 }
 
@@ -112,7 +113,9 @@ export const dentroDoParry = (t: Tiro, l: Lutador) => {
 /** De onde sai o tiro/raio (a mão, um pouco acima do meio da caixa). */
 export const maoDe = (l: Lutador) => ({ x: l.x + l.olhando * (l.l / 2 + 10), y: l.y - l.a * 0.08 });
 
-export const podeApanhar = (e: EstadoLuta, l: Lutador) => e.fase === 'luta' && l.invulneravel <= 0 && l.acao !== 'caido';
+/** Regra nova (Jefferson): na pose de transformar (movimento travado) ninguém machuca — tiro, especial, choque. */
+export const podeApanhar = (e: EstadoLuta, l: Lutador) =>
+  e.fase === 'luta' && l.invulneravel <= 0 && l.acao !== 'caido' && l.acao !== 'transformando';
 export const podeTransformar = (l: Lutador) => l.ki >= C.KI_MAX && l.nivel < nivelMaximo(l);
 
 /** Dano em quem pode apanhar. Chegando a 0: Zenkai (1 vez por partida) devolve 1 de vida e um tempo invulnerável. */
@@ -144,14 +147,16 @@ function ajustarCaixa(l: Lutador) {
   l.y = pes - l.a / 2;
 }
 
-function transformar(l: Lutador, eventos: Evento[]) {
+function transformar(e: EstadoLuta, l: Lutador, eventos: Evento[]) {
   l.ki = 0;
   l.nivel++;
   l.poder = C.PODER_TRANSFORMACAO_QUADROS; // transformou de novo durante o bônus: renova, não acumula
   l.acao = 'transformando';
   l.acaoQuadros = 0;
   ajustarCaixa(l);
-  eventos.push({ tipo: 'transformou', dono: l.id, nivel: l.nivel });
+  // regra nova: quem estiver agarrado nas pernas é arremessado para longe (gancho para os minions da Fase 3)
+  const arremessados = arremessarAgarrados(l, e.minions);
+  eventos.push({ tipo: 'transformou', dono: l.id, nivel: l.nivel, arremessados });
 }
 
 function soltarEspecial(e: EstadoLuta, l: Lutador, eventos: Evento[]) {
@@ -212,7 +217,7 @@ function passoLutador(e: EstadoLuta, l: Lutador, ent: Entrada, eventos: Evento[]
   }
   // choque de raios: os dois param e só contam os apertos de ATAQUE
   if (e.choque) {
-    if (apertouAtaque) e.choque.apertos[l.id]++;
+    if (apertouAtaque) { e.choque.apertos[l.id]++; eventos.push({ tipo: 'apertoChoque', dono: l.id }); }
     return clampar(l);
   }
 
@@ -247,7 +252,7 @@ function passoLutador(e: EstadoLuta, l: Lutador, ent: Entrada, eventos: Evento[]
   }
   if (l.pedidoTransformar > 0 && podeTransformar(l)) {
     l.pedidoTransformar = 0;
-    transformar(l, eventos);
+    transformar(e, l, eventos);
     return clampar(l);
   }
   if (l.pedidoParry > 0 && l.esperaParry <= 0) {

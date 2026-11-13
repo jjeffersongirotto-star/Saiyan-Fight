@@ -1,3 +1,4 @@
+import type { MinionAgarravel } from './minions';
 import type { Regras } from './constantes';
 export type IdJogador = 'p1' | 'p2';
 
@@ -95,10 +96,11 @@ export type Evento =
   | { tipo: 'acerto'; alvo: IdJogador; dano: number; deEspecial: boolean }
   | { tipo: 'parry'; dono: IdJogador; refletidos: number }
   | { tipo: 'especial'; dono: IdJogador; sol: boolean }
-  | { tipo: 'transformou'; dono: IdJogador; nivel: number }
+  | { tipo: 'transformou'; dono: IdJogador; nivel: number; arremessados: number }
   | { tipo: 'kiCheio'; dono: IdJogador }
   | { tipo: 'zenkai'; dono: IdJogador }
   | { tipo: 'choque' }
+  | { tipo: 'apertoChoque'; dono: IdJogador }
   | { tipo: 'fimChoque'; dano: Record<IdJogador, number> }
   | { tipo: 'fimRodada'; vencedor: IdJogador | null }
   | { tipo: 'novaRodada'; rodada: number }
@@ -119,6 +121,8 @@ export interface EstadoLuta {
   tiros: Tiro[];
   raios: Raio[];
   choque: Choque | null;
+  /** minions na tela (Fase 3: modo história; no VERSUS fica vazia) */
+  minions: MinionAgarravel[];
   proximoId: number;
   semente: number;
 }

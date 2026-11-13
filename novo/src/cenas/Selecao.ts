@@ -10,6 +10,7 @@ import { criarBotao } from '../ui/botao';
 import { desenharFundo } from './fundo';
 import type { DadosDaLuta } from './Menu';
 import { aoApertar } from '../entrada/teclas';
+import { som } from '../audio/som';
 
 const COLUNAS = 8, CARTA_L = 84, CARTA_A = 92, ESP = 8;
 const X0 = (TELA_L - (COLUNAS * CARTA_L + (COLUNAS - 1) * ESP)) / 2, Y0 = 46;
@@ -44,6 +45,7 @@ export class Selecao extends Phaser.Scene {
   }
 
   create(): void {
+    som.musica(null); // a música é só da luta (como no jogo antigo)
     ajustarCamera(this);
     desenharFundo(this);
     this.add.rectangle(TELA_L / 2, 175, TELA_L, 350, 0x000000, 0.45);

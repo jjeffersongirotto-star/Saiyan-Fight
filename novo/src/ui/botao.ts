@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { estiloTexto } from './resolucao';
+import { som } from '../audio/som';
 
 /** Botão de menu simples (retângulo arredondado + texto), funciona com mouse e toque. */
 export function criarBotao(cena: Phaser.Scene, x: number, y: number, texto: string, aoClicar: () => void, largura = 320) {
@@ -14,6 +15,6 @@ export function criarBotao(cena: Phaser.Scene, x: number, y: number, texto: stri
   const c = cena.add.container(x, y, [fundo, rotulo]).setSize(largura, a).setInteractive({ useHandCursor: true });
   c.on('pointerover', () => desenhar(true));
   c.on('pointerout', () => desenhar(false));
-  c.on('pointerup', aoClicar);
+  c.on('pointerup', () => { som.ligar(); som.tocar('menu'); aoClicar(); });
   return { container: c, rotulo, desenhar };
 }

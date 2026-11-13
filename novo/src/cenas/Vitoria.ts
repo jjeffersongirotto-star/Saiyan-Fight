@@ -9,6 +9,7 @@ import { metaDoAtlas } from '../ui/formas';
 import type { DadosDaLuta } from './Menu';
 import type { IdJogador } from '../logica/tipos';
 import { aoApertar } from '../entrada/teclas';
+import { som } from '../audio/som';
 
 export interface DadosDaVitoria {
   luta: DadosDaLuta;
@@ -25,6 +26,7 @@ export class Vitoria extends Phaser.Scene {
   }
 
   create(d: DadosDaVitoria): void {
+    som.musica(null); // a música é só da luta (como no jogo antigo)
     ajustarCamera(this);
     const pers = PERSONAGENS[d.luta[d.vencedor]];
     this.add.rectangle(TELA_L / 2, TELA_A / 2, TELA_L, TELA_A, 0x0a0f1f, 1);

@@ -48,7 +48,7 @@ do jogo dentro do app, só quando o jogador aperta). O Phaser 4 já saiu (4.2), 
 - **Modo história**: mapa com 11 fases (Ilha do Kame, Torneio, Planeta do Sr. Kaioh, Namek, Nave do Freeza,
   Namek explodindo, Sala do Tempo, Jogos do Cell, Planeta Supremo Kaioh, Plataforma Celestial, Capital do Oeste),
   3 modos por fase (NORMAL, DIFÍCIL, SEM LIMITE), ondas com Saibamans/Cell Jr., vilão por fase, itens.
-- **VERSUS** melhor de 3 (feito na fatia, falta transformação, choque de raios e Zenkai).
+- **VERSUS** melhor de 3 (feito na fase 2: 16 personagens, transformação, choque de raios, Zenkai, efeitos, sons).
 - **Tutorial** passo a passo (toque, teclado e controle).
 - **Personagens**: 16 jogáveis + 2 minions, com transformações (47 formas), alturas, efeitos de tiro/especial/aura.
 - **Editor de personagens** (sprite sheet, conjuntos/grupos, cadeado de quadros, exportar/importar).
@@ -64,8 +64,8 @@ do jogo dentro do app, só quando o jogador aperta). O Phaser 4 já saiu (4.2), 
 | # | Fase | O que entra | Esforço |
 |---|---|---|---|
 | 1 | **Base + fatia jogável** (esta PR) | Vite/TS/Phaser/Vitest, Boot/Preload com barra, menu, VERSUS Goku x Vegeta (andar/voar, tiro, carregar, especial, parry, vida, rodadas, vitória), teclado + toque, CPU simples, atlas WebP, CI | feito |
-| 2 | **Luta completa** | todos os 16 personagens e 47 formas em atlas, transformação, auras e efeitos de `efeitos/`, choque de raios, Zenkai, alturas, sons | 1–2 semanas |
-| 3 | **Modo história** | ondas, Saibamans/Cell Jr., itens, vilão com IA e padrões, 3 modos por fase, mapa de fases, seleção de personagem | 2 semanas |
+| 2 | **Luta completa** | todos os 16 personagens e 47 formas em atlas, transformação, auras e efeitos de `efeitos/`, choque de raios, Zenkai, alturas, sons | feito (ver abaixo) |
+| 3 | **Modo história** | ondas, Saibamans/Cell Jr. (com a regra nova do arremesso ao transformar), itens (cápsula = escudo), vilão com IA e padrões, 3 modos por fase, mapa de fases | 2 semanas |
 | 4 | **Arenas** | as 11 arenas portadas (primeiro o mesmo desenho em canvas, depois camadas com cache) | 1–2 semanas |
 | 5 | **Menus e progresso** | opções, idiomas (todas as linhas), conquistas, ranking, tutorial, pausa, teste de controles, editor de HUD, controle (gamepad) | 1–2 semanas |
 | 6 | **Editores** | editor de personagens (sprite sheet) e editor de arenas, importar/exportar | 2–3 semanas |
@@ -73,6 +73,43 @@ do jogo dentro do app, só quando o jogador aperta). O Phaser 4 já saiu (4.2), 
 | 8 | **Troca** | testes no celular de verdade, o novo vira o site e o APK; o antigo fica numa pasta/branch de arquivo | 2–3 dias |
 
 Total: **~2 a 3 meses** de trabalho, em PRs pequenas; o jogo antigo continua jogável o tempo todo.
+
+## Fase 2 — o que foi feito
+
+- **Personagens**: os 16 jogáveis e as 47 formas (`dados/personagens.ts`), cada forma com o seu atlas
+  (`npm run atlas`), alturas pelo `ALTURAS_PADRAO`, tela de **seleção** (J1, J2 ou CPU).
+- **Regras do jogo antigo** em `logica/luta.ts` (com testes): transformação (ki cheio, +1 de velocidade por 15 s
+  que renova e não acumula, caixa pela altura mantendo os pés), Zenkai 1x por partida, parry instantâneo
+  (tryReflect), especial de 3 que acerta sempre, choque de raios (apertos de ATAQUE, resolveClashDamage).
+- **Carregamento por cena**: a luta mantém só a forma atual + a próxima de cada lutador e libera o resto; a
+  seleção só baixa os retratos; os efeitos vêm uma vez.
+- **Efeitos** (`npm run efeitos` → atlas `efeitos`, 33 animações): auras pela cor (AURA_EFEITOS) e a labareda
+  desenhada para gelo/rosa, raios de ki de quem está transformado, tiros, raios animados e o raio na cor do golpe,
+  sol do Freeza com explosão, choque com o raio de duas pontas, onda do parry, escudo azul na proteção da Zenkai.
+- **Som** (`audio/som.ts` + `logica/musica.ts`): os 9 efeitos sintetizados e as **11 trilhas** do `audio.js`,
+  tela TRILHAS SONORAS, botão SOM no menu (salvo). Como no antigo, a música só toca na luta; a luta usa a trilha
+  do Torneio ("classico", a fase padrão do VERSUS antigo) porque ainda não há escolha de arena (fase 4).
+
+### Diferenças do jogo antigo — confirmadas pelo Jefferson (13/11/2026)
+
+Ficam **ligadas por padrão**; cada uma ainda tem uma chave em `REGRAS` (`logica/constantes.ts`: `true` = regra
+nova, `false` = como no antigo), com testes dos dois jeitos.
+
+| Chave | Regra nova (padrão) | Como era no antigo |
+|---|---|---|
+| `j2IgualAoJ1` | J2 com as mesmas regras do J1 | J2 andava a 4, sem invulnerabilidade depois de apanhar, transformar não dava velocidade |
+| `danoDoEspecialNaChegada` | o dano entra quando o raio chega (18 quadros; sol 62); responder antes vira choque | dano na hora do disparo; responder com o raio na tela ainda virava choque |
+| `transformacaoTravaMovimento` | a pose de transformar (45 quadros) trava o movimento | dava para andar |
+| `guardaGatilho` | ESPECIAL/PARRY/TRANSFORMAR apertado enquanto não pode fica guardado 8 quadros | só valia no quadro do aperto |
+
+### Regras novas do Jefferson (13/11/2026)
+
+- **Invulnerável na pose de transformar**: enquanto a pose dura (movimento travado), o lutador não leva dano
+  nenhum — tiro encosta e some, especial e choque não machucam (`podeApanhar` em `logica/luta.ts`, testado).
+- **Minion agarrado é arremessado ao transformar**: o gancho já existe — `arremessarAgarrados()` em
+  `logica/minions.ts` é chamado na transformação (solta, joga para longe e um pouco para cima, 60 quadros sem
+  poder agarrar de novo; o evento `transformou` diz quantos voaram). No VERSUS a lista `minions` é vazia; os
+  minions de verdade (andar, agarrar, explodir) entram na **fase 3**. (No antigo, só o especial soltava.)
 
 ## Plano das imagens (medido nesta PR)
 
@@ -148,8 +185,10 @@ npm run dev        # abre em http://localhost:5173
 npm test           # testes da lógica (Vitest)
 npm run build      # gera novo/dist (abrir com: npx vite preview)
 npm run atlas      # refaz os atlas a partir de ../conjuntos (precisa de Python 3 + Pillow)
+npm run efeitos    # refaz o atlas dos efeitos a partir de ../efeitos
 ```
 
-Controles: J1 setas + F (tiro) + S (carregar) + Q (especial) + Espaço (parry); J2 IJKL + U/O/Y/P ou teclado
-numérico (5/2/1/3, Enter, Enter do teclado numérico, 7, 0). No celular: joystick na metade esquerda e os botões
+Controles: J1 setas + F (tiro) + S (carregar) + A (transformar) + Q (especial) + Espaço (parry); J2 IJKL +
+U/O/H/Y/P ou teclado numérico (5/2/1/3, Enter, Enter do teclado numérico, 9, 7, 0). No toque, com o ki cheio o
+CARREGAR vira TRANSFORMAR. No celular: joystick na metade esquerda e os botões
 do jogo antigo à direita. ESC volta ao menu.
