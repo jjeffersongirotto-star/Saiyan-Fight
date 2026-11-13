@@ -66,7 +66,7 @@ do jogo dentro do app, só quando o jogador aperta). O Phaser 4 já saiu (4.2), 
 | 1 | **Base + fatia jogável** (esta PR) | Vite/TS/Phaser/Vitest, Boot/Preload com barra, menu, VERSUS Goku x Vegeta (andar/voar, tiro, carregar, especial, parry, vida, rodadas, vitória), teclado + toque, CPU simples, atlas WebP, CI | feito |
 | 2 | **Luta completa** | todos os 16 personagens e 47 formas em atlas, transformação, auras e efeitos de `efeitos/`, choque de raios, Zenkai, alturas, sons | feito (ver abaixo) |
 | 3 | **Modo história** | ondas, Saibamans/Cell Jr. (com a regra nova do arremesso ao transformar), itens (cápsula = escudo), vilão com IA e padrões, 3 modos por fase, mapa de fases | 1ª versão jogável (ver abaixo) |
-| 4 | **Arenas** | as 11 arenas portadas (primeiro o mesmo desenho em canvas, depois camadas com cache) | 1–2 semanas |
+| 4 | **Arenas** | as 11 arenas portadas (primeiro o mesmo desenho em canvas, depois camadas com cache) | 1ª versão: o desenho do antigo (ver abaixo) |
 | 5 | **Menus e progresso** | opções, idiomas (todas as linhas), conquistas, ranking, tutorial, pausa, teste de controles, editor de HUD, controle (gamepad) | 1–2 semanas |
 | 6 | **Editores** | editor de personagens (sprite sheet) e editor de arenas, importar/exportar | 2–3 semanas |
 | 7 | **APK + atualização** | Capacitor dentro de `novo/`, setinha ATUALIZAR com o capgo (só no botão), progresso salvo continua | 3–5 dias |
@@ -198,6 +198,27 @@ No VERSUS, a CPU (`entradaDaIA`) é outra IA e **não** usa `vilaoUsaParry`: ela
 - HUD no DIFÍCIL: "ONDA 3/5 · NÍVEL 6" (luta do modo + força real); SEM LIMITE: "ONDA 7".
 
 Falta (próximas PRs): arenas desenhadas, diálogos/cutscenes, tutorial, conquistas, ranking, escolher o vilão.
+
+## Fase 4 — arenas (branch `phaser-arenas`, 1ª versão)
+
+- **O mesmo desenho do jogo antigo, sem reescrever**: `scripts/gerar-cenarios-legado.mjs` junta os trechos de
+  `game-logic-core.js` (ângulo da câmera), `menu.js` (Sala do Tempo, Torneio de Cell, Nave de Freeza,
+  `drawStageBackground`) e `cenarios3d.js` inteiro em `src/legado/cenarios-legado.js` (gerado; rodar de novo quando
+  uma arena mudar no antigo — um teste falha se ficar desatualizado). Vem num pedaço separado do jogo (~27 KB
+  comprimido), baixado enquanto o jogador está nos menus.
+- `ui/arena.ts` (`ArenaAntiga`): desenha num canvas que é textura do Phaser. As partes paradas já ficam guardadas
+  em imagens pelo próprio código antigo (panoramas de 360°, construções refeitas só a cada 1/4 de grau); por
+  quadro só o chão é redesenhado e o canvas vai para a placa de vídeo. A câmera anda 1,5 por quadro de luta, como
+  no antigo (para na pausa).
+- **60 fps no celular**: mede o custo do cenário; se passar de 5 ms por quadro, baixa a resolução do cenário para
+  1x e depois atualiza a cada 2 e 3 quadros (os lutadores continuam a 60). Medido no navegador do computador:
+  2–3 ms por quadro nas 11 arenas, 60 fps.
+- Todas as lutas têm arena: história = a arena da fase; VERSUS / CPU = tela nova **ESCOLHA A ARENA** (a focada
+  aparece ao vivo atrás; ALEATÓRIA sorteia), com a música da arena. O mapa da história mostra a arena da fase
+  focada atrás das bolinhas.
+
+A confirmar: no antigo o VERSUS usava a arena escolhida em ARENAS (sem tela na hora da luta); agora a escolha é
+logo depois dos lutadores, e a última fica marcada. O mapa 3D de progresso (`mapa.js`) ainda não foi portado.
 
 ## Plano das imagens (medido nesta PR)
 

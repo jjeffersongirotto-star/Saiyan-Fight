@@ -113,7 +113,7 @@ export class Selecao extends Phaser.Scene {
       this.atualizar();
       return;
     }
-    this.scene.start('Luta', { modo: this.modo, p1: this.escolhaP1!, p2: id } satisfies DadosDaLuta);
+    this.scene.start('Arenas', { modo: this.modo, p1: this.escolhaP1!, p2: id } satisfies DadosDaLuta);
   }
 
   private voltar(): void {

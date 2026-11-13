@@ -30,6 +30,7 @@ import { faseDe, type Fase } from '../dados/fases';
 import { criarHistoria, passoHistoria } from '../logica/historia';
 import { DesenhoHistoria, NOME_DO_ITEM, pedirMinion, rotuloDaOnda } from '../ui/historia';
 import type { DadosDoFimHistoria } from './FimHistoria';
+import { ArenaAntiga, carregarCenarios, cenariosProntos } from '../ui/arena';
 
 export class Luta extends Phaser.Scene {
   private dados!: DadosDaLuta;
@@ -54,6 +55,9 @@ export class Luta extends Phaser.Scene {
   /** modo história: a fase e o desenho dos minions/itens (null nos outros modos) */
   private fase: Fase | null = null;
   private historia: DesenhoHistoria | null = null;
+  /** a arena do jogo antigo (null enquanto o código dela não chegou ou se a luta não tem arena) */
+  private arena: ArenaAntiga | null = null;
+  private idArena: string | null = null;
 
   constructor() {
     super('Luta');
@@ -62,6 +66,7 @@ export class Luta extends Phaser.Scene {
   init(d: DadosDaLuta): void {
     this.dados = d;
     this.fase = d.modo === 'historia' ? faseDe(d.fase ?? '') : null;
+    this.idArena = this.fase?.id ?? (d.arena ? faseDe(d.arena).id : null);
   }
 
   preload(): void {
@@ -75,7 +80,8 @@ export class Luta extends Phaser.Scene {
 
   create(): void {
     ajustarCamera(this);
-    desenharFundo(this, this.fase ?? undefined);
+    this.arena = null;
+    this.ligarArena();
     const semente = Date.now() | 0;
     this.estado = this.fase
       ? criarHistoria(fichaDoPersonagem(this.dados.p1), fichaDoPersonagem(this.dados.p2), this.fase, this.dados.modoFase ?? 'normal', semente)
@@ -101,7 +107,7 @@ export class Luta extends Phaser.Scene {
       .setDepth(850);
     if (this.fase) this.mostrarAviso(`${T(this.fase.nome)}\n${rotuloDaOnda(this.estado.historia!.modo, 0, this.estado.historia!.onda)}`, 1600, 26);
     else this.mostrarAviso(`${T('RODADA')} 1 — ${T('LUTEM!')}`, 1200);
-    som.musica(this.fase?.musica ?? TEMA_DA_LUTA);
+    som.musica(this.fase?.musica ?? (this.idArena ? faseDe(this.idArena).musica : TEMA_DA_LUTA));
 
     this.toque = new ControlesToque(this);
     this.teclado.ligar();
@@ -120,8 +126,29 @@ export class Luta extends Phaser.Scene {
       this.toque.destruir();
       this.efeitos.destruir();
       this.historia?.destruir();
+      this.arena?.destruir();
+      this.arena = null;
       this.load.off(Phaser.Loader.Events.FILE_COMPLETE);
     });
+  }
+
+  /** arena do jogo antigo; sem ela (ou enquanto o código não chegou), o céu e o chão pintados */
+  private ligarArena(): void {
+    const id = this.idArena;
+    const cores = id ? faseDe(id) : undefined;
+    if (!id) { desenharFundo(this); return; }
+    const m = cenariosProntos();
+    if (m) {
+      try { this.arena = new ArenaAntiga(this, id, m); return; } catch { this.arena = null; }
+    }
+    const fundo = desenharFundo(this, cores);
+    if (!m) {
+      carregarCenarios().then((mod) => {
+        if (!this.sys.isActive() || this.arena) return;
+        try { this.arena = new ArenaAntiga(this, id, mod); } catch { return; }
+        for (const o of this.children.list) if (o instanceof Phaser.GameObjects.Image && o.texture.key === fundo) o.destroy();
+      }).catch(() => undefined);
+    }
   }
 
   private criarSprite(id: IdJogador): Phaser.GameObjects.Sprite {
@@ -419,6 +446,7 @@ export class Luta extends Phaser.Scene {
     this.desenharLutador(e.p1, alfa);
     this.desenharLutador(e.p2, alfa);
 
+    this.arena?.desenhar(e.quadro);
     const relogio = e.quadro / 60;
     this.efeitos.desenharTiros(e, relogio);
     this.efeitos.desenharRaios(e, (l) => this.maoNaTela(l), (l) => ({ x: this.sprites[l.id].x, y: this.sprites[l.id].y - l.a / 2 }), relogio);
