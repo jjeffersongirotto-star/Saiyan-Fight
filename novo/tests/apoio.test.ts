@@ -154,7 +154,7 @@ describe('idiomas', () => {
             /\b(?:titulo|avisar|pedirTexto|confirmar)\((?:this, )?'((?:[^'\\]|\\.)+)'/g,
             /label: '((?:[^'\\]|\\.)+)'/g,
           ];
-          for (const re of padroes) for (const m of src.matchAll(re)) if (!cad.has(m[1]) && !/^[-+−◀▶✕←↑↓]$/.test(m[1])) faltam.push(`${n}: ${m[1]}`);
+          for (const re of padroes) for (const m of src.matchAll(re)) if (!cad.has(m[1]) && !/^[-+−◀▶✕←↑↓‹›]$/.test(m[1])) faltam.push(`${n}: ${m[1]}`);
         }
       }
     };

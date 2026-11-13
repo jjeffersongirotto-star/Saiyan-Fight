@@ -5,6 +5,15 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.4',
+    titulo: 'MAPA DE FASES IGUAL AO DO JOGO ANTIGO',
+    itens: [
+      'O mapa da história agora é o caminho em perspectiva do jogo antigo: céu, horizonte, árvores, pedras e construções de cada trecho, e a estrada dourada até a última fase liberada.',
+      'Cada fase mostra a foto da arena, o número, o nome, NORMAL/DIFÍCIL completos e o recorde de onda; as fases futuras aparecem com cadeado e a placa ADVERSÁRIOS MAIS FORTES VIRÃO!.',
+      'Arraste o mapa ou use as setas ‹ › para rolar; toque numa fase para escolher NORMAL (ONDAS 1-5), DIFÍCIL ou SEM LIMITE. Ao liberar uma fase, o cadeado abre e cai.',
+    ],
+  },
+  {
     versao: '0.3',
     titulo: 'EDITORES DE PERSONAGENS E DE ARENAS',
     itens: [

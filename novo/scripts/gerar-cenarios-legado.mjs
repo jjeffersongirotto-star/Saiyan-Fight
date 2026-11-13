@@ -23,6 +23,13 @@ function trecho(texto, de, ate, incluirAte = false) {
 const nucleo = trecho(ler('game-logic-core.js'), '// Sala do Tempo: o cenário', 'function getForwardTravel', true);
 const menu = trecho(ler('menu.js'), '// ==================== SALA DO TEMPO', '// ==================== RENDERIZAÇÃO DE ENTIDADES');
 const c3d = ler('cenarios3d.js');
+// MAPA DE FASES em "3D": a geometria do caminho (game-logic-core.js), o desenho (mapa.js inteiro) e o cadeado e a
+// foto redonda das fases (menu.js). Os textos fixos do desenho passam pela tradução do jogo novo.
+const mapaNucleo = trecho(ler('game-logic-core.js'), '// ==================== MAPA DE PROGRESSO (fases em linha)', '// Altura do personagem');
+const funcao = (t, nome) => { const i = t.indexOf(`function ${nome}(`); if (i < 0) throw new Error(`função não achada: ${nome}`); return t.slice(i, t.indexOf('\n}\n', i) + 3); };
+const menuJs = ler('menu.js');
+const mapaJs = ler('mapa.js').replace(/ctx\.fillText\("([^"]+)"/g, 'ctx.fillText(traduzir("$1")');
+const mapaMenu = ['drawPadlock', 'drawStageThumbCircle'].map((n) => funcao(menuJs, n)).join('\n');
 // EDITOR DE ARENAS (arenas.js): só a parte do desenho (peças, céu, chão, hora, clima), até o arquivo .arena.json
 const arenas = trecho(ler('arenas.js'), '// arenas.js — EDITOR DE ARENAS', '// ---------------- arquivo .arena.json');
 
@@ -48,6 +55,13 @@ export function criarCenariosLegado(canvasEl) {
 ${nucleo}
 ${menu}
 ${c3d}
+  // ---- mapa de fases (game-logic-core.js, mapa.js, menu.js) ----
+  let traduzir = (t) => t;
+  let mapaTotal = 60;
+  function getMapaTotalFases() { return mapaTotal; }
+${mapaNucleo}
+${mapaJs}
+${mapaMenu}
   // ---- arenas.js (desenho das arenas criadas) ----
   const readJsonStorage = (_k, padrao) => padrao;
   const writeStorage = () => false;
@@ -69,6 +83,29 @@ ${arenas}
       ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
       ctx.imageSmoothingEnabled = true;
       drawStageBackground();
+    },
+    /** MAPA DE FASES: o desenho do antigo (céu, horizonte, objetos e estrada) com a rolagem \`rolagem\` */
+    mapa: {
+      TOTAL_FASES: MAPA_TOTAL_FASES, NO_R: 26,
+      posicao: (i) => getMapaPosicaoFase(i),
+      limitar: (r, total) => limitarRolagemMapa(r, total),
+      rolagemPara: (i, total) => rolagemParaFase(i, total),
+      traducao(f) { traduzir = f; },
+      desenhar(rolagem, total, acesaAte) {
+        mapaTotal = total;
+        ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
+        drawMapaFundo(rolagem);
+        const de = Math.max(0, Math.floor((rolagem - MAPA_MARGEM_X) / MAPA_PASSO_X) - 1);
+        const ate = Math.min(total - 1, Math.ceil((rolagem + 800 - MAPA_MARGEM_X) / MAPA_PASSO_X) + 1);
+        const pontos = [];
+        for (let i = de; i <= ate; i++) { const p = getMapaPosicaoFase(i); pontos.push({ x: p.x - rolagem, y: p.y }); }
+        drawMapaEstrada(pontos, acesaAte - de);
+      },
+      sombra: (x, y, r) => drawMapaSombraFase(x, y, r),
+      placa: (x, y) => drawMapaPlaca(x, y),
+      cadeado: (x, y, s, aberto) => drawPadlock(x, y, s, aberto || 0),
+      foto: (x, y, r, img) => drawStageThumbCircle(x, y, r, img),
+      ctx: () => ctx,
     },
     /** troca a resolução (pixels reais por pixel do jogo); as imagens guardadas se refazem sozinhas (c3Valida) */
     escala(k) {
