@@ -32,6 +32,7 @@ Legenda: ✅ feito no novo · 🟡 parcial · ❌ falta · ➕ só no novo. A co
 Contagem: no inventário, 61 itens = 11 ✅ · 12 🟡 · 37 ❌ · 1 ➕. Depois da PR phaser-menus: 46 ✅ · 3 🟡 (A3 editores, A23 mapa 3D,
 B14 resolução automática) · 11 ❌ (A22 tutorial, C1–C10 editores) · 1 ➕.
 Depois da PR phaser-editores: 57 ✅ · 2 🟡 (A23, B14) · 1 ❌ (A22) · 1 ➕.
+Depois da PR phaser-mapa3d: 58 ✅ · 1 🟡 (B14) · 1 ❌ (A22) · 1 ➕.
 
 ### A. Telas e menus
 
@@ -59,7 +60,7 @@ Depois da PR phaser-editores: 57 ✅ · 2 🟡 (A23, B14) · 1 ❌ (A22) · 1 �
 | A20 | MELHORES PONTUAÇÕES: GERAL / POR FASE (abas por fase) | `ranking` | ✅ | phaser-menus |
 | A21 | CONQUISTAS: 57 medalhas (bronze/prata/ouro/diamante), contador por tipo, rolagem, aviso na luta | `achievements`, `progress.js`, `drawAchievementBanner` | ✅ (57 conquistas) | phaser-menus |
 | A22 | TUTORIAL interativo (7 passos: mover, ki, carregar, parry, transformar, especial, pausar; PULAR/VOLTAR) | `gameplay.js` TUTORIAL_STEPS | ❌ | phaser-tutorial |
-| A23 | Mapa da história em "3D" (estrada, árvores, pedras, horizonte por ambiente, placa "ADVERSÁRIOS MAIS FORTES VIRÃO", rolagem ◀ ▶) | `mapa.js`, `render` stage_map | 🟡 (bolinhas sobre a arena) | phaser-mapa3d |
+| A23 | Mapa da história em "3D" (estrada, árvores, pedras, horizonte por ambiente, placa "ADVERSÁRIOS MAIS FORTES VIRÃO", rolagem ◀ ▶) | `mapa.js`, `render` stage_map | ✅ o mesmo desenho (mapa.js + geometria do game-logic-core via legado), 60 nós, fotos, cadeado animado, arrastar/setas, quadro de modo | phaser-mapa3d |
 | A24 | Escolha do modo da fase NORMAL / DIFÍCIL / SEM LIMITE (com cadeado) | `stageMap` | ✅ | fase 3 |
 | A25 | Escolher o herói antes da fase | `abrirTelaPersonagens("solo")` | ✅ | fase 3 |
 | A26 | PAUSA: CONTINUAR / OPÇÕES / SAIR, contagem 3-2-1 ao voltar, pausa sozinho ao trocar de app | `drawPauseOverlay` | ✅ | phaser-menus |

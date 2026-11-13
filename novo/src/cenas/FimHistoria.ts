@@ -112,12 +112,15 @@ export class FimHistoria extends Phaser.Scene {
     });
 
     const deNovo = () => this.scene.start('Luta', d.luta);
-    const mapa = () => this.scene.start('Mapa', { fase: fase.id });
+    const prox0 = ordem[ordem.indexOf(fase.id) + 1];
+    // a próxima fase acabou de ser liberada: o mapa toca o cadeado abrindo nela
+    const liberou = novidades.includes('PRÓXIMA FASE LIBERADA!') ? prox0 : undefined;
+    const mapa = () => this.scene.start('Mapa', { fase: fase.id, liberou });
     const menu = () => this.scene.start('Menu');
     const prox = ordem[ordem.indexOf(fase.id) + 1];
     const temProx = venceu && modo === 'normal' && !!prox;
     criarBotao(this, TELA_L / 2 - 250, 318, venceu ? T('JOGAR DE NOVO') : T('TENTAR DE NOVO'), deNovo, 220);
-    criarBotao(this, TELA_L / 2, 318, temProx ? T('PRÓXIMA FASE') : T('MAPA'), temProx ? () => this.scene.start('Mapa', { fase: prox }) : mapa, 220);
+    criarBotao(this, TELA_L / 2, 318, temProx ? T('PRÓXIMA FASE') : T('MAPA'), temProx ? () => this.scene.start('Mapa', { fase: prox, liberou }) : mapa, 220);
     criarBotao(this, TELA_L / 2 + 250, 318, T('MENU'), menu, 220);
     let foi = false;
     aoApertar(this, (c, ev) => {
