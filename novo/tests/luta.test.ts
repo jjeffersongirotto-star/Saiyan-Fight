@@ -314,3 +314,66 @@ describe('Zenkai, rodadas e partida', () => {
     expect(rodar(f, 1).some((x) => x.tipo === 'especial')).toBe(false);
   });
 });
+
+describe('chaves das diferenças (REGRAS) — regra antiga quando desligada', () => {
+  const antiga = (mudar: Partial<C.Regras>, a = 'goku', b = 'vegeta') => criarLuta(fichaDoPersonagem(a), fichaDoPersonagem(b), 1, { ...C.REGRAS_NOVAS, ...mudar });
+
+  it('o jogo usa as regras novas por padrão', () => {
+    expect(luta().regras).toEqual(C.REGRAS_NOVAS);
+    expect(C.REGRAS).toEqual(C.REGRAS_NOVAS);
+  });
+
+  it('j2IgualAoJ1 = false: J2 anda a 4, não fica invulnerável depois de apanhar e não ganha velocidade ao transformar', () => {
+    const e = antiga({ j2IgualAoJ1: false });
+    alinhar(e);
+    const x0 = e.p2.x;
+    rodar(e, 1, {}, { x: -1 });
+    expect(x0 - e.p2.x).toBeCloseTo(C.VELOCIDADE_J2_ANTIGA, 5);
+    let ev: Evento[] = [];
+    for (let i = 0; i < 300 && !ev.length; i++) ev = rodar(e, 1, { atacar: true }).filter((x) => x.tipo === 'acerto');
+    expect(e.p2.invulneravel).toBe(0);
+    e.tiros.length = 0; // sem invulnerabilidade, os outros tiros no ar continuariam acertando
+    rodar(e, C.ATINGIDO_QUADROS + 1);
+    e.p2.ki = C.KI_MAX;
+    rodar(e, 1, {}, { transformar: true });
+    expect(e.p2.nivel).toBe(1);
+    expect(velocidadeDe(e.p2, e.regras)).toBe(C.VELOCIDADE_J2_ANTIGA);
+    expect(velocidadeDe(e.p1, e.regras)).toBe(C.VELOCIDADE); // o J1 não muda
+  });
+
+  it('danoDoEspecialNaChegada = false: o dano entra no disparo e responder com o raio na tela ainda vira choque', () => {
+    const e = antiga({ danoDoEspecialNaChegada: false });
+    alinhar(e);
+    e.p1.ki = e.p2.ki = C.KI_MAX;
+    const ev = rodar(e, 1, { especial: true });
+    expect(ev.find((x) => x.tipo === 'acerto')).toMatchObject({ alvo: 'p2', dano: C.ESPECIAL_DANO });
+    rodar(e, C.ESPECIAL_CHEGA + 5); // depois de onde a regra nova já não deixaria responder
+    e.p2.acao = 'livre';
+    expect(rodar(e, 1, {}, { especial: true }).some((x) => x.tipo === 'choque')).toBe(true);
+  });
+
+  it('transformacaoTravaMovimento = false: anda durante a pose de transformar', () => {
+    const trava = luta(), solta = antiga({ transformacaoTravaMovimento: false });
+    const ys = [trava, solta].map((e) => {
+      e.p1.y = 200;
+      e.p1.ki = C.KI_MAX;
+      rodar(e, 1, { transformar: true });
+      const y0 = e.p1.y;
+      rodar(e, 5, { y: -1 });
+      expect(e.p1.acao).toBe('transformando');
+      return y0 - e.p1.y;
+    });
+    expect(ys[0]).toBe(0);
+    expect(ys[1]).toBeCloseTo(5 * (C.VELOCIDADE + 1), 5);
+  });
+
+  it('guardaGatilho = false: ESPECIAL apertado enquanto apanha se perde', () => {
+    const e = antiga({ guardaGatilho: false });
+    e.p1.invulneravel = 0;
+    e.p1.ki = C.KI_MAX;
+    e.p1.acao = 'atingido';
+    e.p1.acaoQuadros = C.ATINGIDO_QUADROS - 4;
+    expect(rodar(e, 1, { especial: true }).concat(rodar(e, 6)).some((x) => x.tipo === 'especial')).toBe(false);
+    expect(rodar(e, 1, { especial: true }).some((x) => x.tipo === 'especial')).toBe(true);
+  });
+});

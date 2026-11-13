@@ -1,3 +1,4 @@
+import type { Regras } from './constantes';
 export type IdJogador = 'p1' | 'p2';
 
 /** O que cada jogador está apertando NESTE passo. atacar/carregar = segurando; especial/parry/transformar = acabou de apertar. */
@@ -66,6 +67,8 @@ export interface Tiro {
   raio: number;
   dano: number;
   refletido: boolean;
+  /** quem atirou (o desenho do tiro continua o dele depois do parry, como no jogo antigo) */
+  atirador: IdJogador;
 }
 
 export interface Raio {
@@ -102,6 +105,8 @@ export type Evento =
   | { tipo: 'fimPartida'; vencedor: IdJogador };
 
 export interface EstadoLuta {
+  /** as diferenças em relação ao jogo antigo que estão ligadas nesta luta (constantes.ts) */
+  regras: Regras;
   quadro: number;
   rodada: number;
   placar: Record<IdJogador, number>;

@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "atlas": "python3 scripts/gerar-atlas.py"
+    "efeitos": "python3 scripts/gerar-efeitos.py",
   },
   "dependencies": {
     "phaser": "3.90.0"

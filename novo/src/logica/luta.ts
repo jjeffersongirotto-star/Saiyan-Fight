@@ -3,7 +3,7 @@
 // Regras do jogo antigo (gameplay.js): tiro 1, especial 3 com o ki cheio, parry devolve os tiros por perto,
 // transformação com o ki cheio (sobe um nível, +velocidade por 15 s), Zenkai 1x por partida, choque de raios.
 import * as C from './constantes';
-import type { Choque, Entrada, Evento, EstadoLuta, FichaLuta, IdJogador, Lutador, Tiro } from './tipos';
+import type { Choque, Entrada, Evento, EstadoLuta, FichaLuta, IdJogador, Lutador, Raio, Tiro } from './tipos';
 
 /** Sorteio determinístico (mulberry32): o mesmo começo dá sempre a mesma luta — bom para testes e replays. */
 export function sortear(estado: { semente: number }): number {
@@ -27,7 +27,10 @@ export function tamanhoDaCaixa(alturaCm: number): [number, number] {
 }
 export const alturaDoNivel = (l: Pick<Lutador, 'alturas'>, nivel: number) => l.alturas[Math.min(nivel, l.alturas.length - 1)] ?? C.ALTURA_PADRAO_CM;
 export const nivelMaximo = (l: Pick<Lutador, 'alturas'>) => Math.max(0, l.alturas.length - 1);
-export const velocidadeDe = (l: Lutador) => C.VELOCIDADE + (l.poder > 0 ? C.PODER_BONUS_VELOCIDADE : 0);
+/** J2 com as regras antigas (REGRAS.j2IgualAoJ1 = false)? */
+const j2Antigo = (r: C.Regras | undefined, l: Lutador) => !!r && !r.j2IgualAoJ1 && l.id === 'p2';
+export const velocidadeDe = (l: Lutador, regras?: C.Regras) =>
+  j2Antigo(regras, l) ? C.VELOCIDADE_J2_ANTIGA : C.VELOCIDADE + (l.poder > 0 ? C.PODER_BONUS_VELOCIDADE : 0);
 
 /** Faixa de X permitida para o centro de cada jogador: cada um na sua metade da tela. */
 export function limitesX(id: IdJogador, largura = C.LUTADOR_L): [number, number] {
@@ -57,8 +60,9 @@ export function criarLutador(id: IdJogador, ficha: FichaLuta | string): Lutador 
   };
 }
 
-export function criarLuta(p1: FichaLuta | string, p2: FichaLuta | string, semente = 1): EstadoLuta {
+export function criarLuta(p1: FichaLuta | string, p2: FichaLuta | string, semente = 1, regras: C.Regras = C.REGRAS): EstadoLuta {
   return {
+    regras: { ...regras },
     quadro: 0, rodada: 1, placar: { p1: 0, p2: 0 }, fase: 'luta', faseQuadros: 0,
     vencedorRodada: null, vencedorPartida: null,
     p1: criarLutador('p1', p1), p2: criarLutador('p2', p2),
@@ -114,7 +118,7 @@ export const podeTransformar = (l: Lutador) => l.ki >= C.KI_MAX && l.nivel < niv
 /** Dano em quem pode apanhar. Chegando a 0: Zenkai (1 vez por partida) devolve 1 de vida e um tempo invulnerável. */
 function aplicarDano(e: EstadoLuta, alvo: Lutador, dano: number, deEspecial: boolean, direcao: number, eventos: Evento[]) {
   alvo.vida = Math.max(0, alvo.vida - dano);
-  alvo.invulneravel = C.INVULNERAVEL_QUADROS;
+  alvo.invulneravel = j2Antigo(e.regras, alvo) ? 0 : C.INVULNERAVEL_QUADROS;
   alvo.empurraoX = direcao * C.EMPURRAO * (deEspecial ? 2 : 1);
   eventos.push({ tipo: 'acerto', alvo: alvo.id, dano, deEspecial });
   if (alvo.vida <= 0 && !alvo.zenkaiUsada) {
@@ -158,10 +162,20 @@ function soltarEspecial(e: EstadoLuta, l: Lutador, eventos: Evento[]) {
   e.raios.push({ dono: l.id, idade: 0, duracao: sol ? C.SOL_DURACAO : C.ESPECIAL_DURACAO, chega: sol ? C.SOL_CHEGA : C.ESPECIAL_CHEGA, sol, acertou: false });
   e.tiros.length = 0; // o especial varre os tiros da tela (world.obstacles = [])
   eventos.push({ tipo: 'especial', dono: l.id, sol });
+  if (!e.regras.danoDoEspecialNaChegada) acertarRaio(e, e.raios[e.raios.length - 1], eventos); // como no antigo: na hora
+}
+
+/** O especial sempre acerta (como no jogo antigo), só não passa da invulnerabilidade. */
+function acertarRaio(e: EstadoLuta, r: Raio, eventos: Evento[]) {
+  r.acertou = true;
+  const alvo = e[outro(r.dono)];
+  if (podeApanhar(e, alvo)) aplicarDano(e, alvo, C.ESPECIAL_DANO, true, e[r.dono].olhando, eventos);
 }
 
 /** O outro já tem um raio no ar que ainda não chegou: soltar o especial agora vira CHOQUE (resolveBeamClash). */
 function raioDoOutroNoAr(e: EstadoLuta, id: IdJogador) {
+  // regra antiga: qualquer raio ainda na tela (o dano já entrou no disparo)
+  if (!e.regras.danoDoEspecialNaChegada) return e.raios.find((r) => r.dono !== id && r.idade < r.duracao);
   return e.raios.find((r) => r.dono !== id && !r.acertou && r.idade < r.chega);
 }
 
@@ -179,9 +193,11 @@ function passoLutador(e: EstadoLuta, l: Lutador, ent: Entrada, eventos: Evento[]
   l.acaoQuadros++;
   const apertouAtaque = ent.atacar && !l.atacarAntes;
   l.atacarAntes = ent.atacar;
-  l.pedidoEspecial = ent.especial ? C.GUARDA_GATILHO : Math.max(0, l.pedidoEspecial - 1);
-  l.pedidoParry = ent.parry ? C.GUARDA_GATILHO : Math.max(0, l.pedidoParry - 1);
-  l.pedidoTransformar = ent.transformar ? C.GUARDA_GATILHO : Math.max(0, l.pedidoTransformar - 1);
+  // sem a guarda, o aperto vale só neste quadro (1 = usa agora, some no próximo)
+  const guarda = e.regras.guardaGatilho ? C.GUARDA_GATILHO : 1;
+  l.pedidoEspecial = ent.especial ? guarda : Math.max(0, l.pedidoEspecial - 1);
+  l.pedidoParry = ent.parry ? guarda : Math.max(0, l.pedidoParry - 1);
+  l.pedidoTransformar = ent.transformar ? guarda : Math.max(0, l.pedidoTransformar - 1);
 
   if (l.empurraoX !== 0) {
     l.x += l.empurraoX;
@@ -203,6 +219,7 @@ function passoLutador(e: EstadoLuta, l: Lutador, ent: Entrada, eventos: Evento[]
   if (l.acao === 'atingido' && l.acaoQuadros >= C.ATINGIDO_QUADROS) { l.acao = 'livre'; l.acaoQuadros = 0; }
   if (l.acao === 'transformando') {
     if (l.acaoQuadros >= C.TRANSFORMANDO_QUADROS) { l.acao = 'livre'; l.acaoQuadros = 0; }
+    else if (!e.regras.transformacaoTravaMovimento) andar(e, l, ent);
     return clampar(l);
   }
   if (l.acao === 'especial') {
@@ -260,15 +277,7 @@ function passoLutador(e: EstadoLuta, l: Lutador, ent: Entrada, eventos: Evento[]
   }
   if (l.acao === 'carregando') { l.acao = 'livre'; l.acaoQuadros = 0; }
 
-  // andar/voar (diagonal com a mesma velocidade)
-  let mx = limitar(ent.x, -1, 1), my = limitar(ent.y, -1, 1);
-  const tam = Math.hypot(mx, my);
-  if (tam > 1) { mx /= tam; my /= tam; }
-  const v = velocidadeDe(l);
-  l.x += mx * v;
-  l.y += my * v;
-  l.movX = mx;
-  l.movY = my;
+  andar(e, l, ent);
 
   // tiro de ki: segurando ATAQUE sai ~5 por segundo
   if (ent.atacar && l.esperaTiro <= 0 && e.tiros.length < C.TIROS_MAX) {
@@ -277,13 +286,25 @@ function passoLutador(e: EstadoLuta, l: Lutador, ent: Entrada, eventos: Evento[]
       id: e.proximoId++, dono: l.id,
       x: m.x, y: m.y + (sortear(e) - 0.5) * 20,
       vx: l.olhando * C.TIRO_VELOCIDADE, vy: (sortear(e) - 0.5) * 2,
-      raio: C.TIRO_RAIO, dano: C.TIRO_DANO, refletido: false,
+      raio: C.TIRO_RAIO, dano: C.TIRO_DANO, refletido: false, atirador: l.id,
     });
     l.esperaTiro = C.TIRO_INTERVALO;
     l.poseTiro = C.POSE_TIRO_QUADROS;
     eventos.push({ tipo: 'tiro', dono: l.id });
   }
   clampar(l);
+}
+
+/** andar/voar (diagonal com a mesma velocidade) */
+function andar(e: EstadoLuta, l: Lutador, ent: Entrada) {
+  let mx = limitar(ent.x, -1, 1), my = limitar(ent.y, -1, 1);
+  const tam = Math.hypot(mx, my);
+  if (tam > 1) { mx /= tam; my /= tam; }
+  const v = velocidadeDe(l, e.regras);
+  l.x += mx * v;
+  l.y += my * v;
+  l.movX = mx;
+  l.movY = my;
 }
 
 function clampar(l: Lutador) {
@@ -312,11 +333,7 @@ function passoTiros(e: EstadoLuta, eventos: Evento[]) {
 function passoRaios(e: EstadoLuta, eventos: Evento[]) {
   for (const r of e.raios) {
     r.idade++;
-    if (!r.acertou && r.idade >= r.chega) {
-      r.acertou = true; // o especial sempre acerta (como no jogo antigo), só não passa da invulnerabilidade
-      const alvo = e[outro(r.dono)];
-      if (podeApanhar(e, alvo)) aplicarDano(e, alvo, C.ESPECIAL_DANO, true, e[r.dono].olhando, eventos);
-    }
+    if (!r.acertou && r.idade >= r.chega) acertarRaio(e, r, eventos);
   }
   e.raios = e.raios.filter((r) => r.idade < r.duracao);
 }

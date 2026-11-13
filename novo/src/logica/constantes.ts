@@ -68,5 +68,35 @@ export const EMPURRAO = 3;
 export const FIM_RODADA_QUADROS = 150;  // pausa com o resultado antes da próxima rodada
 export const INVULNERAVEL_INICIO = 60;  // começo de cada rodada
 
-/** quadros que um aperto de ESPECIAL/PARRY/TRANSFORMAR fica guardado enquanto o lutador ainda não pode */
+/** quadros que um aperto de ESPECIAL/PARRY/TRANSFORMAR fica guardado (com REGRAS.guardaGatilho ligada) */
 export const GUARDA_GATILHO = 8;
+
+// ==================== DIFERENÇAS DO JOGO ANTIGO (ainda sem a palavra final do Jefferson) ====================
+// Cada uma liga/desliga aqui. `true` = regra nova; `false` = como era no jogo antigo.
+export interface Regras {
+  /** J2 com as regras do J1. false = J2 como no antigo: velocidade 4, sem invulnerabilidade depois de apanhar,
+   *  e a transformação não dá o +1 de velocidade (no antigo só deixava a CPU mais agressiva) */
+  j2IgualAoJ1: boolean;
+  /** o dano do especial entra quando o raio CHEGA (18 quadros; sol 62) e o outro pode responder antes = choque.
+   *  false = como no antigo: o dano entra na hora do disparo e responder com o raio no ar ainda vira choque */
+  danoDoEspecialNaChegada: boolean;
+  /** a pose de transformar (45 quadros) trava o movimento. false = dá para andar durante a pose */
+  transformacaoTravaMovimento: boolean;
+  /** aperto de ESPECIAL/PARRY/TRANSFORMAR guardado por GUARDA_GATILHO quadros. false = só vale no quadro do aperto */
+  guardaGatilho: boolean;
+}
+export const REGRAS_NOVAS: Readonly<Regras> = {
+  j2IgualAoJ1: true,
+  danoDoEspecialNaChegada: true,
+  transformacaoTravaMovimento: true,
+  guardaGatilho: true,
+};
+export const REGRAS_ANTIGAS: Readonly<Regras> = {
+  j2IgualAoJ1: false,
+  danoDoEspecialNaChegada: false,
+  transformacaoTravaMovimento: false,
+  guardaGatilho: false,
+};
+/** as regras que o jogo usa (troque aqui, ou peça na criarLuta) */
+export const REGRAS: Readonly<Regras> = REGRAS_NOVAS;
+export const VELOCIDADE_J2_ANTIGA = 4;
