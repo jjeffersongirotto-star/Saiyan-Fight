@@ -19,6 +19,13 @@ export class Hud {
     };
   }
 
+  /** TUTORIAL: sem barras (só a de ki do próprio tutorial) */
+  esconder(): void {
+    this.g.clear();
+    this.nomes.p1.setVisible(false);
+    this.nomes.p2.setVisible(false);
+  }
+
   desenhar(e: EstadoLuta): void {
     const g = this.g.clear();
     for (const id of ['p1', 'p2'] as const) {

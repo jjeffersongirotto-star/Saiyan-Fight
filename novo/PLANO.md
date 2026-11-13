@@ -33,6 +33,7 @@ Contagem: no inventário, 61 itens = 11 ✅ · 12 🟡 · 37 ❌ · 1 ➕. Depoi
 B14 resolução automática) · 11 ❌ (A22 tutorial, C1–C10 editores) · 1 ➕.
 Depois da PR phaser-editores: 57 ✅ · 2 🟡 (A23, B14) · 1 ❌ (A22) · 1 ➕.
 Depois da PR phaser-mapa3d: 58 ✅ · 1 🟡 (B14) · 1 ❌ (A22) · 1 ➕.
+Depois da PR phaser-tutorial: 59 ✅ · 1 🟡 (B14) · 0 ❌ · 1 ➕.
 
 ### A. Telas e menus
 
@@ -59,7 +60,7 @@ Depois da PR phaser-mapa3d: 58 ✅ · 1 🟡 (B14) · 1 ❌ (A22) · 1 ➕.
 | A19 | TRANSMITIR PARA A TV (Presentation API + WebRTC, `tv.html`) | `transmitirParaTV` | ✅ (mesmo `tv.html`; precisa de navegador com Presentation API) | phaser-menus |
 | A20 | MELHORES PONTUAÇÕES: GERAL / POR FASE (abas por fase) | `ranking` | ✅ | phaser-menus |
 | A21 | CONQUISTAS: 57 medalhas (bronze/prata/ouro/diamante), contador por tipo, rolagem, aviso na luta | `achievements`, `progress.js`, `drawAchievementBanner` | ✅ (57 conquistas) | phaser-menus |
-| A22 | TUTORIAL interativo (7 passos: mover, ki, carregar, parry, transformar, especial, pausar; PULAR/VOLTAR) | `gameplay.js` TUTORIAL_STEPS | ❌ | phaser-tutorial |
+| A22 | TUTORIAL interativo (7 passos: mover, ki, carregar, parry, transformar, especial, pausar; PULAR/VOLTAR) | `gameplay.js` TUTORIAL_STEPS | ✅ `logica/tutorial.ts` + Luta modo 'tutorial' (passos de verdade, PULAR/CRIAR, instruções por plataforma) | phaser-tutorial |
 | A23 | Mapa da história em "3D" (estrada, árvores, pedras, horizonte por ambiente, placa "ADVERSÁRIOS MAIS FORTES VIRÃO", rolagem ◀ ▶) | `mapa.js`, `render` stage_map | ✅ o mesmo desenho (mapa.js + geometria do game-logic-core via legado), 60 nós, fotos, cadeado animado, arrastar/setas, quadro de modo | phaser-mapa3d |
 | A24 | Escolha do modo da fase NORMAL / DIFÍCIL / SEM LIMITE (com cadeado) | `stageMap` | ✅ | fase 3 |
 | A25 | Escolher o herói antes da fase | `abrirTelaPersonagens("solo")` | ✅ | fase 3 |

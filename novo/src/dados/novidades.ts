@@ -5,6 +5,15 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.5',
+    titulo: 'TUTORIAL INTERATIVO',
+    itens: [
+      'TUTORIAL no menu: 7 passos (mover, atacar, carregar, rebater, transformar, especial e pausar), como no jogo antigo. Cada passo só conta quando você faz o comando de verdade.',
+      'As instruções mostram as teclas, os botões do controle ou os botões de toque que você usa agora; PULAR passa o passo (no controle, o botão CRIAR).',
+      'No fim, VOLTAR AO MENU; até lá dá para continuar treinando à vontade.',
+    ],
+  },
+  {
     versao: '0.4',
     titulo: 'MAPA DE FASES IGUAL AO DO JOGO ANTIGO',
     itens: [

@@ -37,6 +37,9 @@ import { modoEfetivo, mudarOpcoes, opcoes } from '../logica/opcoes';
 
 const mudarOpcoesSemPerder = () => mudarOpcoes((o) => { o.dicaTiroVista = true; });
 import { conquistas, RastreioDaLuta } from '../logica/conquistas';
+import { criarTutorial, passoTutorial, marcarFeito, avancarPasso, passoAtual, instrucoesDoPasso, PASSOS_DO_TUTORIAL, type EstadoTutorial } from '../logica/tutorial';
+import { TF } from '../logica/idioma';
+import { nomeDaTecla, NOMES_BOTOES } from '../logica/opcoes';
 
 export class Luta extends Phaser.Scene {
   private dados!: DadosDaLuta;
@@ -78,6 +81,10 @@ export class Luta extends Phaser.Scene {
   private navPausa: Navegacao | null = null;
   private dicaTiro: Phaser.GameObjects.Container | null = null;
   private dicaTiroSeg = 0;
+  /** TUTORIAL: o passo a passo (null nas lutas) e o balão com PULAR / VOLTAR AO MENU */
+  private tutorial: EstadoTutorial | null = null;
+  private uiTutorial: { g: Phaser.GameObjects.Graphics; titulo: Phaser.GameObjects.Text; sub: Phaser.GameObjects.Text; pular: ReturnType<typeof botao>; voltar: ReturnType<typeof botao>; ki: Phaser.GameObjects.Graphics; chave: string } | null = null;
+  private criarAntes = false;
 
   constructor() {
     super('Luta');
@@ -86,7 +93,7 @@ export class Luta extends Phaser.Scene {
   init(d: DadosDaLuta): void {
     this.dados = d;
     this.fase = d.modo === 'historia' ? faseDe(d.fase ?? '') : null;
-    this.idArena = this.fase?.id ?? (d.arena ? faseDe(d.arena).id : null);
+    this.idArena = this.fase?.id ?? (d.modo === 'tutorial' ? 'terra' : d.arena ? faseDe(d.arena).id : null);
   }
 
   preload(): void {
@@ -103,7 +110,13 @@ export class Luta extends Phaser.Scene {
     this.arena = null;
     this.ligarArena();
     const semente = Date.now() | 0;
-    this.estado = this.fase
+    this.tutorial = null;
+    this.uiTutorial = null;
+    if (this.dados.modo === 'tutorial') {
+      const tu = criarTutorial(fichaDoPersonagem(this.dados.p1), semente);
+      this.tutorial = tu.t;
+      this.estado = tu.luta;
+    } else this.estado = this.fase
       ? criarHistoria(fichaDoPersonagem(this.dados.p1), fichaDoPersonagem(this.dados.p2), this.fase, this.dados.modoFase ?? 'normal', semente)
       : criarLuta(fichaDoPersonagem(this.dados.p1), fichaDoPersonagem(this.dados.p2), semente);
     for (const k of formasDaLuta(this.estado)) criarAnimacoes(this, k);
@@ -126,6 +139,7 @@ export class Luta extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(850);
     if (this.fase) this.mostrarAviso(`${T(this.fase.nome)}\n${rotuloDaOnda(this.estado.historia!.modo, 0, this.estado.historia!.onda)}`, 1600, 26);
+    else if (this.tutorial) { this.hud.esconder(); this.sprites.p2.setVisible(false); }
     else this.mostrarAviso(`${T('RODADA')} 1 — ${T('LUTEM!')}`, 1200);
     som.musica(this.fase?.musica ?? (this.idArena ? faseDe(this.idArena).musica : TEMA_DA_LUTA));
 
@@ -153,7 +167,10 @@ export class Luta extends Phaser.Scene {
     this.textoChoqueAtual = '';
     this.criarFaiscas();
     this.criarBotaoDePausa();
-    aoApertar(this, (c) => { if (c === 'Escape' && !this.scene.isPaused()) (this.pausado ? this.continuar() : this.pausar()); });
+    // (no tutorial o P também pausa, como no antigo)
+    aoApertar(this, (c) => { if ((c === 'Escape' || (c === 'KeyP' && this.tutorial)) && !this.scene.isPaused()) (this.pausado ? this.continuar() : this.pausar()); });
+    this.criarAntes = true;
+    if (this.tutorial) this.criarBalaoDoTutorial();
     // celular: trocou de app / apagou a tela no meio da luta = pausa (na volta ninguém leva tiro sem ver)
     const aoEsconder = () => this.pausar(true);
     this.game.events.on(Phaser.Core.Events.HIDDEN, aoEsconder);
@@ -242,6 +259,7 @@ export class Luta extends Phaser.Scene {
   /** pauseGame: congela a luta e mostra CONTINUAR / OPÇÕES / SAIR PARA MENU (auto = trocou de app) */
   private pausar(auto = false): void {
     if (this.estado.fase === 'fimPartida') return;
+    if (this.tutorial && !auto) marcarFeito(this.tutorial, 'pause');
     if (this.pausado) { if (auto) { this.pausaAuto = true; this.contagem = 0; this.camadaPausa?.destroy(); this.camadaPausa = null; this.mostrarPausa(); } return; }
     this.pausado = true;
     this.pausaAuto = auto;
@@ -362,9 +380,10 @@ export class Luta extends Phaser.Scene {
     const passos = this.relogio.avancar(dt);
     for (let i = 0; i < passos; i++) {
       const entradas = this.lerEntradas();
-      const eventos = this.estado.historia ? passoHistoria(this.estado, entradas.p1) : passoLuta(this.estado, entradas);
+      const eventos = this.tutorial ? passoTutorial(this.estado, this.tutorial, entradas.p1)
+        : this.estado.historia ? passoHistoria(this.estado, entradas.p1) : passoLuta(this.estado, entradas);
       this.efeitos.passo();
-      this.rastreio.passo(this.estado, eventos);
+      if (!this.tutorial) this.rastreio.passo(this.estado, eventos);
       for (const ev of eventos) this.aoEvento(ev);
       // carregando ki: o "zumbido" do jogo antigo (charge em ~20% dos quadros)
       for (const id of ['p1', 'p2'] as const) if (this.estado[id].acao === 'carregando' && Math.random() < CHANCE_SOM_CARREGANDO) som.tocar('charge');
@@ -372,6 +391,68 @@ export class Luta extends Phaser.Scene {
     }
     this.cuidarDasFormas();
     this.desenhar(this.relogio.alfa, dt / 1000);
+    if (this.tutorial) this.atualizarBalaoDoTutorial();
+  }
+
+  /** getTutorialUiLayout / drawTutorialScreen: balão abaixo do ícone de pausa, PULAR à esquerda, barra de ki */
+  private criarBalaoDoTutorial(): void {
+    const g = this.add.graphics().setDepth(860);
+    const titulo = this.add.text(C.TELA_L / 2, 52, '', estiloTexto({ fontFamily: "'Trebuchet MS', sans-serif", fontStyle: 'bold', fontSize: '10px', color: '#ffd23f' })).setOrigin(0.5, 0.75).setDepth(861);
+    const sub = this.add.text(C.TELA_L / 2, 66, '', estiloTexto({ fontFamily: "'Trebuchet MS', sans-serif", fontSize: '9px', color: '#dbe6ff' })).setOrigin(0.5, 0.75).setDepth(861);
+    const pular = botao(this, ret(6, 51, 50, 16), 'PULAR', () => this.pularPasso(), { cor: '#93c5fd', fonte: 8, prof: 862 });
+    const voltar = botao(this, ret(C.TELA_L / 2 - 70, 70, 140, 18), 'VOLTAR AO MENU', () => this.scene.start('Menu'), { cor: '#86efac', fonte: 9, prof: 862 });
+    const ki = this.add.graphics().setDepth(860);
+    this.uiTutorial = { g, titulo, sub, pular, voltar, ki, chave: '' };
+  }
+
+  private pularPasso(): void {
+    if (!this.tutorial || this.pausado) return;
+    if (this.tutorial.fase === 'fim') { this.scene.start('Menu'); return; }
+    avancarPasso(this.estado, this.tutorial);
+  }
+
+  private atualizarBalaoDoTutorial(): void {
+    const t = this.tutorial!, u = this.uiTutorial!;
+    // CRIAR (botão 8 do controle) pula o passo / volta ao menu no fim
+    const criar = padsConectados().some((p) => p.buttons[8]?.pressed);
+    if (criar && !this.criarAntes && !this.pausado) this.pularPasso();
+    this.criarAntes = criar;
+    if (!this.tutorial) return;
+    const s = passoAtual(t);
+    const fim = t.fase === 'fim';
+    const titulo = fim ? T('TUTORIAL CONCLUÍDO! VOCÊ JÁ SABE TODOS OS COMANDOS.') : s ? TF('PASSO {0}/{1}: {2}', t.passo + 1, PASSOS_DO_TUTORIAL.length, T(s.titulo)) : '';
+    let sub = '';
+    if (!fim && s) {
+      if (t.fase === 'efeito') sub = T('MUITO BEM! ISSO MESMO.');
+      else {
+        const o = opcoes();
+        const pl = modoEfetivo(o, ultimaEntrada(), this.toque.ativo);
+        const tk = o.teclas.p1, bt = (a: keyof typeof o.controle) => NOMES_BOTOES[o.controle[a][0]] ?? '?';
+        const linha = instrucoesDoPasso(s.chave, {
+          plataforma: pl, modoToque: o.modoToque, duploToqueParry: o.duploToqueParry, tiroContinuo: o.tiroContinuo,
+          teclas: { up: nomeDaTecla(tk.up), left: nomeDaTecla(tk.left), down: nomeDaTecla(tk.down), right: nomeDaTecla(tk.right), attack: nomeDaTecla(tk.attack), charge: nomeDaTecla(tk.charge), parry: nomeDaTecla(tk.parry), transform: nomeDaTecla(tk.transform), special: nomeDaTecla(tk.special) },
+          botoes: { attack: bt('attack'), charge: bt('charge'), parry: bt('parry'), transform: bt('transform'), special: bt('special'), pause: bt('pause') },
+        })[0];
+        if (linha) sub = TF(linha[0], ...linha.slice(1).map((v) => T(v)));
+      }
+    }
+    const chave = `${titulo}|${sub}|${t.fase}`;
+    if (chave !== u.chave) {
+      u.chave = chave;
+      u.titulo.setText(titulo).setColor(t.fase === 'efeito' ? '#86efac' : '#ffd23f');
+      u.sub.setText(sub).setColor(t.fase === 'efeito' ? '#eafff0' : '#dbe6ff');
+      const w = Math.min(C.TELA_L - 24, Math.max(u.titulo.width, sub ? u.sub.width : 0) + 28), h = sub ? 38 : 24, x = (C.TELA_L - w) / 2, y = 40;
+      u.g.clear().fillStyle(0x040814, 0.88).fillRoundedRect(x, y, w, h, 8).lineStyle(1.5, t.fase === 'efeito' ? 0x4ade80 : 0x3a5a8a, 1).strokeRoundedRect(x, y, w, h, 8);
+      u.titulo.setY(y + 12);
+      u.sub.setY(y + 26).setVisible(!!sub);
+      u.pular.container.setVisible(!fim).setY(y + h / 2 - 8);
+      u.voltar.container.setVisible(fim).setY(y + h + 6);
+    }
+    // barra de ki embaixo à esquerda (amarela quando dá para soltar o especial)
+    const p = this.estado.p1;
+    u.ki.clear().fillStyle(0x222244, 1).fillRect(14, C.TELA_A - 20, 120, 7)
+      .fillStyle(p.ki >= C.KI_MAX ? 0xffd23f : 0x00ffff, 1).fillRect(14, C.TELA_A - 20, (p.ki / C.KI_MAX) * 120, 7)
+      .lineStyle(1, 0xffffff, 1).strokeRect(14, C.TELA_A - 20, 120, 7);
   }
 
   /** Mantém carregadas a forma atual + a próxima de cada um; libera as outras quando nada está baixando. */
@@ -588,7 +669,7 @@ export class Luta extends Phaser.Scene {
     const e = this.estado;
     this.dtSeg = Math.min(0.1, dtSeg);
     this.desenharLutador(e.p1, alfa);
-    this.desenharLutador(e.p2, alfa);
+    if (!this.tutorial) this.desenharLutador(e.p2, alfa);
 
     this.arena?.desenhar(e.quadro);
     const relogio = e.quadro / 60;
@@ -603,7 +684,7 @@ export class Luta extends Phaser.Scene {
     }
 
     this.historia?.desenhar(e, this.dtSeg);
-    this.hud.desenhar(e);
+    if (!this.tutorial) this.hud.desenhar(e);
     this.toque.desenhar(e.p1.ki >= C.KI_MAX, podeTransformar(e.p1), this.dtSeg);
   }
 
