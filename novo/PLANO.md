@@ -1,8 +1,10 @@
 # Saiyan Fight NOVO — plano de migração para Phaser 3 + TypeScript
 
-O jogo atual (raiz do repositório, HTML/CSS/JS puro, ~22,5 mil linhas) **continua no ar sem mudança** no
-GitHub Pages e no APK até o novo ter tudo o que o antigo tem. O novo mora em `novo/` e só sai para os
-jogadores quando a gente decidir trocar (fase 8).
+> **v0.121: a troca foi feita (fase 8, ver "Fase 8" no fim).** O site e o app agora são o jogo novo; o antigo
+> fica em `/Saiyan-Fight/antigo/`.
+
+O jogo antigo (raiz do repositório, HTML/CSS/JS puro, ~22,5 mil linhas) ficou no ar sem mudança no
+GitHub Pages e no APK até o Jefferson decidir trocar (fase 8). O novo mora em `novo/`.
 
 Ferramentas, iguais às do Ki-Clash: **Vite 5 + TypeScript estrito + Vitest**, **Phaser 3.90** para desenhar
 e **Capacitor 8 + @capgo/capacitor-updater** (o mesmo esquema do APK atual: a setinha ATUALIZAR baixa o pacote
@@ -166,8 +168,8 @@ Depois da PR phaser-tutorial: 59 ✅ · 1 🟡 (B14) · 0 ❌ · 1 ➕.
 | 4 | **Arenas** | as 11 arenas portadas (primeiro o mesmo desenho em canvas, depois camadas com cache) | 1ª versão: o desenho do antigo (ver abaixo) |
 | 5 | **Menus e progresso** | opções, idiomas (todas as linhas), conquistas, ranking, tutorial, pausa, teste de controles, editor de HUD, controle (gamepad) | 1–2 semanas |
 | 6 | **Editores** | editor de personagens (sprite sheet) e editor de arenas, importar/exportar | 2–3 semanas |
-| 7 | **APK + atualização** | Capacitor dentro de `novo/`, setinha ATUALIZAR com o capgo (só no botão), progresso salvo continua | 3–5 dias |
-| 8 | **Troca** | testes no celular de verdade, o novo vira o site e o APK; o antigo fica numa pasta/branch de arquivo | 2–3 dias |
+| 7 | **APK + atualização** | setinha ATUALIZAR com o capgo (só no botão), progresso salvo continua | feito junto com a 8 (o Capacitor continua na raiz) |
+| 8 | **Troca** | o novo vira o site e o APK; o antigo fica em `/antigo/` | feito na v0.121 (ver abaixo) |
 
 Total: **~2 a 3 meses** de trabalho, em PRs pequenas; o jogo antigo continua jogável o tempo todo.
 
@@ -375,8 +377,9 @@ desenhar. Só de dados decodificados são 25,6 MB.
 - **R3 — Editores** (personagem e arena): muita interface HTML; ficam em HTML por cima do jogo.
 - **R4 — Progresso dos jogadores**: o novo tem que ler as mesmas chaves do localStorage (`saiyan_*`) e o
   IndexedDB das formas feitas no editor; testar com um save real antes da troca.
-- **R5 — APK**: trocar o jogo dentro do app pela setinha só funciona se a parte nativa for a mesma; a troca
-  (fase 8) provavelmente precisa de um APK novo (subir o `nativoMinimo`), uma vez.
+- **R5 — APK**: trocar o jogo dentro do app pela setinha só funciona se a parte nativa for a mesma. Na troca
+  (v0.121) não precisou: o jogo novo usa só os plugins que o APK já tem (CapacitorHttp e o capgo), então o
+  `nativoMinimo` continua 1.0.0 e o APK instalado recebe o jogo novo pela setinha.
 - **R6 — Phaser 3 x 4**: ficar no 3.90 agora; a lógica pura não depende do Phaser, então trocar depois afeta
   só as cenas.
 - **R7 — Desempenho em celular fraco**: WebGL + atlas é bem mais leve que o canvas 2D atual, mas o canvas a 2x
@@ -398,3 +401,20 @@ Controles: J1 setas + F (tiro) + S (carregar) + A (transformar) + Q (especial) +
 U/O/H/Y/P ou teclado numérico (5/2/1/3, Enter, Enter do teclado numérico, 9, 7, 0). No toque, com o ki cheio o
 CARREGAR vira TRANSFORMAR. No celular: joystick na metade esquerda e os botões
 do jogo antigo à direita. ESC volta ao menu.
+
+## Fase 8 — a troca (v0.121)
+
+- **Site** (`.github/workflows/pages.yml`, o Pages passou a ser publicado pelo GitHub Actions): `novo/dist` na
+  raiz e o jogo antigo inteiro em `antigo/` (`scripts/montar-site.js`). Os dois ficam no mesmo endereço, então o
+  progresso salvo no navegador continua: o novo grava só `saiyan-novo-*` e lê as chaves antigas.
+- **App**: `scripts/android/copiar-web.js` copia `novo/dist` para `www/`; o `android.yml` constrói o novo antes.
+  O pacote da setinha (Release `app-bundle`) passou de ~28 MB para ~23 MB. O jogo antigo não vai dentro do app
+  (seriam ~51 MB): o botão JOGO ANTIGO abre o site no navegador.
+- **Setinha ATUALIZAR** portada (`src/app/plataforma.ts`, `src/logica/atualizacao.ts`, cena `Atualizacoes`):
+  mesmo latest.json, mesma decisão (nada / jogo / apk), mesmo download com sha256 + `set`, e o
+  `notifyAppReady` ao abrir o menu. Sem mudança nativa: `nativoMinimo` continua 1.0.0, o APK 1.0.278/1.0.301
+  recebe o jogo novo pela setinha, e daí em diante as versões novas chegam do mesmo jeito.
+- **Versão**: o jogo novo é a 0.121 (`novo/package.json` 0.121.0); as novidades ficam em `src/dados/novidades.ts`.
+- **Ainda não tem no novo** (o antigo continua em `/antigo/` para isso): mapa 3D (mapa.js), arenas feitas no
+  editor, editores de personagem e de arena, tutorial/diálogos, conquistas, ranking, opções completas (controles,
+  editor de HUD, sensibilidade do controle, transmitir para TV), gamepad, tela de personagens com o painel "i".

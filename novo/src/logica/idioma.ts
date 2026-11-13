@@ -8,7 +8,6 @@ export const CHAVE_IDIOMA = 'saiyan_idioma';
 
 const LINHAS: Record<string, [string, string]> = {
   CARREGANDO: ['LOADING', 'CARGANDO'],
-  'PRÉVIA PHASER': ['PHASER PREVIEW', 'VISTA PREVIA PHASER'],
   '1 JOGADOR (CONTRA A CPU)': ['1 PLAYER (VS CPU)', '1 JUGADOR (CONTRA LA CPU)'],
   '2 JOGADORES (VERSUS)': ['2 PLAYERS (VERSUS)', '2 JUGADORES (VERSUS)'],
   IDIOMA: ['LANGUAGE', 'IDIOMA'],

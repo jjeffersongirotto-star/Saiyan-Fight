@@ -6,9 +6,11 @@ Jogo de luta no estilo Dragon Ball, feito para jogar direto no navegador do celu
 
 **https://jjeffersongirotto-star.github.io/Saiyan-Fight/**
 
+Desde a versão 0.121 o site e o app são o **jogo novo** (refeito em Phaser + TypeScript, pasta [`novo/`](novo/)). O **jogo antigo** continua no ar em **https://jjeffersongirotto-star.github.io/Saiyan-Fight/antigo/** (botão **JOGO ANTIGO** no menu).
+
 No celular dá para deixar o jogo na tela inicial, como um aplicativo: abra o link no Chrome, toque nos três pontinhos (⋮) e escolha **"Adicionar à tela inicial"** ou **"Instalar app"**. No iPhone, use o botão de compartilhar e depois **"Adicionar à Tela de Início"**.
 
-O jogo se atualiza sozinho: quando sai uma versão nova, ele percebe e recarrega assim que você estiver num menu (nunca no meio da luta). Não precisa instalar de novo.
+No site, o jogo abre sempre na versão mais nova (é só abrir o link de novo). Não precisa instalar de novo.
 
 Abrindo pelo ícone, o jogo já abre **deitado e em tela cheia**, sem o aviso do navegador ("Para sair da tela cheia...") que aparece quando se usa a tela cheia dentro do Chrome.
 
@@ -21,7 +23,7 @@ Além do site, o jogo também sai como **app Android de verdade** (um arquivo `.
 2. Abra o arquivo baixado. Na primeira vez o Android pede para **permitir instalar apps desta fonte** (do Chrome ou do gerenciador de arquivos): permita e toque em **Instalar**.
 3. Pronto: o ícone **Saiyan Fight** aparece junto dos outros apps.
 
-**Atualizar (dentro do próprio app, sem baixar APK de novo):** o app **nunca se atualiza sozinho**. Quando quiser, abra **UPDATES** e toque na setinha **ATUALIZAR**. Se saiu uma versão nova do jogo, ele pergunta **ATUALIZAR AGORA?** (com a versão, ex.: 0.117). Se você aceitar, ele baixa a versão nova, confere se o arquivo chegou inteiro e reinicia já nela. Personagens, conquistas e recordes continuam salvos e o jogo segue funcionando sem internet. Se não tiver nada novo, aparece **JÁ ESTÁ ATUALIZADO**, e sem internet, **SEM CONEXÃO**. Nunca troca de versão no meio de uma luta. Se uma versão nova não abrir direito, o app volta sozinho para a anterior.
+**Atualizar (dentro do próprio app, sem baixar APK de novo):** o app **nunca se atualiza sozinho**. Quando quiser, abra **⟳ ATUALIZAÇÕES** (canto do menu) e toque na setinha **ATUALIZAR**. Se saiu uma versão nova do jogo, ele pergunta **ATUALIZAR AGORA?** (com a versão, ex.: 0.117). Se você aceitar, ele baixa a versão nova, confere se o arquivo chegou inteiro e reinicia já nela. Personagens, conquistas e recordes continuam salvos e o jogo segue funcionando sem internet. Se não tiver nada novo, aparece **JÁ ESTÁ ATUALIZADO**, e sem internet, **SEM CONEXÃO**. Nunca troca de versão no meio de uma luta. Se uma versão nova não abrir direito, o app volta sozinho para a anterior.
 
 Só em casos raros, quando a versão nova precisa de uma mudança no próprio app Android, a setinha oferece **baixar o APK novo**. Aí é só instalar por cima.
 

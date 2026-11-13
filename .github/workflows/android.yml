@@ -1,4 +1,5 @@
 # Gera o APK Android do Saiyan Fight (Capacitor): o jogo vai DENTRO do app, que abre rápido e roda sem internet.
+# Desde a v0.121 o jogo do app é o jogo NOVO (pasta novo/, construído com o Vite e copiado para www/).
 # Em toda PR e push na main o APK e o pacote do jogo (.zip da pasta www + latest.json) são gerados (artefatos).
 # Na main:
 #  - o pacote do jogo é publicado na Release "app-bundle" (latest.json + saiyan-fight-web-<jogo>-<build>.zip):
@@ -31,11 +32,17 @@ jobs:
         with:
           node-version: 22  # o Capacitor 8 exige Node 22+
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            novo/package-lock.json
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
       - run: npm ci
+      - name: Construir o jogo novo (novo/dist)
+        working-directory: novo
+        run: npm ci && npm run build
       - name: Copiar o jogo para www/
         run: node scripts/android/copiar-web.js
       - run: npx cap sync android

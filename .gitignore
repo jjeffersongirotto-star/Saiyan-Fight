@@ -8,3 +8,5 @@ www
 *.keystore
 __pycache__/
 pacote-web
+# site do GitHub Pages (scripts/montar-site.js)
+_site

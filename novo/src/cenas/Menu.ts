@@ -10,7 +10,7 @@ import { botao, botaoNav, dentro, montarTela, painel, ret, type BotaoTela, type 
 import { esferaDoDragao, fotoDoPerfil } from '../ui/esfera';
 import { conquistas, APELIDO_MAX } from '../logica/conquistas';
 import { pedirTexto } from '../ui/janela';
-import { avisarQueOJogoAbriu, infoVersao } from '../app/plataforma';
+import { abrirJogoAntigo, avisarQueOJogoAbriu, infoVersao } from '../app/plataforma';
 import { abrirEditor } from '../ui/editores';
 import { aoApertar } from '../entrada/teclas';
 import type { ModoFase } from '../logica/ondas';
@@ -34,6 +34,7 @@ const L = {
   ranking: ret(190, 205, 180, 36), achievements: ret(430, 205, 180, 36),
   tutorial: ret(190, 260, 180, 36), livre: ret(430, 260, 180, 36),
   esfera: ret(12, 12, 40, 40),
+  antigo: ret(8, 320, 104, 24),
 };
 const E = { x: 12, y: 58, w: 216 };
 
@@ -66,6 +67,8 @@ export class Menu extends Phaser.Scene {
     // TUTORIAL e TUTORIAL LIVRE: antes escolhe o personagem e a forma (Selecao)
     b(L.tutorial, 'TUTORIAL', () => this.scene.start('Selecao', { modo: 'tutorial' }));
     b(L.livre, 'TUTORIAL LIVRE', () => this.scene.start('Selecao', { modo: 'treino' }));
+    // o jogo antigo continua no site (em /antigo/), para quem quiser jogar nele
+    botaoNav(this, this.nav, L.antigo, 'JOGO ANTIGO', () => abrirJogoAntigo(), { cor: '#cbd5e1', fonte: 10 });
     this.add.text(TELA_L - 6, TELA_A - 4, `v${infoVersao().jogo}`, estiloTexto({ fontFamily: 'Arial', fontSize: '10px', color: '#94a3b8' })).setOrigin(1, 1);
 
     // esfera de 4 estrelas
