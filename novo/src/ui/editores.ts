@@ -77,7 +77,7 @@ export function abrirEditor(cena: Phaser.Scene, qual: QualEditor): void {
         // espera o jogo antigo chegar no menu dele e abre o editor
         if (st !== 'menu' || typeof w.setGameState !== 'function') return;
         try {
-          if (qual === 'personagens') w.setGameState('database');
+          if (qual === 'personagens') { w.setGameState('database'); viu = true; } // muda na hora
           else w.abrirEditorArenas?.();
           entrou = true;
         } catch { /* tenta de novo */ }

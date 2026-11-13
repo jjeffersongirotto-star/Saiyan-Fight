@@ -5,6 +5,15 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.3',
+    titulo: 'EDITORES DE PERSONAGENS E DE ARENAS',
+    itens: [
+      'Na esfera do menu, EDITOR DE PERSONAGENS e EDITOR DE ARENAS abrem os editores do jogo antigo, completos, por cima do jogo novo. Toque em VOLTAR AO JOGO NOVO ou saia do editor para voltar.',
+      'Os personagens criados no editor (com as formas e transformações) aparecem em PERSONAGENS, na escolha do lutador e na luta.',
+      'As arenas criadas no editor aparecem no VERSUS, em ARENAS, no mapa da história (sempre liberadas) e no ranking.',
+    ],
+  },
+  {
     versao: '0.2',
     titulo: 'MENUS E OPÇÕES IGUAIS AOS DO JOGO ANTIGO',
     itens: [

@@ -31,6 +31,7 @@ Legenda: ✅ feito no novo · 🟡 parcial · ❌ falta · ➕ só no novo. A co
 
 Contagem: no inventário, 61 itens = 11 ✅ · 12 🟡 · 37 ❌ · 1 ➕. Depois da PR phaser-menus: 46 ✅ · 3 🟡 (A3 editores, A23 mapa 3D,
 B14 resolução automática) · 11 ❌ (A22 tutorial, C1–C10 editores) · 1 ➕.
+Depois da PR phaser-editores: 57 ✅ · 2 🟡 (A23, B14) · 1 ❌ (A22) · 1 ➕.
 
 ### A. Telas e menus
 
@@ -38,7 +39,7 @@ B14 resolução automática) · 11 ❌ (A22 tutorial, C1–C10 editores) · 1 �
 |---|---|---|---|---|
 | A1 | Menu principal: JOGAR, PERSONAGENS, ARENAS, OPÇÕES, RANKING, CONQUISTAS, TUTORIAL | `MENU_LAYOUT.main` | ✅ | phaser-menus |
 | A2 | Fundo do menu (céu, lua, montanhas) e painel Dragon Ball | `drawDragonBallMenuBackdrop` | ✅ (mesmo desenho: céu, lua, montanhas, painel) | phaser-menus |
-| A3 | Esfera de 4 estrelas: perfil JOGADOR + APELIDO (TROCAR FOTO desligado), EDITOR DE PERSONAGENS, EDITOR DE ARENAS, UPDATES | `getEsferaItens` | 🟡 perfil/APELIDO/UPDATES feitos; os 2 editores abrem na PR phaser-editores | phaser-menus / phaser-editores |
+| A3 | Esfera de 4 estrelas: perfil JOGADOR + APELIDO (TROCAR FOTO desligado), EDITOR DE PERSONAGENS, EDITOR DE ARENAS, UPDATES | `getEsferaItens` | ✅ | phaser-menus / phaser-editores |
 | A4 | Botão de tela cheia em todas as telas (canto direito) | `drawFullscreenButton` | ✅ | phaser-menus |
 | A5 | ESCOLHA SEU CAMINHO: SINGLEPLAYER (história) / VERSUS | `modeSelect` | ✅ (+ "1 JOGADOR x CPU") | phaser-menus |
 | A6 | PERSONAGENS: abas HERÓIS / VILÕES, cartões, "i" com as formas | `characters` | ✅ | phaser-menus |
@@ -94,16 +95,16 @@ B14 resolução automática) · 11 ❌ (A22 tutorial, C1–C10 editores) · 1 �
 
 | # | Função | Status | PR |
 |---|---|---|---|
-| C1 | EDITOR DE PERSONAGENS: lista, + CRIAR NOVO, EDITAR, EXCLUIR | ❌ | phaser-editores |
-| C2 | Aba BÁSICO: nome, alinhamento, aura, golpe especial, cor e tamanho do tiro, efeitos de aura/tiro/especial, escala | ❌ | phaser-editores |
-| C3 | Aba ANIMAÇÕES E MOVIMENTOS: sprite sheet (arquivo/URL), recorte, cor de fundo e tolerância, quadros por movimento, FPS, espelhar, prévia | ❌ | phaser-editores |
-| C4 | Aba TRANSFORMAÇÃO: formas, conjuntos/grupos, cadeado de quadros | ❌ | phaser-editores |
-| C5 | Exportar / importar personagem `.saiyan.json` | ❌ | phaser-editores |
-| C6 | Personagens criados no editor jogáveis (`saiyan_db_v8_8bit` + IndexedDB `saiyan_conjuntos`) | ❌ | phaser-editores |
-| C7 | EDITOR DE ARENAS: 11 abas de peças, céu/chão/hora/clima/música/minion, câmera/ângulo/zoom, grade, desfazer/refazer, seleção (cor, tamanho, giro, espelho, texto...), conjuntos, rascunho, TESTAR | ❌ | phaser-editores |
-| C8 | Exportar / importar arena | ❌ | phaser-editores |
-| C9 | Arenas criadas jogáveis (`saiyan_arenas`, até 7) no VERSUS, ARENAS e ranking | ❌ | phaser-editores |
-| C10 | Conquistas do construtor (criar 1 / 5 personagens) | ❌ | phaser-editores |
+| C1 | EDITOR DE PERSONAGENS: lista, + CRIAR NOVO, EDITAR, EXCLUIR | ✅ (editor do próprio jogo antigo, aberto por cima do novo numa moldura) | phaser-editores |
+| C2 | Aba BÁSICO: nome, alinhamento, aura, golpe especial, cor e tamanho do tiro, efeitos de aura/tiro/especial, escala | ✅ (editor do próprio jogo antigo, aberto por cima do novo numa moldura) | phaser-editores |
+| C3 | Aba ANIMAÇÕES E MOVIMENTOS: sprite sheet (arquivo/URL), recorte, cor de fundo e tolerância, quadros por movimento, FPS, espelhar, prévia | ✅ (editor do próprio jogo antigo, aberto por cima do novo numa moldura) | phaser-editores |
+| C4 | Aba TRANSFORMAÇÃO: formas, conjuntos/grupos, cadeado de quadros | ✅ (editor do próprio jogo antigo, aberto por cima do novo numa moldura) | phaser-editores |
+| C5 | Exportar / importar personagem `.saiyan.json` | ✅ (editor do próprio jogo antigo, aberto por cima do novo numa moldura) | phaser-editores |
+| C6 | Personagens criados no editor jogáveis (`saiyan_db_v8_8bit` + IndexedDB `saiyan_conjuntos`) | ✅ (lidos de `saiyan_db_v8_8bit` + IndexedDB `saiyan_conjuntos`, só leitura; ORIGINAL e CONJUNTOS, formas e transformações) | phaser-editores |
+| C7 | EDITOR DE ARENAS: 11 abas de peças, céu/chão/hora/clima/música/minion, câmera/ângulo/zoom, grade, desfazer/refazer, seleção (cor, tamanho, giro, espelho, texto...), conjuntos, rascunho, TESTAR | ✅ (editor do próprio jogo antigo, aberto por cima do novo numa moldura) | phaser-editores |
+| C8 | Exportar / importar arena | ✅ (editor do próprio jogo antigo, aberto por cima do novo numa moldura) | phaser-editores |
+| C9 | Arenas criadas jogáveis (`saiyan_arenas`, até 7) no VERSUS, ARENAS e ranking | ✅ (desenhadas pelo `arenas.js` do antigo; VERSUS, ARENAS, mapa e ranking) | phaser-editores |
+| C10 | Conquistas do construtor (criar 1 / 5 personagens) | ✅ (o editor do antigo destrava; o novo lê as medalhas do antigo) | phaser-editores |
 
 ### D. Plataforma
 
