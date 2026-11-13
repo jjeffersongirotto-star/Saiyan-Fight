@@ -13,7 +13,8 @@ export interface Entrada {
   transformar: boolean;
 }
 
-export type Acao = 'livre' | 'carregando' | 'transformando' | 'especial' | 'atingido' | 'caido' | 'vitoria';
+// Como o herói do jogo antigo: apanhar e soltar o especial NÃO travam o lutador (só a pose de transformar trava).
+export type Acao = 'livre' | 'carregando' | 'transformando' | 'caido' | 'vitoria';
 
 /** Ficha de um personagem para a luta: só o que a lógica precisa (vem de dados/personagens.ts). */
 export interface FichaLuta {
@@ -50,7 +51,16 @@ export interface Lutador {
   esperaTiro: number;
   esperaParry: number;
   invulneravel: number;
-  empurraoX: number;
+  /** quadros da pose de "apanhou" (só o desenho: apanhar não trava, como o herói do jogo antigo) */
+  poseAtingido: number;
+  /** quadros do brilho do parry (parryHighlightTimer): enquanto dura, segurar ATAQUE não atira */
+  ondaParry: number;
+  /** o próprio raio (ou o choque) está na tela: pose de especial */
+  emEspecial: boolean;
+  /** combo de parry (rebatidas seguidas): dá ki de bônus a cada degrau; apanhar ou 90 quadros sem rebater zera */
+  comboParry: number;
+  comboParryQuadros: number;
+  ultimoBonusParry: number;
   zenkaiUsada: boolean;
   atacarAntes: boolean;
   pedidoEspecial: number;
@@ -93,9 +103,9 @@ export type Fase = 'luta' | 'fimRodada' | 'fimPartida';
 
 export type Evento =
   | { tipo: 'tiro'; dono: IdJogador }
-  | { tipo: 'acerto'; alvo: IdJogador; dano: number; deEspecial: boolean }
-  | { tipo: 'parry'; dono: IdJogador; refletidos: number }
-  | { tipo: 'especial'; dono: IdJogador; sol: boolean }
+  | { tipo: 'acerto'; alvo: IdJogador; dano: number; deEspecial: boolean; direcao: number }
+  | { tipo: 'parry'; dono: IdJogador; refletidos: number; bonusKi: number }
+  | { tipo: 'especial'; dono: IdJogador; sol: boolean; agarradosDestruidos: number }
   | { tipo: 'transformou'; dono: IdJogador; nivel: number; arremessados: number }
   | { tipo: 'kiCheio'; dono: IdJogador }
   | { tipo: 'zenkai'; dono: IdJogador }

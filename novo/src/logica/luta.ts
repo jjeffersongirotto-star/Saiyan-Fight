@@ -3,7 +3,7 @@
 // Regras do jogo antigo (gameplay.js): tiro 1, especial 3 com o ki cheio, parry devolve os tiros por perto,
 // transformação com o ki cheio (sobe um nível, +velocidade por 15 s), Zenkai 1x por partida, choque de raios.
 import * as C from './constantes';
-import { arremessarAgarrados } from './minions';
+import { arremessarAgarrados, destruirAgarrados } from './minions';
 import type { Choque, Entrada, Evento, EstadoLuta, FichaLuta, IdJogador, Lutador, Raio, Tiro } from './tipos';
 
 /** Sorteio determinístico (mulberry32): o mesmo começo dá sempre a mesma luta — bom para testes e replays. */
@@ -56,7 +56,8 @@ export function criarLutador(id: IdJogador, ficha: FichaLuta | string): Lutador 
     olhando: id === 'p1' ? 1 : -1,
     vida: C.VIDA_VERSUS, vidaMax: C.VIDA_VERSUS, ki: 0, nivel: 0, poder: 0,
     acao: 'livre', acaoQuadros: 0, poseTiro: 0, poseParry: 0, esperaTiro: 0, esperaParry: 0,
-    invulneravel: C.INVULNERAVEL_INICIO, empurraoX: 0, zenkaiUsada: false, atacarAntes: false,
+    invulneravel: C.INVULNERAVEL_INICIO, poseAtingido: 0, ondaParry: 0, emEspecial: false,
+    comboParry: 0, comboParryQuadros: 0, ultimoBonusParry: 0, zenkaiUsada: false, atacarAntes: false,
     pedidoEspecial: 0, pedidoParry: 0, pedidoTransformar: 0,
   };
 }
@@ -122,8 +123,12 @@ export const podeTransformar = (l: Lutador) => l.ki >= C.KI_MAX && l.nivel < niv
 function aplicarDano(e: EstadoLuta, alvo: Lutador, dano: number, deEspecial: boolean, direcao: number, eventos: Evento[]) {
   alvo.vida = Math.max(0, alvo.vida - dano);
   alvo.invulneravel = j2Antigo(e.regras, alvo) ? 0 : C.INVULNERAVEL_QUADROS;
-  alvo.empurraoX = direcao * C.EMPURRAO * (deEspecial ? 2 : 1);
-  eventos.push({ tipo: 'acerto', alvo: alvo.id, dano, deEspecial });
+  alvo.poseAtingido = C.ATINGIDO_QUADROS;
+  // apanhar zera o combo de parry (como o herói antigo: parryCombo = 0)
+  alvo.comboParry = 0;
+  alvo.comboParryQuadros = 0;
+  alvo.ultimoBonusParry = 0;
+  eventos.push({ tipo: 'acerto', alvo: alvo.id, dano, deEspecial, direcao });
   if (alvo.vida <= 0 && !alvo.zenkaiUsada) {
     alvo.zenkaiUsada = true;
     alvo.vida = 1;
@@ -134,9 +139,6 @@ function aplicarDano(e: EstadoLuta, alvo: Lutador, dano: number, deEspecial: boo
     alvo.acao = 'caido';
     alvo.acaoQuadros = 0;
     e.raios = e.raios.filter((r) => r.dono !== alvo.id);
-  } else if (alvo.acao !== 'especial' && alvo.acao !== 'transformando') {
-    alvo.acao = 'atingido';
-    alvo.acaoQuadros = 0;
   }
 }
 
@@ -161,12 +163,13 @@ function transformar(e: EstadoLuta, l: Lutador, eventos: Evento[]) {
 
 function soltarEspecial(e: EstadoLuta, l: Lutador, eventos: Evento[]) {
   l.ki = 0;
-  l.acao = 'especial';
-  l.acaoQuadros = 0;
+  if (l.acao === 'carregando') { l.acao = 'livre'; l.acaoQuadros = 0; }
   const sol = l.especialLento;
   e.raios.push({ dono: l.id, idade: 0, duracao: sol ? C.SOL_DURACAO : C.ESPECIAL_DURACAO, chega: sol ? C.SOL_CHEGA : C.ESPECIAL_CHEGA, sol, acertou: false });
   e.tiros.length = 0; // o especial varre os tiros da tela (world.obstacles = [])
-  eventos.push({ tipo: 'especial', dono: l.id, sol });
+  // o poder do especial destrói quem está agarrado nas pernas (destruirSaibamansAgarrados; gancho da fase 3)
+  const agarradosDestruidos = destruirAgarrados(l, e.minions);
+  eventos.push({ tipo: 'especial', dono: l.id, sol, agarradosDestruidos });
   if (!e.regras.danoDoEspecialNaChegada) acertarRaio(e, e.raios[e.raios.length - 1], eventos); // como no antigo: na hora
 }
 
@@ -184,6 +187,10 @@ function raioDoOutroNoAr(e: EstadoLuta, id: IdJogador) {
   return e.raios.find((r) => r.dono !== id && !r.acertou && r.idade < r.chega);
 }
 
+// Regras do HERÓI do jogo antigo, iguais para os dois (Jefferson): apanhar não trava nem empurra; soltar o
+// especial não trava (dá para andar, carregar e rebater com o raio na tela); um aperto NOVO de ATAQUE sempre atira
+// (se o intervalo passou), mas SEGURAR só repete fora da carga, do brilho do parry e sem raio na tela.
+// A pose de transformar continua travando tudo (regra nova confirmada), e nela ninguém leva dano.
 function passoLutador(e: EstadoLuta, l: Lutador, ent: Entrada, eventos: Evento[]) {
   l.xAnt = l.x;
   l.yAnt = l.y;
@@ -194,8 +201,12 @@ function passoLutador(e: EstadoLuta, l: Lutador, ent: Entrada, eventos: Evento[]
   if (l.esperaParry > 0) l.esperaParry--;
   if (l.poseTiro > 0) l.poseTiro--;
   if (l.poseParry > 0) l.poseParry--;
+  if (l.poseAtingido > 0) l.poseAtingido--;
+  if (l.ondaParry > 0) l.ondaParry--;
   if (l.poder > 0) l.poder--;
+  if (l.comboParryQuadros > 0 && --l.comboParryQuadros === 0) { l.comboParry = 0; l.ultimoBonusParry = 0; }
   l.acaoQuadros++;
+  l.emEspecial = !!e.choque || e.raios.some((r) => r.dono === l.id);
   const apertouAtaque = ent.atacar && !l.atacarAntes;
   l.atacarAntes = ent.atacar;
   // sem a guarda, o aperto vale só neste quadro (1 = usa agora, some no próximo)
@@ -204,38 +215,25 @@ function passoLutador(e: EstadoLuta, l: Lutador, ent: Entrada, eventos: Evento[]
   l.pedidoParry = ent.parry ? guarda : Math.max(0, l.pedidoParry - 1);
   l.pedidoTransformar = ent.transformar ? guarda : Math.max(0, l.pedidoTransformar - 1);
 
-  if (l.empurraoX !== 0) {
-    l.x += l.empurraoX;
-    l.empurraoX *= 0.8;
-    if (Math.abs(l.empurraoX) < 0.2) l.empurraoX = 0;
-  }
-
   if (l.acao === 'caido' || l.acao === 'vitoria') return clampar(l);
   if (e.fase !== 'luta') {
     if (l.acao !== 'livre') { l.acao = 'livre'; l.acaoQuadros = 0; }
     return clampar(l);
   }
-  // choque de raios: os dois param e só contam os apertos de ATAQUE
-  if (e.choque) {
-    if (apertouAtaque) { e.choque.apertos[l.id]++; eventos.push({ tipo: 'apertoChoque', dono: l.id }); }
-    return clampar(l);
-  }
-
-  if (l.acao === 'atingido' && l.acaoQuadros >= C.ATINGIDO_QUADROS) { l.acao = 'livre'; l.acaoQuadros = 0; }
   if (l.acao === 'transformando') {
     if (l.acaoQuadros >= C.TRANSFORMANDO_QUADROS) { l.acao = 'livre'; l.acaoQuadros = 0; }
-    else if (!e.regras.transformacaoTravaMovimento) andar(e, l, ent);
-    return clampar(l);
+    else {
+      if (!e.regras.transformacaoTravaMovimento) andar(e, l, ent);
+      return clampar(l);
+    }
   }
-  if (l.acao === 'especial') {
-    const meu = e.raios.find((r) => r.dono === l.id);
-    if (!meu) { l.acao = 'livre'; l.acaoQuadros = 0; }
-    return clampar(l);
-  }
-  if (l.acao === 'atingido') return clampar(l);
+
+  // choque de raios: cada aperto NOVO de ATAQUE conta (registerClashMash); não sai tiro nem outro especial
+  const noChoque = !!e.choque;
+  if (noChoque && apertouAtaque) { e.choque!.apertos[l.id]++; eventos.push({ tipo: 'apertoChoque', dono: l.id }); }
 
   // gatilhos: especial (ou choque), transformar, parry
-  if (l.pedidoEspecial > 0 && l.ki >= C.KI_MAX) {
+  if (!noChoque && l.pedidoEspecial > 0 && l.ki >= C.KI_MAX && !e.raios.some((r) => r.dono === l.id)) {
     l.pedidoEspecial = 0;
     const noAr = raioDoOutroNoAr(e, l.id);
     if (noAr) {
@@ -243,12 +241,10 @@ function passoLutador(e: EstadoLuta, l: Lutador, ent: Entrada, eventos: Evento[]
       e.raios.length = 0;
       e.tiros.length = 0;
       e.choque = { idade: 0, apertos: { p1: 0, p2: 0 }, empurrao: 0 };
-      for (const id of ['p1', 'p2'] as const) { e[id].acao = 'especial'; e[id].acaoQuadros = 0; }
+      for (const id of ['p1', 'p2'] as const) e[id].emEspecial = true;
       eventos.push({ tipo: 'choque' });
-      return clampar(l);
-    }
-    soltarEspecial(e, l, eventos);
-    return clampar(l);
+    } else soltarEspecial(e, l, eventos);
+    l.emEspecial = true;
   }
   if (l.pedidoTransformar > 0 && podeTransformar(l)) {
     l.pedidoTransformar = 0;
@@ -257,47 +253,78 @@ function passoLutador(e: EstadoLuta, l: Lutador, ent: Entrada, eventos: Evento[]
   }
   if (l.pedidoParry > 0 && l.esperaParry <= 0) {
     l.pedidoParry = 0;
-    l.poseParry = C.PARRY_POSE_QUADROS;
-    let refletidos = 0;
-    for (const t of e.tiros) {
-      if (t.dono === l.id || !dentroDoParry(t, l)) continue;
-      const vel = Math.hypot(t.vx, t.vy) || 4;
-      t.vx = l.olhando * vel * C.PARRY_REFLEXO_VEL; // volta reto, rumo ao adversário
-      t.vy = 0;
-      t.dono = l.id;
-      t.refletido = true;
-      refletidos++;
-    }
-    if (refletidos === 0) l.esperaParry = C.PARRY_ERROU_ESPERA;
-    eventos.push({ tipo: 'parry', dono: l.id, refletidos });
+    rebater(l, e, eventos);
   }
 
-  // carregar ki: fica parado acumulando
+  // carregar ki: fica parado acumulando (o aperto novo de ATAQUE ainda atira, como no antigo)
   if (ent.carregar) {
     if (l.acao !== 'carregando') { l.acao = 'carregando'; l.acaoQuadros = 0; }
-    const antes = l.ki;
-    l.ki = Math.min(C.KI_MAX, l.ki + C.KI_CARREGAR_POR_QUADRO);
-    if (antes < C.KI_MAX && l.ki >= C.KI_MAX) eventos.push({ tipo: 'kiCheio', dono: l.id });
-    return clampar(l);
+    ganharKi(l, C.KI_CARREGAR_POR_QUADRO, eventos);
+  } else {
+    if (l.acao === 'carregando') { l.acao = 'livre'; l.acaoQuadros = 0; }
+    andar(e, l, ent);
   }
-  if (l.acao === 'carregando') { l.acao = 'livre'; l.acaoQuadros = 0; }
 
-  andar(e, l, ent);
-
-  // tiro de ki: segurando ATAQUE sai ~5 por segundo
-  if (ent.atacar && l.esperaTiro <= 0 && e.tiros.length < C.TIROS_MAX) {
-    const m = maoDe(l);
-    e.tiros.push({
-      id: e.proximoId++, dono: l.id,
-      x: m.x, y: m.y + (sortear(e) - 0.5) * 20,
-      vx: l.olhando * C.TIRO_VELOCIDADE, vy: (sortear(e) - 0.5) * 2,
-      raio: C.TIRO_RAIO, dano: C.TIRO_DANO, refletido: false, atirador: l.id,
-    });
-    l.esperaTiro = C.TIRO_INTERVALO;
-    l.poseTiro = C.POSE_TIRO_QUADROS;
-    eventos.push({ tipo: 'tiro', dono: l.id });
-  }
+  // tiro de ki: aperto novo sempre; segurando, ~5 por segundo fora da carga, do brilho do parry e sem raio na tela
+  const segurandoPode = !ent.carregar && l.ondaParry <= 0 && e.raios.length === 0;
+  if (!noChoque && ent.atacar && (apertouAtaque || segurandoPode) && l.esperaTiro <= 0 && e.tiros.length < C.TIROS_MAX) atirar(e, l, eventos);
   clampar(l);
+}
+
+function ganharKi(l: Lutador, quanto: number, eventos: Evento[]) {
+  const antes = l.ki;
+  l.ki = Math.min(C.KI_MAX, l.ki + quanto);
+  if (antes < C.KI_MAX && l.ki >= C.KI_MAX) eventos.push({ tipo: 'kiCheio', dono: l.id });
+}
+
+/** Ki de bônus do combo de parry (getParryComboBonus): 3 rebatidas seguidas = +2, 6 = +5, 10 = +10. */
+export function bonusDoComboDeParry(combo: number): number {
+  if (combo >= 10) return 10;
+  if (combo >= 6) return 5;
+  if (combo >= 3) return 2;
+  return 0;
+}
+
+/** Parry (tryReflect): devolve na hora os tiros do outro que estão no círculo. Errou = espera; acertou = combo. */
+function rebater(l: Lutador, e: EstadoLuta, eventos: Evento[]) {
+  l.poseParry = C.PARRY_POSE_QUADROS;
+  l.ondaParry = C.PARRY_ONDA_QUADROS;
+  let refletidos = 0;
+  for (const t of e.tiros) {
+    if (t.dono === l.id || !dentroDoParry(t, l)) continue;
+    const vel = Math.hypot(t.vx, t.vy) || 4;
+    t.vx = l.olhando * vel * C.PARRY_REFLEXO_VEL; // volta reto, rumo ao adversário
+    t.vy = 0;
+    t.dono = l.id;
+    t.refletido = true;
+    refletidos++;
+  }
+  let bonusKi = 0;
+  if (refletidos === 0) l.esperaParry = C.PARRY_ERROU_ESPERA;
+  else {
+    l.comboParry++;
+    l.comboParryQuadros = C.COMBO_PARRY_QUADROS;
+    const bonus = bonusDoComboDeParry(l.comboParry);
+    if (bonus > 0 && bonus !== l.ultimoBonusParry) {
+      bonusKi = bonus;
+      l.ultimoBonusParry = bonus;
+    }
+  }
+  eventos.push({ tipo: 'parry', dono: l.id, refletidos, bonusKi });
+  if (bonusKi > 0) ganharKi(l, bonusKi, eventos);
+}
+
+function atirar(e: EstadoLuta, l: Lutador, eventos: Evento[]) {
+  const m = maoDe(l);
+  e.tiros.push({
+    id: e.proximoId++, dono: l.id,
+    x: m.x, y: m.y + (sortear(e) - 0.5) * 20,
+    vx: l.olhando * C.TIRO_VELOCIDADE, vy: (sortear(e) - 0.5) * 2,
+    raio: C.TIRO_RAIO, dano: C.TIRO_DANO, refletido: false, atirador: l.id,
+  });
+  l.esperaTiro = C.TIRO_INTERVALO;
+  l.poseTiro = C.POSE_TIRO_QUADROS;
+  eventos.push({ tipo: 'tiro', dono: l.id });
 }
 
 /** andar/voar (diagonal com a mesma velocidade) */
@@ -363,8 +390,6 @@ function passoChoque(e: EstadoLuta, eventos: Evento[]) {
   eventos.push({ tipo: 'fimChoque', dano });
   for (const id of ['p1', 'p2'] as const) {
     const l = e[id];
-    l.acao = 'livre';
-    l.acaoQuadros = 0;
     if (podeApanhar(e, l)) aplicarDano(e, l, dano[id], true, id === 'p1' ? -1 : 1, eventos);
   }
 }

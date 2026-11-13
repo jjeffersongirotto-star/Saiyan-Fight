@@ -63,8 +63,11 @@ export const CHOQUE_ESCALA = 8;       // CLASH_MASH_PUSH_SCALE
 export const ZENKAI_INVULNERAVEL = 90;
 
 export const INVULNERAVEL_QUADROS = 30; // player.invulnerableTimer = 30 depois de apanhar
-export const ATINGIDO_QUADROS = 15;     // hitTimer
-export const EMPURRAO = 3;
+export const ATINGIDO_QUADROS = 15;     // hitTimer: só a pose de "apanhou" (o herói antigo não ficava preso nem era empurrado)
+/** brilho do parry (parryHighlightTimer): enquanto dura, segurar ATAQUE não atira (pollTecladoTiro) */
+export const PARRY_ONDA_QUADROS = 10;
+/** combo de parry (getParryComboBonus): ~1,5 s sem rebater zera */
+export const COMBO_PARRY_QUADROS = 90;
 export const FIM_RODADA_QUADROS = 150;  // pausa com o resultado antes da próxima rodada
 export const INVULNERAVEL_INICIO = 60;  // começo de cada rodada
 

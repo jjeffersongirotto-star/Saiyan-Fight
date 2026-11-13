@@ -212,7 +212,7 @@ export class Luta extends Phaser.Scene {
     switch (ev.tipo) {
       case 'tiro': som.tocar('shoot'); break;
       case 'apertoChoque': som.tocar('shoot'); break;
-      case 'acerto': som.tocar('hit'); break;
+      case 'acerto': som.tocar('hit'); if (meu(ev.alvo)) vibrar(140); break; // o herói antigo vibrava 140 ms ao apanhar; agora qualquer humano
       case 'parry':
         if (ev.refletidos > 0) { som.tocar('reflect'); if (meu(ev.dono)) vibrar(45); }
         break;

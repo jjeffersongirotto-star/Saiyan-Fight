@@ -63,8 +63,13 @@ describe('poses', () => {
     expect(poseDoLutador(e.p1).movimento).toBe('parry');
     e.p1.acao = 'transformando';
     expect(poseDoLutador(e.p1).movimento).toBe('transform');
-    e.p1.acao = 'especial';
+    e.p1.emEspecial = true;
     expect(poseDoLutador(e.p1).movimento).toBe('special');
+    e.p1.acao = 'livre';
+    e.p1.emEspecial = false;
+    e.p1.poseParry = 0;
+    e.p1.poseAtingido = 3;
+    expect(poseDoLutador(e.p1).movimento).toBe('flyLeft');
   });
 });
 

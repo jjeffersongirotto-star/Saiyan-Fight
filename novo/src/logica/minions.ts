@@ -20,6 +20,22 @@ export const ARREMESSO_VX = 14;
 export const ARREMESSO_VY = -6;
 export const ARREMESSO_ATORDOADO = 60;
 
+/** Quem está invulnerável (depois de apanhar, Zenkai, começo da rodada) ou transformando não pode ser agarrado
+ *  (gameplay.js: podeAgarrar = ... invulnerableTimer === 0) — vale para os dois. */
+export const podeSerAgarrado = (l: { invulneravel: number; acao: string }) => l.invulneravel <= 0 && l.acao !== 'transformando';
+
+/** O especial destrói quem está agarrado nas pernas de quem soltou (destruirSaibamansAgarrados, sem tirar vida
+ *  de quem soltou). No antigo só o herói tinha isso; agora os dois. Tira da lista; devolve quantos. */
+export function destruirAgarrados(dono: { id: IdJogador }, minions: MinionAgarravel[]): number {
+  let n = 0;
+  for (let i = minions.length - 1; i >= 0; i--) {
+    if (minions[i].agarrando !== dono.id) continue;
+    minions.splice(i, 1);
+    n++;
+  }
+  return n;
+}
+
 /** Solta e arremessa para longe todos os minions agarrados em `dono` (centro em x). Devolve quantos voaram. */
 export function arremessarAgarrados(dono: { id: IdJogador; x: number; olhando: number }, minions: MinionAgarravel[]): number {
   let n = 0;

@@ -110,6 +110,33 @@ nova, `false` = como no antigo), com testes dos dois jeitos.
   `logica/minions.ts` é chamado na transformação (solta, joga para longe e um pouco para cima, 60 quadros sem
   poder agarrar de novo; o evento `transformou` diz quantos voaram). No VERSUS a lista `minions` é vazia; os
   minions de verdade (andar, agarrar, explodir) entram na **fase 3**. (No antigo, só o especial soltava.)
+- **No VERSUS, as regras do herói da história valem para os DOIS** (pedido do Jefferson, 13/11/2026). Auditoria de
+  `gameplay.js`/`menu.js`/`game-logic-core.js` e como ficou (testado para J1 e J2 em `tests/luta.test.ts`):
+
+| Regra do herói (história) | No antigo | No novo (J1 e J2) |
+|---|---|---|
+| Vida | 3 na história; 4 para os dois no VERSUS (`VERSUS_FIGHTER_HP`) | 4 para os dois |
+| Velocidade | 4,5; +1 por 15 s ao transformar (renova) | igual para os dois (`j2IgualAoJ1`) |
+| Invulnerável depois de apanhar | 30 quadros (tiro, especial, choque) só o herói | 30 quadros para os dois |
+| Invulnerável no começo da rodada / Zenkai | 60 / 90 quadros, Zenkai 1x por partida | igual para os dois |
+| Apanhar | o herói **não** ficava preso nem era empurrado (o `hitTimer` do J2 só mudava o desenho) | ninguém fica preso nem é empurrado; sobra só a pose de "apanhou" (15 quadros, `poseAtingido`). Saiu o `EMPURRAO` e a ação `atingido` |
+| Carregar ki | parado, +0,8 por quadro | igual para os dois (o J2 antigo andava carregando) |
+| Tiro | aperto NOVO atira sempre que o intervalo passou (até carregando); SEGURAR só repete fora da carga, do brilho do parry (10 quadros) e sem raio na tela (`beamActive`) | igual para os dois |
+| Durante o próprio especial | o herói andava, carregava, rebatia e transformava; não soltava outro com o raio na tela | igual para os dois (pose de especial enquanto o raio dura, `emEspecial`); antes o novo travava quem soltou |
+| Choque de raios | o herói andava; aperto de ATAQUE conta | os dois andam; cada aperto novo conta; sem tiro nem outro especial |
+| Combo de parry | só o herói: +1 por rebatida, zera com 90 quadros sem rebater ou ao apanhar; +2 ki no 3º, +5 no 6º, +10 no 10º (`getParryComboBonus`) | para os dois (`bonusDoComboDeParry`, evento `parry.bonusKi`) |
+| Parry errado | espera 30 quadros (os dois) | igual |
+| Transformar | ki cheio, a qualquer hora | igual; a pose trava e protege (regras confirmadas acima) |
+| Especial destrói os agarrados | só o herói (`destruirSaibamansAgarrados`) | gancho `destruirAgarrados()` para os dois (evento `especial.agarradosDestruidos`); minions na fase 3 |
+| Não ser agarrado invulnerável | só o herói | `podeSerAgarrado()` para os dois (também na pose de transformar); usado na fase 3 |
+| Protegido depois de vencer | `protegerHeroiAposVitoria` | os dois, fora da fase `luta` |
+| Vibrar ao apanhar | 140 ms no herói | 140 ms em qualquer jogador humano |
+
+  **Fica de fora (não existe no VERSUS):** itens da história (cápsula/escudo que segura um golpe, nuvem, bastão
+  com o super ataque, senzu), minions/ondas/chefes (fase 3), pontos/conquistas/estatísticas, o ki 1,4 do
+  tutorial, a agressividade da CPU e o tiro automático do toque (camada de entrada). **Diferença que sobra, não é
+  do herói:** no antigo o círculo do parry crescia com a aura desenhada (`getParryCircle`, para os dois); no novo
+  é fixo (56) — fica para quando o desenho da aura for igual.
 
 ## Plano das imagens (medido nesta PR)
 

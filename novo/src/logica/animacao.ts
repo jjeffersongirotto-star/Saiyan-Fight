@@ -32,11 +32,11 @@ export interface Pose {
 export function poseDoLutador(l: Lutador): Pose {
   const espelhar = l.olhando === -1;
   let movimento: Movimento;
-  if (l.acao === 'especial') movimento = 'special';
+  if (l.emEspecial) movimento = 'special';
   else if (l.acao === 'transformando') movimento = 'transform';
   else if (l.poseParry > 0) movimento = 'parry';
   else if (l.acao === 'carregando') movimento = 'chargeKi';
-  else if (l.acao === 'caido' || l.acao === 'atingido') movimento = 'flyLeft'; // recuando
+  else if (l.acao === 'caido' || l.poseAtingido > 0) movimento = 'flyLeft'; // recuando
   else if (l.acao === 'vitoria') movimento = 'idle';
   else if (l.poseTiro > 0) movimento = 'attackKi';
   else movimento = movimentoDeVoo(l.movX * l.olhando, l.movY);
