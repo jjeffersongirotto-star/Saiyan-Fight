@@ -79,3 +79,24 @@ describe('tamanho na unidade certa (v0.132)', () => {
     expect(formatarTamanho(0)).toBe('0 KB');
   });
 });
+
+describe('progresso real do download (v0.133, APK 1.1)', () => {
+  it('10..70 = bytes reais baixados; depois instalando; 100 = pronto', async () => {
+    const { faseDoDownload } = await import('../src/logica/atualizacao');
+    expect(faseDoDownload(10)).toEqual({ fase: 'baixando', pct: 0 });
+    expect(faseDoDownload(40)).toEqual({ fase: 'baixando', pct: 50 });
+    expect(faseDoDownload(70)).toEqual({ fase: 'baixando', pct: 100 });
+    expect(faseDoDownload(75)).toEqual({ fase: 'instalando' });
+    expect(faseDoDownload(90)).toEqual({ fase: 'instalando' });
+    expect(faseDoDownload(100)).toEqual({ fase: 'pronto' });
+  });
+  it('o ajuste nativo do plugin está no postinstall e falha se o código mudar', async () => {
+    const fs = await import('node:fs');
+    const pkg = JSON.parse(fs.readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
+    expect(pkg.scripts.postinstall).toBe('node scripts/android/ajustar-updater.js');
+    expect(pkg.version.split('.').slice(0, 2).join('.')).toBe('1.1');   // mudança nativa: APK novo (nativoMinimo 1.1.0)
+    const s = fs.readFileSync(new URL('../../scripts/android/ajustar-updater.js', import.meta.url), 'utf8');
+    expect(s).toContain('return 10 + (int) (parte * 60);');
+    expect(s).toContain('o código do @capgo/capacitor-updater mudou');
+  });
+});

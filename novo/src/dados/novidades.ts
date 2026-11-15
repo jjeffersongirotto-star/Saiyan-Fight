@@ -6,6 +6,14 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.133',
+    titulo: 'DOWNLOAD REAL EM TEMPO REAL (APP NOVO)',
+    itens: [
+      'Ao atualizar, a tela mostra os MB que estão sendo baixados de verdade, em tempo real (antes o app só avisava de 10 em 10% e parava em 70%). Depois do download aparece INSTALANDO... e o jogo reinicia na versão nova.',
+      'Para isso o próprio app Android mudou: a setinha ⟳ ATUALIZAR vai oferecer BAIXAR o APK novo uma vez. É só instalar por cima: personagens, progresso e conquistas continuam salvos. Daí em diante as atualizações voltam a vir pela setinha.',
+    ],
+  },
+  {
     versao: '0.132',
     titulo: 'DOWNLOAD EM MB',
     itens: [

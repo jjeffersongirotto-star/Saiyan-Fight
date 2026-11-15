@@ -68,6 +68,17 @@ export function progressoDoDownload(percent: number, tamanhoBytes: number): { pc
   return { pct, kb: Math.round((totalKb * pct) / 100), totalKb };
 }
 
+/** v0.133: o que o número do plugin quer dizer, com o ajuste nativo de scripts/android/ajustar-updater.js
+ *  (APK 1.1+): 10..70 = bytes baixados em linha reta (10 = nada, 70 = tudo), 71..99 = descompactando/instalando,
+ *  100 = pronto. Devolve a fase e, baixando, a porcentagem REAL dos bytes (0..100). */
+export type FaseDownload = { fase: 'baixando'; pct: number } | { fase: 'instalando' } | { fase: 'pronto' };
+export function faseDoDownload(percentDoPlugin: number): FaseDownload {
+  const p = Number(percentDoPlugin) || 0;
+  if (p >= 100) return { fase: 'pronto' };
+  if (p > 70) return { fase: 'instalando' };
+  return { fase: 'baixando', pct: Math.max(0, Math.min(100, ((p - 10) / 60) * 100)) };
+}
+
 /** Tamanho na unidade que cabe: KB abaixo de 1 MB, MB abaixo de 1 GB, depois GB (1 casa; vírgula em PT/ES). */
 export function formatarTamanho(bytes: number, virgula = true): string {
   const b = Math.max(0, Number(bytes) || 0);
