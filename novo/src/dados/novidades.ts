@@ -6,6 +6,13 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.131',
+    titulo: 'SETA DE VOLTAR CENTRALIZADA',
+    itens: [
+      'A seta ← dos botões de voltar ficava baixa no botão (a letra da fonte varia em cada celular). Agora ela é desenhada e fica sempre no meio do botão, em todas as telas.',
+    ],
+  },
+  {
     versao: '0.130',
     titulo: 'ATUALIZAR MOSTRA QUANTO JÁ BAIXOU',
     itens: [
