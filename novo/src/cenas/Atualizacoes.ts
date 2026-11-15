@@ -13,7 +13,7 @@ import { vigiarControles } from '../entrada/controles';
 import { UPDATES_LEGADO } from '../legado/updates-legado';
 import { aoApertar } from '../entrada/teclas';
 import { NOVIDADES } from '../dados/novidades';
-import { abrirApk, androidNoNavegador, baixarEAtualizar, infoVersao, noApp, procurarAtualizacao, versaoDoAppInstalado } from '../app/plataforma';
+import { abrirApk, androidNoNavegador, baixarEAtualizar, infoVersao, noApp, procurarAtualizacao } from '../app/plataforma';
 import { recarregarSite, temVersaoNova, verificarAtualizacao } from '../app/aviso';
 
 
@@ -64,10 +64,8 @@ export class Atualizacoes extends Phaser.Scene {
     botaoTelaCheia(this);
     this.add.text(TELA_L / 2, 24, T('ATUALIZAÇÕES'), estiloTexto({ fontFamily: 'Arial Black, Arial', fontSize: '24px', color: '#ffd23a', stroke: '#8a2b00', strokeThickness: 5 })).setOrigin(0.5);
     const v = infoVersao();
-    const linhaVersao = this.add.text(TELA_L / 2, 50, '', estiloTexto({ fontFamily: 'Arial Black, Arial', fontSize: '13px', color: '#ffffff' })).setOrigin(0.5);
-    const escreverVersao = (apk: string) => linhaVersao.setText(`${T('VERSÃO')} ${v.jogo} · BUILD ${v.build}${apk ? ` · ${T('APP')} ${apk}` : ''}`);
-    escreverVersao(v.apk);
-    if (noApp()) versaoDoAppInstalado().then((a) => { if (this.sys.isActive()) escreverVersao(a); }).catch(() => undefined);
+    // só a versão do jogo (v0.134: build e versão do app confundiam; continuam sendo usados por dentro na setinha)
+    this.add.text(TELA_L / 2, 50, `${T('VERSÃO')} ${v.jogo}`, estiloTexto({ fontFamily: 'Arial Black, Arial', fontSize: '13px', color: '#ffffff' })).setOrigin(0.5);
 
     // novidades (só em português, como as UPDATES do jogo antigo): as do novo e, embaixo, todo o histórico 0.x do
     // antigo (gerado de index.html). A lista é longa: só as linhas visíveis viram texto (cabe em qualquer celular).
