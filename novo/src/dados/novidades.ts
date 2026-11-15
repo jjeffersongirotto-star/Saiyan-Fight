@@ -6,6 +6,16 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.125',
+    titulo: 'LUTAS A 60 FPS EM QUALQUER FASE',
+    itens: [
+      'O jogo mede o FPS de verdade e, se o aparelho não segura 60, baixa a resolução sozinho (2x → 1,5x → 1x; bem lento, vai direto a 1x) em cerca de 1 segundo. Não volta a subir enquanto o jogo estiver aberto.',
+      'O cenário 3D das fases é desenhado em resolução 1x: mandar uma imagem 4 vezes maior para a placa de vídeo a cada quadro era o que mais travava no celular.',
+      'Se mesmo assim faltar FPS, o cenário passa a ser atualizado a cada 2 ou 3 quadros (a câmera anda devagar, quase não se nota).',
+      'Medido nas 11 fases com Goku, Broly, Freeza e Gotenks, e com formas transformadas: 57 a 60 FPS.',
+    ],
+  },
+  {
     versao: '0.124',
     titulo: 'SPRITES SEM CORTES E SEM PISCAR',
     itens: [

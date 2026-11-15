@@ -1,11 +1,13 @@
 // As 11 arenas do jogo antigo, desenhadas pelo MESMO código de antes (src/legado/cenarios-legado.js, gerado) num
 // canvas que vira textura do Phaser. O código antigo já guarda as partes paradas em imagens (panoramas de 360°,
 // construções que a câmera rodeia, refeitas só a cada 1/4 de grau); aqui só se copia o canvas para a placa de
-// vídeo a cada quadro. Para segurar 60 fps no celular: mede quanto custa e, se passar do limite, baixa a
-// resolução do cenário para 1x e depois atualiza o cenário a cada 2 quadros (a câmera anda devagar).
+// vídeo a cada quadro. Para segurar 60 fps no celular (v0.125): o cenário é sempre desenhado em 1x (é desenho
+// suave, esticado com filtro; mandar 1600x700 para a placa a cada quadro era o que mais pesava) e, quando o vigia
+// de desempenho (ui/resolucao.ts) já baixou a resolução da tela ao mínimo e ainda falta fps, o cenário passa a ser
+// atualizado a cada 2 e depois a cada 3 quadros (a câmera anda devagar).
 import Phaser from 'phaser';
 import { TELA_A, TELA_L } from '../logica/constantes';
-import { ESCALA_RENDER } from './resolucao';
+import { aoFaltarDesempenho } from './resolucao';
 import type { CenariosLegado } from '../legado/cenarios-legado';
 import { TEMAS } from '../dados/temas';
 
@@ -28,16 +30,19 @@ export const cenariosProntos = () => pronto;
 
 /** avanço da câmera do antigo: world.stageScrollX += 1,5 por quadro de luta */
 export const SCROLL_POR_QUADRO = 1.5;
-/** custo médio (ms) do cenário por quadro acima do qual baixa a qualidade */
-export const LIMITE_MS = 5;
+
+/** quadros entre atualizações do cenário (sobe com o vigia de desempenho, nunca desce na sessão) */
+let pularDaSessao = 1;
 
 export class ArenaAntiga {
   private tex: Phaser.Textures.CanvasTexture;
   private img: Phaser.GameObjects.Image;
   private legado: CenariosLegado;
-  private k: number;
-  /** atualiza 1 a cada `pular` quadros (1 = todo quadro) */
-  private pular = 1;
+  /** resolução do canvas do cenário: sempre 1x (ver o topo) */
+  private readonly k = 1;
+  /** atualiza 1 a cada `pular` quadros (1 = todo quadro); o mesmo valor vale para as próximas lutas da sessão */
+  private get pular() { return pularDaSessao; }
+  private soltarAlivio: () => void;
   private contador = 0;
   private amostras = 0;
   /** média móvel do custo (ms) de desenhar + mandar para a placa */
@@ -46,13 +51,17 @@ export class ArenaAntiga {
   custoEnvio = 0;
 
   constructor(private cena: Phaser.Scene, readonly id: string, modulo: Modulo, private readonly chave = 'arena-antiga') {
-    this.k = ESCALA_RENDER;
     if (cena.textures.exists(chave)) cena.textures.remove(chave);
     this.tex = cena.textures.createCanvas(chave, Math.round(TELA_L * this.k), Math.round(TELA_A * this.k))!;
     this.legado = modulo.criarCenariosLegado(this.tex.getSourceImage() as HTMLCanvasElement);
     this.legado.escala(this.k);
     this.tex.setFilter(Phaser.Textures.FilterMode.LINEAR); // o cenário é desenho suave, não pixel art
     this.img = cena.add.image(0, 0, chave).setOrigin(0, 0).setDisplaySize(TELA_L, TELA_A).setDepth(-10);
+    this.soltarAlivio = aoFaltarDesempenho(() => {
+      if (pularDaSessao >= 3) return false;
+      pularDaSessao++; // 30 e depois 20 atualizações do cenário por segundo
+      return true;
+    });
   }
 
   get qualidade() {
@@ -69,21 +78,10 @@ export class ArenaAntiga {
     const ms = performance.now() - t0;
     this.custoEnvio = this.custoEnvio * 0.95 + (ms - (t1 - t0)) * 0.05;
     this.custoMedio = this.amostras++ === 0 ? ms : this.custoMedio * 0.95 + ms * 0.05;
-    // custo por quadro de jogo (atualizando a cada `pular` quadros, divide)
-    if (this.amostras > 45 && this.custoMedio / this.pular > LIMITE_MS) this.baixarQualidade();
-  }
-
-  private baixarQualidade(): void {
-    this.amostras = 0;
-    if (this.k > 1) {
-      this.k = 1;
-      this.tex.setSize(TELA_L, TELA_A);
-      this.legado.escala(1);
-      this.img.setDisplaySize(TELA_L, TELA_A);
-    } else if (this.pular < 3) this.pular++; // 30 e depois 20 atualizações por segundo (a câmera anda devagar)
   }
 
   destruir(): void {
+    this.soltarAlivio();
     this.img.destroy();
     if (this.cena.textures.exists(this.chave)) this.cena.textures.remove(this.chave);
   }

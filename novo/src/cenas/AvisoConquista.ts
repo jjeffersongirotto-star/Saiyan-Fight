@@ -61,7 +61,7 @@ export class AvisoConquista extends Phaser.Scene {
     this.caixa.setPosition(TELA_L / 2 - this.w / 2, 8 + deslocamentoDoAviso(t));
     const p = Math.min(1, Math.max(0, (t - 6) / 16));
     const esc = p <= 0 ? 0 : 1 + 0.35 * Math.sin(p * Math.PI) * (1 - p * 0.4);
-    this.icone.setScale(esc / ESCALA_RENDER).setVisible(esc > 0);
+    this.icone.setScale(esc * (R + 8) * 2 / this.icone.frame.width).setVisible(esc > 0);
     this.anel.clear();
     if (t > 8 && t < 50) {
       const q = (t - 8) / 42;

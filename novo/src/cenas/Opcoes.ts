@@ -3,7 +3,7 @@
 // (+ TRILHAS SONORAS), TRANSMITIR PARA A TV e IDIOMAS. Abre do menu ou da PAUSA (por cima da luta congelada:
 // voltar da tela principal das opções devolve à pausa).
 import Phaser from 'phaser';
-import { ajustarCamera, ESCALA_RENDER } from '../ui/resolucao';
+import { ajustarCamera } from '../ui/resolucao';
 import { desenharFundo } from './fundo';
 import { TELA_A, TELA_L } from '../logica/constantes';
 import { T, TF, definirIdioma, idiomaAtual, type Idioma } from '../logica/idioma';
@@ -417,7 +417,7 @@ export class TesteControles extends Phaser.Scene {
     // foto da planície no quadro da prévia (a 1ª fase)
     const chaveFundo = desenharFundo(this);
     this.children.list.filter((c) => (c as Phaser.GameObjects.Image).texture?.key === chaveFundo).forEach((c) => c.destroy());
-    this.add.image(Q.x, Q.y, chaveFundo).setOrigin(0).setDisplaySize(Q.w, Q.h * 1.9).setCrop(0, 0, TELA_L * ESCALA_RENDER, TELA_A * ESCALA_RENDER * (1 / 1.9)).setDepth(1);
+    this.add.image(Q.x, Q.y, chaveFundo).setOrigin(0).setDisplaySize(Q.w, Q.h * 1.9).setCrop(0, 0, this.textures.get(chaveFundo).source[0].width, this.textures.get(chaveFundo).source[0].height / 1.9).setDepth(1);
     criarAnimacoes(this, 'goku-normal');
     if (this.textures.exists('goku-normal')) {
       this.goku = this.add.sprite(Q.x + 90, Q.y + 110, 'goku-normal', 'idle/0').setScale(0.55).setDepth(3);
