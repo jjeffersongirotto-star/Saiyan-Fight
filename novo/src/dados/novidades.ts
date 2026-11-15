@@ -6,6 +6,13 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.134',
+    titulo: 'SÓ UMA VERSÃO NA TELA',
+    itens: [
+      'A tela ATUALIZAÇÕES mostra só a versão do jogo (ex.: VERSÃO 0.134). O número do build e a versão do app, que confundiam, saíram da tela.',
+    ],
+  },
+  {
     versao: '0.133',
     titulo: 'DOWNLOAD REAL EM TEMPO REAL (APP NOVO)',
     itens: [
