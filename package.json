@@ -1,12 +1,13 @@
 {
   "name": "saiyan-fight",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Saiyan Fight: o jogo fica em novo/ (Phaser + TypeScript + Vite). Este package.json só empacota o APK Android com o Capacitor.",
   "scripts": {
     "copiar": "node scripts/android/copiar-web.js",
     "android": "node scripts/android/copiar-web.js && cap sync android && cd android && ./gradlew assembleRelease",
-    "test": "cd novo && npm test"
+    "test": "cd novo && npm test",
+    "postinstall": "node scripts/android/ajustar-updater.js"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.5.3"

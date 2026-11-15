@@ -115,6 +115,7 @@ const LINHAS: Record<string, [string, string]> = {
   'BAIXANDO...': ['DOWNLOADING...', 'DESCARGANDO...'],
   'BAIXANDO... {0} DE {1} ({2}%)': ['DOWNLOADING... {0} OF {1} ({2}%)', 'DESCARGANDO... {0} DE {1} ({2}%)'],
   'BAIXANDO... {0}%': ['DOWNLOADING... {0}%', 'DESCARGANDO... {0}%'],
+  'INSTALANDO...': ['INSTALLING...', 'INSTALANDO...'],
   'NOVA VERSÃO': ['NEW VERSION', 'NUEVA VERSIÓN'],
   'AGORA NÃO': ['NOT NOW', 'AHORA NO'],
   BAIXAR: ['DOWNLOAD', 'DESCARGAR'],

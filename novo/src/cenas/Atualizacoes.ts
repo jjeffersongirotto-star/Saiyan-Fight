@@ -6,7 +6,7 @@ import Phaser from 'phaser';
 import { ajustarCamera, estiloTexto } from '../ui/resolucao';
 import { TELA_A, TELA_L } from '../logica/constantes';
 import { T, TF, idiomaAtual } from '../logica/idioma';
-import { formatarTamanho, progressoDoDownload } from '../logica/atualizacao';
+import { faseDoDownload, formatarTamanho, progressoDoDownload } from '../logica/atualizacao';
 import { criarBotao } from '../ui/botao';
 import { fundoDeMenu, botaoTelaCheia } from '../ui/telas';
 import { vigiarControles } from '../entrada/controles';
@@ -157,14 +157,17 @@ export class Atualizacoes extends Phaser.Scene {
     }
     this.perguntar(T('ATUALIZAR AGORA?'), `${T('Saiu a versão')} ${d.versao}. ${T('O jogo baixa a versão nova e reinicia; o progresso continua salvo.')}`, T('ATUALIZAR'), async () => {
       this.ocupado = true;
-      // KB baixados / total, mudando enquanto baixa (o total vem do latest.json)
-      const mostrarProgresso = (percent: number) => {
+      // MB baixados de verdade / total, a cada aviso do plugin (ajustado para avisar em tempo real, faseDoDownload);
+      // depois do download, a fase de descompactar aparece como INSTALANDO...
+      const mostrarProgresso = (percentDoPlugin: number) => {
         if (!this.sys.isActive()) return;
-        const p = progressoDoDownload(percent, d.tamanho);
+        const f = faseDoDownload(percentDoPlugin);
+        if (f.fase !== 'baixando') { avisar(T(f.fase === 'pronto' ? 'ATUALIZANDO...' : 'INSTALANDO...'), '#7dffb0'); return; }
+        const p = progressoDoDownload(f.pct, d.tamanho);
         const virgula = idiomaAtual() !== 'en';
         avisar(p.totalKb ? TF('BAIXANDO... {0} DE {1} ({2}%)', formatarTamanho(p.kb * 1024, virgula), formatarTamanho(p.totalKb * 1024, virgula), p.pct) : TF('BAIXANDO... {0}%', p.pct), '#ffffff');
       };
-      mostrarProgresso(0);
+      mostrarProgresso(10);
       const ok = await baixarEAtualizar(d, mostrarProgresso);
       // deu certo: o plugin já está reiniciando o jogo na versão nova
       this.ocupado = false;
