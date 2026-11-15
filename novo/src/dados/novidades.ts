@@ -6,6 +6,14 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.129',
+    titulo: 'AVISO DE VERSÃO NOVA NA ESFERA',
+    itens: [
+      'Quando sai uma versão nova, aparece uma bolinha vermelha com "!" na esfera de 4 estrelas do menu e no botão UPDATES.',
+      'O jogo confere sozinho ao abrir o menu (no máximo a cada 10 minutos), mas não baixa nada: no app, atualize pela setinha ⟳ ATUALIZAR; no site, a tela ATUALIZAÇÕES mostra o botão RECARREGAR.',
+    ],
+  },
+  {
     versao: '0.128',
     titulo: 'O JOGO NOVO NÃO PRECISA MAIS DO ANTIGO',
     itens: [

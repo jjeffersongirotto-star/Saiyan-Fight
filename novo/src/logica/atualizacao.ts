@@ -47,3 +47,12 @@ export function decidirAtualizacao(latest: Latest | null | undefined, atual: { b
 export function versaoCurta(v: string): string {
   return String(v).split('.').slice(0, 2).join('.');
 }
+
+/** versao.json do site (gerado no build pelo vite.config.ts): o site publicado tem build mais novo que o aberto? */
+export function siteTemVersaoNova(remoto: unknown, buildAtual: number): boolean {
+  const b = Number((remoto as { build?: unknown } | null)?.build);
+  return Number.isFinite(b) && b > buildAtual;
+}
+
+/** Aviso de atualização (bolinha na esfera e em UPDATES): só quando o app tem pacote ou APK novo para baixar. */
+export const avisaAtualizacao = (d: { tipo: string }) => d.tipo === 'jogo' || d.tipo === 'apk';

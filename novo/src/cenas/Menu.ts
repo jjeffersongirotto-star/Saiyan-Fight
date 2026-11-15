@@ -11,6 +11,7 @@ import { esferaDoDragao, fotoDoPerfil } from '../ui/esfera';
 import { conquistas, APELIDO_MAX } from '../logica/conquistas';
 import { pedirTexto } from '../ui/janela';
 import { avisarQueOJogoAbriu, infoVersao } from '../app/plataforma';
+import { aoMudarAviso, temVersaoNova, verificarAtualizacao } from '../app/aviso';
 import { abrirEditor } from '../ui/editores';
 import { aoApertar } from '../entrada/teclas';
 import type { ModoFase } from '../logica/ondas';
@@ -36,6 +37,13 @@ const L = {
   esfera: ret(12, 12, 40, 40),
 };
 const E = { x: 12, y: 58, w: 216 };
+
+/** bolinha vermelha com "!" (aviso de versão nova) */
+function bolinhaDeAviso(cena: Phaser.Scene, x: number, y: number, r: number): Phaser.GameObjects.Container {
+  const c = cena.add.circle(0, 0, r, 0xef4444).setStrokeStyle(1.5, 0xffffff);
+  const t = cena.add.text(0, 0.5, '!', estiloTexto({ fontFamily: 'Arial Black, Arial', fontSize: `${r * 1.6}px`, color: '#ffffff' })).setOrigin(0.5);
+  return cena.add.container(x, y, [c, t]).setDepth(6);
+}
 
 export class Menu extends Phaser.Scene {
   private nav!: Navegacao;
@@ -72,6 +80,11 @@ export class Menu extends Phaser.Scene {
     const esf = this.add.image(L.esfera.x + 20, L.esfera.y + 20, esferaDoDragao(this)).setDisplaySize(40, 40).setInteractive({ useHandCursor: true });
     esf.on('pointerup', () => { som.tocar('menu'); this.alternarEsfera(); });
     this.nav.add({ ...L.esfera, acionar: () => this.alternarEsfera() });
+    // aviso de versão nova: bolinha vermelha na esfera (confere em silêncio, no máximo a cada 10 min)
+    const selo = bolinhaDeAviso(this, L.esfera.x + 36, L.esfera.y + 5, 5).setVisible(temVersaoNova());
+    const parar = aoMudarAviso((n) => { if (selo.active) selo.setVisible(n); });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, parar);
+    verificarAtualizacao();
     this.input.on('pointerup', (p: Phaser.Input.Pointer) => {
       if (this.esferaAberta && !dentro(p.worldX, p.worldY, this.retPainelEsfera()) && !dentro(p.worldX, p.worldY, L.esfera)) this.fecharEsfera();
     });
@@ -127,6 +140,7 @@ export class Menu extends Phaser.Scene {
       const bt = botao(this, r, t, f, { ...fonte, ...(c ? { cor: c } : {}) });
       this.botoesEsfera.push(bt);
       this.nav.add({ ...r, acionar: bt.acionar });
+      return bt;
     };
     if (this.perfilAberto) {
       const foto2 = botao(this, ret(E.x + 14, y, 92, 26), 'TROCAR FOTO', () => undefined, { cor: '#8b95a5', fonte: 10, mono: false, prof: 110 });
@@ -138,7 +152,8 @@ export class Menu extends Phaser.Scene {
     }
     add(ret(E.x + 12, y, E.w - 24, 30), 'EDITOR DE PERSONAGENS', () => abrirEditor(this, 'personagens'));
     add(ret(E.x + 12, y + 36, E.w - 24, 30), 'EDITOR DE ARENAS', () => abrirEditor(this, 'arenas'));
-    add(ret(E.x + 12, y + 72, E.w - 24, 30), 'UPDATES', () => this.scene.start('Atualizacoes'), '#fbbf24');
+    const upd = add(ret(E.x + 12, y + 72, E.w - 24, 30), 'UPDATES', () => this.scene.start('Atualizacoes'), '#fbbf24');
+    if (temVersaoNova()) upd.container.add(bolinhaDeAviso(this, upd.r.w - 12, upd.r.h / 2, 5));
     this.nav.add({ ...L.esfera, acionar: () => this.fecharEsfera() });
   }
 
