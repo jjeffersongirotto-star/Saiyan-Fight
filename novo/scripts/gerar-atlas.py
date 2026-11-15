@@ -131,7 +131,7 @@ def _gerar(arg):
 
 
 if __name__ == "__main__":
-    # sem argumentos (ou "todos"): as 47 formas + os retratos, em paralelo
+    # sem argumentos (ou "todos"): as 49 formas + os retratos, em paralelo
     args = sys.argv[1:]
     if not args or args == ["todos"]:
         from multiprocessing import Pool

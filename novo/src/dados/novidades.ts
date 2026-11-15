@@ -6,6 +6,16 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.123',
+    titulo: 'SUPER 17, KIBITOSHIN E SPRITES REFEITOS',
+    itens: [
+      'Androide 17 ganhou a transformação Super 17 e o Supremo Sr. Kaio ganhou a fusão Kibitoshin, com todos os movimentos.',
+      'Freeza 3ª forma redesenhado (sem nariz e com a postura certa) e as transformações do Freeza sem quadros cortados ao meio.',
+      'Voos refeitos sem os braços para cima em vários personagens; Trunks Fúria com a aura azul rente ao corpo; Gohan criança e os últimos movimentos do Piccolo redesenhados.',
+      'Tiras limpas: sumiram as linhas que apareciam entre os quadros e os quadros com dois bonecos ou só pedaços.',
+    ],
+  },
+  {
     versao: '0.122',
     titulo: 'FASES DO MODO HISTÓRIA ABREM NO CELULAR',
     itens: [

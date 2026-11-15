@@ -32,7 +32,7 @@ const CONJ_FPS_PADRAO = 12;
 // ---------------------------------------------------------------------------------------------------------------
 // v0.106: versão dos arquivos dos pacotes — vai no endereço (?v=) para o navegador não usar uma cópia antiga
 // guardada (o Vegeta continuava com os sprites recortados antigos). Suba o número sempre que trocar um pacote.
-const CONJ_VERSAO_ARQUIVOS = "119";
+const CONJ_VERSAO_ARQUIVOS = "123";
 const CONJ_PACOTES = {
     // v0.102: desenhos do jogador (gerados no Gemini) para as 4 formas do Goku; já entra como o conjunto em uso.
     // variantes = base + transformações em ordem (o jogo usa a forma do nível atual)
@@ -51,13 +51,13 @@ const CONJ_PACOTES = {
     gohan: { pasta: "conjuntos/gohan/", personagem: "gohan", nome: "GOHAN SPRITES", marca: "saiyan_conjunto_gohan",
         variantes: ["normal", "ssj", "ssj2"], ativar: true },
     kaioshin: { pasta: "conjuntos/kaioshin/", personagem: "kaioshin", nome: "SUPREMO SR. KAIO SPRITES", marca: "saiyan_conjunto_kaioshin",
-        variantes: ["normal"], ativar: true },
+        variantes: ["normal", "kibitoshin"], ativar: true },
     vegetto: { pasta: "conjuntos/vegetto/", personagem: "gogeta", nome: "VEGETTO SPRITES", marca: "saiyan_conjunto_vegetto_110",
         variantes: ["normal", "ssj", "blue"], ativar: true },
     bardock: { pasta: "conjuntos/bardock/", personagem: "bardock", nome: "BARDOCK SPRITES", marca: "saiyan_conjunto_bardock_110",
         variantes: ["normal", "ssj"], ativar: true },
     android17: { pasta: "conjuntos/android17/", personagem: "android17", nome: "ANDROIDE 17 SPRITES", marca: "saiyan_conjunto_android17",
-        variantes: ["normal"], ativar: true },
+        variantes: ["normal", "super17"], ativar: true },
     android18: { pasta: "conjuntos/android18/", personagem: "android18", nome: "ANDROIDE 18 SPRITES", marca: "saiyan_conjunto_android18",
         variantes: ["normal"], ativar: true },
     buu: { pasta: "conjuntos/buu/", personagem: "majin_buu", nome: "MAJIN BUU SPRITES", marca: "saiyan_conjunto_buu",
