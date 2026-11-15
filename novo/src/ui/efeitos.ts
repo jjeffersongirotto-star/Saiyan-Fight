@@ -237,7 +237,11 @@ export class EfeitosDaLuta {
     this.explosao.setVisible(false);
     for (const r of e.raios) {
       const dono = e[r.dono], alvo = e[r.dono === 'p1' ? 'p2' : 'p1'];
-      const de = mao(dono), para = centro(alvo);
+      const de = mao(dono);
+      // sem adversário na tela (TUTORIAL / TUTORIAL LIVRE: o J2 fica estacionado fora da tela), o raio sai reto para
+      // a frente; antes mirava no J2 escondido e ia para trás (v0.135)
+      const naTela = alvo.x > -60 && alvo.x < C.TELA_L + 60;
+      const para = naTela ? centro(alvo) : { x: de.x + dono.olhando * C.TELA_L, y: de.y };
       if (r.sol) { this.desenharSol(r, dono, de, para, relogio, usados++); continue; }
       const crescer = e.regras.danoDoEspecialNaChegada ? r.chega : 9;
       const nome = efeitoDoEspecial(dono.personagem);

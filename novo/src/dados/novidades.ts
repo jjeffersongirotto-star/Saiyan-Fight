@@ -6,6 +6,14 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.135',
+    titulo: 'KAMEHAMEHA PARA A FRENTE E AURA AMARELA',
+    itens: [
+      'No TUTORIAL e no TUTORIAL LIVRE o especial (Kamehameha e os outros raios) ia para trás, na direção do adversário escondido fora da tela. Agora, sem adversário, o raio sai reto para a frente.',
+      'A aura é sempre a da forma em que o lutador está: o Goku Super Saiyajin 3 ficava com a aura azul da forma normal quando o poder da transformação acabava. Todo Super Saiyajin agora tem aura amarela.',
+    ],
+  },
+  {
     versao: '0.134',
     titulo: 'SÓ UMA VERSÃO NA TELA',
     itens: [
