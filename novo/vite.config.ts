@@ -12,9 +12,16 @@ function numeroDoBuild(): number {
 }
 
 // base './': o build funciona em qualquer endereço (site em /Saiyan-Fight/, prévia do CI e dentro do APK, servido do próprio celular)
+const BUILD = numeroDoBuild();
+
 export default defineConfig({
   base: './',
-  define: { __VERSAO__: JSON.stringify(pkg.version), __BUILD__: JSON.stringify(numeroDoBuild()) },
+  define: { __VERSAO__: JSON.stringify(pkg.version), __BUILD__: JSON.stringify(BUILD) },
+  // versao.json no site: o jogo aberto compara com ele para acender o aviso de versão nova (src/app/aviso.ts)
+  plugins: [{
+    name: 'versao-json',
+    generateBundle() { this.emitFile({ type: 'asset', fileName: 'versao.json', source: JSON.stringify({ versao: pkg.version, build: BUILD }) }); },
+  }],
   build: {
     outDir: 'dist',
     chunkSizeWarningLimit: 1600, // o Phaser sozinho tem ~1,2 MB (fica num arquivo separado, em cache)

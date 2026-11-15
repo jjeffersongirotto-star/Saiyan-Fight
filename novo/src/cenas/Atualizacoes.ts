@@ -13,6 +13,7 @@ import { UPDATES_LEGADO } from '../legado/updates-legado';
 import { aoApertar } from '../entrada/teclas';
 import { NOVIDADES } from '../dados/novidades';
 import { abrirApk, androidNoNavegador, baixarEAtualizar, infoVersao, noApp, procurarAtualizacao, versaoDoAppInstalado } from '../app/plataforma';
+import { recarregarSite, temVersaoNova, verificarAtualizacao } from '../app/aviso';
 
 
 /** quebra em linhas de até ~`max` letras (Arial 12px na largura do quadro) */
@@ -109,13 +110,24 @@ export class Atualizacoes extends Phaser.Scene {
     const status = this.add.text(TELA_L / 2, 282, '', estiloTexto({ fontFamily: 'Arial Black, Arial', fontSize: '13px', color: '#7dffb0' })).setOrigin(0.5);
     const avisar = (t: string, cor = '#7dffb0') => status.setColor(cor).setText(t);
 
-    const temBotao = noApp() || androidNoNavegador();
-    const xs = temBotao ? [-130, 130] : [0];
-    let i = 0;
-    if (noApp()) criarBotao(this, TELA_L / 2 + xs[i++], 318, T('⟳ ATUALIZAR'), () => this.procurar(avisar), 220);
-    else if (androidNoNavegador()) criarBotao(this, TELA_L / 2 + xs[i++], 318, T('BAIXAR APP'), () => abrirApk(), 220);
-    else avisar(T('NO SITE O JOGO JÁ ABRE SEMPRE NA VERSÃO MAIS NOVA'), '#dfe7ff');
-    criarBotao(this, TELA_L / 2 + xs[i], 318, T('VOLTAR'), () => this.voltar(), 220);
+    // botões de baixo; com versão nova no site entra RECARREGAR (aviso da esfera, src/app/aviso.ts)
+    const botoes: { t: string; f: () => void }[] = [];
+    if (noApp()) botoes.push({ t: T('⟳ ATUALIZAR'), f: () => this.procurar(avisar) });
+    else {
+      if (temVersaoNova()) botoes.push({ t: T('RECARREGAR'), f: () => recarregarSite() });
+      if (androidNoNavegador()) botoes.push({ t: T('BAIXAR APP'), f: () => abrirApk() });
+    }
+    botoes.push({ t: T('VOLTAR'), f: () => this.voltar() });
+    const larg = botoes.length > 2 ? 200 : 220, passo = botoes.length > 2 ? 230 : 260;
+    botoes.forEach((b, k) => criarBotao(this, TELA_L / 2 + (k - (botoes.length - 1) / 2) * passo, 318, b.t, b.f, larg));
+    const avisoDaVersao = () => {
+      if (!temVersaoNova()) { if (!noApp() && !androidNoNavegador()) avisar(T('NO SITE O JOGO JÁ ABRE SEMPRE NA VERSÃO MAIS NOVA'), '#dfe7ff'); return; }
+      avisar(T(noApp() ? 'VERSÃO NOVA DISPONÍVEL: TOQUE EM ⟳ ATUALIZAR' : 'VERSÃO NOVA NO SITE: TOQUE EM RECARREGAR'), '#fbbf24');
+    };
+    avisoDaVersao();
+    // a conferência pode terminar com a tela já aberta: no site refaz a tela para entrar o RECARREGAR
+    const antes = temVersaoNova();
+    verificarAtualizacao().then((n) => { if (!this.sys.isActive() || this.ocupado) return; if (n !== antes && !noApp()) this.scene.restart(); else avisoDaVersao(); }).catch(() => undefined);
     aoApertar(this, (c) => {
       if (c !== 'Escape') return;
       if (this.dialogo) this.fecharDialogo();

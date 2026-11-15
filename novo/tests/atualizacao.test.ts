@@ -35,3 +35,21 @@ describe('atualização dentro do app (setinha ATUALIZAR)', () => {
     expect(NOVIDADES[0].versao).toBe(versaoCurta(pkg.version));
   });
 });
+
+describe('aviso de versão nova (v0.129)', () => {
+  it('site: acende só com build publicado mais novo que o aberto', async () => {
+    const { siteTemVersaoNova } = await import('../src/logica/atualizacao');
+    expect(siteTemVersaoNova({ versao: '0.129.0', build: 310 }, 300)).toBe(true);
+    expect(siteTemVersaoNova({ build: 300 }, 300)).toBe(false);
+    expect(siteTemVersaoNova({ build: 'x' }, 300)).toBe(false);
+    expect(siteTemVersaoNova(null, 300)).toBe(false);
+  });
+  it('app: acende com pacote novo ou APK novo, não com nada/erro', async () => {
+    const { avisaAtualizacao } = await import('../src/logica/atualizacao');
+    expect(avisaAtualizacao({ tipo: 'jogo' })).toBe(true);
+    expect(avisaAtualizacao({ tipo: 'apk' })).toBe(true);
+    expect(avisaAtualizacao({ tipo: 'nada' })).toBe(false);
+    expect(avisaAtualizacao({ tipo: 'erro' })).toBe(false);
+    expect(avisaAtualizacao({ tipo: 'offline' })).toBe(false);
+  });
+});
