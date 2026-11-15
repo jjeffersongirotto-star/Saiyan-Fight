@@ -7,7 +7,7 @@
 // Ao abrir, avisa o plugin que este pacote carregou bem (notifyAppReady); sem isso, em 15 s ele volta para o
 // pacote anterior (appReadyTimeout no capacitor.config.json).
 // O jogo nunca importa os pacotes do Capacitor: usa window.Capacitor.Plugins, que o app injeta.
-import { APK_DOWNLOAD_URL, APP_BUNDLE_LATEST_URL, JOGO_ANTIGO_URL, decidirAtualizacao, versaoCurta, type Decisao, type Latest } from '../logica/atualizacao';
+import { APK_DOWNLOAD_URL, APP_BUNDLE_LATEST_URL, decidirAtualizacao, versaoCurta, type Decisao, type Latest } from '../logica/atualizacao';
 
 interface Updater {
   notifyAppReady(): Promise<unknown>;
@@ -102,8 +102,3 @@ export function abrirEndereco(url: string): void {
 }
 export const abrirApk = (url = APK_DOWNLOAD_URL) => abrirEndereco(url);
 
-/** JOGO ANTIGO: no site, a pasta antigo/ ao lado do jogo novo; no app, o endereço do site (abre no navegador). */
-export function abrirJogoAntigo(): void {
-  if (noApp()) return abrirEndereco(JOGO_ANTIGO_URL);
-  try { abrirEndereco(new URL('antigo/', window.location.href).href); } catch { abrirEndereco(JOGO_ANTIGO_URL); }
-}

@@ -6,7 +6,7 @@ Jogo de luta no estilo Dragon Ball, feito para jogar direto no navegador do celu
 
 **https://jjeffersongirotto-star.github.io/Saiyan-Fight/**
 
-Desde a versão 0.121 o site e o app são o **jogo novo** (refeito em Phaser + TypeScript, pasta [`novo/`](novo/)). O **jogo antigo** continua no ar em **https://jjeffersongirotto-star.github.io/Saiyan-Fight/antigo/** (botão **JOGO ANTIGO** no menu).
+O jogo fica na pasta [`novo/`](novo/) (Phaser + TypeScript). O jogo antigo em HTML/JS foi apagado na versão 0.128: tudo o que ele tinha já está no jogo novo, e o que você salvou nele (personagens, arenas, progresso, conquistas) continua aparecendo.
 
 No celular dá para deixar o jogo na tela inicial, como um aplicativo: abra o link no Chrome, toque nos três pontinhos (⋮) e escolha **"Adicionar à tela inicial"** ou **"Instalar app"**. No iPhone, use o botão de compartilhar e depois **"Adicionar à Tela de Início"**.
 
@@ -74,23 +74,18 @@ Sem as variáveis `SAIYAN_KEYSTORE` / `SAIYAN_KEYSTORE_PASSWORD` o APK sai assin
 
 ## 🧍 Personagens
 
-O jogo já vem com 15 personagens: Goku, Vegeta, Piccolo, Freeza, Trunks, Gohan, Supremo Sr. Kaio, Gogeta, Bardock, Androides 17 e 18, Majin Buu, Raditz, Broly e Cell.
+O jogo já vem com 16 personagens: Goku, Vegeta, Piccolo, Freeza, Trunks, Gohan, Supremo Sr. Kaio, Vegetto, Bardock, Androides 17 e 18, Majin Buu, Raditz, Broly, Gotenks e Cell, cada um com as suas transformações (Super 17 e Kibitoshin desde a 0.123).
 
-Em **DATABASE** você cria personagens novos de duas formas:
-- **Construtor:** monta o personagem juntando partes, como cabelo, roupa, cauda, asas e acessórios.
-- **Sprite sheet:** usa uma imagem sua, recortando os quadros de cada movimento.
-
-Na aba **TRANSFORMAÇÃO** do editor, cada personagem pode ter várias transformações, na ordem que você escolher. Elas são editadas no próprio construtor, guardando só o que muda. Na luta, cada **TRANSFORMAR** com o ki cheio leva à próxima.
+No **EDITOR DE PERSONAGENS** (esfera de 4 estrelas do menu) você cria personagens novos a partir de uma imagem sua (sprite sheet), recortando os quadros de cada movimento e de cada transformação.
 
 Tudo fica salvo no próprio navegador.
 
 ## 🛠️ Para quem mexe no código
 
-É HTML, CSS e JavaScript puro, sem nenhuma instalação (o `package.json` só serve para o APK Android). As regras do projeto estão em [`AGENTS.md`](AGENTS.md). Para conferir se nada quebrou (é preciso ter o Node 18 ou mais novo):
+O jogo é Phaser 3 + TypeScript + Vite, na pasta [`novo/`](novo/) (o `package.json` da raiz só serve para o APK Android). As regras do projeto estão em [`AGENTS.md`](AGENTS.md). Para conferir se nada quebrou (Node 22):
 
 ```bash
-node --test tests/game-logic-core.test.js
-for t in tests/*.test.js; do node "$t"; done
+cd novo && npm ci && npm test && npm run build
 ```
 
 Os mesmos testes rodam automaticamente no GitHub a cada alteração.

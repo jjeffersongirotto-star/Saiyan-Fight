@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Gera o atlas dos efeitos (auras, tiros, raios, sol, escudo, parry, explosão) a partir de ../efeitos/*.png.
+"""Gera o atlas dos efeitos (auras, tiros, raios, sol, escudo, parry, explosão) a partir de fontes/efeitos/*.png.
 
 Uso (da pasta novo/):  python3 scripts/gerar-efeitos.py
 
@@ -16,7 +16,7 @@ MARGEM = 1
 QUALIDADE = 85
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
-ORIGEM = os.path.normpath(os.path.join(AQUI, "..", "..", "efeitos"))
+ORIGEM = os.path.normpath(os.path.join(AQUI, "..", "fontes", "efeitos"))
 SAIDA = os.path.normpath(os.path.join(AQUI, "..", "public", "efeitos"))
 TABELA = os.path.normpath(os.path.join(AQUI, "..", "src", "dados", "efeitos.ts"))
 

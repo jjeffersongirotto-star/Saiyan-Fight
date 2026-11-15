@@ -1,5 +1,5 @@
-"""Gera os ícones e as telas de abertura do app Android a partir de icons/icon-512.png
-(recorte quadrado da arte icons/capa-original.webp: rostos e punhos do Goku x Vegeta).
+"""Gera os ícones e as telas de abertura do app Android a partir de novo/public/icons/icon-512.png
+(recorte quadrado da arte novo/fontes/capa-original.webp: rostos e punhos do Goku x Vegeta).
 
 Rodar na raiz do projeto: python3 scripts/android/icones.py   (precisa do Pillow)
 
@@ -11,7 +11,7 @@ Rodar na raiz do projeto: python3 scripts/android/icones.py   (precisa do Pillow
 from pathlib import Path
 from PIL import Image, ImageDraw
 
-SRC = Path('icons/icon-512.png')
+SRC = Path('novo/public/icons/icon-512.png')
 RES = Path('android/app/src/main/res')
 BG = (18, 18, 20)  # background_color do manifest (#121214)
 DENS = {'mdpi': 1, 'hdpi': 1.5, 'xhdpi': 2, 'xxhdpi': 3, 'xxxhdpi': 4}

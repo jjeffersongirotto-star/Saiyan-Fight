@@ -1,4 +1,4 @@
-// GERADO por novo/scripts/gerar-dados-legado.mjs a partir de progress.js (achievements) — NÃO EDITAR À MÃO.
+// Veio do jogo antigo (gerado uma vez a partir dele; o antigo foi apagado na v0.128). Agora é arquivo do jogo novo: editar aqui mesmo.
 // estat/limiar: destrava sozinha quando a estatística chega no limiar (checkThresholdAchievements); sem eles, o jogo
 // destrava na hora certa (logica/conquistas.ts), como o unlockAchievement do antigo.
 export interface ConquistaLegado { id: string; nome: string; desc: string; medalha: 'bronze' | 'silver' | 'gold' | 'diamond'; estat?: string; limiar?: number }

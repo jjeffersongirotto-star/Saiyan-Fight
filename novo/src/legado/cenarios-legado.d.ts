@@ -1,4 +1,4 @@
-// Tipos do desenho das arenas do jogo antigo (cenarios-legado.js é gerado; ver scripts/gerar-cenarios-legado.mjs).
+// Tipos do desenho das arenas do jogo antigo (cenarios-legado.js veio do jogo antigo e agora é editado aqui).
 /** uma peça da tabela ARENA_PECAS do arenas.js */
 export interface DefPecaArena {
   aba: string; nome: string; cor: string; planta?: { ret?: [number, number]; circ?: number };
