@@ -100,6 +100,17 @@ export function botao(cena: Phaser.Scene, r: Ret, texto: string, aoClicar: () =>
   ajustar(T(texto));
   desenhar();
   const c = cena.add.container(r.x, r.y, [g, rot]).setSize(r.w, r.h).setDepth(opc.prof ?? 1);
+  // seta ← de VOLTAR: desenhada (a letra "←" das fontes fica baixa no botão, cada celular de um jeito) e centrada
+  if (texto === '←') {
+    rot.setVisible(false);
+    const cor = Phaser.Display.Color.HexStringToColor(opc.cor ?? '#00ffff').color;
+    const cx = r.w / 2, cy = r.h / 2, m = Math.min(r.w, r.h) * 0.28;
+    const seta = cena.add.graphics().lineStyle(2.5, cor, 1)
+      .lineBetween(cx - m, cy, cx + m, cy)
+      .lineBetween(cx - m, cy, cx - m + m * 0.7, cy - m * 0.7)
+      .lineBetween(cx - m, cy, cx - m + m * 0.7, cy + m * 0.7);
+    c.add(seta);
+  }
   c.setInteractive(new Phaser.Geom.Rectangle(r.w / 2, r.h / 2, r.w, r.h), Phaser.Geom.Rectangle.Contains);
   if (c.input) c.input.cursor = 'pointer';
   const b: BotaoTela = {
