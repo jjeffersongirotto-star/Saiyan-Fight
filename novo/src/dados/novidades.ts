@@ -6,6 +6,15 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.124',
+    titulo: 'SPRITES SEM CORTES E SEM PISCAR',
+    itens: [
+      'Nenhum sprite passa mais da moldura: voos e o Freeza 3ª forma apareciam com a cabeça cortada.',
+      'Saíram 10 quadros quebrados (só pedaços) que faziam personagens piscarem: Freeza ciborgue parado, Broly, Buu, Cell, Gohan, Piccolo, Vegetto e outros.',
+      'Linhas soltas que sobravam na borda de alguns voos (Piccolo, Vegeta) foram apagadas.',
+    ],
+  },
+  {
     versao: '0.123',
     titulo: 'SUPER 17, KIBITOSHIN E SPRITES REFEITOS',
     itens: [
