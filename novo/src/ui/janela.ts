@@ -52,7 +52,10 @@ function abrir(titulo: string, msg: string, botoes: Botao[], campo?: { valor: st
     caixa.appendChild(el);
   }
   fundo.appendChild(caixa);
-  fundo.addEventListener('pointerdown', (e) => e.stopPropagation());
+  // nenhum toque/clique da janela chega ao jogo: o Phaser também escuta toque e mouse na janela do navegador (fora do
+  // canvas) e lia o OK como um toque no botão que estava embaixo (v0.127: OK do TRANSMITIR PARA A TV abria IDIOMAS)
+  for (const ev of ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'touchcancel', 'mousedown', 'mouseup'])
+    fundo.addEventListener(ev, (e) => e.stopPropagation());
   (document.fullscreenElement ?? document.body).appendChild(fundo); // em tela cheia, só o que está dentro dela aparece
   aberta = fundo;
   let foco = 0;

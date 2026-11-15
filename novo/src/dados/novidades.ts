@@ -6,6 +6,14 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.127',
+    titulo: 'OK DOS AVISOS NÃO ABRE MAIS OUTRA TELA',
+    itens: [
+      'Em OPÇÕES, apertar OK no aviso do TRANSMITIR PARA A TV abria a tela de IDIOMAS (o toque passava para o botão que estava embaixo). Agora volta só para as OPÇÕES.',
+      'Vale para todos os avisos do jogo: o toque ou clique na janela nunca chega aos botões de trás.',
+    ],
+  },
+  {
     versao: '0.126',
     titulo: 'ESCOLHA SEU CAMINHO MAIS ARRUMADA',
     itens: [
