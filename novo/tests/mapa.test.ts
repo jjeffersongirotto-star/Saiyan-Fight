@@ -47,3 +47,14 @@ describe('mapa de fases (geometria do antigo)', () => {
     expect(recordeDeOnda({ normal: { pontos: 10, onda: 5 }, unlimited: { pontos: 99, onda: 12 } })).toBe(12);
   });
 });
+
+describe('toques no mapa (v0.122)', () => {
+  // no celular a câmera tem zoom (ESCALA_RENDER 2): p.x/p.y são pixels do canvas, não a tela do jogo; o toque caía
+  // no dobro do lugar e nenhuma fase abria. Tocar, arrastar e escolher a fase usam worldX/worldY.
+  const mapa = readFileSync(new URL('../src/cenas/Mapa.ts', import.meta.url), 'utf8');
+  const blocoDeToque = mapa.slice(mapa.indexOf('POINTER_DOWN'), mapa.indexOf('this.clicar(p.worldX'));
+  it('tocar e arrastar usam a posição na tela do jogo', () => {
+    expect(mapa).toContain('this.clicar(p.worldX, p.worldY)');
+    expect(blocoDeToque).not.toMatch(/\bp\.(x|y)\b/);
+  });
+});

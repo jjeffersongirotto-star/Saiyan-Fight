@@ -115,22 +115,24 @@ export class Mapa extends Phaser.Scene {
     this.aviso = texto(this, TELA_L / 2, TELA_A - 14, '', 11, '#ff5555', { fontFamily: 'monospace', fontStyle: 'bold', backgroundColor: 'rgba(6,10,26,0.85)', padding: { x: 10, y: 3 } })
       .setOrigin(0.5).setDepth(50).setVisible(false);
 
-    // arrastar rola o mapa; um toque sem arrastar escolhe a fase
+    // arrastar rola o mapa; um toque sem arrastar escolhe a fase.
+    // Sempre na posição da TELA DO JOGO (worldX/worldY): p.x/p.y são pixels do canvas e, com o zoom de nitidez
+    // (ESCALA_RENDER 2 nos celulares), o toque caía no dobro do lugar e nenhuma fase abria.
     this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer, objs: unknown[]) => {
       if (this.escolha || objs.length) return;
-      this.arrasto = { x: p.x, r: this.rolagem, moveu: false };
+      this.arrasto = { x: p.worldX, r: this.rolagem, moveu: false };
     });
     this.input.on(Phaser.Input.Events.POINTER_MOVE, (p: Phaser.Input.Pointer) => {
       const a = this.arrasto;
       if (!a || !p.isDown) return;
-      if (Math.abs(p.x - a.x) > 6) a.moveu = true;
-      if (a.moveu) { this.alvo = null; this.rolagem = limitarRolagem(a.r - (p.x - a.x), this.total); }
+      if (Math.abs(p.worldX - a.x) > 6) a.moveu = true;
+      if (a.moveu) { this.alvo = null; this.rolagem = limitarRolagem(a.r - (p.worldX - a.x), this.total); }
     });
     this.input.on(Phaser.Input.Events.POINTER_UP, (p: Phaser.Input.Pointer) => {
       const a = this.arrasto;
       this.arrasto = null;
       if (!a || a.moveu || this.escolha) return;
-      this.clicar(p.x, p.y);
+      this.clicar(p.worldX, p.worldY);
     });
 
     if (this.liberou && ids.includes(this.liberou)) { this.animT = 0; som.tocar('powerup'); }
