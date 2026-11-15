@@ -14,6 +14,7 @@ interface Updater {
   current(): Promise<{ native?: string }>;
   download(o: { url: string; version: string; checksum: string }): Promise<{ id: string }>;
   set(o: { id: string }): Promise<unknown>;
+  addListener?(evento: 'download', f: (info: { percent?: number }) => void): Promise<{ remove(): unknown }> | { remove(): unknown };
 }
 interface Http { get(o: { url: string; headers?: Record<string, string>; responseType?: string }): Promise<{ status: number; data: unknown }> }
 interface JanelaComApp {
@@ -85,15 +86,23 @@ export async function procurarAtualizacao(): Promise<Procura> {
     return decidirAtualizacao(latest, { build: infoVersao().build, nativo: await versaoDoAppInstalado() });
   } catch { return { tipo: 'offline' }; }
 }
-/** Baixa o pacote (o plugin confere o sha256) e troca para ele (o jogo reinicia na versão nova). */
-export async function baixarEAtualizar(d: Extract<Decisao, { tipo: 'jogo' }>): Promise<boolean> {
+/** Baixa o pacote (o plugin confere o sha256) e troca para ele (o jogo reinicia na versão nova).
+ *  `aoProgresso` recebe a porcentagem baixada (evento "download" do @capgo/capacitor-updater). */
+export async function baixarEAtualizar(d: Extract<Decisao, { tipo: 'jogo' }>, aoProgresso?: (percent: number) => void): Promise<boolean> {
   const u = plugin<Updater>('CapacitorUpdater');
   if (!u) return false;
+  let ouvinte: { remove(): unknown } | null = null;
+  try {
+    if (aoProgresso && u.addListener) ouvinte = await u.addListener('download', (info) => aoProgresso(Number(info?.percent) || 0));
+  } catch { ouvinte = null; }
   try {
     const pacote = await u.download({ url: d.url, version: d.id, checksum: d.sha256 });
+    aoProgresso?.(100);
     await u.set({ id: pacote.id });
     return true;
-  } catch { return false; }
+  } catch { return false; } finally {
+    try { ouvinte?.remove(); } catch { /* ignora */ }
+  }
 }
 
 /** Abre um endereço fora do jogo (no app o Capacitor manda endereços de fora para o navegador). */

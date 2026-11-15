@@ -10,7 +10,7 @@ describe('atualização dentro do app (setinha ATUALIZAR)', () => {
     expect(decidirAtualizacao({ ...base, build: 300 }, { build: 310, nativo: '1.0.301' }).tipo).toBe('nada');
   });
   it('build maior = baixa o pacote do jogo (url, sha256, id versão-build)', () => {
-    expect(decidirAtualizacao(base, { build: 301, nativo: '1.0.301' })).toEqual({ tipo: 'jogo', url: base.url, sha256: base.sha256, versao: '0.121', id: '0.121-310' });
+    expect(decidirAtualizacao(base, { build: 301, nativo: '1.0.301' })).toEqual({ tipo: 'jogo', url: base.url, sha256: base.sha256, versao: '0.121', id: '0.121-310', tamanho: 0 });
   });
   it('o APK que já está nos celulares (1.0.278 / 1.0.301) recebe o jogo novo pela setinha (nativoMinimo 1.0.0)', () => {
     expect(decidirAtualizacao(base, { build: 278, nativo: '1.0.278' }).tipo).toBe('jogo');
@@ -51,5 +51,19 @@ describe('aviso de versão nova (v0.129)', () => {
     expect(avisaAtualizacao({ tipo: 'nada' })).toBe(false);
     expect(avisaAtualizacao({ tipo: 'erro' })).toBe(false);
     expect(avisaAtualizacao({ tipo: 'offline' })).toBe(false);
+  });
+});
+
+describe('progresso do download (v0.130)', () => {
+  it('KB baixados e total a partir da porcentagem e do tamanho do latest.json', async () => {
+    const { progressoDoDownload, decidirAtualizacao } = await import('../src/logica/atualizacao');
+    expect(progressoDoDownload(0, 24 * 1024 * 1024)).toEqual({ pct: 0, kb: 0, totalKb: 24576 });
+    expect(progressoDoDownload(50, 24 * 1024 * 1024)).toEqual({ pct: 50, kb: 12288, totalKb: 24576 });
+    expect(progressoDoDownload(150, 1024)).toEqual({ pct: 100, kb: 1, totalKb: 1 });
+    expect(progressoDoDownload(33.4, 0)).toEqual({ pct: 33, kb: 0, totalKb: 0 });
+    const d = decidirAtualizacao({ url: 'u', sha256: 's', build: 10, versao: '0.130', tamanho: 2048 }, { build: 1, nativo: '1.0.0' });
+    expect(d.tipo === 'jogo' && d.tamanho).toBe(2048);
+    const sem = decidirAtualizacao({ url: 'u', sha256: 's', build: 10, versao: '0.130' }, { build: 1, nativo: '1.0.0' });
+    expect(sem.tipo === 'jogo' && sem.tamanho).toBe(0);
   });
 });
