@@ -98,7 +98,7 @@ export class Atualizacoes extends Phaser.Scene {
     };
     mostrar();
     this.input.on('wheel', (_p: unknown, _o: unknown, _dx: number, dy: number) => rolar(dy * 0.5));
-    this.input.on('pointermove', (p: Phaser.Input.Pointer) => { if (p.isDown && p.worldY > 70 && p.worldY < 262) rolar(p.prevPosition.y - p.y); });
+    this.input.on('pointermove', (p: Phaser.Input.Pointer) => { if (p.isDown && p.worldY > 70 && p.worldY < 262) rolar((p.prevPosition.y - p.y) / this.cameras.main.zoom); });   // pixels do canvas → tela do jogo
     aoApertar(this, (c) => { if (c === 'ArrowDown') rolar(ALTURA); else if (c === 'ArrowUp') rolar(-ALTURA); else if (c === 'PageDown') rolar(ALTURA * 10); else if (c === 'PageUp') rolar(-ALTURA * 10); });
     this.events.on(Phaser.Scenes.Events.UPDATE, () => {
       const it = vigiarControles()[0];

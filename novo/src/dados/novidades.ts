@@ -6,6 +6,14 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.122',
+    titulo: 'FASES DO MODO HISTÓRIA ABREM NO CELULAR',
+    itens: [
+      'No celular, tocar numa fase do mapa (SINGLE PLAYER) não abria a escolha do modo: o toque era lido no dobro do lugar por causa da tela de alta resolução. Agora tocar e arrastar o mapa funcionam em qualquer celular.',
+      'Na tela ATUALIZAÇÕES, arrastar a lista também rola na velocidade certa no celular.',
+    ],
+  },
+  {
     versao: '0.121',
     titulo: 'O JOGO NOVO ENTROU NO AR',
     itens: [
