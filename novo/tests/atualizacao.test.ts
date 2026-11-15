@@ -67,3 +67,15 @@ describe('progresso do download (v0.130)', () => {
     expect(sem.tipo === 'jogo' && sem.tamanho).toBe(0);
   });
 });
+
+describe('tamanho na unidade certa (v0.132)', () => {
+  it('KB abaixo de 1 MB, MB abaixo de 1 GB, depois GB', async () => {
+    const { formatarTamanho } = await import('../src/logica/atualizacao');
+    expect(formatarTamanho(500 * 1024)).toBe('500 KB');
+    expect(formatarTamanho(4630 * 1024)).toBe('4,5 MB');
+    expect(formatarTamanho(23152 * 1024)).toBe('22,6 MB');
+    expect(formatarTamanho(1.5 * 1024 ** 3)).toBe('1,5 GB');
+    expect(formatarTamanho(23152 * 1024, false)).toBe('22.6 MB');
+    expect(formatarTamanho(0)).toBe('0 KB');
+  });
+});

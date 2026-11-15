@@ -5,8 +5,8 @@
 import Phaser from 'phaser';
 import { ajustarCamera, estiloTexto } from '../ui/resolucao';
 import { TELA_A, TELA_L } from '../logica/constantes';
-import { T, TF } from '../logica/idioma';
-import { progressoDoDownload } from '../logica/atualizacao';
+import { T, TF, idiomaAtual } from '../logica/idioma';
+import { formatarTamanho, progressoDoDownload } from '../logica/atualizacao';
 import { criarBotao } from '../ui/botao';
 import { fundoDeMenu, botaoTelaCheia } from '../ui/telas';
 import { vigiarControles } from '../entrada/controles';
@@ -161,7 +161,8 @@ export class Atualizacoes extends Phaser.Scene {
       const mostrarProgresso = (percent: number) => {
         if (!this.sys.isActive()) return;
         const p = progressoDoDownload(percent, d.tamanho);
-        avisar(p.totalKb ? TF('BAIXANDO... {0} KB DE {1} KB ({2}%)', p.kb.toLocaleString('pt-BR'), p.totalKb.toLocaleString('pt-BR'), p.pct) : TF('BAIXANDO... {0}%', p.pct), '#ffffff');
+        const virgula = idiomaAtual() !== 'en';
+        avisar(p.totalKb ? TF('BAIXANDO... {0} DE {1} ({2}%)', formatarTamanho(p.kb * 1024, virgula), formatarTamanho(p.totalKb * 1024, virgula), p.pct) : TF('BAIXANDO... {0}%', p.pct), '#ffffff');
       };
       mostrarProgresso(0);
       const ok = await baixarEAtualizar(d, mostrarProgresso);

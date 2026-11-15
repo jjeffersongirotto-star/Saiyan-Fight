@@ -6,6 +6,13 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.132',
+    titulo: 'DOWNLOAD EM MB',
+    itens: [
+      'O progresso da atualização mostra o tamanho na unidade certa: KB até 1 MB, depois MB e, se um dia passar de 1 GB, GB (ex.: BAIXANDO... 4,5 MB DE 22,6 MB (20%)).',
+    ],
+  },
+  {
     versao: '0.131',
     titulo: 'SETA DE VOLTAR CENTRALIZADA',
     itens: [
