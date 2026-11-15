@@ -67,3 +67,11 @@ export function progressoDoDownload(percent: number, tamanhoBytes: number): { pc
   const totalKb = tamanhoBytes > 0 ? Math.round(tamanhoBytes / 1024) : 0;
   return { pct, kb: Math.round((totalKb * pct) / 100), totalKb };
 }
+
+/** Tamanho na unidade que cabe: KB abaixo de 1 MB, MB abaixo de 1 GB, depois GB (1 casa; vírgula em PT/ES). */
+export function formatarTamanho(bytes: number, virgula = true): string {
+  const b = Math.max(0, Number(bytes) || 0);
+  const [v, u] = b < 1024 * 1024 ? [b / 1024, 'KB'] : b < 1024 ** 3 ? [b / 1024 ** 2, 'MB'] : [b / 1024 ** 3, 'GB'];
+  const n = u === 'KB' ? String(Math.round(v)) : v.toFixed(1);
+  return `${virgula ? n.replace('.', ',') : n} ${u}`;
+}
