@@ -6,6 +6,14 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.130',
+    titulo: 'ATUALIZAR MOSTRA QUANTO JÁ BAIXOU',
+    itens: [
+      'No app, enquanto a versão nova baixa, a tela ATUALIZAÇÕES mostra os KB já baixados, o total e a porcentagem, mudando conforme baixa (ex.: BAIXANDO... 12.288 KB DE 24.576 KB (50%)).',
+      'Vale a partir da próxima atualização depois desta (é a versão nova que mostra o progresso).',
+    ],
+  },
+  {
     versao: '0.129',
     titulo: 'AVISO DE VERSÃO NOVA NA ESFERA',
     itens: [

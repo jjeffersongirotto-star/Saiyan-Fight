@@ -6,7 +6,8 @@ Rodar na raiz do projeto, depois do copiar-web.js:
 
 Gera em pasta_saida:
 - saiyan-fight-web-<jogo>-<build>.zip: os arquivos de www/ na raiz do zip (o que o @capgo/capacitor-updater espera);
-- latest.json: { versao (jogo 0.X), build, arquivo, url, sha256 (do zip, conferido pelo plugin no celular),
+- latest.json: { versao (jogo 0.X), build, arquivo, url, sha256 (do zip, conferido pelo plugin no celular), tamanho
+  (bytes do zip, para o app mostrar KB baixados / total),
   nativoMinimo (APK mínimo para este pacote), apk (endereço do APK mais novo), publicadoEm }.
 A CI (.github/workflows/android.yml) publica os dois na Release "app-bundle" a cada push na main.
 """
@@ -40,6 +41,7 @@ latest = {
     'arquivo': nome,
     'url': f'{URL_BASE}/{nome}',
     'sha256': sha,
+    'tamanho': destino.stat().st_size,
     'nativoMinimo': info['nativoMinimo'],
     'apk': APK,
     'publicadoEm': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),

@@ -113,6 +113,8 @@ const LINHAS: Record<string, [string, string]> = {
   'VERIFICANDO...': ['CHECKING...', 'VERIFICANDO...'],
   'SEM CONEXÃO': ['NO CONNECTION', 'SIN CONEXIÓN'],
   'BAIXANDO...': ['DOWNLOADING...', 'DESCARGANDO...'],
+  'BAIXANDO... {0} KB DE {1} KB ({2}%)': ['DOWNLOADING... {0} KB OF {1} KB ({2}%)', 'DESCARGANDO... {0} KB DE {1} KB ({2}%)'],
+  'BAIXANDO... {0}%': ['DOWNLOADING... {0}%', 'DESCARGANDO... {0}%'],
   'NOVA VERSÃO': ['NEW VERSION', 'NUEVA VERSIÓN'],
   'AGORA NÃO': ['NOT NOW', 'AHORA NO'],
   BAIXAR: ['DOWNLOAD', 'DESCARGAR'],

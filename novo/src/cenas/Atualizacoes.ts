@@ -5,7 +5,8 @@
 import Phaser from 'phaser';
 import { ajustarCamera, estiloTexto } from '../ui/resolucao';
 import { TELA_A, TELA_L } from '../logica/constantes';
-import { T } from '../logica/idioma';
+import { T, TF } from '../logica/idioma';
+import { progressoDoDownload } from '../logica/atualizacao';
 import { criarBotao } from '../ui/botao';
 import { fundoDeMenu, botaoTelaCheia } from '../ui/telas';
 import { vigiarControles } from '../entrada/controles';
@@ -156,8 +157,14 @@ export class Atualizacoes extends Phaser.Scene {
     }
     this.perguntar(T('ATUALIZAR AGORA?'), `${T('Saiu a versão')} ${d.versao}. ${T('O jogo baixa a versão nova e reinicia; o progresso continua salvo.')}`, T('ATUALIZAR'), async () => {
       this.ocupado = true;
-      avisar(T('BAIXANDO...'), '#ffffff');
-      const ok = await baixarEAtualizar(d);
+      // KB baixados / total, mudando enquanto baixa (o total vem do latest.json)
+      const mostrarProgresso = (percent: number) => {
+        if (!this.sys.isActive()) return;
+        const p = progressoDoDownload(percent, d.tamanho);
+        avisar(p.totalKb ? TF('BAIXANDO... {0} KB DE {1} KB ({2}%)', p.kb.toLocaleString('pt-BR'), p.totalKb.toLocaleString('pt-BR'), p.pct) : TF('BAIXANDO... {0}%', p.pct), '#ffffff');
+      };
+      mostrarProgresso(0);
+      const ok = await baixarEAtualizar(d, mostrarProgresso);
       // deu certo: o plugin já está reiniciando o jogo na versão nova
       this.ocupado = false;
       if (this.sys.isActive()) avisar(ok ? T('ATUALIZANDO...') : T('ERRO AO ATUALIZAR'), ok ? '#7dffb0' : '#ff6a6a');

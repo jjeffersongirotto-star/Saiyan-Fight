@@ -9,6 +9,8 @@ export interface Latest {
   arquivo?: string;
   url?: string;
   sha256?: string;
+  /** bytes do .zip (v0.130: mostra KB baixados / total enquanto baixa) */
+  tamanho?: number;
   nativoMinimo?: string;
   apk?: string;
 }
@@ -17,7 +19,7 @@ export type Decisao =
   | { tipo: 'nada' }
   | { tipo: 'erro' }
   | { tipo: 'apk'; url: string; versao: string }
-  | { tipo: 'jogo'; url: string; sha256: string; versao: string; id: string };
+  | { tipo: 'jogo'; url: string; sha256: string; versao: string; id: string; tamanho: number };
 
 export const APK_DOWNLOAD_URL = 'https://github.com/jjeffersongirotto-star/Saiyan-Fight/releases/latest/download/Saiyan-Fight.apk';
 export const APP_BUNDLE_LATEST_URL = 'https://github.com/jjeffersongirotto-star/Saiyan-Fight/releases/download/app-bundle/latest.json';
@@ -40,7 +42,8 @@ export function decidirAtualizacao(latest: Latest | null | undefined, atual: { b
   if (build <= (Number(atual.build) || 0)) return { tipo: 'nada' };
   const versao = String(latest.versao ?? '');
   if (latest.nativoMinimo && compararVersoes(latest.nativoMinimo, atual.nativo || '0') > 0) return { tipo: 'apk', url: latest.apk || APK_DOWNLOAD_URL, versao };
-  return { tipo: 'jogo', url: String(latest.url), sha256: String(latest.sha256), versao, id: `${versao || 'web'}-${build}` };
+  const tamanho = Number(latest.tamanho);
+  return { tipo: 'jogo', url: String(latest.url), sha256: String(latest.sha256), versao, id: `${versao || 'web'}-${build}`, tamanho: Number.isFinite(tamanho) && tamanho > 0 ? tamanho : 0 };
 }
 
 /** "0.121.0" → "0.121" (a versão 0.X que aparece para o jogador, como nas UPDATES do jogo antigo). */
@@ -56,3 +59,11 @@ export function siteTemVersaoNova(remoto: unknown, buildAtual: number): boolean 
 
 /** Aviso de atualização (bolinha na esfera e em UPDATES): só quando o app tem pacote ou APK novo para baixar. */
 export const avisaAtualizacao = (d: { tipo: string }) => d.tipo === 'jogo' || d.tipo === 'apk';
+
+/** Progresso do download (o plugin avisa a porcentagem): KB já baixados e o total, quando o latest.json traz o
+ *  tamanho; senão só a porcentagem. Devolve os números para o texto (TF) da tela ATUALIZAÇÕES. */
+export function progressoDoDownload(percent: number, tamanhoBytes: number): { pct: number; kb: number; totalKb: number } {
+  const pct = Math.max(0, Math.min(100, Math.round(Number(percent) || 0)));
+  const totalKb = tamanhoBytes > 0 ? Math.round(tamanhoBytes / 1024) : 0;
+  return { pct, kb: Math.round((totalKb * pct) / 100), totalKb };
+}
