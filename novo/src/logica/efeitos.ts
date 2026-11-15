@@ -35,9 +35,11 @@ export const PALETAS_AURA: Record<Aura, [number, number, number]> = {
 };
 
 /** Aura que aparece agora: a da forma transformada enquanto dura o poder; senão a do personagem (drawKiAura). */
-export function auraDoLutador(personagem: string, nivel: number, poder: number): Aura {
+/** Cor da aura = a da forma em que o lutador está (v0.135: antes voltava à da forma normal quando o poder da
+ *  transformação acabava, e o Goku SSJ3 ficava com a aura azul da forma normal). `poder` só deixa a aura forte. */
+export function auraDoLutador(personagem: string, nivel: number, _poder?: number): Aura {
   const formas = PERSONAGENS[personagem].formas;
-  return nivel > 0 && poder > 0 ? formas[Math.min(nivel, formas.length - 1)].aura : formas[0].aura;
+  return formas[Math.max(0, Math.min(nivel, formas.length - 1))].aura;
 }
 
 /** A aura fica "forte" (maior, animação forte) carregando ki, transformando ou com o poder da transformação. */

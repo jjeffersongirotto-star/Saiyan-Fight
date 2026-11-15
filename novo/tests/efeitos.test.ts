@@ -80,7 +80,11 @@ describe('qual efeito cada um usa', () => {
     expect(auraDoLutador('goku', 0, 0)).toBe('gelo');
     expect(auraDoLutador('goku', 1, 100)).toBe('amarelo');
     expect(auraDoLutador('goku', 4, 100)).toBe('blue');
-    expect(auraDoLutador('goku', 4, 0)).toBe('gelo'); // continua transformado, a aura volta
+    expect(auraDoLutador('goku', 4, 0)).toBe('blue');   // v0.135: transformado, a aura é sempre a da forma
+    expect(auraDoLutador('goku', 2, 0)).toBe('amarelo'); // SSJ3 sem poder continua amarelo (estava azul)
+    // todo Super Saiyajin tem aura amarela
+    for (const [p, f] of [['goku', 'ssj'], ['goku', 'ssj3'], ['vegeta', 'ssj'], ['gohan', 'ssj'], ['gohan', 'ssj2'], ['trunks', 'ssj'], ['gotenks', 'ssj'], ['gotenks', 'ssj3'], ['bardock', 'ssj'], ['vegetto', 'ssj']] as const)
+      expect(auraDoLutador(p, PERSONAGENS[p].formas.findIndex((x) => x.forma === f), 0), `${p}-${f}`).toBe('amarelo');
   });
   it('aura forte: carregando, transformando ou com o poder', () => {
     expect(auraForte({ acao: 'livre', nivel: 0, poder: 0 })).toBe(false);
