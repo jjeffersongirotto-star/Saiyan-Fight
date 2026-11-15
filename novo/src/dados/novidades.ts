@@ -6,6 +6,13 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.126',
+    titulo: 'ESCOLHA SEU CAMINHO MAIS ARRUMADA',
+    itens: [
+      'Os botões SINGLEPLAYER, VERSUS e 1 JOGADOR x CPU subiram para perto do título e ficaram centralizados no quadro.',
+    ],
+  },
+  {
     versao: '0.125',
     titulo: 'LUTAS A 60 FPS EM QUALQUER FASE',
     itens: [

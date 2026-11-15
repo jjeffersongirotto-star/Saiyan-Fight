@@ -34,10 +34,10 @@ export class ModoJogo extends Phaser.Scene {
     ajustarCamera(this);
     const nav = montarTela(this, () => this.scene.start('Menu'));
     painel(this, 120, 60, 560, 230, 'ESCOLHA SEU CAMINHO', 'PARTIDA RÁPIDA OU LOCAL');
-    botaoNav(this, nav, ret(175, 176, 200, 58), 'SINGLEPLAYER', () => this.scene.start('Mapa'), { cor: '#7dd3fc' });
-    botaoNav(this, nav, ret(425, 176, 200, 58), 'VERSUS (2 JOGADORES)', () => this.scene.start('Selecao', { modo: 'versus' }), { cor: '#a78bfa' });
+    botaoNav(this, nav, ret(175, 146, 200, 58), 'SINGLEPLAYER', () => this.scene.start('Mapa'), { cor: '#7dd3fc' });
+    botaoNav(this, nav, ret(425, 146, 200, 58), 'VERSUS (2 JOGADORES)', () => this.scene.start('Selecao', { modo: 'versus' }), { cor: '#a78bfa' });
     // só do novo: luta rápida contra a CPU (o antigo não tinha)
-    botaoNav(this, nav, ret(300, 246, 200, 30), '1 JOGADOR x CPU', () => this.scene.start('Selecao', { modo: 'cpu' }), { cor: '#fde68a', fonte: 11 });
+    botaoNav(this, nav, ret(300, 222, 200, 30), '1 JOGADOR x CPU', () => this.scene.start('Selecao', { modo: 'cpu' }), { cor: '#fde68a', fonte: 11 });
   }
 }
 
