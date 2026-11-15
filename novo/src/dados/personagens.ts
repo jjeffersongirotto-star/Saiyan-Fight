@@ -1,6 +1,6 @@
 // Os 16 personagens jogáveis do jogo antigo (DEFAULT_CHARACTERS + ALTURAS_PADRAO + *_TRANSFORMACOES em
 // database.js e CONJ_PACOTES em conjuntos.js). Cada forma tem o seu atlas: public/atlas/<id>-<forma>.webp/.json,
-// gerado por scripts/gerar-atlas.py a partir de ../conjuntos/<id>/<forma>.json.
+// gerado por scripts/gerar-atlas.py a partir de fontes/conjuntos/<id>/<forma>.json.
 // Os nomes dos personagens, das formas e dos golpes não são traduzidos (regra do jogo).
 
 export type Alinhamento = 'HERÓI' | 'ANTI-HERÓI' | 'VILÃO';

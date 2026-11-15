@@ -1,4 +1,4 @@
-// Desenho dos efeitos animados na luta (imagens de ../efeitos, empacotadas por scripts/gerar-efeitos.py):
+// Desenho dos efeitos animados na luta (imagens de fontes/efeitos, empacotadas por scripts/gerar-efeitos.py):
 // aura atrás do corpo (animada, ou a labareda desenhada para gelo/rosa), raios de ki de quem está transformado,
 // escudo, onda do parry, tiros, raios dos especiais, sol do Freeza com explosão e o choque de raios.
 // As contas (quadro, caminho do sol, qual efeito) ficam em logica/efeitos.ts; aqui só se posiciona na tela.

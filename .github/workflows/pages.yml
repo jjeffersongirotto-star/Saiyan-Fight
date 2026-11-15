@@ -1,6 +1,5 @@
 # Publica o site do GitHub Pages (https://jjeffersongirotto-star.github.io/Saiyan-Fight/) a cada push na main:
 #  - raiz: o jogo novo (pasta novo/: Phaser 3 + TypeScript, construído com o Vite);
-#  - /antigo/: o jogo antigo (HTML/JS da raiz do repositório), inteiro (scripts/montar-site.js).
 # (Desde a v0.121; antes o Pages servia a raiz do repositório direto da branch main.)
 name: Site (GitHub Pages)
 
@@ -36,8 +35,8 @@ jobs:
       - name: Construir o jogo novo
         working-directory: novo
         run: npm ci && npm run build
-      - name: Montar o site (jogo novo + jogo antigo em antigo/)
-        run: node scripts/montar-site.js _site
+      - name: Montar o site (o jogo construído em novo/dist)
+        run: cp -r novo/dist _site && touch _site/.nojekyll
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

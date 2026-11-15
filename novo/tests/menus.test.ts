@@ -1,6 +1,4 @@
 // Fase "menus": opções, controle, conquistas/ranking, configuração das fases e dados gerados do jogo antigo.
-import fs from 'node:fs';
-import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   CONTROLE_PADRAO, HUD_PADRAO, TECLAS_PADRAO, atribuirBotao, atribuirTecla, hudDoAntigo, lerOpcoes, limiarDoAnalogico,
@@ -12,8 +10,6 @@ import { lerConfigFases, trocarPosicao } from '../src/logica/configFases';
 import { prefsDoAntigo } from '../src/audio/som';
 import { LINHAS_LEGADO } from '../src/legado/idiomas-legado';
 import { UPDATES_LEGADO } from '../src/legado/updates-legado';
-// @ts-expect-error script .mjs sem tipos
-import { gerarConquistas, gerarIdiomas, gerarUpdates } from '../scripts/gerar-dados-legado.mjs';
 
 class Memoria {
   m = new Map<string, string>();
@@ -156,12 +152,8 @@ describe('áudio do antigo', () => {
   });
 });
 
-describe('dados gerados do jogo antigo', () => {
-  const dir = path.resolve(__dirname, '../src/legado');
-  it('estão em dia com idiomas.js, progress.js e o histórico de updates (rodar node novo/scripts/gerar-dados-legado.mjs)', () => {
-    expect(fs.readFileSync(path.join(dir, 'idiomas-legado.ts'), 'utf8')).toBe(gerarIdiomas());
-    expect(fs.readFileSync(path.join(dir, 'conquistas-legado.ts'), 'utf8')).toBe(gerarConquistas());
-    expect(fs.readFileSync(path.join(dir, 'updates-legado.ts'), 'utf8')).toBe(gerarUpdates());
+describe('dados que vieram do jogo antigo (src/legado)', () => {
+  it('traduções e histórico de updates estão completos', () => {
     expect(LINHAS_LEGADO.length).toBeGreaterThan(800);
     expect(UPDATES_LEGADO.length).toBeGreaterThan(100);
   });

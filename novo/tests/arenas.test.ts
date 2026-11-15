@@ -1,11 +1,10 @@
-// As arenas usam o código de desenho do jogo antigo (gerado em src/legado). Aqui: o gerado está em dia com o
-// antigo e as 11 arenas desenham sem erro (num canvas de mentira) em vários momentos da luta.
+// As arenas usam o código de desenho que veio do jogo antigo (src/legado/cenarios-legado.js, agora parte do jogo
+// novo). Aqui: as 11 arenas e as arenas criadas desenham sem erro (num canvas de mentira) em vários momentos da luta.
 import fs from 'node:fs';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { FASES } from '../src/dados/fases';
 
-const raiz = path.join(__dirname, '../..');
 const gerado = fs.readFileSync(path.join(__dirname, '../src/legado/cenarios-legado.js'), 'utf8');
 
 function contexto(c: { width: number; height: number }) {
@@ -36,18 +35,9 @@ beforeAll(() => {
 afterAll(() => { (globalThis as { document?: unknown }).document = docAntes; });
 
 describe('arenas do jogo antigo', () => {
-  it('o arquivo gerado tem o cenarios3d.js inteiro e os trechos do menu.js (rodar scripts/gerar-cenarios-legado.mjs)', () => {
-    expect(gerado).toContain(fs.readFileSync(path.join(raiz, 'cenarios3d.js'), 'utf8'));
-    const menu = fs.readFileSync(path.join(raiz, 'menu.js'), 'utf8');
-    const i = menu.indexOf('// ==================== SALA DO TEMPO'), j = menu.indexOf('// ==================== RENDERIZAÇÃO DE ENTIDADES');
-    expect(gerado).toContain(menu.slice(i, j));
-    const arenas = fs.readFileSync(path.join(raiz, 'arenas.js'), 'utf8');
-    expect(gerado).toContain(arenas.slice(0, arenas.indexOf('// ---------------- arquivo .arena.json')));
-  });
-
   it('arena criada no EDITOR DE ARENAS do antigo desenha com todas as peças, horas, climas e movimentos', async () => {
     const { criarCenariosLegado, definirArenasCriadas } = await import('../src/legado/cenarios-legado.js');
-    const t = fs.readFileSync(path.join(raiz, 'arenas.js'), 'utf8');
+    const t = gerado;
     const tipos = [...t.slice(t.indexOf('const ARENA_PECAS = {'), t.indexOf('const ARENA_PLANICIES')).matchAll(/^ {4}(\w+): \{/gm)].map((m) => m[1]);
     expect(tipos.length).toBeGreaterThan(50);
     const pecas = tipos.map((tp, i) => ({ t: tp, x: ((i % 9) - 4) * 80, z: (Math.floor(i / 9) - 3) * 80, a: (i * 37) % 360, h: 0.4, pts: [[0, 0], [40, 20]] }));

@@ -8,7 +8,7 @@ import { chaveDoAtlas, ORDEM_PERSONAGENS, PERSONAGENS } from '../src/dados/perso
 import { formaParaDesenhar, formasNecessarias } from '../src/logica/formas';
 
 const PASTA = join(__dirname, '..', 'public', 'atlas');
-const PACOTES = join(__dirname, '..', '..', 'conjuntos');
+const PACOTES = join(__dirname, '..', 'fontes', 'conjuntos');
 
 describe('personagens e formas', () => {
   it('16 personagens jogáveis e 49 formas, as mesmas dos pacotes do jogo antigo', () => {

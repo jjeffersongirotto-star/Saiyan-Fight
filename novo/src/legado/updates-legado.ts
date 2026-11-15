@@ -1,5 +1,5 @@
-// GERADO por novo/scripts/gerar-dados-legado.mjs a partir de index.html (#lista-updates, a janela UPDATES do
-// jogo antigo) — NÃO EDITAR À MÃO. Histórico das versões 0.x do jogo antigo, mostrado na tela ATUALIZAÇÕES.
+// Veio do jogo antigo (gerado uma vez a partir dele; o antigo foi apagado na v0.128). Agora é arquivo do jogo novo: editar aqui mesmo.
+// Histórico das versões 0.x do jogo antigo, mostrado na tela ATUALIZAÇÕES.
 export interface UpdateLegado { versao: string; titulo: string; itens: { tag: string; titulo: string; texto: string }[] }
 export const UPDATES_LEGADO: UpdateLegado[] = [
  {

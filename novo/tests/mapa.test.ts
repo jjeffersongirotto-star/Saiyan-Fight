@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { cadeadoAbrindo, inteiroNaTela, limitarRolagem, naTela, posicaoNoMapa, rolagemParaFase, recordeDeOnda, totalNoMapa, TOTAL_NO_MAPA } from '../src/logica/mapa';
 
-// a geometria do antigo (game-logic-core.js), para conferir que o caminho é o mesmo
-const core = readFileSync(new URL('../../game-logic-core.js', import.meta.url), 'utf8');
+// a geometria do desenho do mapa (src/legado/cenarios-legado.js, vindo do jogo antigo), para conferir que o
+// caminho da lógica é o mesmo do desenho
+const core = readFileSync(new URL('../src/legado/cenarios-legado.js', import.meta.url), 'utf8');
 const ini = core.indexOf('// ==================== MAPA DE PROGRESSO (fases em linha)');
-const fim = core.indexOf('// Altura do personagem', ini);
+const fim = core.indexOf('// ==================== MAPA DE PROGRESSO (cenário em 3D)', ini);
 const antigo = new Function(`${core.slice(ini, fim)}; return { getMapaPosicaoFase, limitarRolagemMapa, rolagemParaFase, MAPA_TOTAL_FASES };`)() as {
   getMapaPosicaoFase(i: number): { x: number; y: number };
   limitarRolagemMapa(r: number, t: number): number;

@@ -4,7 +4,7 @@
 Uso (da pasta novo/):  python3 scripts/gerar-atlas.py            (todas as formas + retratos)
        python3 scripts/gerar-atlas.py goku/normal retratos   (só essas)
 
-Lê ../conjuntos/<nome>/<forma>.json (cada quadro = [x, y, w, h, webp em base64] no recorte original) e faz a
+Lê fontes/conjuntos/<nome>/<forma>.json (cada quadro = [x, y, w, h, webp em base64] no recorte original) e faz a
 MESMA conta de posição do conjEmbrulharQuadro (conjuntos.js): desenho 96x112, pés na linha 103, centro em x=48.
 Cada quadro vai para uma célula lógica de 96x112 desenhada a ESCALA px por unidade; a parte vazia é cortada
 (trim) e o Phaser devolve a célula inteira ao desenhar (sourceSize/spriteSourceSize), então os pés continuam
@@ -20,7 +20,7 @@ MARGEM = 1            # 1 px vazio entre quadros (evita "sangrar" o vizinho ao f
 QUALIDADE = 82       # o WebP original já era com perda; 82 + alfa 90 fica igual a olho e bem menor
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
-RAIZ_ANTIGA = os.path.normpath(os.path.join(AQUI, "..", ".."))
+FONTES = os.path.normpath(os.path.join(AQUI, "..", "fontes"))
 SAIDA = os.path.normpath(os.path.join(AQUI, "..", "public", "atlas"))
 
 
@@ -42,7 +42,7 @@ def quadro_na_celula(d, q, estado):
 
 
 def gerar(nome, forma):
-    caminho = os.path.join(RAIZ_ANTIGA, "conjuntos", nome, forma + ".json")
+    caminho = os.path.join(FONTES, "conjuntos", nome, forma + ".json")
     d = json.load(open(caminho, encoding="utf-8"))
     estados = d[forma]
     pedacos = []   # (chave, imagem cortada, caixa do corte)
@@ -98,9 +98,9 @@ def gerar(nome, forma):
 
 
 def gerar_retratos():
-    """Primeiro quadro parado de cada personagem (../conjuntos/retratos.json) num atlas pequeno para a tela de
+    """Primeiro quadro parado de cada personagem (fontes/conjuntos/retratos.json) num atlas pequeno para a tela de
     escolha: a seleção não precisa baixar nenhum pacote inteiro (igual ao conjRetratoUrl do jogo antigo)."""
-    d = json.load(open(os.path.join(RAIZ_ANTIGA, "conjuntos", "retratos.json"), encoding="utf-8"))
+    d = json.load(open(os.path.join(FONTES, "conjuntos", "retratos.json"), encoding="utf-8"))
     celulas = {nome: quadro_na_celula(r, r["q"], "idle") for nome, r in d.items()}
     cw, ch = next(iter(celulas.values())).size
     por_linha = 8
@@ -120,7 +120,7 @@ def gerar_retratos():
 
 
 def todas_as_formas():
-    pasta = os.path.join(RAIZ_ANTIGA, "conjuntos")
+    pasta = os.path.join(FONTES, "conjuntos")
     return sorted(f"{n}/{f[:-5]}" for n in os.listdir(pasta) if os.path.isdir(os.path.join(pasta, n))
                   for f in os.listdir(os.path.join(pasta, n)) if f.endswith(".json"))
 

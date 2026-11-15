@@ -6,6 +6,15 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.128',
+    titulo: 'O JOGO NOVO NÃO PRECISA MAIS DO ANTIGO',
+    itens: [
+      'O jogo antigo (HTML/JS) foi apagado: tudo o que ele tinha já está aqui (história, VERSUS, mapa 3D, arenas, editores, tutorial, conquistas, ranking, opções, controle, TV).',
+      'Saíram os botões JOGO ANTIGO do menu e da tela ATUALIZAÇÕES.',
+      'O que você salvou no jogo antigo (personagens e arenas criados, fases vencidas, conquistas, ranking, opções) continua aparecendo aqui.',
+    ],
+  },
+  {
     versao: '0.127',
     titulo: 'OK DOS AVISOS NÃO ABRE MAIS OUTRA TELA',
     itens: [

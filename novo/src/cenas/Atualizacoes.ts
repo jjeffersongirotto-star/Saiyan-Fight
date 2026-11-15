@@ -2,7 +2,6 @@
 //  - no app (APK): ⟳ ATUALIZAR procura versão nova e, se o jogador aceitar, baixa e troca o pacote do jogo
 //    (src/app/plataforma.ts). Nada disso acontece sozinho.
 //  - no navegador do Android: BAIXAR APP leva ao APK; no resto do site não há botão (o site já abre a versão nova).
-//  - JOGO ANTIGO abre o jogo antigo (HTML/JS) que continua no site, em /antigo/.
 import Phaser from 'phaser';
 import { ajustarCamera, estiloTexto } from '../ui/resolucao';
 import { TELA_A, TELA_L } from '../logica/constantes';
@@ -13,7 +12,7 @@ import { vigiarControles } from '../entrada/controles';
 import { UPDATES_LEGADO } from '../legado/updates-legado';
 import { aoApertar } from '../entrada/teclas';
 import { NOVIDADES } from '../dados/novidades';
-import { abrirApk, abrirJogoAntigo, androidNoNavegador, baixarEAtualizar, infoVersao, noApp, procurarAtualizacao, versaoDoAppInstalado } from '../app/plataforma';
+import { abrirApk, androidNoNavegador, baixarEAtualizar, infoVersao, noApp, procurarAtualizacao, versaoDoAppInstalado } from '../app/plataforma';
 
 
 /** quebra em linhas de até ~`max` letras (Arial 12px na largura do quadro) */
@@ -111,12 +110,11 @@ export class Atualizacoes extends Phaser.Scene {
     const avisar = (t: string, cor = '#7dffb0') => status.setColor(cor).setText(t);
 
     const temBotao = noApp() || androidNoNavegador();
-    const xs = temBotao ? [-250, 0, 250] : [-130, 130];
+    const xs = temBotao ? [-130, 130] : [0];
     let i = 0;
     if (noApp()) criarBotao(this, TELA_L / 2 + xs[i++], 318, T('⟳ ATUALIZAR'), () => this.procurar(avisar), 220);
     else if (androidNoNavegador()) criarBotao(this, TELA_L / 2 + xs[i++], 318, T('BAIXAR APP'), () => abrirApk(), 220);
     else avisar(T('NO SITE O JOGO JÁ ABRE SEMPRE NA VERSÃO MAIS NOVA'), '#dfe7ff');
-    criarBotao(this, TELA_L / 2 + xs[i++], 318, T('JOGO ANTIGO'), () => abrirJogoAntigo(), 220);
     criarBotao(this, TELA_L / 2 + xs[i], 318, T('VOLTAR'), () => this.voltar(), 220);
     aoApertar(this, (c) => {
       if (c !== 'Escape') return;

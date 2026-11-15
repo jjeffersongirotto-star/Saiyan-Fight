@@ -1,5 +1,5 @@
-# Roda as verificações do jogo automaticamente a cada push e pull request.
-# Sem dependências: só Node (mesmos comandos descritos em "Run and validation" no AGENTS.md).
+# Verificação "testes" (exigida pela proteção da branch main): roda os testes e o TypeScript estrito do jogo
+# (pasta novo/) a cada push e pull request. Até a v0.127 rodava os testes do jogo antigo, apagado na v0.128.
 name: Testes
 
 on:
@@ -14,22 +14,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-
-      - name: Sintaxe dos arquivos .js
-        run: for f in *.js tests/*.js; do node --check "$f"; done
-
-      - name: Manifest válido
-        run: node -e "JSON.parse(require('fs').readFileSync('manifest.webmanifest','utf8'))"
-
-      - name: Lógica pura (game-logic-core)
-        run: node --test tests/game-logic-core.test.js
-
-      - name: Cenários (toque, menus, fases, ranking...)
-        run: |
-          status=0
-          for t in tests/*.test.js; do
-            [ "$t" = "tests/game-logic-core.test.js" ] && continue
-            echo "== $t"
-            node "$t" || status=1
-          done
-          exit $status
+          cache: npm
+          cache-dependency-path: novo/package-lock.json
+      - name: Dependências
+        working-directory: novo
+        run: npm ci
+      - name: TypeScript estrito
+        working-directory: novo
+        run: npx tsc --noEmit -p .
+      - name: Testes (Vitest)
+        working-directory: novo
+        run: npx vitest run

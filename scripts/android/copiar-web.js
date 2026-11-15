@@ -1,7 +1,6 @@
 // scripts/android/copiar-web.js — monta a pasta www/ (a webDir do Capacitor) com o JOGO NOVO já construído
-// (novo/dist, feito por `cd novo && npm ci && npm run build`). Desde a v0.121 o app e o site são o jogo novo
-// (Phaser + TypeScript, pasta novo/); o jogo antigo (HTML/JS da raiz) continua no site em /antigo/
-// (scripts/montar-site.js) e não vai dentro do app (o botão JOGO ANTIGO do app abre o site no navegador).
+// (novo/dist, feito por `cd novo && npm ci && npm run build`). O app e o site são o jogo da pasta novo/
+// (Phaser + TypeScript); o jogo antigo (HTML/JS da raiz) foi apagado na v0.128.
 // Rodar na raiz: `npm run copiar` (ou `node scripts/android/copiar-web.js`). SAIYAN_DIST=<pasta> troca novo/dist.
 //
 // Versões:
@@ -21,18 +20,6 @@ const { execSync } = require("child_process");
 
 const RAIZ = path.resolve(__dirname, "..", "..");
 const DESTINO = path.join(RAIZ, "www");
-// Jogo antigo: pastas com arquivos que ele carrega (imagens, pacotes de sprites, arenas, efeitos, exemplos de
-// formato) e os arquivos soltos da raiz. Usado pelo scripts/montar-site.js para a pasta /antigo/ do site.
-const PASTAS = ["icons", "conjuntos", "efeitos", "fases", "minions", "formatos"];
-const ARQUIVOS_SOLTOS = ["index.html", "tv.html", "manifest.webmanifest"];
-
-function copiarJogoAntigo(destino) {
-    fs.mkdirSync(destino, { recursive: true });
-    const soltos = ARQUIVOS_SOLTOS.concat(fs.readdirSync(RAIZ).filter(f => f.endsWith(".js")));
-    for (const f of soltos) fs.copyFileSync(path.join(RAIZ, f), path.join(destino, f));
-    for (const p of PASTAS) fs.cpSync(path.join(RAIZ, p), path.join(destino, p), { recursive: true });
-}
-
 function versaoDoApk() {
     const pkg = JSON.parse(fs.readFileSync(path.join(RAIZ, "package.json"), "utf8"));
     const [major, minor] = String(pkg.version).split(".").map(n => parseInt(n, 10) || 0);
@@ -71,5 +58,5 @@ function main() {
     console.log(`www/ pronta (jogo novo): APK ${versao} (código ${codigo}), jogo ${jogo} build ${build}`);
 }
 
-module.exports = { copiarJogoAntigo, versaoDoApk, versaoDoJogo, PASTAS, ARQUIVOS_SOLTOS };
+module.exports = { versaoDoApk, versaoDoJogo };
 if (require.main === module) main();

@@ -21,8 +21,6 @@ export type Decisao =
 
 export const APK_DOWNLOAD_URL = 'https://github.com/jjeffersongirotto-star/Saiyan-Fight/releases/latest/download/Saiyan-Fight.apk';
 export const APP_BUNDLE_LATEST_URL = 'https://github.com/jjeffersongirotto-star/Saiyan-Fight/releases/download/app-bundle/latest.json';
-/** O jogo antigo (HTML/JS) continua no site, nesta pasta. */
-export const JOGO_ANTIGO_URL = 'https://jjeffersongirotto-star.github.io/Saiyan-Fight/antigo/';
 
 /** > 0 quando `a` é mais nova que `b` ("1.0.280" > "1.0.275"; aceita "apk-v"/"v" na frente). */
 export function compararVersoes(a: string | undefined, b: string | undefined): number {

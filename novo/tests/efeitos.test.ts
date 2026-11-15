@@ -25,7 +25,7 @@ describe('atlas dos efeitos', () => {
   it('todos os efeitos do jogo antigo, com todos os quadros, cabendo na página', () => {
     expect(Object.keys(EFEITOS).length).toBe(33);
     for (const [nome, e] of Object.entries(EFEITOS)) {
-      expect(existsSync(join(__dirname, '..', '..', 'efeitos', `${nome}.png`)), nome).toBe(true);
+      expect(existsSync(join(__dirname, '..', 'fontes', 'efeitos', `${nome}.png`)), nome).toBe(true);
       for (let i = 0; i < e.n; i++) {
         const f = quadros.get(`${nome}/${i}`);
         expect(f, `${nome}/${i}`).toBeDefined();

@@ -1,5 +1,5 @@
 // @ts-nocheck
-// GERADO por novo/scripts/gerar-cenarios-legado.mjs a partir do jogo antigo — NÃO EDITAR À MÃO.
+// Veio do jogo antigo (gerado uma vez a partir dele; o antigo foi apagado na v0.128). Agora é arquivo do jogo novo: editar aqui mesmo.
 // Trechos: game-logic-core.js (ângulos), menu.js (Sala do Tempo, Torneio de Cell, Nave de Freeza,
 // drawStageBackground) e cenarios3d.js. O canvas é a "tela" do jogo antigo: 800x350 lógicos, contexto escalado.
 /* eslint-disable */

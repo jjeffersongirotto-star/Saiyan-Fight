@@ -1,4 +1,4 @@
-// GERADO por novo/scripts/gerar-dados-legado.mjs a partir de idiomas.js (IDIOMA_LINHAS) — NÃO EDITAR À MÃO.
+// Veio do jogo antigo (gerado uma vez a partir dele; o antigo foi apagado na v0.128). Agora é arquivo do jogo novo: editar aqui mesmo.
 // [português, english, español]. O português é a chave, como no antigo.
 export const LINHAS_LEGADO: [string, string, string][] = [["SAIYAN FIGHT","SAIYAN FIGHT","SAIYAN FIGHT"],
   ["A BATALHA COMEÇA AGORA","THE BATTLE BEGINS NOW","LA BATALLA EMPIEZA YA"],
