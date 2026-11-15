@@ -11,10 +11,10 @@ const PASTA = join(__dirname, '..', 'public', 'atlas');
 const PACOTES = join(__dirname, '..', '..', 'conjuntos');
 
 describe('personagens e formas', () => {
-  it('16 personagens jogáveis e 47 formas, as mesmas dos pacotes do jogo antigo', () => {
+  it('16 personagens jogáveis e 49 formas, as mesmas dos pacotes do jogo antigo', () => {
     expect(ORDEM_PERSONAGENS.length).toBe(16);
     const formas = Object.values(PERSONAGENS).flatMap((p) => p.formas.map((f) => `${p.id}/${f.forma}`));
-    expect(formas.length).toBe(47);
+    expect(formas.length).toBe(49);
     for (const f of formas) expect(existsSync(join(PACOTES, `${f}.json`)), f).toBe(true);
   });
 

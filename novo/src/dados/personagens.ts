@@ -72,7 +72,7 @@ const LISTA: DadosPersonagem[] = [
   {
     id: 'kaioshin', chaveAntiga: 'kaioshin', nome: 'SUPREMO SR. KAIO', alinhamento: 'HERÓI', especial: 'KIAI SAGRADO', corKi: hex('#c9a0ff'),
     efeitoTiro: 'tiro_pixel', efeitoEspecial: 'cor',
-    formas: [f('normal', 'Normal', 'rosa', 157)],
+    formas: [f('normal', 'Normal', 'rosa', 157), f('kibitoshin', 'Kibitoshin', 'rosa', 185)],
   },
   {
     id: 'vegetto', chaveAntiga: 'gogeta', nome: 'VEGETTO', alinhamento: 'HERÓI', especial: 'FINAL KAMEHAMEHA', corKi: hex('#7fd8ff'),
@@ -87,7 +87,7 @@ const LISTA: DadosPersonagem[] = [
   {
     id: 'android17', chaveAntiga: 'android17', nome: 'ANDROIDE 17', alinhamento: 'ANTI-HERÓI', especial: 'POWER BLITZ', corKi: hex('#ffe07a'),
     efeitoTiro: 'tiro_pixel', efeitoEspecial: 'raio_azul',
-    formas: [f('normal', 'Normal', 'verde', 172)],
+    formas: [f('normal', 'Normal', 'verde', 172), f('super17', 'Super 17', 'verde', 180)],
   },
   {
     id: 'android18', chaveAntiga: 'android18', nome: 'ANDROIDE 18', alinhamento: 'ANTI-HERÓI', especial: 'DESTRUCTO DISC', corKi: hex('#a9e3ff'),
