@@ -16,7 +16,7 @@ import { Selecao } from './cenas/Selecao';
 import { CENAS_TELAS } from './cenas/Telas';
 import { Trilhas } from './cenas/Trilhas';
 import { Vitoria } from './cenas/Vitoria';
-import { ESCALA_RENDER } from './ui/resolucao';
+import { ESCALA_RENDER, vigiarDesempenho } from './ui/resolucao';
 
 const jogo = new Phaser.Game({
   type: Phaser.AUTO,
@@ -32,6 +32,8 @@ const jogo = new Phaser.Game({
   // as OPÇÕES vêm depois da Luta: abertas da pausa, ficam desenhadas por cima dela; o aviso de conquista por cima de tudo
   scene: [Boot, Preload, Menu, ...CENAS_TELAS, Mapa, Selecao, Arenas, Luta, Vitoria, FimHistoria, Trilhas, Atualizacoes, ...CENAS_OPCOES, AvisoConquista],
 });
+
+vigiarDesempenho(jogo);
 
 // para testes no navegador (playwright) e depuração
 (window as unknown as { saiyan: Phaser.Game }).saiyan = jogo;
