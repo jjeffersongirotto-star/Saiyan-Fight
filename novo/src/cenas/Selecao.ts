@@ -220,7 +220,8 @@ export class Selecao extends Phaser.Scene {
       if (i === this.foco) g.lineStyle(3, this.escolhendo === 'p1' ? 0x3fa9ff : 0xff4a4a, 1).strokeRect(x, y, CARTA_L, CARTA_A);
     });
     const p = PERSONAGENS[ORDEM_PERSONAGENS[this.foco]];
-    this.info.setText(`${p.nome}  ·  ${T(p.alinhamento)}  ·  ${p.especial}`);
-    this.formas.setText(`${T('FORMAS')} (${p.formas.length}): ${p.formas.map((f) => f.nome).join(' → ')}`);
+    // v0.139: só o nome (sem alinhamento, golpe e lista de formas)
+    this.info.setText(p.nome);
+    this.formas.setText('');
   }
 }

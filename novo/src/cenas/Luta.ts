@@ -670,7 +670,9 @@ export class Luta extends Phaser.Scene {
     const anim = `${chave}:${pose.movimento}`;
     const animFinal = this.anims.exists(anim) ? anim : `${chave}:${pose.movimento === 'special' ? 'attackKi' : 'idle'}`;
     if (s.anims.currentAnim?.key !== animFinal) s.play(animFinal);
-    s.setAlpha(l.acao === 'caido' ? 0.5 : l.invulneravel > 0 && Math.floor(l.invulneravel / 4) % 2 === 0 ? 0.45 : 1);
+    // pisca só quando foi atingido: a proteção do começo de cada rodada (INVULNERAVEL_INICIO) não pisca (v0.139)
+    const pisca = l.invulneravel > 0 && this.estado.faseQuadros > C.INVULNERAVEL_INICIO && Math.floor(l.invulneravel / 4) % 2 === 0;
+    s.setAlpha(l.acao === 'caido' ? 0.5 : pisca ? 0.45 : 1);
     this.efeitos.lutador[l.id].desenhar(l, { x: s.x, y: s.y }, k, this.estado.quadro / 60, this.dtSeg);
   }
 
