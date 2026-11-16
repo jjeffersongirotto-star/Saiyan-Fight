@@ -49,11 +49,23 @@ export function medirQuadro(v: VigiaDesempenho, ms: number): Pedido {
   return muito ? 'minimo' : 'baixar';
 }
 
-/** a resolução inicial pela densidade da tela (1 a 2) */
-export const escalaInicial = (dpr: number) => Math.min(2, Math.max(1, Math.round(dpr || 1)));
+/** maior resolução no computador (800x350 × 2,4 = 1920 de largura: Full HD; até 3 em telas maiores) */
+export const ESCALA_MAX_PC = 3;
+/**
+ * Resolução inicial. Celular/tablet (toque): pela densidade da tela, de 1 a 2 (como antes).
+ * Computador (v0.137): pelo tamanho REAL da tela em pixels, para o jogo ser desenhado na resolução do monitor
+ * (Full HD = 2,4x) em vez de 800x350 esticado — antes ficava pixelado. `telaL`/`telaA` em pixels CSS.
+ */
+export function escalaInicial(dpr: number, telaL = 0, telaA = 0, toque = true): number {
+  const d = dpr || 1;
+  if (toque || !(telaL > 0 && telaA > 0)) return Math.min(2, Math.max(1, Math.round(d)));
+  const cabe = Math.min((telaL * d) / 800, (telaA * d) / 350);
+  return Math.min(ESCALA_MAX_PC, Math.max(1, Math.round(cabe * 10) / 10));
+}
 
 /** o próximo degrau abaixo de `k` (null = já está no mais leve) */
 export function degrauAbaixo(k: number): number | null {
+  // acima de 2 (computador em Full HD), o primeiro degrau é o 2
   for (const d of DEGRAUS_ESCALA) if (d < k - 1e-6) return d;
   return null;
 }

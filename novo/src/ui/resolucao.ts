@@ -8,7 +8,14 @@ import { TELA_A, TELA_L } from '../logica/constantes';
 import { criarVigia, degrauAbaixo, DEGRAUS_ESCALA, escalaInicial, medirQuadro } from '../logica/desempenho';
 
 /** resolução atual da tela (muda só para baixo, por mudarEscala) */
-export let ESCALA_RENDER = escalaInicial(typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
+export let ESCALA_RENDER = typeof window === 'undefined' ? 1 : escalaInicial(
+  window.devicePixelRatio || 1,
+  Math.max(window.screen?.width || 0, window.innerWidth || 0),
+  Math.max(window.screen?.height || 0, window.innerHeight || 0),
+  'ontouchstart' in window || (navigator.maxTouchPoints || 0) > 0,
+);
+/** computador (sem toque): o cenário 3D pode ser desenhado em 2x (no celular fica 1x, pesava) */
+export const NO_PC = typeof window !== 'undefined' && !('ontouchstart' in window || (navigator.maxTouchPoints || 0) > 0);
 
 /** Chamar no create() de toda cena: mostra o mundo 0..800 x 0..350 inteiro no canvas maior. */
 export function ajustarCamera(cena: Phaser.Scene): void {

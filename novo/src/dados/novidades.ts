@@ -6,6 +6,14 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.137',
+    titulo: 'IMAGEM NÍTIDA NO COMPUTADOR (ATÉ FULL HD)',
+    itens: [
+      'No computador o jogo era desenhado pequeno e esticado para a tela (ficava pixelado). Agora ele é desenhado na resolução do monitor: Full HD (1920 de largura), HD e até 4K (no máximo 3x), com textos, menus, mapa e cenários nítidos.',
+      'O cenário 3D das lutas também fica em 2x no computador. Se o PC não segurar 60 FPS, a resolução baixa sozinha, como no celular.',
+    ],
+  },
+  {
     versao: '0.136',
     titulo: 'SEM TEXTO NO MEIO DA LUTA',
     itens: [

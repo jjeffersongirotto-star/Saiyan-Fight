@@ -22,8 +22,8 @@ const jogo = new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'jogo',
   backgroundColor: '#0a0f1f',
-  width: TELA_L * ESCALA_RENDER,
-  height: TELA_A * ESCALA_RENDER,
+  width: Math.round(TELA_L * ESCALA_RENDER),
+  height: Math.round(TELA_A * ESCALA_RENDER),
   pixelArt: true, // sprites sem borrar
   roundPixels: true,
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, fullscreenTarget: 'jogo' },
