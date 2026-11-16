@@ -72,6 +72,10 @@ Sem as variáveis `SAIYAN_KEYSTORE` / `SAIYAN_KEYSTORE_PASSWORD` o APK sai assin
 - **No celular:** use o analógico na esquerda da tela e os botões na direita. Por padrão, rebater é um **toque duplo** em qualquer lugar livre da tela.
 - Tudo pode ser trocado em **OPÇÕES → CONTROLES**, inclusive a posição e o tamanho dos botões na tela.
 
+## 💻 App para Windows
+
+Baixe **https://github.com/jjeffersongirotto-star/Saiyan-Fight/releases/download/app-pc/Saiyan-Fight-PC.exe** e abra para instalar (se o Windows avisar "O Windows protegeu o computador", clique em **Mais informações → Executar assim mesmo**). Cria o ícone na área de trabalho; o jogo abre sem internet, em janela própria (**F11** = tela cheia). Para atualizar, use a setinha **⟳ ATUALIZAR** em ATUALIZAÇÕES, como no celular: baixa só o jogo, sem instalar de novo.
+
 ## 🧍 Personagens
 
 O jogo já vem com 16 personagens: Goku, Vegeta, Piccolo, Freeza, Trunks, Gohan, Supremo Sr. Kaio, Vegetto, Bardock, Androides 17 e 18, Majin Buu, Raditz, Broly, Gotenks e Cell, cada um com as suas transformações (Super 17 e Kibitoshin desde a 0.123).

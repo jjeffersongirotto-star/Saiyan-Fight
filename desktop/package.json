@@ -1,0 +1,30 @@
+{
+  "name": "saiyan-fight-pc",
+  "productName": "Saiyan Fight",
+  "version": "1.0.0",
+  "description": "Saiyan Fight para Windows (Electron): o jogo de novo/ dentro do app, sem internet, atualizado pela setinha ATUALIZAR.",
+  "main": "main.js",
+  "private": true,
+  "author": "Saiyan Fight",
+  "scripts": {
+    "jogo": "node preparar-jogo.js",
+    "start": "node preparar-jogo.js && electron .",
+    "instalador": "node preparar-jogo.js && electron-builder --win nsis --publish never"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.16"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "io.github.jjeffersongirotto.saiyanfight.pc",
+    "productName": "Saiyan Fight",
+    "files": ["main.js", "preload.js", "atualizador.js", "package.json"],
+    "extraResources": [{ "from": "jogo", "to": "jogo" }],
+    "directories": { "output": "dist" },
+    "win": { "target": "nsis", "icon": "icone.png", "artifactName": "Saiyan-Fight-PC.exe" },
+    "nsis": { "oneClick": true, "perMachine": false, "createDesktopShortcut": true, "shortcutName": "Saiyan Fight" }
+  }
+}

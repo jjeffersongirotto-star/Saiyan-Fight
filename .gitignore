@@ -10,3 +10,8 @@ __pycache__/
 pacote-web
 # site do GitHub Pages (scripts/montar-site.js)
 _site
+
+# app de PC (desktop/): gerados
+desktop/jogo
+desktop/dist
+desktop/icone.png

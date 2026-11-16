@@ -1,0 +1,64 @@
+# Gera o app de Windows do Saiyan Fight (desktop/, Electron): instalador Saiyan-Fight-PC.exe com o jogo de novo/
+# dentro (abre sem internet). Depois de instalado, o próprio app atualiza o jogo pela setinha ⟳ ATUALIZAR com o
+# mesmo pacote da Release "app-bundle" do Android — o instalador só precisa ser baixado de novo se desktop/ mudar.
+# Na main publica o instalador na Release fixa "app-pc" (link: releases/download/app-pc/Saiyan-Fight-PC.exe).
+name: App PC (Windows)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths: ['desktop/**', '.github/workflows/desktop.yml', 'novo/src/app/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pc:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # build = número de commits (o mesmo do app Android)
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            novo/package-lock.json
+            desktop/package-lock.json
+      - name: Construir o jogo (novo/dist → www/)
+        run: |
+          (cd novo && npm ci && npm run build)
+          node scripts/android/copiar-web.js
+      - name: Dependências do app de PC
+        working-directory: desktop
+        run: npm ci
+      - name: Testes do atualizador
+        working-directory: desktop
+        run: node --test teste.js
+      - name: Gerar o instalador
+        working-directory: desktop
+        run: npm run instalador
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Saiyan-Fight-PC
+          path: desktop/dist/Saiyan-Fight-PC.exe
+      - name: Publicar (Release app-pc)
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view app-pc >/dev/null 2>&1; then
+            gh release create app-pc --target "$GITHUB_SHA" --latest=false --title "Saiyan Fight para Windows" \
+              --notes "Baixe Saiyan-Fight-PC.exe e abra para instalar (o Windows pode avisar 'O Windows protegeu o computador': clique em Mais informações → Executar assim mesmo). O jogo se atualiza sozinho pela setinha ATUALIZAR, sem baixar o instalador de novo."
+          fi
+          gh release upload app-pc desktop/dist/Saiyan-Fight-PC.exe --clobber

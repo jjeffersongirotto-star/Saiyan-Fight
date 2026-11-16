@@ -13,7 +13,7 @@ import { vigiarControles } from '../entrada/controles';
 import { UPDATES_LEGADO } from '../legado/updates-legado';
 import { aoApertar } from '../entrada/teclas';
 import { NOVIDADES } from '../dados/novidades';
-import { abrirApk, androidNoNavegador, baixarEAtualizar, infoVersao, noApp, procurarAtualizacao } from '../app/plataforma';
+import { abrirApk, abrirInstaladorPc, comAtualizador, windowsNoNavegador, androidNoNavegador, baixarEAtualizar, infoVersao, procurarAtualizacao } from '../app/plataforma';
 import { recarregarSite, temVersaoNova, verificarAtualizacao } from '../app/aviso';
 
 
@@ -111,22 +111,23 @@ export class Atualizacoes extends Phaser.Scene {
 
     // botões de baixo; com versão nova no site entra RECARREGAR (aviso da esfera, src/app/aviso.ts)
     const botoes: { t: string; f: () => void }[] = [];
-    if (noApp()) botoes.push({ t: T('⟳ ATUALIZAR'), f: () => this.procurar(avisar) });
+    if (comAtualizador()) botoes.push({ t: T('⟳ ATUALIZAR'), f: () => this.procurar(avisar) });
     else {
       if (temVersaoNova()) botoes.push({ t: T('RECARREGAR'), f: () => recarregarSite() });
       if (androidNoNavegador()) botoes.push({ t: T('BAIXAR APP'), f: () => abrirApk() });
+      if (windowsNoNavegador()) botoes.push({ t: T('BAIXAR APP PC'), f: () => abrirInstaladorPc() });
     }
     botoes.push({ t: T('VOLTAR'), f: () => this.voltar() });
     const larg = botoes.length > 2 ? 200 : 220, passo = botoes.length > 2 ? 230 : 260;
     botoes.forEach((b, k) => criarBotao(this, TELA_L / 2 + (k - (botoes.length - 1) / 2) * passo, 318, b.t, b.f, larg));
     const avisoDaVersao = () => {
-      if (!temVersaoNova()) { if (!noApp() && !androidNoNavegador()) avisar(T('NO SITE O JOGO JÁ ABRE SEMPRE NA VERSÃO MAIS NOVA'), '#dfe7ff'); return; }
-      avisar(T(noApp() ? 'VERSÃO NOVA DISPONÍVEL: TOQUE EM ⟳ ATUALIZAR' : 'VERSÃO NOVA NO SITE: TOQUE EM RECARREGAR'), '#fbbf24');
+      if (!temVersaoNova()) { if (!comAtualizador() && !androidNoNavegador() && !windowsNoNavegador()) avisar(T('NO SITE O JOGO JÁ ABRE SEMPRE NA VERSÃO MAIS NOVA'), '#dfe7ff'); return; }
+      avisar(T(comAtualizador() ? 'VERSÃO NOVA DISPONÍVEL: TOQUE EM ⟳ ATUALIZAR' : 'VERSÃO NOVA NO SITE: TOQUE EM RECARREGAR'), '#fbbf24');
     };
     avisoDaVersao();
     // a conferência pode terminar com a tela já aberta: no site refaz a tela para entrar o RECARREGAR
     const antes = temVersaoNova();
-    verificarAtualizacao().then((n) => { if (!this.sys.isActive() || this.ocupado) return; if (n !== antes && !noApp()) this.scene.restart(); else avisoDaVersao(); }).catch(() => undefined);
+    verificarAtualizacao().then((n) => { if (!this.sys.isActive() || this.ocupado) return; if (n !== antes && !comAtualizador()) this.scene.restart(); else avisoDaVersao(); }).catch(() => undefined);
     aoApertar(this, (c) => {
       if (c !== 'Escape') return;
       if (this.dialogo) this.fecharDialogo();

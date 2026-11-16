@@ -1,7 +1,7 @@
 {
   "name": "saiyan-fight-novo",
   "private": true,
-  "version": "0.137.0",
+  "version": "0.138.0",
   "description": "Saiyan Fight (Phaser 3 + TypeScript + Vite): o jogo publicado no site e no app Android.",
   "type": "module",
   "scripts": {
