@@ -670,8 +670,14 @@ export class Luta extends Phaser.Scene {
     const pose = poseDoLutador(l);
     s.setFlipX(pose.espelhar);
     const anim = `${chave}:${pose.movimento}`;
-    const animFinal = this.anims.exists(anim) ? anim : `${chave}:${pose.movimento === 'special' ? 'attackKi' : 'idle'}`;
-    if (s.anims.currentAnim?.key !== animFinal) s.play(animFinal);
+    let animFinal = this.anims.exists(anim) ? anim : `${chave}:${pose.movimento === 'special' ? 'attackKi' : 'idle'}`;
+    // golpe de ki (v0.142): o movimento vai até o fim mesmo depois da pose curta do tiro, e apertando de novo ele
+    // continua/recomeça em vez de voltar sempre ao 1º quadro (antes ficava travado no começo do golpe)
+    const golpe = `${chave}:attackKi`, atual = s.anims.currentAnim?.key;
+    const solto = l.acao === 'livre' && l.poseAtingido <= 0 && !l.emEspecial && l.poseParry <= 0;
+    if (solto && atual === golpe && s.anims.isPlaying && this.anims.exists(golpe)) animFinal = golpe;
+    if (atual !== animFinal) s.play(animFinal);
+    else if (pose.movimento === 'attackKi' && !s.anims.isPlaying) s.play(animFinal);
     // pisca só quando foi atingido: a proteção do começo de cada rodada (INVULNERAVEL_INICIO) não pisca (v0.139)
     const pisca = l.invulneravel > 0 && this.estado.faseQuadros > C.INVULNERAVEL_INICIO && Math.floor(l.invulneravel / 4) % 2 === 0;
     s.setAlpha(l.acao === 'caido' ? 0.5 : pisca ? 0.45 : 1);

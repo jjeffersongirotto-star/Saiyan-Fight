@@ -6,6 +6,13 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.142',
+    titulo: 'ATAQUE SEM TRAVAR',
+    itens: [
+      'Apertando ATAQUE várias vezes, o personagem ficava parado no primeiro quadro do golpe. Agora o movimento do golpe vai até o fim e continua a cada novo tiro, sem travar.',
+    ],
+  },
+  {
     versao: '0.141',
     titulo: 'TRANSFORMAÇÕES PARA DESCOBRIR',
     itens: [
