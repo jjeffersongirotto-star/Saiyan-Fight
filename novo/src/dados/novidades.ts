@@ -6,6 +6,13 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.140',
+    titulo: 'TRILHAS SONORAS SEM TEXTO POR CIMA',
+    itens: [
+      'Na tela TRILHAS SONORAS, a frase azul do topo e o aviso vermelho de áudio mutado ficavam por cima das músicas. O quadro cresceu e a lista ficou entre os dois, sem nada sobreposto.',
+    ],
+  },
+  {
     versao: '0.139',
     titulo: 'ESCOLHA MAIS LIMPA E SEM PISCAR NO COMEÇO',
     itens: [
