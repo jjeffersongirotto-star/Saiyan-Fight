@@ -6,6 +6,15 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.138',
+    titulo: 'APP PARA WINDOWS',
+    itens: [
+      'Saiu o Saiyan Fight para computador com Windows: um instalador (Saiyan-Fight-PC.exe) que cria o ícone na área de trabalho. O jogo vai dentro do app, abre sem internet, em janela própria (F11 = tela cheia) e com a imagem na resolução do monitor.',
+      'O app de PC se atualiza como o do celular: pela setinha ⟳ ATUALIZAR em ATUALIZAÇÕES, baixando só o jogo (com os MB reais em tempo real), sem baixar o instalador de novo. Se uma versão nova não abrir, ele volta sozinho para a anterior.',
+      'Jogando pelo site num PC com Windows, a tela ATUALIZAÇÕES mostra o botão BAIXAR APP PC.',
+    ],
+  },
+  {
     versao: '0.137',
     titulo: 'IMAGEM NÍTIDA NO COMPUTADOR (ATÉ FULL HD)',
     itens: [

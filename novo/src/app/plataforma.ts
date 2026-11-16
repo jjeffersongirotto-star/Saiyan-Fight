@@ -7,7 +7,7 @@
 // Ao abrir, avisa o plugin que este pacote carregou bem (notifyAppReady); sem isso, em 15 s ele volta para o
 // pacote anterior (appReadyTimeout no capacitor.config.json).
 // O jogo nunca importa os pacotes do Capacitor: usa window.Capacitor.Plugins, que o app injeta.
-import { APK_DOWNLOAD_URL, APP_BUNDLE_LATEST_URL, decidirAtualizacao, versaoCurta, type Decisao, type Latest } from '../logica/atualizacao';
+import { APK_DOWNLOAD_URL, APP_BUNDLE_LATEST_URL, NATIVO_DO_PC, PC_DOWNLOAD_URL, decidirAtualizacao, versaoCurta, type Decisao, type Latest } from '../logica/atualizacao';
 
 interface Updater {
   notifyAppReady(): Promise<unknown>;
@@ -25,6 +25,23 @@ interface JanelaComApp {
   BUILD_WEB?: number;
 }
 const janela = (): JanelaComApp => (typeof window !== 'undefined' ? (window as unknown as JanelaComApp) : {});
+
+/** v0.138: app de Windows (desktop/, Electron): o preload expõe window.saiyanDesktop */
+interface Desktop {
+  versaoDoApp: string;
+  procurar(): Promise<Latest | null>;
+  baixar(d: { url: string; sha256: string; id: string; build: number; tamanho: number }): Promise<boolean>;
+  aoProgresso(f: (p: { baixados: number; total: number }) => void): () => void;
+  reiniciar(): void;
+  pronto(): void;
+}
+const desktop = (): Desktop | null => (typeof window !== 'undefined' ? ((window as unknown as { saiyanDesktop?: Desktop }).saiyanDesktop ?? null) : null);
+export const naDesktop = () => !!desktop();
+/** tem a setinha ⟳ ATUALIZAR (app Android ou app de PC) */
+export const comAtualizador = () => noApp() || naDesktop();
+/** Windows num navegador (não no app): a tela ATUALIZAÇÕES oferece BAIXAR APP PC */
+export const windowsNoNavegador = () => !comAtualizador() && typeof navigator !== 'undefined' && /Windows/i.test(navigator.userAgent || '');
+export const abrirInstaladorPc = () => abrirEndereco(PC_DOWNLOAD_URL);
 
 export function noApp(): boolean {
   try {
@@ -55,7 +72,9 @@ export async function versaoDoAppInstalado(): Promise<string> {
 let avisado = false;
 /** Chamar quando o menu aparece (o jogo abriu de verdade). */
 export function avisarQueOJogoAbriu(): void {
-  if (avisado || !noApp()) return;
+  if (avisado) return;
+  if (desktop()) { avisado = true; desktop()!.pronto(); return; }
+  if (!noApp()) return;
   const u = plugin<Updater>('CapacitorUpdater');
   if (!u) return;
   avisado = true;
@@ -63,6 +82,7 @@ export function avisarQueOJogoAbriu(): void {
 }
 
 async function lerLatest(): Promise<Latest | null> {
+  if (desktop()) return desktop()!.procurar();
   const url = `${APP_BUNDLE_LATEST_URL}?t=${Date.now()}`;
   const http = plugin<Http>('CapacitorHttp');
   if (http) {
@@ -83,12 +103,24 @@ export async function procurarAtualizacao(): Promise<Procura> {
   try {
     const latest = await lerLatest();
     if (latest === null) return { tipo: 'nada' };
-    return decidirAtualizacao(latest, { build: infoVersao().build, nativo: await versaoDoAppInstalado() });
+    return decidirAtualizacao(latest, { build: infoVersao().build, nativo: desktop() ? NATIVO_DO_PC : await versaoDoAppInstalado() });
   } catch { return { tipo: 'offline' }; }
 }
 /** Baixa o pacote (o plugin confere o sha256) e troca para ele (o jogo reinicia na versão nova).
  *  `aoProgresso` recebe a porcentagem baixada (evento "download" do @capgo/capacitor-updater). */
 export async function baixarEAtualizar(d: Extract<Decisao, { tipo: 'jogo' }>, aoProgresso?: (percent: number) => void): Promise<boolean> {
+  const pc = desktop();
+  if (pc) {
+    // app de PC: bytes reais do download na mesma escala do plugin do Android (10..70 = baixando, 80 = instalando)
+    const parar = pc.aoProgresso(({ baixados, total }) => aoProgresso?.(total > 0 ? 10 + (60 * Math.min(baixados, total)) / total : 10));
+    try {
+      const ok = await pc.baixar({ url: d.url, sha256: d.sha256, id: d.id, build: Number(d.id.split('-').pop()) || 0, tamanho: d.tamanho });
+      if (!ok) return false;
+      aoProgresso?.(80);
+      setTimeout(() => pc.reiniciar(), 600);
+      return true;
+    } finally { parar(); }
+  }
   const u = plugin<Updater>('CapacitorUpdater');
   if (!u) return false;
   let ouvinte: { remove(): unknown } | null = null;

@@ -5,7 +5,7 @@
 //  - site: versao.json publicado junto com o site (vite.config.ts), comparado com o build aberto.
 // Confere no máximo a cada 10 minutos; sem internet, fica sem aviso.
 import { avisaAtualizacao, siteTemVersaoNova } from '../logica/atualizacao';
-import { infoVersao, noApp, procurarAtualizacao } from './plataforma';
+import { comAtualizador, infoVersao, procurarAtualizacao } from './plataforma';
 
 const INTERVALO_MS = 10 * 60 * 1000;
 let nova = false;
@@ -27,7 +27,7 @@ export function verificarAtualizacao(): Promise<boolean> {
   ultima = Date.now();
   emCurso = (async () => {
     try {
-      if (noApp()) nova = avisaAtualizacao(await procurarAtualizacao());
+      if (comAtualizador()) nova = avisaAtualizacao(await procurarAtualizacao());
       else {
         const r = await fetch(`versao.json?t=${Date.now()}`, { cache: 'no-store' });
         if (r.ok) nova = siteTemVersaoNova(await r.json(), infoVersao().build);

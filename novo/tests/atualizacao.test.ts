@@ -100,3 +100,12 @@ describe('progresso real do download (v0.133, APK 1.1)', () => {
     expect(s).toContain('o código do @capgo/capacitor-updater mudou');
   });
 });
+
+describe('app de PC (v0.138)', () => {
+  it('o nativoMinimo do Android não bloqueia o app de PC: recebe o pacote do jogo', async () => {
+    const { decidirAtualizacao, NATIVO_DO_PC } = await import('../src/logica/atualizacao');
+    const latest = { url: 'u', sha256: 's', build: 400, versao: '0.138', nativoMinimo: '1.1.0', tamanho: 10 };
+    expect(decidirAtualizacao(latest, { build: 300, nativo: NATIVO_DO_PC }).tipo).toBe('jogo');
+    expect(decidirAtualizacao(latest, { build: 300, nativo: '1.0.278' }).tipo).toBe('apk');
+  });
+});

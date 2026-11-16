@@ -22,6 +22,10 @@ export type Decisao =
   | { tipo: 'jogo'; url: string; sha256: string; versao: string; id: string; tamanho: number };
 
 export const APK_DOWNLOAD_URL = 'https://github.com/jjeffersongirotto-star/Saiyan-Fight/releases/latest/download/Saiyan-Fight.apk';
+/** instalador do app de Windows (desktop/, workflow desktop.yml, Release fixa "app-pc") */
+export const PC_DOWNLOAD_URL = 'https://github.com/jjeffersongirotto-star/Saiyan-Fight/releases/download/app-pc/Saiyan-Fight-PC.exe';
+/** o app de PC não tem "geração nativa" do Android: o nativoMinimo do latest.json não vale para ele */
+export const NATIVO_DO_PC = '999.0.0';
 export const APP_BUNDLE_LATEST_URL = 'https://github.com/jjeffersongirotto-star/Saiyan-Fight/releases/download/app-bundle/latest.json';
 
 /** > 0 quando `a` é mais nova que `b` ("1.0.280" > "1.0.275"; aceita "apk-v"/"v" na frente). */
