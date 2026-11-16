@@ -7,6 +7,7 @@ import { armazenamentoPadrao, type Armazenamento } from './progresso';
 import type { ProgressoFases } from './ondas';
 import { faseLiberada } from './ondas';
 import type { EstadoLuta, Evento, TipoItem } from './tipos';
+import { ORDEM_PERSONAGENS, PERSONAGENS } from '../dados/personagens';
 
 export const CHAVE_ESTAT = 'saiyan-novo-estatisticas';
 export const CHAVE_MEDALHAS = 'saiyan-novo-conquistas';
@@ -17,7 +18,33 @@ export const APELIDO_MAX = 16;
 
 export type Medalha = ConquistaLegado['medalha'];
 export const MEDALHAS: Medalha[] = ['diamond', 'gold', 'silver', 'bronze'];
-export const CONQUISTAS = CONQUISTAS_LEGADO;
+/** v0.141: uma conquista por transformação de cada personagem (a 1ª vez que o jogador vira aquela forma). Elas
+ *  também são o registro das formas já feitas: forma não feita aparece só como silhueta e não dá para escolher. */
+export const idConquistaForma = (personagem: string, forma: string) => `forma_${personagem}_${forma}`;
+export const DESC_CONQUISTA_FORMA = 'Transforme-se nesta forma pela primeira vez';
+const CONQUISTAS_FORMAS: ConquistaLegado[] = ORDEM_PERSONAGENS.flatMap((id) => PERSONAGENS[id].formas.slice(1).map((f, i): ConquistaLegado => ({
+  id: idConquistaForma(id, f.forma), nome: `${PERSONAGENS[id].nome}: ${f.nome}`, desc: DESC_CONQUISTA_FORMA,
+  medalha: i === 0 ? 'bronze' : i === 1 ? 'silver' : 'gold',
+})));
+export const CONQUISTAS: ConquistaLegado[] = [
+  ...CONQUISTAS_LEGADO.filter((c) => c.id !== 'all_achievements'), ...CONQUISTAS_FORMAS,
+  ...CONQUISTAS_LEGADO.filter((c) => c.id === 'all_achievements'),
+];
+
+/** a forma `nivel` do personagem já foi feita (a normal sempre; personagens criados no editor não têm trava) */
+export function formaLiberada(c: Pick<Conquistas, 'tem'>, personagem: string, nivel: number): boolean {
+  if (nivel <= 0) return true;
+  const p = PERSONAGENS[personagem], f = p?.formas[nivel];
+  if (!p || !f || p.criado) return true;
+  return c.tem(idConquistaForma(personagem, f.forma));
+}
+/** a forma mais alta já feita, em sequência (as transformações vêm em ordem) */
+export function nivelLiberado(c: Pick<Conquistas, 'tem'>, personagem: string): number {
+  const n = PERSONAGENS[personagem]?.formas.length ?? 1;
+  let k = 0;
+  while (k + 1 < n && formaLiberada(c, personagem, k + 1)) k++;
+  return k;
+}
 export const UNTOUCHABLE_PONTOS = 5;
 
 export const CHAVES_ESTAT = [
@@ -196,7 +223,14 @@ export class RastreioDaLuta {
         case 'parry':
           if (ev.dono === 'p1' && ev.refletidos > 0) { c.somar('reflectsTotal', ev.refletidos); c.elevar('maxParryCombo', e.p1.comboParry); }
           break;
-        case 'transformou': if (ev.dono === 'p1') { c.destravar('ssj_transform'); c.somar('transformsTotal'); } break;
+        case 'transformou': {
+          // a forma conta para quem joga: o J1 sempre; o J2 só no VERSUS (no resto ele é a CPU)
+          const l = e[ev.dono];
+          const forma = PERSONAGENS[l.personagem]?.formas[ev.nivel];
+          if ((ev.dono === 'p1' || this.modo === 'versus') && forma) c.destravar(idConquistaForma(l.personagem, forma.forma));
+          if (ev.dono === 'p1') { c.destravar('ssj_transform'); c.somar('transformsTotal'); }
+          break;
+        }
         case 'especial':
           if (ev.dono === 'p1') {
             c.destravar('special_first');

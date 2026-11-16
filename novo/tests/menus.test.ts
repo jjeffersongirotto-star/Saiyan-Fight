@@ -107,7 +107,7 @@ describe('conquistas e ranking', () => {
     expect(avisos).toEqual(['reflect_50']);
     expect(a.getItem('saiyan_badges')).toBe(JSON.stringify({ reflect_10: true, nao_existe: true }));
     expect(c.contagem().total.total).toBe(CONQUISTAS.length);
-    expect(CONQUISTAS.length).toBe(57);
+    expect(CONQUISTAS.length).toBe(57 + 33); // v0.141: + uma por transformação dos 16 personagens
   });
   it('ranking: top 5 juntando antigo e novo, sem repetir', () => {
     const velho = [{ score: 10, date: 'a' }, { score: 30, date: 'b' }];

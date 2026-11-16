@@ -6,6 +6,16 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.141',
+    titulo: 'TRANSFORMAÇÕES PARA DESCOBRIR',
+    itens: [
+      'As transformações que você ainda não fez numa luta aparecem só como silhueta (com ???) no quadro "i" do personagem. Depois de se transformar a primeira vez, ela aparece.',
+      'Cada transformação de cada personagem virou uma conquista (33 novas: bronze na 1ª transformação, prata na 2ª, ouro nas seguintes).',
+      'No TUTORIAL e no TUTORIAL LIVRE só dá para escolher e se transformar nas formas já feitas. Sem nenhuma, o passo TRANSFORMAR é pulado.',
+      'O botão "i" dos cartões agora é redondo, com contorno laranja como o botão de voltar e o "i" bem no centro. A linha embaixo do nome no quadro das formas ficou maior e mais clara.',
+    ],
+  },
+  {
     versao: '0.140',
     titulo: 'TRILHAS SONORAS SEM TEXTO POR CIMA',
     itens: [

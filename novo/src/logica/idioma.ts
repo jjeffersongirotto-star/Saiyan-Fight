@@ -107,6 +107,7 @@ const LINHAS: Record<string, [string, string]> = {
   APP: ['APP', 'APP'],
   'BAIXAR APP': ['GET THE APP', 'DESCARGAR APP'],
   'BAIXAR APP PC': ['GET THE PC APP', 'DESCARGAR APP PC'],
+  'Transforme-se nesta forma pela primeira vez': ['Transform into this form for the first time', 'Transfórmate en esta forma por primera vez'],
   'VERSÃO NOVA DISPONÍVEL': ['NEW VERSION AVAILABLE', 'NUEVA VERSIÓN DISPONIBLE'],
   'VERSÃO NOVA DISPONÍVEL: TOQUE EM ⟳ ATUALIZAR': ['NEW VERSION AVAILABLE: TAP ⟳ UPDATE', 'NUEVA VERSIÓN DISPONIBLE: TOCA ⟳ ACTUALIZAR'],
   'VERSÃO NOVA NO SITE: TOQUE EM RECARREGAR': ['NEW VERSION ON THE SITE: TAP RELOAD', 'NUEVA VERSIÓN EN EL SITIO: TOCA RECARGAR'],

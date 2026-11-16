@@ -63,6 +63,13 @@ export function porNoNivel(p: EstadoLuta['p1'], nivel: number): void {
   p.y = pes - p.a / 2;
 }
 
+/** v0.141: no TUTORIAL e no TUTORIAL LIVRE só dá para chegar às formas já feitas em luta (`max` = a mais alta) */
+export function limitarFormas(l: { alturas: number[]; nivel: number }, max: number): void {
+  const n = Math.max(0, Math.min(Math.floor(max) || 0, l.alturas.length - 1));
+  l.alturas = l.alturas.slice(0, n + 1);
+  if (l.nivel > n) l.nivel = n;
+}
+
 /** a forma de onde o passo TRANSFORMAR começa: a anterior à escolhida (ou a normal) */
 export const nivelAntesDeTransformar = (t: Pick<EstadoTutorial, 'nivel'>) => Math.max(0, t.nivel - 1);
 
@@ -99,6 +106,8 @@ export function prepararPasso(e: EstadoLuta, t: EstadoTutorial): void {
   const p = e.p1;
   if (s.chave === 'move') t.inicio = { x: p.x, y: p.y };
   else if (s.chave === 'transform') {
+    // sem nenhuma transformação liberada (ou personagem de uma forma só), o passo TRANSFORMAR é pulado
+    if (nivelMaximo(p) === 0) { avancarPasso(e, t); return; }
     p.ki = C.KI_MAX;
     porNoNivel(p, nivelAntesDeTransformar(t));
   } else if (s.chave === 'special') p.ki = C.KI_MAX;
