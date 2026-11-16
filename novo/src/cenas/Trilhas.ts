@@ -8,7 +8,7 @@ import { FASE_DO_TEMA, ORDEM_TEMAS, TEMAS, type IdTema } from '../dados/temas';
 import { som } from '../audio/som';
 import { botao, montarTela, painel, ret, texto, type BotaoTela } from '../ui/telas';
 
-export const retLinhaTrilha = (i: number) => ret(86 + Math.floor(i / 6) * 322, 90 + (i % 6) * 38, 306, 35);
+export const retLinhaTrilha = (i: number) => ret(86 + Math.floor(i / 6) * 322, 92 + (i % 6) * 36, 306, 33); // v0.140: abaixo do subtítulo, acima do aviso
 
 export class Trilhas extends Phaser.Scene {
   private linhas: { id: IdTema; g: Phaser.GameObjects.Graphics; nome: Phaser.GameObjects.Text; b: BotaoTela; i: number }[] = [];
@@ -21,18 +21,18 @@ export class Trilhas extends Phaser.Scene {
   create(): void {
     ajustarCamera(this);
     const nav = montarTela(this, () => this.scene.start('OpcoesAudio'));
-    painel(this, 70, 46, 660, 280, 'TRILHAS SONORAS', 'Toque para ouvir a música de cada fase');
+    painel(this, 70, 30, 660, 312, 'TRILHAS SONORAS', 'Toque para ouvir a música de cada fase');
     this.linhas = ORDEM_TEMAS.map((id, i) => {
       const r = retLinhaTrilha(i);
       const g = this.add.graphics();
       const nome = texto(this, r.x + 10, r.y + 15, '', 12, '#e2e8f0', { fontFamily: "'Segoe UI', sans-serif" }).setOrigin(0, 0.75);
-      texto(this, r.x + 10, r.y + 29, `${T('Fase')} ${i + 1}: ${T(FASE_DO_TEMA[id])}`, 10, '#94a3b8', { fontFamily: "'Segoe UI', sans-serif", fontStyle: 'normal' }).setOrigin(0, 0.75);
-      const rb = ret(r.x + r.w - 92, r.y + 4, 84, 27);
+      texto(this, r.x + 10, r.y + 28, `${T('Fase')} ${i + 1}: ${T(FASE_DO_TEMA[id])}`, 10, '#94a3b8', { fontFamily: "'Segoe UI', sans-serif", fontStyle: 'normal' }).setOrigin(0, 0.75);
+      const rb = ret(r.x + r.w - 92, r.y + 3, 84, 27);
       const b = botao(this, rb, '', () => this.alternar(id));
       nav.add({ ...rb, acionar: b.acionar });
       return { id, g, nome, b, i };
     });
-    this.aviso = texto(this, TELA_L / 2, 320, '', 12, '#fca5a5', { fontFamily: "'Segoe UI', sans-serif", fontStyle: 'normal' }).setOrigin(0.5, 0.75);
+    this.aviso = texto(this, TELA_L / 2, 326, '', 12, '#fca5a5', { fontFamily: "'Segoe UI', sans-serif", fontStyle: 'normal' }).setOrigin(0.5, 0.75);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => som.musica(null));
     this.atualizar();
   }
