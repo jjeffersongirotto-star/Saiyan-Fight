@@ -6,6 +6,14 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.136',
+    titulo: 'SEM TEXTO NO MEIO DA LUTA',
+    itens: [
+      'Saíram os textos que apareciam no meio da tela durante a luta: nome da transformação, ZENKAI!, SUPER ATAQUE!, pontos ao derrubar o vilão, nome do item, AGARRADO!, onda nova, nome da fase no começo, FASE COMPLETA/FIM DE JOGO e TUTORIAL LIVRE. Os efeitos (brilho, tremida, partículas) continuam.',
+      'Só o VERSUS e o 1 JOGADOR x CPU continuam mostrando RODADA / LUTEM! e quem venceu a rodada, entre uma rodada e outra.',
+    ],
+  },
+  {
     versao: '0.135',
     titulo: 'KAMEHAMEHA PARA A FRENTE E AURA AMARELA',
     itens: [
