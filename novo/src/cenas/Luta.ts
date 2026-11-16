@@ -36,8 +36,8 @@ import { intencaoDe, padsConectados, ultimaEntrada, marcarEntrada } from '../ent
 import { modoEfetivo, mudarOpcoes, opcoes } from '../logica/opcoes';
 
 const mudarOpcoesSemPerder = () => mudarOpcoes((o) => { o.dicaTiroVista = true; });
-import { conquistas, RastreioDaLuta } from '../logica/conquistas';
-import { criarTreino, passoTreino, nivelAntesDeTransformar, criarTutorial, passoTutorial, marcarFeito, avancarPasso, passoAtual, instrucoesDoPasso, PASSOS_DO_TUTORIAL, type EstadoTutorial } from '../logica/tutorial';
+import { conquistas, nivelLiberado, RastreioDaLuta } from '../logica/conquistas';
+import { criarTreino, limitarFormas, passoTreino, nivelAntesDeTransformar, criarTutorial, passoTutorial, marcarFeito, avancarPasso, passoAtual, instrucoesDoPasso, PASSOS_DO_TUTORIAL, type EstadoTutorial } from '../logica/tutorial';
 import { TF } from '../logica/idioma';
 import { nomeDaTecla, NOMES_BOTOES } from '../logica/opcoes';
 
@@ -124,6 +124,8 @@ export class Luta extends Phaser.Scene {
       this.tutorial = tu.t;
       this.estado = tu.luta;
     } else if (this.treino) this.estado = criarTreino(fichaDoPersonagem(this.dados.p1), semente, this.dados.nivel ?? 0).luta;
+    // TUTORIAL / TUTORIAL LIVRE: transformar só nas formas já feitas em luta (v0.141)
+    if (this.tutorial || this.treino) limitarFormas(this.estado.p1, Math.max(this.dados.nivel ?? 0, nivelLiberado(conquistas(), this.dados.p1)));
     else this.estado = this.fase
       ? criarHistoria(fichaDoPersonagem(this.dados.p1), fichaDoPersonagem(this.dados.p2), this.fase, this.dados.modoFase ?? 'normal', semente)
       : criarLuta(fichaDoPersonagem(this.dados.p1), fichaDoPersonagem(this.dados.p2), semente);

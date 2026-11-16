@@ -16,7 +16,7 @@ import { escalaDaAltura } from '../logica/luta';
 import { chaveFoto, fazerFotos } from '../ui/fotoFase';
 import { retratoDe } from '../ui/criados';
 import { cadeado, medalha } from '../ui/esfera';
-import { conquistas, CONQUISTAS, type LinhaRanking } from '../logica/conquistas';
+import { conquistas, CONQUISTAS, formaLiberada, type LinhaRanking } from '../logica/conquistas';
 import { pedirMinion, chaveDoMinion } from '../ui/historia';
 import type { ModeloMinion } from '../logica/minions';
 
@@ -124,8 +124,16 @@ export class Personagens extends Phaser.Scene {
       z.on('pointerup', (pp: Phaser.Input.Pointer) => { if (pp.getDistance() < 8 && !this.quadro) abrir(); });
       // botão "i" (canto de cima à direita)
       const ir = ret(r.x + r.w - 22, r.y + 4, 18, 18);
-      const gi = this.add.graphics().fillStyle(0x0a1e46, 0.92).fillCircle(ir.x + 9, ir.y + 9, 8).lineStyle(1.5, 0x7dd3fc, 1).strokeCircle(ir.x + 9, ir.y + 9, 8);
-      const ti = this.add.text(ir.x + 9, ir.y + 10, 'i', estiloTexto({ fontFamily: 'Georgia, serif', fontStyle: 'bold', fontSize: '12px', color: '#e0f2fe' })).setOrigin(0.5);
+      // v0.141: botão redondo como o de voltar (azul-escuro, contorno laranja) com o "i" DESENHADO no centro exato
+      // (a letra da fonte ficava fora do meio do círculo)
+      const cx = ir.x + 9, cy = ir.y + 9;
+      const gi = this.add.graphics()
+        .fillStyle(0x000000, 0.35).fillCircle(cx + 0.6, cy + 1.6, 9)
+        .fillStyle(0x0f2c56, 1).fillCircle(cx, cy, 9)
+        .lineStyle(1.6, 0xe85d04, 1).strokeCircle(cx, cy, 9)
+        .fillStyle(0xfff0a6, 1).fillCircle(cx, cy - 4.2, 1.5)
+        .fillRoundedRect(cx - 1.25, cy - 1.6, 2.5, 6.6, 1);
+      const ti = this.add.zone(cx, cy, 1, 1);
       const zi = this.add.zone(ir.x - 2, ir.y - 2, ir.w + 4, ir.h + 4).setOrigin(0).setInteractive({ useHandCursor: true });
       zi.on('pointerup', () => { if (!this.quadro) this.abrirFormas(id, false); });
       this.lista.add([g, img, nome, z, gi, ti, zi]);
@@ -177,7 +185,9 @@ export class Personagens extends Phaser.Scene {
     const bloqueio = this.add.zone(0, 0, TELA_L, TELA_A).setOrigin(0).setInteractive();
     itens.push(bloqueio, fundo);
     itens.push(this.add.text(TELA_L / 2, py + 24, p.nome, estiloTexto({ fontFamily: "'Trebuchet MS', sans-serif", fontStyle: 'bold', fontSize: '16px', color: '#fff0a6' })).setOrigin(0.5, 0.75));
-    itens.push(texto(this, TELA_L / 2, py + 40, escolher ? T('EM QUAL FORMA ELE APARECE NESTA FASE?') : `${T(p.alinhamento)}  ·  ${T('ESPECIAL')}: ${p.especial}`, 10, '#9fb3d8', { fontStyle: 'normal' }).setOrigin(0.5, 0.75));
+    // v0.141: subtítulo legível (antes cinza-azulado, fino e pequeno)
+    itens.push(this.add.text(TELA_L / 2, py + 42, escolher ? T('EM QUAL FORMA ELE APARECE NESTA FASE?') : `${T(p.alinhamento)}  ·  ${T('ESPECIAL')}: ${p.especial}`,
+      estiloTexto({ fontFamily: "'Trebuchet MS', sans-serif", fontStyle: 'bold', fontSize: '12px', color: '#e0f2fe', stroke: '#06122c', strokeThickness: 3 })).setOrigin(0.5, 0.75));
     const escalas = p.formas.map((f) => escalaDaAltura(f.altura));
     const maior = Math.max(1, ...escalas);
     const nq = (this.navQuadro ??= new Navegacao(this, () => this.fecharQuadro()));
@@ -190,13 +200,16 @@ export class Personagens extends Phaser.Scene {
     p.formas.forEach((f, i) => {
       const x = x0 + i * (colW + gap);
       const g = this.add.graphics().fillStyle(0x174f78, escolher ? 0.55 : 0.35).fillRect(x, topo, colW, altura).lineStyle(escolher ? 2 : 1, escolher ? 0xe85d04 : 0x7dd3fc, escolher ? 1 : 0.5).strokeRect(x, topo, colW, altura);
-      const nome = (i === 0 ? T('FORMA BASE') : f.nome.toUpperCase());
+      // forma ainda não feita em luta: só a silhueta, sem o nome (o painel de escolher o vilão mostra tudo)
+      const oculta = !escolher && !formaLiberada(conquistas(), id, i);
+      const nome = (i === 0 ? T('FORMA BASE') : oculta ? '???' : f.nome.toUpperCase());
       const t = texto(this, x + colW / 2, topo + 14, nome, 10, i ? '#ffd23f' : '#e0f2fe').setOrigin(0.5, 0.75);
       for (let px2 = 10; px2 > 6 && t.width > colW - 6; px2--) t.setFontSize(px2 - 1);
       const k = escalas[i] / maior;
       const img = this.add.image(x + colW / 2, topo + altura - 6, chaves[i], 'idle/0').setOrigin(0.5, 1);
       const ih = (altura - 26) * k, iw = Math.min(colW - 8, ((altura - 26) * 96) / 112) * k;
       img.setScale(Math.min(iw / img.width, ih / img.height) * 1.25);
+      if (oculta) img.setTintFill(0x020617).setAlpha(0.9);
       conteudo.add([g, t, img]);
       if (escolher) {
         const z = this.add.zone(x, topo, colW, altura).setOrigin(0).setInteractive({ useHandCursor: true });

@@ -1,6 +1,7 @@
 // Escolha dos lutadores (VERSUS: jogador 1 e depois jogador 2; contra a CPU: o seu e o adversário).
 // Só carrega os retratos (um atlas pequeno com o 1º quadro parado de cada um); as formas vêm na cena da luta.
 import Phaser from 'phaser';
+import { conquistas, nivelLiberado } from '../logica/conquistas';
 import { ajustarCamera, estiloTexto } from '../ui/resolucao';
 import { TELA_L } from '../logica/constantes';
 import { T } from '../logica/idioma';
@@ -118,7 +119,8 @@ export class Selecao extends Phaser.Scene {
   private escolher(id: string): void {
     if (this.quadroForma) return;
     if (this.modo === 'tutorial' || this.modo === 'treino') {
-      if (PERSONAGENS[id].formas.length <= 1) this.comecarTreino(id, 0);
+      // só as formas já feitas em luta (v0.141): sem nenhuma transformação feita, começa direto na normal
+      if (nivelLiberado(conquistas(), id) === 0) this.comecarTreino(id, 0);
       else this.abrirFormas(id);
       return;
     }
@@ -142,7 +144,7 @@ export class Selecao extends Phaser.Scene {
 
   /** escolha da forma (TUTORIAL / TUTORIAL LIVRE): um botão por forma, na ordem das transformações */
   private abrirFormas(id: string): void {
-    const p = PERSONAGENS[id], n = p.formas.length;
+    const p = PERSONAGENS[id], formas = p.formas.slice(0, nivelLiberado(conquistas(), id) + 1), n = formas.length;
     const larg = 300, altB = 26, esp = 5, alt = 58 + n * (altB + esp) + 36;
     const x0 = (TELA_L - larg) / 2, y0 = Math.max(6, (350 - alt) / 2);
     const itens: Phaser.GameObjects.GameObject[] = [];
@@ -153,7 +155,7 @@ export class Selecao extends Phaser.Scene {
     itens.push(this.add.text(TELA_L / 2, y0 + 36, T(this.modo === 'tutorial' ? 'NO PASSO TRANSFORMAR VOCÊ SE TRANSFORMA NELA' : 'VOCÊ COMEÇA NELA E PODE SE TRANSFORMAR NAS PRÓXIMAS'),
       estiloTexto({ fontFamily: 'Arial', fontSize: '10px', color: '#dfe7ff' })).setOrigin(0.5));
     const molduras: Phaser.GameObjects.Graphics[] = [];
-    p.formas.forEach((f, i) => {
+    formas.forEach((f, i) => {
       const y = y0 + 52 + i * (altB + esp);
       const g = this.add.graphics();
       molduras.push(g);
