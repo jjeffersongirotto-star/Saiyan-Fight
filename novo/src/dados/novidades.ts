@@ -6,6 +6,14 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.139',
+    titulo: 'ESCOLHA MAIS LIMPA E SEM PISCAR NO COMEÇO',
+    itens: [
+      'Na escolha do personagem aparece só o nome (saíram o alinhamento, o golpe e a lista de formas).',
+      'Ao começar a luta (e cada rodada) os lutadores não ficam mais piscando: a proteção do começo continua, mas sem piscar. Piscar agora só quando o lutador é atingido.',
+    ],
+  },
+  {
     versao: '0.138',
     titulo: 'APP PARA WINDOWS',
     itens: [
