@@ -7,7 +7,7 @@
 // atualizado a cada 2 e depois a cada 3 quadros (a câmera anda devagar).
 import Phaser from 'phaser';
 import { TELA_A, TELA_L } from '../logica/constantes';
-import { aoFaltarDesempenho } from './resolucao';
+import { aoFaltarDesempenho, ESCALA_RENDER, NO_PC } from './resolucao';
 import type { CenariosLegado } from '../legado/cenarios-legado';
 import { TEMAS } from '../dados/temas';
 
@@ -38,8 +38,9 @@ export class ArenaAntiga {
   private tex: Phaser.Textures.CanvasTexture;
   private img: Phaser.GameObjects.Image;
   private legado: CenariosLegado;
-  /** resolução do canvas do cenário: sempre 1x (ver o topo) */
-  private readonly k = 1;
+  /** resolução do canvas do cenário: 1x no celular (ver o topo); no computador 2x se a tela está em 2x ou mais
+   *  (v0.137: em Full HD o cenário em 1x esticado ficava borrado). O vigia ainda pode baixar a tela depois. */
+  private readonly k = NO_PC && ESCALA_RENDER >= 2 ? 2 : 1;
   /** atualiza 1 a cada `pular` quadros (1 = todo quadro); o mesmo valor vale para as próximas lutas da sessão */
   private get pular() { return pularDaSessao; }
   private soltarAlivio: () => void;

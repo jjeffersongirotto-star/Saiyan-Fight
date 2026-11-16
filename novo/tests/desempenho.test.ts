@@ -48,9 +48,17 @@ describe('vigia de desempenho', () => {
     expect(escalaInicial(2.625)).toBe(2);
     expect(escalaInicial(1)).toBe(1);
   });
-  it('o cenário 3D é desenhado em 1x e só alivia pelo vigia (não pelo tempo do processador)', () => {
+  it('computador: desenha na resolução do monitor (Full HD = 2,4x), até 3x; celular continua 1 a 2', () => {
+    expect(escalaInicial(1, 1920, 1080, false)).toBe(2.4);   // Full HD
+    expect(escalaInicial(1, 1366, 768, false)).toBe(1.7);    // HD
+    expect(escalaInicial(1, 3840, 2160, false)).toBe(3);     // 4K: limite
+    expect(escalaInicial(1.25, 1536, 864, false)).toBe(2.4); // Full HD com zoom do Windows 125%
+    expect(escalaInicial(2.625, 915, 412, true)).toBe(2);    // celular
+    expect(degrauAbaixo(2.4)).toBe(2);
+  });
+  it('o cenário 3D: 1x no celular (2x só no PC em 2x ou mais) e só alivia pelo vigia', () => {
     const src = readFileSync(join(__dirname, '..', 'src', 'ui', 'arena.ts'), 'utf8');
-    expect(src).toContain('private readonly k = 1;');
+    expect(src).toContain('private readonly k = NO_PC && ESCALA_RENDER >= 2 ? 2 : 1;');
     expect(src).toContain('aoFaltarDesempenho');
     expect(src).not.toContain('LIMITE_MS');
   });
