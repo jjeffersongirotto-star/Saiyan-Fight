@@ -6,6 +6,16 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.144',
+    titulo: 'POLIMENTO',
+    itens: [
+      'Escolha do lutador no mesmo visual das outras telas: a grade à direita e, à esquerda, o lutador em foco grande e animado. O escolhido pelo jogador 1 fica marcado com 1P.',
+      'Antes da luta (1 JOGADOR x CPU e VERSUS), uma tela de VERSUS com os dois lutadores. Toque para pular.',
+      'Na luta: o pedaço de vida perdido fica branco e escorre, a última vida pulsa, e o golpe que fecha a rodada fica em câmera lenta.',
+      'PERSONAGENS com os lutadores maiores; CONQUISTAS com mais contraste nas que faltam e uma barra de progresso; os botões dão um clarão ao tocar.',
+    ],
+  },
+  {
     versao: '0.143',
     titulo: 'MENU NOVO',
     itens: [

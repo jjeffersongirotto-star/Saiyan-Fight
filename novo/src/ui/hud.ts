@@ -5,10 +5,15 @@ import { KI_MAX, PODER_TRANSFORMACAO_QUADROS, RODADAS_PARA_VENCER, TELA_L } from
 import type { EstadoLuta, IdJogador } from '../logica/tipos';
 import { formaDoNivel, PERSONAGENS } from '../dados/personagens';
 
+const RASTRO_MS = 520;
+
 export class Hud {
   private g: Phaser.GameObjects.Graphics;
   private nomes: Record<IdJogador, Phaser.GameObjects.Text>;
   private textoAtual: Record<IdJogador, string> = { p1: '', p2: '' };
+  /** v0.144: pedaço de vida que acabou de ser perdido: fica branco e escorre em ~0,5 s (rastro) */
+  private vidaAntes: Record<IdJogador, number> = { p1: -1, p2: -1 };
+  private rastro: Record<IdJogador, { idx: number; ate: number }[]> = { p1: [], p2: [] };
 
   constructor(cena: Phaser.Scene, private readonly sufixoP2 = '') {
     this.g = cena.add.graphics().setDepth(800);
@@ -36,11 +41,24 @@ export class Hud {
       if (texto !== this.textoAtual[id]) { this.nomes[id].setText(texto); this.textoAtual[id] = texto; }
       const larg = 250, x0 = esq ? 16 : TELA_L - 16 - larg, y = 22;
       const ped = l.vidaMax, esp = 4, w = (larg - esp * (ped - 1)) / ped;
+      const agora = performance.now();
+      if (this.vidaAntes[id] > l.vida) for (let v = l.vida; v < this.vidaAntes[id]; v++) this.rastro[id].push({ idx: v, ate: agora + RASTRO_MS });
+      this.vidaAntes[id] = l.vida;
+      this.rastro[id] = this.rastro[id].filter((r) => r.ate > agora && r.idx >= l.vida);
+      // a última vida pulsa
+      const pulso = l.vida <= 1 ? 0.75 + 0.25 * Math.sin(agora / 110) : 1;
       for (let i = 0; i < ped; i++) {
         const idx = esq ? i : ped - 1 - i; // o lado de dentro esvazia primeiro
-        const cheio = idx < l.vida;
-        g.fillStyle(0x000000, 0.55).fillRect(x0 + i * (w + esp) - 1, y - 1, w + 2, 14);
-        g.fillStyle(cheio ? (l.vida <= 1 ? 0xff3b30 : 0x34d058) : 0x3a1010, 1).fillRect(x0 + i * (w + esp), y, w, 12);
+        const cheio = idx < l.vida, bx = x0 + i * (w + esp);
+        g.fillStyle(0x000000, 0.55).fillRect(bx - 1, y - 1, w + 2, 14);
+        g.fillStyle(cheio ? (l.vida <= 1 ? 0xff3b30 : 0x34d058) : 0x3a1010, cheio ? pulso : 1).fillRect(bx, y, w, 12);
+        // brilho em cima de cada pedaço cheio
+        if (cheio) g.fillStyle(0xffffff, 0.28).fillRect(bx, y, w, 3);
+        const r = this.rastro[id].find((q) => q.idx === idx);
+        if (r) {
+          const t = (r.ate - agora) / RASTRO_MS, rw = w * t;
+          g.fillStyle(0xffffff, 0.5 + 0.5 * t).fillRect(esq ? bx + w - rw : bx, y, rw, 12);
+        }
       }
       // ki (dourado cheio); por baixo, o tempo que resta do poder da transformação
       const ki = l.ki / KI_MAX, kl = larg * 0.7, kx = esq ? x0 : x0 + larg * 0.3;

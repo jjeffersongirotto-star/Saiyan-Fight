@@ -18,6 +18,7 @@ import { mostrarBarraDeCarregamento } from '../ui/barra';
 import { ControlesToque } from '../ui/controlesToque';
 import { criarAnimacoes, liberarFormas, metaDoAtlas, pedirFormas } from '../ui/formas';
 import { Hud } from '../ui/hud';
+import { mostrarVersus } from '../ui/apresentacao';
 import { desenharFundo } from './fundo';
 import type { DadosDaLuta } from './Menu';
 import type { DadosDaVitoria } from './Vitoria';
@@ -41,10 +42,17 @@ import { criarTreino, limitarFormas, passoTreino, nivelAntesDeTransformar, criar
 import { TF } from '../logica/idioma';
 import { nomeDaTecla, NOMES_BOTOES } from '../logica/opcoes';
 
+/** câmera lenta do golpe final: ~0,8 s a 30% da velocidade */
+const LENTO_MS = 800, VELOCIDADE_LENTA = 0.3;
+
 export class Luta extends Phaser.Scene {
   private dados!: DadosDaLuta;
   private estado!: EstadoLuta;
   private relogio = new RelogioFixo();
+  /** tela de VERSUS na frente: a luta ainda não corre */
+  private apresentando = false;
+  /** v0.144: câmera lenta no golpe que fecha a rodada (ms que faltam) */
+  private lentoMs = 0;
   private teclado = new Teclado();
   private toque!: ControlesToque;
   private hud!: Hud;
@@ -113,6 +121,8 @@ export class Luta extends Phaser.Scene {
 
   create(): void {
     ajustarCamera(this);
+    this.apresentando = false;
+    this.lentoMs = 0;
     this.arena = null;
     this.ligarArena();
     const semente = Date.now() | 0;
@@ -152,7 +162,15 @@ export class Luta extends Phaser.Scene {
     if (this.fase) { /* história: começa direto */ }
     else if (this.tutorial) { this.hud.esconder(); this.sprites.p2.setVisible(false); }
     else if (this.treino) { this.hud.esconder(); this.sprites.p2.setVisible(false); this.criarDicaDoTreino(); }
-    else this.mostrarAviso(`${T('RODADA')} 1 — ${T('LUTEM!')}`, 1200);
+    else {
+      // v0.144: tela de VERSUS antes da 1ª rodada (a luta só começa depois dela)
+      this.apresentando = true;
+      mostrarVersus(this, { id: this.dados.p1, nivel: this.estado.p1.nivel }, { id: this.dados.p2, nivel: this.estado.p2.nivel }, () => {
+        this.apresentando = false;
+        this.relogio.zerar();
+        this.mostrarAviso(`${T('RODADA')} 1 — ${T('LUTEM!')}`, 1200);
+      });
+    }
     som.musica(this.fase?.musica ?? (this.idArena ? faseDe(this.idArena).musica : TEMA_DA_LUTA));
 
     this.toque = new ControlesToque(this);
@@ -386,10 +404,13 @@ export class Luta extends Phaser.Scene {
   }
 
   update(_t: number, dt: number): void {
+    if (this.apresentando) { this.desenhar(this.relogio.alfa, dt / 1000); return; }
     this.vigiarPausa(dt);
     if (this.pausado) return;
     this.dicaDoTiroContinuo(dt / 1000);
-    const passos = this.relogio.avancar(dt);
+    const lento = this.lentoMs > 0;
+    if (lento) this.lentoMs -= dt;
+    const passos = this.relogio.avancar(lento ? dt * VELOCIDADE_LENTA : dt);
     for (let i = 0; i < passos; i++) {
       const entradas = this.lerEntradas();
       const eventos = this.tutorial ? passoTutorial(this.estado, this.tutorial, entradas.p1)
@@ -543,6 +564,7 @@ export class Luta extends Phaser.Scene {
         break;
       case 'fimRodada': {
         const v = ev.vencedor;
+        if (v) { this.lentoMs = LENTO_MS; this.piscarTela(0xffffff, 10); }
         if (this.estado.historia) break; // a tela FimHistoria já mostra o resultado
         this.mostrarAviso(v ? `${PERSONAGENS[this.estado[v].personagem].nome} ${T('VENCEU')}!` : T('EMPATE'), 2200);
         break;

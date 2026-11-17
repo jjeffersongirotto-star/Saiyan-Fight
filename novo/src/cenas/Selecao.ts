@@ -1,5 +1,7 @@
 // Escolha dos lutadores (VERSUS: jogador 1 e depois jogador 2; contra a CPU: o seu e o adversário).
 // Só carrega os retratos (um atlas pequeno com o 1º quadro parado de cada um); as formas vêm na cena da luta.
+// v0.144: mesmo visual das outras telas (fundo, ← e tela cheia), grade à direita e, à esquerda, o lutador em foco
+// grande e animado (o atlas da forma normal vem ~0,3 s depois de parar no cartão; até lá, o retrato).
 import Phaser from 'phaser';
 import { conquistas, nivelLiberado } from '../logica/conquistas';
 import { ajustarCamera, estiloTexto } from '../ui/resolucao';
@@ -8,7 +10,11 @@ import { T } from '../logica/idioma';
 import { ORDEM_PERSONAGENS, PERSONAGENS } from '../dados/personagens';
 import { mostrarBarraDeCarregamento } from '../ui/barra';
 import { criarBotao } from '../ui/botao';
-import { desenharFundo } from './fundo';
+import { botao, botaoTelaCheia, botaoVoltar, fundoDeMenu, ret } from '../ui/telas';
+import { chaveDoAtlas } from '../dados/personagens';
+import { PALETAS_AURA } from '../logica/efeitos';
+import { criarAnimacoes, liberarFormas, metaDoAtlas, pedirFormas } from '../ui/formas';
+import { escalaDaAltura } from '../logica/luta';
 import type { DadosDaLuta } from './Menu';
 import { aoApertar } from '../entrada/teclas';
 import { som } from '../audio/som';
@@ -16,16 +22,22 @@ import { faseDe } from '../dados/fases';
 import { retratoDe } from '../ui/criados';
 import type { ModoFase } from '../logica/ondas';
 
-// 16 personagens: 2 linhas de 8. Com os criados no editor do antigo os cartões diminuem (3 linhas).
-let COLUNAS = 8, CARTA_L = 84, CARTA_A = 92, ESP = 8, LINHAS = 2;
-let X0 = 0;
-const Y0 = 46;
+// grade à direita: 16 personagens = 6 colunas x 3 linhas; com os criados no editor os cartões diminuem
+let COLUNAS = 6, CARTA_L = 80, CARTA_A = 78, ESP = 7;
+const GRADE = { x: 248, y: 52, w: 532, h: 250 };
+let X0 = GRADE.x;
+const Y0 = GRADE.y;
 function medir(n: number): void {
-  if (n <= 16) { COLUNAS = 8; CARTA_L = 84; CARTA_A = 92; ESP = 8; }
-  else { COLUNAS = Math.max(9, Math.ceil(n / 3)); ESP = 6; CARTA_L = Math.floor((TELA_L - 40 - (COLUNAS - 1) * ESP) / COLUNAS); CARTA_A = Math.min(62, Math.round(CARTA_L * 1.1)); }
-  LINHAS = Math.ceil(n / COLUNAS);
-  X0 = (TELA_L - (COLUNAS * CARTA_L + (COLUNAS - 1) * ESP)) / 2;
+  COLUNAS = n <= 18 ? 6 : Math.ceil(n / 4);
+  const linhas = Math.ceil(n / COLUNAS);
+  ESP = n <= 18 ? 7 : 5;
+  CARTA_L = Math.floor((GRADE.w - (COLUNAS - 1) * ESP) / COLUNAS);
+  CARTA_A = Math.min(78, Math.floor((GRADE.h - (linhas - 1) * ESP) / linhas));
+  X0 = GRADE.x + (GRADE.w - (COLUNAS * CARTA_L + (COLUNAS - 1) * ESP)) / 2;
 }
+/** quadro do lutador em foco (esquerda) */
+const VITRINE = { x: 18, y: 52, w: 216, h: 250 };
+const CORES_JOGADOR = { p1: 0x3fa9ff, p2: 0xff4a4a };
 
 export class Selecao extends Phaser.Scene {
   private modo!: DadosDaLuta['modo'];
@@ -35,7 +47,10 @@ export class Selecao extends Phaser.Scene {
   private molduras: Phaser.GameObjects.Graphics[] = [];
   private titulo!: Phaser.GameObjects.Text;
   private info!: Phaser.GameObjects.Text;
-  private formas!: Phaser.GameObjects.Text;
+  private vitrine!: { fundo: Phaser.GameObjects.Graphics; img: Phaser.GameObjects.Image; sprite: Phaser.GameObjects.Sprite | null; id: string };
+  private esperaVitrine: Phaser.Time.TimerEvent | null = null;
+  /** "1P" no cartão já escolhido pelo jogador 1 */
+  private marcaP1!: Phaser.GameObjects.Text;
   /** modo história: só o herói é escolhido (o vilão é o da fase) */
   private fase: string | undefined;
   private modoFase: ModoFase | undefined;
@@ -67,27 +82,39 @@ export class Selecao extends Phaser.Scene {
   create(): void {
     som.musica(null); // a música é só da luta (como no jogo antigo)
     ajustarCamera(this);
-    desenharFundo(this);
-    this.add.rectangle(TELA_L / 2, 175, TELA_L, 350, 0x000000, 0.45);
-    this.titulo = this.add.text(TELA_L / 2, 22, '', estiloTexto({ fontFamily: 'Arial Black, Arial', fontSize: '20px', color: '#ffd23a', stroke: '#8a2b00', strokeThickness: 5 })).setOrigin(0.5);
+    fundoDeMenu(this);
+    this.add.rectangle(TELA_L / 2, 175, TELA_L, 350, 0x020a1d, 0.55);
+    this.titulo = this.add.text(TELA_L / 2, 26, '', estiloTexto({ fontFamily: "'Trebuchet MS', Arial, sans-serif", fontStyle: 'bold italic', fontSize: '20px', color: '#ffd23f' })).setOrigin(0.5);
+    this.titulo.setStroke('#7c2d12', 5);
+    botaoVoltar(this, () => this.voltar());
+    botaoTelaCheia(this);
     medir(ORDEM_PERSONAGENS.length);
     ORDEM_PERSONAGENS.forEach((id, i) => {
       const { x, y } = this.posicao(i);
-      this.add.rectangle(x, y, CARTA_L, CARTA_A, 0x14204a, 0.9).setOrigin(0, 0);
-      const img = this.add.image(x + CARTA_L / 2, y + CARTA_A - 4, ...retratoDe(id)).setOrigin(0.5, 103 / 112);
-      img.setScale((CARTA_A - 8) / 112 / 1.5 * 1.05);
-      this.add.text(x + CARTA_L / 2, y + CARTA_A - 2, PERSONAGENS[id].nome, estiloTexto({ fontFamily: 'Arial', fontSize: '9px', color: '#ffffff', stroke: '#000000', strokeThickness: 3 })).setOrigin(0.5, 1);
+      const pal = PALETAS_AURA[PERSONAGENS[id].formas[0].aura];
+      this.add.graphics().fillGradientStyle(0x12305e, 0x12305e, 0x061634, 0x061634, 0.95).fillRect(x, y, CARTA_L, CARTA_A)
+        .fillStyle(pal[1], 0.16).fillEllipse(x + CARTA_L / 2, y + CARTA_A * 0.5, CARTA_L * 0.9, CARTA_A * 0.75)
+        .lineStyle(1, 0x2b4f86, 1).strokeRect(x, y, CARTA_L, CARTA_A);
+      const img = this.add.image(x + CARTA_L / 2, y + CARTA_A - 13, ...retratoDe(id)).setOrigin(0.5, 103 / 112);
+      img.setScale(Math.min((CARTA_A + 2) / img.height, (CARTA_L * 1.4) / img.width));
+      const nome = this.add.text(x + CARTA_L / 2, y + CARTA_A - 2, PERSONAGENS[id].nome, estiloTexto({ fontFamily: "'Trebuchet MS', Arial, sans-serif", fontStyle: 'bold', fontSize: '9px', color: '#ffffff', stroke: '#000000', strokeThickness: 3 })).setOrigin(0.5, 1);
+      if (nome.width > CARTA_L - 4) nome.setScale((CARTA_L - 4) / nome.width, 1);
       const moldura = this.add.graphics();
       this.molduras.push(moldura);
       const zona = this.add.zone(x, y, CARTA_L, CARTA_A).setOrigin(0, 0).setInteractive({ useHandCursor: true });
       zona.on('pointerover', (p: Phaser.Input.Pointer) => { if (!p.wasTouch) this.focar(i); });
       zona.on('pointerup', () => (this.foco === i ? this.escolher(id) : this.focar(i)));
     });
-    const yInfo = Y0 + LINHAS * (CARTA_A + ESP) + 6;
-    this.info = this.add.text(X0, yInfo, '', estiloTexto({ fontFamily: 'Arial Black, Arial', fontSize: '15px', color: '#ffffff' }));
-    this.formas = this.add.text(X0, yInfo + 22, '', estiloTexto({ fontFamily: 'Arial', fontSize: '11px', color: '#dfe7ff', wordWrap: { width: 520 } }));
-    criarBotao(this, TELA_L - 190, yInfo + 24, T('ALEATÓRIO'), () => this.escolher(ORDEM_PERSONAGENS[Math.floor(Math.random() * ORDEM_PERSONAGENS.length)]), 130);
-    criarBotao(this, TELA_L - 60, yInfo + 24, T('VOLTAR'), () => this.voltar(), 100);
+    this.marcaP1 = this.add.text(0, 0, '1P', estiloTexto({ fontFamily: 'Arial Black, Arial', fontSize: '9px', color: '#ffffff' })).setOrigin(0.5).setDepth(4).setVisible(false);
+    this.molduras.forEach((m) => m.setDepth(3));
+    // quadro do lutador em foco
+    const fundo = this.add.graphics();
+    const img = this.add.image(VITRINE.x + VITRINE.w / 2, VITRINE.y + VITRINE.h - 46, 'retratos', ORDEM_PERSONAGENS[0]).setOrigin(0.5, 103 / 112);
+    this.vitrine = { fundo, img, sprite: null, id: '' };
+    this.info = this.add.text(VITRINE.x + VITRINE.w / 2 - 6, VITRINE.y + VITRINE.h - 22, '', estiloTexto({ fontFamily: "'Trebuchet MS', Arial, sans-serif", fontStyle: 'bold italic', fontSize: '19px', color: '#fff0a6' })).setOrigin(0.5).setDepth(3);
+    this.info.setStroke('#020617', 5);
+    botao(this, ret(GRADE.x + GRADE.w - 150, 312, 150, 28), 'ALEATÓRIO', () => this.escolher(ORDEM_PERSONAGENS[Math.floor(Math.random() * ORDEM_PERSONAGENS.length)]), { cor: '#fff0a6' });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => { this.esperaVitrine?.remove(); this.esperaVitrine = null; });
 
     const mover = (dx: number, dy: number) => {
       const n = ORDEM_PERSONAGENS.length;
@@ -215,15 +242,63 @@ export class Selecao extends Phaser.Scene {
         : this.modo === 'tutorial' ? T('TUTORIAL: ESCOLHA O LUTADOR') : this.modo === 'treino' ? T('TUTORIAL LIVRE: ESCOLHA O LUTADOR')
         : this.escolhendo === 'p1' ? T('JOGADOR 1: ESCOLHA O LUTADOR') : this.modo === 'cpu' ? T('ESCOLHA O ADVERSÁRIO (CPU)') : T('JOGADOR 2: ESCOLHA O LUTADOR'),
     );
+    const corJ = CORES_JOGADOR[this.escolhendo];
+    this.marcaP1.setVisible(!!this.escolhaP1);
     ORDEM_PERSONAGENS.forEach((id, i) => {
       const { x, y } = this.posicao(i);
       const g = this.molduras[i].clear();
-      if (id === this.escolhaP1) g.lineStyle(3, 0x3fa9ff, 1).strokeRect(x - 2, y - 2, CARTA_L + 4, CARTA_A + 4);
-      if (i === this.foco) g.lineStyle(3, this.escolhendo === 'p1' ? 0x3fa9ff : 0xff4a4a, 1).strokeRect(x, y, CARTA_L, CARTA_A);
+      if (id === this.escolhaP1) {
+        g.lineStyle(2, CORES_JOGADOR.p1, 1).strokeRect(x - 1, y - 1, CARTA_L + 2, CARTA_A + 2);
+        g.fillStyle(CORES_JOGADOR.p1, 1).fillRect(x, y, 20, 12);
+        this.marcaP1.setPosition(x + 10, y + 6.5);
+      }
+      if (i === this.foco) g.lineStyle(7, corJ, 0.3).strokeRect(x - 2, y - 2, CARTA_L + 4, CARTA_A + 4).lineStyle(3, corJ, 1).strokeRect(x, y, CARTA_L, CARTA_A);
     });
-    const p = PERSONAGENS[ORDEM_PERSONAGENS[this.foco]];
+    const id = ORDEM_PERSONAGENS[this.foco];
     // v0.139: só o nome (sem alinhamento, golpe e lista de formas)
-    this.info.setText(p.nome);
-    this.formas.setText('');
+    this.info.setText(PERSONAGENS[id].nome);
+    this.info.setScale(Math.min(1, (VITRINE.w - 30) / (this.info.width || 1)));
+    this.mostrarNaVitrine(id);
+  }
+
+  /** quadro da esquerda: o retrato na hora; depois de ~0,3 s parado no cartão, o lutador animado */
+  private mostrarNaVitrine(id: string): void {
+    const v = this.vitrine;
+    if (v.id === id) return;
+    v.id = id;
+    const pal = PALETAS_AURA[PERSONAGENS[id].formas[0].aura], corJ = CORES_JOGADOR[this.escolhendo];
+    const { x, y, w, h } = VITRINE, s = 22;
+    const forma = [{ x: x + s, y }, { x: x + w, y }, { x: x + w - s, y: y + h }, { x, y: y + h }];
+    v.fundo.clear().fillStyle(0x000000, 0.4).fillPoints(forma.map((p) => ({ x: p.x + 3, y: p.y + 5 })), true)
+      .fillGradientStyle(0x0f2c56, 0x0f2c56, 0x030d23, 0x030d23, 0.96).fillPoints(forma, true)
+      .fillStyle(pal[1], 0.22).fillEllipse(x + w / 2, y + h * 0.48, w * 0.9, h * 0.7)
+      .fillStyle(pal[2], 0.12).fillEllipse(x + w / 2, y + h * 0.48, w * 0.5, h * 0.45)
+      .fillStyle(0x000000, 0.35).fillEllipse(x + w / 2, y + h - 46, 90, 10)
+      .fillStyle(0x020617, 0.85).fillPoints([{ x: x + s * 0.2, y: y + h - 40 }, { x: x + w - s * 0.8, y: y + h - 40 }, { x: x + w - s, y: y + h }, { x, y: y + h }], true)
+      .lineStyle(2.5, corJ, 1).strokePoints(forma, true);
+    v.sprite?.destroy();
+    v.sprite = null;
+    const [k, fr] = retratoDe(id);
+    v.img.setTexture(k, fr).setVisible(true);
+    v.img.setScale((h - 70) / 0.8 / v.img.height);
+    this.esperaVitrine?.remove();
+    if (PERSONAGENS[id].criado) return;
+    this.esperaVitrine = this.time.delayedCall(300, () => {
+      const chave = chaveDoAtlas(id, 0);
+      const pronto = () => {
+        if (!this.sys.isActive() || v.id !== id || !this.textures.exists(chave)) return;
+        const manter = new Set([chave]);
+        if (this.escolhaP1) manter.add(chaveDoAtlas(this.escolhaP1, 0));
+        liberarFormas(this, manter);
+        criarAnimacoes(this, chave);
+        const k2 = 1.95 * escalaDaAltura(PERSONAGENS[id].formas[0].altura);
+        v.sprite = this.add.sprite(v.img.x, v.img.y, chave, 'idle/0').setOrigin(0.5, 103 / 112).setScale(k2 / metaDoAtlas(this, chave).escala).setDepth(2);
+        v.sprite.play(`${chave}:idle`);
+        v.img.setVisible(false);
+      };
+      if (pedirFormas(this, [chave]) === 0) { pronto(); return; }
+      this.load.once(Phaser.Loader.Events.COMPLETE, pronto);
+      this.load.start();
+    });
   }
 }
