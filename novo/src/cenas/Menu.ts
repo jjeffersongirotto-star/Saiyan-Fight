@@ -144,11 +144,15 @@ export class Menu extends Phaser.Scene {
   // ---------- vitrine: lutador grande com aura ----------
   private vitrine: { sprite: Phaser.GameObjects.Sprite; efeitos: EfeitosDoLutador; l: Lutador; k: number; chao: Phaser.GameObjects.Graphics; faiscas?: Phaser.GameObjects.Particles.ParticleEmitter } | null = null;
 
+  /** a cena saiu (o carregamento da vitrine pode terminar depois) */
+  private fechada = false;
+
   private montarVitrine(): void {
     this.vitrine = null;
+    this.fechada = false;
     this.mostrarLutador(vitrineAtual ?? sortearLutador());
     this.time.addEvent({ delay: TROCA_MS, loop: true, callback: () => this.trocarLutador() });
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => { this.vitrine = null; });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => { this.vitrine = null; this.fechada = true; });
   }
 
   private trocarLutador(): void {
@@ -172,7 +176,8 @@ export class Menu extends Phaser.Scene {
     vitrineAtual = esc;
     const chave = chaveDoAtlas(esc.id, esc.nivel);
     const pronto = () => {
-      if (!this.sys.isActive() || vitrineAtual !== esc || !this.textures.exists(chave)) return;
+      // (no create o atlas já pode estar no cache: aqui a cena ainda não está "ativa", por isso olha só se foi fechada)
+      if (this.fechada || vitrineAtual !== esc || !this.textures.exists(chave)) return;
       liberarFormas(this, new Set([chave])); // só a forma da vitrine fica na memória
       criarAnimacoes(this, chave);
       const meta = metaDoAtlas(this, chave);

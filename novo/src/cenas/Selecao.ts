@@ -13,7 +13,7 @@ import { criarBotao } from '../ui/botao';
 import { botao, botaoTelaCheia, botaoVoltar, fundoDeMenu, ret } from '../ui/telas';
 import { chaveDoAtlas } from '../dados/personagens';
 import { PALETAS_AURA } from '../logica/efeitos';
-import { criarAnimacoes, liberarFormas, metaDoAtlas, pedirFormas } from '../ui/formas';
+import { criarAnimacoes, liberarFormas, pedirFormas } from '../ui/formas';
 import { escalaDaAltura } from '../logica/luta';
 import type { DadosDaLuta } from './Menu';
 import { aoApertar } from '../entrada/teclas';
@@ -38,6 +38,8 @@ function medir(n: number): void {
 /** quadro do lutador em foco (esquerda) */
 const VITRINE = { x: 18, y: 52, w: 216, h: 250 };
 const CORES_JOGADOR = { p1: 0x3fa9ff, p2: 0xff4a4a };
+/** altura da célula (144x168 do atlas) de um personagem de altura padrão no quadro da esquerda */
+const ALTURA_VITRINE = 200;
 
 export class Selecao extends Phaser.Scene {
   private modo!: DadosDaLuta['modo'];
@@ -280,7 +282,10 @@ export class Selecao extends Phaser.Scene {
     v.sprite = null;
     const [k, fr] = retratoDe(id);
     v.img.setTexture(k, fr).setVisible(true);
-    v.img.setScale((h - 70) / 0.8 / v.img.height);
+    // a mesma altura no retrato e no lutador animado (v0.146: antes o animado aparecia maior ou menor), pela altura
+    // do personagem, mas sem passar do topo do quadro (os muito altos ficam no limite)
+    const alturaCelula = Math.min(ALTURA_VITRINE * escalaDaAltura(PERSONAGENS[id].formas[0].altura), (v.img.y - VITRINE.y - 4) / (103 / 112));
+    v.img.setScale(alturaCelula / v.img.height);
     this.esperaVitrine?.remove();
     if (PERSONAGENS[id].criado) return;
     this.esperaVitrine = this.time.delayedCall(300, () => {
@@ -291,8 +296,8 @@ export class Selecao extends Phaser.Scene {
         if (this.escolhaP1) manter.add(chaveDoAtlas(this.escolhaP1, 0));
         liberarFormas(this, manter);
         criarAnimacoes(this, chave);
-        const k2 = 1.95 * escalaDaAltura(PERSONAGENS[id].formas[0].altura);
-        v.sprite = this.add.sprite(v.img.x, v.img.y, chave, 'idle/0').setOrigin(0.5, 103 / 112).setScale(k2 / metaDoAtlas(this, chave).escala).setDepth(2);
+        v.sprite = this.add.sprite(v.img.x, v.img.y, chave, 'idle/0').setOrigin(0.5, 103 / 112).setDepth(2);
+        v.sprite.setScale(alturaCelula / v.sprite.height);
         v.sprite.play(`${chave}:idle`);
         v.img.setVisible(false);
       };

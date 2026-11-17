@@ -6,6 +6,15 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.146',
+    titulo: 'CORREÇÕES DO MENU NOVO',
+    itens: [
+      'Os botões inclinados do menu só respondiam na parte de cima: o toque parecia não funcionar na primeira vez. Agora o botão inteiro responde.',
+      'Ao voltar de uma tela para o menu, o lutador grande sumia. Agora ele continua lá.',
+      'Na escolha do lutador (e no tutorial), o lutador em foco não muda mais de tamanho quando começa a animar: fica sempre na altura dele, e os muito altos param no limite do quadro.',
+    ],
+  },
+  {
     versao: '0.145',
     titulo: 'ABERTURA MAIS LEVE',
     itens: [
