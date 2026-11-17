@@ -1,12 +1,21 @@
-// MENU PRINCIPAL do jogo antigo (gameState "menu"): painel SAIYAN FIGHT com JOGAR, PERSONAGENS, ARENAS, OPÇÕES,
-// RANKING, CONQUISTAS e TUTORIAL; a esfera de 4 estrelas no canto abre o menu de ajustes (perfil com APELIDO,
-// EDITOR DE PERSONAGENS, EDITOR DE ARENAS, UPDATES); tela cheia no canto direito. Mesmas posições (MENU_LAYOUT).
+// MENU PRINCIPAL. v0.143: à esquerda um lutador grande com aura (sorteado entre as formas já liberadas, troca a
+// cada ~9 s; tocar nele solta um golpe), à direita SAIYAN FIGHT e as LÂMINAS (JOGAR maior, PERSONAGENS, ARENAS,
+// TUTORIAL, TUTORIAL LIVRE) e embaixo os botões redondos RANKING, CONQUISTAS e OPÇÕES. A esfera de 4 estrelas no
+// canto abre o menu de ajustes (perfil com APELIDO, EDITORES, UPDATES); tela cheia no canto direito.
 import Phaser from 'phaser';
 import { ajustarCamera, estiloTexto } from '../ui/resolucao';
 import { TELA_A, TELA_L } from '../logica/constantes';
 import { T } from '../logica/idioma';
 import { som } from '../audio/som';
-import { botao, botaoNav, dentro, montarTela, painel, ret, type BotaoTela, type Navegacao } from '../ui/telas';
+import { botao, botaoIcone, botaoLamina, dentro, montarTela, ret, type BotaoTela, type Navegacao } from '../ui/telas';
+import { ORDEM_PERSONAGENS, PERSONAGENS, chaveDoAtlas } from '../dados/personagens';
+import { nivelLiberado } from '../logica/conquistas';
+import { escalaDaAltura } from '../logica/luta';
+import { PALETAS_AURA, auraDoLutador } from '../logica/efeitos';
+import type { Lutador } from '../logica/tipos';
+import { criarAnimacoes, liberarFormas, metaDoAtlas, pedirFormas } from '../ui/formas';
+import { EfeitosDoLutador, pedirEfeitos } from '../ui/efeitos';
+import { enfeitesLigados } from '../ui/transicao';
 import { esferaDoDragao, fotoDoPerfil } from '../ui/esfera';
 import { conquistas, APELIDO_MAX } from '../logica/conquistas';
 import { pedirTexto } from '../ui/janela';
@@ -29,13 +38,36 @@ export interface DadosDaLuta {
   arena?: string;
 }
 
+/** lâminas em diagonal (cada fileira um pouco à esquerda, seguindo a inclinação) */
+const lamina = (y: number, h = 30, w = 290) => ret(Math.round(470 - (y - 84) * 0.42), y, w, h);
 const L = {
-  play: ret(190, 95, 180, 36), characters: ret(430, 95, 180, 36),
-  stages: ret(190, 150, 180, 36), options: ret(430, 150, 180, 36),
-  ranking: ret(190, 205, 180, 36), achievements: ret(430, 205, 180, 36),
-  tutorial: ret(190, 260, 180, 36), livre: ret(430, 260, 180, 36),
+  play: lamina(84, 46, 300), characters: lamina(140), stages: lamina(176), tutorial: lamina(212), livre: lamina(248),
   esfera: ret(12, 12, 40, 40),
 };
+/** botões redondos de baixo */
+const ICONES_Y = 306;
+/** pés do lutador da vitrine */
+const VITRINE = { x: 205, y: 322, k: 2 };
+const TROCA_MS = 9000;
+
+/** quem está na vitrine (fica o mesmo quando a cena reinicia, ex.: ao fechar a esfera) */
+let vitrineAtual: { id: string; nivel: number } | null = null;
+/** um personagem (diferente do atual) numa forma já liberada */
+function sortearLutador(fora?: string): { id: string; nivel: number } {
+  const ids = ORDEM_PERSONAGENS.filter((id) => id !== fora && !PERSONAGENS[id].criado);
+  const id = ids[Math.floor(Math.random() * ids.length)] ?? ORDEM_PERSONAGENS[0];
+  return { id, nivel: Math.floor(Math.random() * (nivelLiberado(conquistas(), id) + 1)) };
+}
+/** pontinho de luz das faíscas (uma textura só) */
+function faisca(cena: Phaser.Scene): string {
+  if (!cena.textures.exists('faisca')) {
+    const g = cena.make.graphics({}, false);
+    g.fillStyle(0xffffff, 0.35).fillCircle(8, 8, 8).fillStyle(0xffffff, 1).fillCircle(8, 8, 3.5);
+    g.generateTexture('faisca', 16, 16);
+    g.destroy();
+  }
+  return 'faisca';
+}
 const E = { x: 12, y: 58, w: 216 };
 
 /** bolinha vermelha com "!" (aviso de versão nova) */
@@ -63,17 +95,18 @@ export class Menu extends Phaser.Scene {
     this.esferaAberta = this.perfilAberto = false;
     this.camadaEsfera = null;
     this.nav = montarTela(this, null, true);
-    painel(this, 150, 35, 500, 270, 'SAIYAN FIGHT', 'A BATALHA COMEÇA AGORA');
-    const b = (r: typeof L.play, t: string, f: () => void) => botaoNav(this, this.nav, r, t, f, { cor: '#fff0a6' });
-    b(L.play, 'JOGAR', () => this.scene.start('ModoJogo'));
+    this.titulo();
+    const b = (r: typeof L.play, t: string, f: () => void, destaque = false) => botaoLamina(this, this.nav, r, t, f, { destaque });
+    b(L.play, 'JOGAR', () => this.scene.start('ModoJogo'), true);
     b(L.characters, 'PERSONAGENS', () => this.scene.start('Personagens'));
     b(L.stages, 'ARENAS', () => this.scene.start('ConfigArenas'));
-    b(L.options, 'OPÇÕES', () => this.scene.start('Opcoes', { voltar: 'Menu' }));
-    b(L.ranking, 'RANKING', () => this.scene.start('Ranking'));
-    b(L.achievements, 'CONQUISTAS', () => this.scene.start('Conquistas'));
     // TUTORIAL e TUTORIAL LIVRE: antes escolhe o personagem e a forma (Selecao)
     b(L.tutorial, 'TUTORIAL', () => this.scene.start('Selecao', { modo: 'tutorial' }));
     b(L.livre, 'TUTORIAL LIVRE', () => this.scene.start('Selecao', { modo: 'treino' }));
+    botaoIcone(this, this.nav, 470, ICONES_Y, 16, 'trofeu', 'RANKING', () => this.scene.start('Ranking'));
+    botaoIcone(this, this.nav, 545, ICONES_Y, 16, 'medalha', 'CONQUISTAS', () => this.scene.start('Conquistas'));
+    botaoIcone(this, this.nav, 620, ICONES_Y, 16, 'engrenagem', 'OPÇÕES', () => this.scene.start('Opcoes', { voltar: 'Menu' }));
+    this.montarVitrine();
     this.add.text(TELA_L - 6, TELA_A - 4, `v${infoVersao().jogo}`, estiloTexto({ fontFamily: 'Arial', fontSize: '10px', color: '#94a3b8' })).setOrigin(1, 1);
 
     // esfera de 4 estrelas
@@ -96,6 +129,94 @@ export class Menu extends Phaser.Scene {
       else if (c === 'Digit2' || c === 'Numpad2') this.scene.start('Selecao', { modo: 'versus' });
       else if (c === 'KeyH' || c === 'Digit3' || c === 'Numpad3') this.scene.start('Mapa');
     });
+  }
+
+  private titulo(): void {
+    const t = this.add.text(608, 40, 'SAIYAN FIGHT', estiloTexto({ fontFamily: "'Trebuchet MS', Arial, sans-serif", fontStyle: 'bold italic', fontSize: '34px', color: '#ffd23f' })).setOrigin(0.5);
+    t.setStroke('#7c2d12', 7).setShadow(2, 3, '#000000', 4, true, true);
+    // brilho de cima para baixo nas letras (amarelo claro → laranja)
+    const grad = t.context.createLinearGradient(0, 0, 0, t.height);
+    grad.addColorStop(0.15, '#fff7c2'); grad.addColorStop(0.55, '#ffd23f'); grad.addColorStop(0.95, '#ff8a00');
+    t.setFill(grad);
+    this.add.text(608, 66, T('A BATALHA COMEÇA AGORA'), estiloTexto({ fontFamily: "'Trebuchet MS', Arial, sans-serif", fontStyle: 'bold', fontSize: '10px', color: '#8fd3ff' })).setOrigin(0.5).setStroke('#020617', 3);
+  }
+
+  // ---------- vitrine: lutador grande com aura ----------
+  private vitrine: { sprite: Phaser.GameObjects.Sprite; efeitos: EfeitosDoLutador; l: Lutador; k: number; chao: Phaser.GameObjects.Graphics; faiscas?: Phaser.GameObjects.Particles.ParticleEmitter } | null = null;
+
+  private montarVitrine(): void {
+    this.vitrine = null;
+    this.mostrarLutador(vitrineAtual ?? sortearLutador());
+    this.time.addEvent({ delay: TROCA_MS, loop: true, callback: () => this.trocarLutador() });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => { this.vitrine = null; });
+  }
+
+  private trocarLutador(): void {
+    if (this.esferaAberta || !this.vitrine) return;
+    const v = this.vitrine, novo = sortearLutador(vitrineAtual?.id);
+    this.tweens.add({
+      targets: [v.sprite, v.chao], alpha: 0, duration: 250,
+      onComplete: () => { if (this.vitrine === v) { this.apagarVitrine(); this.mostrarLutador(novo); } },
+    });
+  }
+
+  private apagarVitrine(): void {
+    const v = this.vitrine;
+    if (!v) return;
+    v.sprite.destroy(); v.efeitos.destruir(); v.chao.destroy(); v.faiscas?.destroy();
+    this.vitrine = null;
+  }
+
+  /** carrega (se faltar) o atlas da forma e os efeitos, e mostra o lutador com a aura */
+  private mostrarLutador(esc: { id: string; nivel: number }): void {
+    vitrineAtual = esc;
+    const chave = chaveDoAtlas(esc.id, esc.nivel);
+    const pronto = () => {
+      if (!this.sys.isActive() || vitrineAtual !== esc || !this.textures.exists(chave)) return;
+      liberarFormas(this, new Set([chave])); // só a forma da vitrine fica na memória
+      criarAnimacoes(this, chave);
+      const meta = metaDoAtlas(this, chave);
+      const k = VITRINE.k * escalaDaAltura(PERSONAGENS[esc.id].formas[esc.nivel].altura);
+      const chao = this.add.graphics().setDepth(8);
+      const cores = PALETAS_AURA[auraDoLutador(esc.id, esc.nivel)];
+      chao.fillStyle(cores[1], 0.18).fillEllipse(VITRINE.x, VITRINE.y + 2, 190, 26).fillStyle(cores[2], 0.25).fillEllipse(VITRINE.x, VITRINE.y + 2, 110, 12)
+        .fillStyle(0x000000, 0.35).fillEllipse(VITRINE.x, VITRINE.y + 1, 70, 8);
+      const sprite = this.add.sprite(VITRINE.x, VITRINE.y, chave, 'idle/0').setOrigin(0.5, 103 / 112).setDepth(10).setScale(k / meta.escala);
+      sprite.play(`${chave}:idle`);
+      sprite.setInteractive({ useHandCursor: true, pixelPerfect: false }).on('pointerup', () => this.golpe());
+      sprite.on(Phaser.Animations.Events.ANIMATION_COMPLETE, () => sprite.play(`${chave}:idle`));
+      const l = { acao: 'livre', nivelAura: 0.55, personagem: esc.id, nivel: esc.nivel, poder: 0, invulneravel: 0, escudo: false, olhando: 1 } as unknown as Lutador;
+      const efeitos = new EfeitosDoLutador(this, 'p1');
+      let faiscas: Phaser.GameObjects.Particles.ParticleEmitter | undefined;
+      if (enfeitesLigados()) {
+        faiscas = this.add.particles(0, 0, faisca(this), {
+          x: { min: VITRINE.x - 55, max: VITRINE.x + 55 }, y: { min: VITRINE.y - 150, max: VITRINE.y },
+          speedY: { min: -70, max: -25 }, speedX: { min: -8, max: 8 }, lifespan: { min: 600, max: 1200 },
+          scale: { start: 0.7, end: 0 }, alpha: { start: 0.9, end: 0 }, tint: [cores[1], cores[2]], blendMode: 'ADD',
+          frequency: 70, maxAliveParticles: 22,
+        }).setDepth(11);
+      }
+      for (const o of [sprite, chao]) { o.setAlpha(0); this.tweens.add({ targets: o, alpha: 1, duration: 300 }); }
+      this.vitrine = { sprite, efeitos, l, k, chao, faiscas };
+    };
+    const faltam = pedirFormas(this, [chave]) + (pedirEfeitos(this) ? 1 : 0);
+    if (!faltam) { pronto(); return; }
+    this.load.once(Phaser.Loader.Events.COMPLETE, pronto);
+    this.load.start();
+  }
+
+  /** tocar no lutador: ataque de ki (volta ao parado no fim) */
+  private golpe(): void {
+    const v = this.vitrine;
+    if (!v) return;
+    const chave = v.sprite.texture.key, a = `${chave}:attackKi`;
+    if (this.anims.exists(a) && v.sprite.anims.currentAnim?.key !== a) { som.tocar('shoot'); v.sprite.play(a); }
+  }
+
+  update(tempo: number, delta: number): void {
+    const v = this.vitrine;
+    if (!v) return;
+    v.efeitos.desenhar(v.l, { x: v.sprite.x, y: v.sprite.y }, v.k, tempo / 1000, Math.min(0.1, delta / 1000));
   }
 
   private retPainelEsfera() {

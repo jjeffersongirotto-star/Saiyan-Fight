@@ -6,6 +6,15 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.143',
+    titulo: 'MENU NOVO',
+    itens: [
+      'Menu principal novo: um lutador grande com aura à esquerda (sorteado entre as formas que você já liberou, troca a cada poucos segundos; toque nele para soltar um golpe) e os botões em lâminas inclinadas à direita, com o JOGAR maior. RANKING, CONQUISTAS e OPÇÕES viraram botões redondos com ícone.',
+      'ESCOLHA SEU CAMINHO agora tem três cartões altos com os lutadores: SINGLEPLAYER, 1 JOGADOR x CPU e VERSUS.',
+      'Ao trocar de tela, uma faixa de energia passa pela tela.',
+    ],
+  },
+  {
     versao: '0.142',
     titulo: 'ATAQUE SEM TRAVAR',
     itens: [

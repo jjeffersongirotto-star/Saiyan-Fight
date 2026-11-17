@@ -87,7 +87,7 @@ function texturaDaLabareda(cena: Phaser.Scene, aura: Aura, semente: number): str
 }
 
 /** Efeitos que acompanham um lutador: aura, raios de ki, escudo e onda do parry. */
-class EfeitosDoLutador {
+export class EfeitosDoLutador {
   private aura: Phaser.GameObjects.Image;
   private raiosKi: Phaser.GameObjects.Graphics;
   private escudo: Phaser.GameObjects.Image;
