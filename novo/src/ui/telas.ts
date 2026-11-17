@@ -189,7 +189,7 @@ export function texto(cena: Phaser.Scene, x: number, y: number, t: string, tam =
 // ------------------------------------------------------------------------------------------------------------
 // Navegação por teclado e controle (padNav do antigo: vai para o alvo mais perto na direção, com penalidade
 // para o desvio lateral; CRUZ/Enter aperta, BOLA/Esc volta; o quadro amarelo só aparece depois de usar).
-export interface Alvo extends Ret { acionar(): void; ajustar?(d: -1 | 1): void }
+export interface Alvo extends Ret { acionar(): void; ajustar?(d: -1 | 1): void; /** desenha o próprio foco (sem o quadro amarelo) */ focar?(f: boolean): void }
 
 export function proximoAlvo(alvos: Ret[], atual: number, dx: number, dy: number): number {
   const c = alvos[atual];
@@ -216,6 +216,7 @@ export class Navegacao {
   private antes: Intencao[] = [];
   private repetir = 0;
   private dirAntes = '';
+  private focoDesenhado = -1;
   /** quando false, a navegação não responde (ex.: um quadro por cima com a sua própria) */
   ativa = true;
 
@@ -236,7 +237,7 @@ export class Navegacao {
   }
 
   add(a: Alvo): Alvo { this.alvos.push(a); return a; }
-  limpar(): void { this.alvos = []; this.foco = -1; this.desenhar(); }
+  limpar(): void { this.alvos = []; this.foco = -1; this.focoDesenhado = -1; this.desenhar(); }
 
   mover(dx: number, dy: number): void {
     if (!this.alvos.length) return;
@@ -272,7 +273,10 @@ export class Navegacao {
   desenhar(): void {
     this.quadro.clear();
     const t = this.alvos[this.foco];
-    if (!this.visivel || !t) return;
+    // só avisa quem ganhou/perdeu o foco (o mouse por cima continua aceso)
+    const novo = this.visivel ? this.foco : -1;
+    if (novo !== this.focoDesenhado) { this.alvos[this.focoDesenhado]?.focar?.(false); this.alvos[novo]?.focar?.(true); this.focoDesenhado = novo; }
+    if (!this.visivel || !t || t.focar) return;
     this.quadro.lineStyle(3, 0xffd23f, 1).strokeRect(t.x - 3, t.y - 3, t.w + 6, t.h + 6);
   }
 }
@@ -294,3 +298,121 @@ export function botaoNav(cena: Phaser.Scene, nav: Navegacao, r: Ret, t: string, 
   return b;
 }
 export { css };
+
+// ------------------------------------------------------------------------------------------------------------
+// Peças novas do menu (v0.143): LÂMINA (botão inclinado como um corte de energia, acende e desliza no foco) e
+// botão REDONDO com ícone desenhado (troféu, medalha, engrenagem), no estilo do botão de voltar.
+
+/** botão inclinado; `destaque` = o JOGAR (maior, borda dourada pulsando) */
+export function botaoLamina(cena: Phaser.Scene, nav: Navegacao, r: Ret, texto: string, aoClicar: () => void, opc: { destaque?: boolean; fonte?: number } = {}): BotaoTela {
+  const s = r.h * 0.42;
+  const g = cena.add.graphics();
+  const fonte = opc.fonte ?? (opc.destaque ? 20 : 13);
+  const rot = cena.add.text(s + 16, r.h / 2 + 1, '', estiloTexto({ fontFamily: "'Trebuchet MS', Arial, sans-serif", fontStyle: 'bold italic', fontSize: `${fonte}px`, color: '#fff0a6' })).setOrigin(0, 0.5);
+  rot.setShadow(1, 1, '#000000', 2, false, true);
+  let aceso = false, apertado = false;
+  const forma = (dx = 0, dy = 0) => [{ x: s + dx, y: dy }, { x: r.w + dx, y: dy }, { x: r.w - s + dx, y: r.h + dy }, { x: dx, y: r.h + dy }];
+  const desenhar = () => {
+    g.clear();
+    const dy = apertado ? 1 : 0;
+    g.fillStyle(0x000000, 0.35).fillPoints(forma(2, 4), true);
+    if (aceso) g.fillGradientStyle(0xffd23f, 0xffb703, 0xe85d04, 0xc2410c, 1);
+    else g.fillGradientStyle(opc.destaque ? 0x1d4f8f : 0x123765, opc.destaque ? 0x123765 : 0x0b2a55, 0x061636, 0x061636, 0.95);
+    g.fillPoints(forma(0, dy), true);
+    // faixa laranja na ponta esquerda
+    g.fillStyle(aceso ? 0xffffff : 0xe85d04, aceso ? 0.7 : 1).fillPoints([{ x: s, y: dy }, { x: s + 6, y: dy }, { x: 6, y: r.h + dy }, { x: 0, y: r.h + dy }], true);
+    g.lineStyle(opc.destaque || aceso ? 2 : 1.5, aceso ? 0xfff7d6 : opc.destaque ? 0xffd23f : 0xe85d04, 1).strokePoints(forma(0, dy), true);
+    rot.setColor(aceso ? '#2a0f00' : '#fff0a6').setShadow(1, 1, aceso ? '#ffe9a8' : '#000000', 2, false, true);
+    rot.setY(r.h / 2 + 1 + dy);
+  };
+  const ajustar = (t: string) => {
+    rot.setText(t);
+    let px = fonte;
+    rot.setFontSize(px);
+    while (px > 8 && rot.width > r.w - s * 2 - 24) { px -= 0.5; rot.setFontSize(px); }
+  };
+  ajustar(T(texto));
+  desenhar();
+  const c = cena.add.container(r.x, r.y, [g, rot]).setSize(r.w, r.h).setDepth(1);
+  if (opc.destaque) {
+    // brilho que pulsa atrás do JOGAR
+    const brilho = cena.add.graphics().fillStyle(0xffb703, 1).fillPoints(forma(-3, -3).map((p, i) => ({ x: p.x + (i === 1 || i === 2 ? 6 : 0), y: p.y + (i >= 2 ? 6 : 0) })), true).setAlpha(0.15);
+    c.addAt(brilho, 0);
+    cena.tweens.add({ targets: brilho, alpha: 0.4, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+  }
+  const xBase = r.x;
+  const acender = (a: boolean) => {
+    if (a === aceso) return;
+    aceso = a;
+    desenhar();
+    cena.tweens.add({ targets: c, x: xBase + (a ? -8 : 0), duration: 120, ease: 'Quad.easeOut' });
+  };
+  c.setInteractive(new Phaser.Geom.Polygon(forma()), Phaser.Geom.Polygon.Contains);
+  if (c.input) c.input.cursor = 'pointer';
+  const b: BotaoTela = {
+    container: c, rotulo: rot, r, ligado: true,
+    texto: (t) => ajustar(t), corTexto: (k) => rot.setColor(k),
+    acionar: () => { if (!b.ligado) return; som.ligar(); som.tocar('menu'); aoClicar(); },
+  };
+  c.on('pointerover', (p: Phaser.Input.Pointer) => { if (!p.wasTouch) acender(true); });
+  c.on('pointerout', () => { apertado = false; acender(false); desenhar(); });
+  c.on('pointerdown', () => { apertado = true; acender(true); desenhar(); });
+  c.on('pointerup', () => { const era = apertado; apertado = false; desenhar(); if (era) b.acionar(); });
+  nav.add({ ...r, acionar: b.acionar, focar: (f) => acender(f) });
+  return b;
+}
+
+export type Icone = 'trofeu' | 'medalha' | 'engrenagem';
+
+function desenharIcone(g: Phaser.GameObjects.Graphics, ic: Icone, cx: number, cy: number, k: number, c: number, fundo: number): void {
+  g.fillStyle(c, 1);
+  if (ic === 'trofeu') {
+    g.fillPoints([{ x: cx - 7 * k, y: cy - 7 * k }, { x: cx + 7 * k, y: cy - 7 * k }, { x: cx + 5 * k, y: cy + 1 * k }, { x: cx - 5 * k, y: cy + 1 * k }], true);
+    g.fillCircle(cx, cy + 0.5 * k, 5 * k);
+    g.lineStyle(1.8 * k, c, 1).strokeCircle(cx - 7 * k, cy - 3 * k, 3 * k).strokeCircle(cx + 7 * k, cy - 3 * k, 3 * k);
+    g.fillRect(cx - 1.3 * k, cy + 4 * k, 2.6 * k, 3.5 * k).fillRoundedRect(cx - 5 * k, cy + 7 * k, 10 * k, 2.6 * k, 1);
+  } else if (ic === 'medalha') {
+    g.fillStyle(0xe85d04, 1).fillPoints([{ x: cx - 6 * k, y: cy - 9 * k }, { x: cx - 2 * k, y: cy - 9 * k }, { x: cx + 2 * k, y: cy - 1 * k }, { x: cx - 2 * k, y: cy }], true);
+    g.fillStyle(0x38bdf8, 1).fillPoints([{ x: cx + 6 * k, y: cy - 9 * k }, { x: cx + 2 * k, y: cy - 9 * k }, { x: cx - 2 * k, y: cy - 1 * k }, { x: cx + 2 * k, y: cy }], true);
+    g.fillStyle(c, 1).fillCircle(cx, cy + 3.5 * k, 5.5 * k).fillStyle(fundo, 1).fillCircle(cx, cy + 3.5 * k, 2.6 * k);
+  } else {
+    const pts: { x: number; y: number }[] = [];
+    for (let i = 0; i < 32; i++) {
+      const a = (i / 32) * Math.PI * 2, raio = (i % 4 < 2 ? 9 : 6.6) * k;
+      pts.push({ x: cx + Math.cos(a) * raio, y: cy + Math.sin(a) * raio });
+    }
+    g.fillPoints(pts, true).fillStyle(fundo, 1).fillCircle(cx, cy, 3.2 * k);
+  }
+}
+
+/** botão redondo com ícone e um rótulo pequeno embaixo */
+export function botaoIcone(cena: Phaser.Scene, nav: Navegacao, cx: number, cy: number, raio: number, icone: Icone, rotulo: string, aoClicar: () => void): BotaoTela {
+  const g = cena.add.graphics();
+  const rot = cena.add.text(0, raio + 8, T(rotulo), estiloTexto({ fontFamily: "'Trebuchet MS', Arial, sans-serif", fontStyle: 'bold', fontSize: '9px', color: '#cfe8ff' })).setOrigin(0.5);
+  rot.setStroke('#020617', 3);
+  let aceso = false, apertado = false;
+  const desenhar = () => {
+    const dy = apertado ? 1 : 0, fundo = aceso ? 0xe85d04 : 0x0f2c56;
+    g.clear().fillStyle(0x000000, 0.35).fillCircle(0.8, 2, raio)
+      .fillStyle(fundo, 1).fillCircle(0, dy, raio)
+      .lineStyle(aceso ? 2.2 : 1.8, aceso ? 0xfff0a6 : 0xe85d04, 1).strokeCircle(0, dy, raio);
+    desenharIcone(g, icone, 0, dy, raio / 17, aceso ? 0xffffff : 0xfff0a6, fundo);
+  };
+  desenhar();
+  const c = cena.add.container(cx, cy, [g, rot]).setDepth(1);
+  c.setInteractive(new Phaser.Geom.Circle(0, 0, raio + 4), Phaser.Geom.Circle.Contains);
+  if (c.input) c.input.cursor = 'pointer';
+  const acender = (a: boolean) => { aceso = a; desenhar(); cena.tweens.add({ targets: c, scale: a ? 1.1 : 1, duration: 110 }); };
+  const r = ret(cx - raio, cy - raio, raio * 2, raio * 2);
+  const b: BotaoTela = {
+    container: c, rotulo: rot, r, ligado: true,
+    texto: (t) => rot.setText(t), corTexto: (k) => rot.setColor(k),
+    acionar: () => { som.ligar(); som.tocar('menu'); aoClicar(); },
+  };
+  c.on('pointerover', (p: Phaser.Input.Pointer) => { if (!p.wasTouch) acender(true); });
+  c.on('pointerout', () => { apertado = false; acender(false); });
+  c.on('pointerdown', () => { apertado = true; desenhar(); });
+  c.on('pointerup', () => { const era = apertado; apertado = false; desenhar(); if (era) b.acionar(); });
+  nav.add({ ...r, acionar: b.acionar, focar: (f) => { if (f !== aceso) acender(f); } });
+  return b;
+}

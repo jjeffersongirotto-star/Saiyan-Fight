@@ -5,7 +5,8 @@ import Phaser from 'phaser';
 import { ajustarCamera, estiloTexto } from '../ui/resolucao';
 import { TELA_A, TELA_L } from '../logica/constantes';
 import { T, TF } from '../logica/idioma';
-import { botao, botaoNav, montarTela, painel, ret, texto, cor, Navegacao, type Ret } from '../ui/telas';
+import { som } from '../audio/som';
+import { botao, botaoNav, montarTela, ret, texto, cor, Navegacao, type Ret } from '../ui/telas';
 import { ORDEM_PERSONAGENS, PERSONAGENS, chaveDoAtlas } from '../dados/personagens';
 import { mostrarBarraDeCarregamento } from '../ui/barra';
 import { fasesEmOrdem, mudarConfigDasFases, configDasFases, todasAsFases, faseDe } from '../dados/fases';
@@ -30,15 +31,86 @@ const titulo = (cena: Phaser.Scene, t: string, y = 25, tam = 18, c = '#fff0a6') 
 // ------------------------------------------------------------------------------------------------------------
 export class ModoJogo extends Phaser.Scene {
   constructor() { super('ModoJogo'); }
+  preload(): void { retratos(this); }
   create(): void {
     ajustarCamera(this);
     const nav = montarTela(this, () => this.scene.start('Menu'));
-    painel(this, 120, 60, 560, 230, 'ESCOLHA SEU CAMINHO', 'PARTIDA RÁPIDA OU LOCAL');
-    botaoNav(this, nav, ret(175, 146, 200, 58), 'SINGLEPLAYER', () => this.scene.start('Mapa'), { cor: '#7dd3fc' });
-    botaoNav(this, nav, ret(425, 146, 200, 58), 'VERSUS (2 JOGADORES)', () => this.scene.start('Selecao', { modo: 'versus' }), { cor: '#a78bfa' });
-    // só do novo: luta rápida contra a CPU (o antigo não tinha)
-    botaoNav(this, nav, ret(300, 222, 200, 30), '1 JOGADOR x CPU', () => this.scene.start('Selecao', { modo: 'cpu' }), { cor: '#fde68a', fonte: 11 });
+    escurecer(this, 0.45);
+    const t = titulo(this, 'ESCOLHA SEU CAMINHO', 34, 22);
+    t.setFontStyle('bold italic').setStroke('#7c2d12', 5);
+    // v0.143: três cartões altos e inclinados, como nas telas de jogo de luta (antes: 3 botões num painel)
+    const cartoes: [string, string, number, string[], () => void][] = [
+      ['SINGLEPLAYER', 'FASES E CHEFES', 0x1d4ed8, ['goku'], () => this.scene.start('Mapa')],
+      ['1 JOGADOR x CPU', 'LUTA RÁPIDA', 0xb45309, ['vegeta'], () => this.scene.start('Selecao', { modo: 'cpu' })],
+      ['VERSUS (2 JOGADORES)', 'NO MESMO APARELHO', 0x7c3aed, ['goku', 'freeza'], () => this.scene.start('Selecao', { modo: 'versus' })],
+    ];
+    cartoes.forEach(([rot, sub, c, quem, f], i) => cartaoDeModo(this, nav, ret(118 + i * 196, 70, 176, 236), rot, sub, c, quem, f));
   }
+}
+
+/** cartão inclinado com retrato(s), raios de energia atrás e o nome embaixo; sobe e acende no foco */
+function cartaoDeModo(cena: Phaser.Scene, nav: Navegacao, r: Ret, rotulo: string, sub: string, corBase: number, quem: string[], aoClicar: () => void): void {
+  const s = 26;
+  const forma = (dx = 0, dy = 0) => [{ x: s + dx, y: dy }, { x: r.w + dx, y: dy }, { x: r.w - s + dx, y: r.h + dy }, { x: dx, y: r.h + dy }];
+  const fundo = cena.add.graphics();
+  const escura = Phaser.Display.Color.ValueToColor(corBase).darken(55).color;
+  // raios de energia saindo do centro do retrato (desenhados uma vez; ficam por baixo do retrato)
+  const raios = cena.add.graphics();
+  const cx = r.w / 2, cy = r.h * 0.45;
+  for (let i = 0; i < 18; i++) {
+    const a = (i / 18) * Math.PI * 2, a2 = a + 0.09;
+    raios.fillStyle(0xffffff, i % 2 ? 0.05 : 0.1).fillTriangle(cx, cy, cx + Math.cos(a) * 170, cy + Math.sin(a) * 170, cx + Math.cos(a2) * 170, cy + Math.sin(a2) * 170);
+  }
+  const mascara = cena.make.graphics({}, false).fillStyle(0xffffff).fillPoints(forma(r.x, r.y), true);
+  raios.setMask(mascara.createGeometryMask());
+  const itens: Phaser.GameObjects.GameObject[] = [fundo, raios];
+  const alt = quem.length > 1 ? 120 : 160;
+  quem.forEach((id, j) => {
+    const [k, fr] = retratoDe(id);
+    if (!cena.textures.exists(k)) return;
+    const img = cena.add.image(quem.length > 1 ? cx + (j ? 34 : -30) : cx, quem.length > 1 ? r.h * 0.66 : r.h * 0.72, k, fr).setOrigin(0.5, 1);
+    img.setScale(alt / img.height).setFlipX(j === 1);
+    itens.push(img);
+  });
+  if (quem.length > 1) {
+    const vs = cena.add.text(cx, r.h * 0.4, 'VS', estiloTexto({ fontFamily: "'Trebuchet MS', Arial, sans-serif", fontStyle: 'bold italic', fontSize: '30px', color: '#ffd23f' })).setOrigin(0.5);
+    vs.setStroke('#7c2d12', 6);
+    itens.push(vs);
+  }
+  // faixa escura embaixo com o nome
+  const faixa = cena.add.graphics().fillStyle(0x020617, 0.82).fillPoints([{ x: s * 0.3, y: r.h - 62 }, { x: r.w - s * 0.7 + 4, y: r.h - 62 }, { x: r.w - s, y: r.h }, { x: 0, y: r.h }], true);
+  const nome = cena.add.text(cx - 6, r.h - 40, T(rotulo), estiloTexto({ fontFamily: "'Trebuchet MS', Arial, sans-serif", fontStyle: 'bold italic', fontSize: '15px', color: '#fff0a6', align: 'center' })).setOrigin(0.5);
+  let px = 15;
+  while (px > 9 && nome.width > r.w - s - 14) { px -= 0.5; nome.setFontSize(px); }
+  const detalhe = cena.add.text(cx - 8, r.h - 19, T(sub), estiloTexto({ fontFamily: "'Trebuchet MS', Arial, sans-serif", fontStyle: 'bold', fontSize: '9px', color: '#8fd3ff' })).setOrigin(0.5);
+  itens.push(faixa, nome, detalhe);
+  const borda = cena.add.graphics();
+  itens.push(borda);
+  let aceso = false;
+  const desenhar = () => {
+    fundo.clear().fillStyle(0x000000, 0.4).fillPoints(forma(3, 6), true);
+    fundo.fillGradientStyle(aceso ? Phaser.Display.Color.ValueToColor(corBase).lighten(12).color : corBase, corBase, escura, escura, 1).fillPoints(forma(), true);
+    borda.clear().lineStyle(aceso ? 3 : 2, aceso ? 0xffd23f : 0xe85d04, 1).strokePoints(forma(), true);
+    if (aceso) borda.lineStyle(8, 0xffb703, 0.25).strokePoints(forma(), true);
+  };
+  desenhar();
+  const c = cena.add.container(r.x, r.y, itens).setDepth(1);
+  c.setInteractive(new Phaser.Geom.Polygon(forma()), Phaser.Geom.Polygon.Contains);
+  if (c.input) c.input.cursor = 'pointer';
+  const acender = (a: boolean) => {
+    if (a === aceso) return;
+    aceso = a;
+    desenhar();
+    cena.tweens.add({ targets: c, y: r.y - (a ? 8 : 0), duration: 130, ease: 'Quad.easeOut' });
+    cena.tweens.add({ targets: mascara, y: a ? -8 : 0, duration: 130, ease: 'Quad.easeOut' });
+  };
+  const acionar = () => { som.ligar(); som.tocar('menu'); aoClicar(); };
+  let apertado = false;
+  c.on('pointerover', (p: Phaser.Input.Pointer) => { if (!p.wasTouch) acender(true); });
+  c.on('pointerout', () => { apertado = false; acender(false); });
+  c.on('pointerdown', () => { apertado = true; acender(true); });
+  c.on('pointerup', () => { if (apertado) acionar(); apertado = false; });
+  nav.add({ ...r, acionar, focar: acender });
 }
 
 // ------------------------------------------------------------------------------------------------------------
