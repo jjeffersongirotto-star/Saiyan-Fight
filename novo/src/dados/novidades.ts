@@ -6,6 +6,15 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.145',
+    titulo: 'ABERTURA MAIS LEVE',
+    itens: [
+      'O motor do jogo ficou um terço menor (só com as partes que o jogo usa): menos para baixar e o jogo abre mais rápido no celular.',
+      'O histórico das versões antigas só é baixado ao abrir ATUALIZAÇÕES.',
+      'Em aparelho que não segura 60 fps, a faixa de transição e as faíscas do menu se desligam junto com a resolução.',
+    ],
+  },
+  {
     versao: '0.144',
     titulo: 'POLIMENTO',
     itens: [

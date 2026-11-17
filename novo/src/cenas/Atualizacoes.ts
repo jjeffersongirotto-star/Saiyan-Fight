@@ -10,7 +10,10 @@ import { faseDoDownload, formatarTamanho, progressoDoDownload } from '../logica/
 import { criarBotao } from '../ui/botao';
 import { fundoDeMenu, botaoTelaCheia } from '../ui/telas';
 import { vigiarControles } from '../entrada/controles';
-import { UPDATES_LEGADO } from '../legado/updates-legado';
+import type { UPDATES_LEGADO } from '../legado/updates-legado';
+
+// v0.145: o histórico do jogo antigo (~80 KB) só é baixado ao abrir esta tela, não na abertura do jogo
+let historico: typeof UPDATES_LEGADO | null = null;
 import { aoApertar } from '../entrada/teclas';
 import { NOVIDADES } from '../dados/novidades';
 import { abrirApk, abrirInstaladorPc, comAtualizador, windowsNoNavegador, androidNoNavegador, baixarEAtualizar, infoVersao, procurarAtualizacao } from '../app/plataforma';
@@ -28,7 +31,7 @@ function quebrar(t: string, max: number, recuo = ''): string[] {
   if (l) r.push(l);
   return r;
 }
-export function linhasDasNovidades(max = 118): { t: string; c?: string; b?: boolean }[] {
+export function linhasDasNovidades(legado: typeof UPDATES_LEGADO = [], max = 118): { t: string; c?: string; b?: boolean }[] {
   const r: { t: string; c?: string; b?: boolean }[] = [];
   for (const n of NOVIDADES) {
     r.push({ t: `VERSÃO ${n.versao}${n === NOVIDADES[0] ? ' (ATUAL)' : ''} — ${n.titulo}`, c: '#ffd23a', b: true });
@@ -38,7 +41,7 @@ export function linhasDasNovidades(max = 118): { t: string; c?: string; b?: bool
   const novas = new Set(NOVIDADES.map((n) => n.versao));
   r.push({ t: 'HISTÓRICO DO JOGO ANTIGO', c: '#8fd3ff', b: true });
   r.push({ t: '' });
-  for (const u of UPDATES_LEGADO) {
+  for (const u of legado) {
     if (novas.has(u.versao)) continue;
     r.push({ t: `VERSÃO ${u.versao} — ${u.titulo}`, c: '#fde68a', b: true });
     for (const i of u.itens) for (const q of quebrar(`  • [${i.tag}] ${i.titulo}${i.texto ? ': ' + i.texto : ''}`, max, '     ')) r.push({ t: q });
@@ -70,11 +73,11 @@ export class Atualizacoes extends Phaser.Scene {
     // novidades (só em português, como as UPDATES do jogo antigo): as do novo e, embaixo, todo o histórico 0.x do
     // antigo (gerado de index.html). A lista é longa: só as linhas visíveis viram texto (cabe em qualquer celular).
     this.add.rectangle(TELA_L / 2, 166, 740, 196, 0x0a0f1f, 0.85).setStrokeStyle(2, 0xffd23a, 0.8);
-    const linhas = linhasDasNovidades();
+    const linhas = linhasDasNovidades(historico ?? []);
     const VISIVEIS = 13, ALTURA = 14.5;
     const objs = Array.from({ length: VISIVEIS }, (_, k) => this.add.text(42, 76 + k * ALTURA, '', estiloTexto({ fontFamily: 'Arial', fontSize: '12px', color: '#dfe7ff' })));
     let topo = 0, resto = 0;
-    const max = Math.max(0, linhas.length - VISIVEIS);
+    let max = Math.max(0, linhas.length - VISIVEIS);
     const barra = this.add.graphics();
     const mostrar = () => {
       objs.forEach((o, k) => {
@@ -96,6 +99,15 @@ export class Atualizacoes extends Phaser.Scene {
       mostrar();
     };
     mostrar();
+    if (!historico) {
+      import('../legado/updates-legado').then((m) => {
+        historico = m.UPDATES_LEGADO;
+        if (!this.sys.isActive()) return;
+        linhas.splice(0, linhas.length, ...linhasDasNovidades(historico));
+        max = Math.max(0, linhas.length - VISIVEIS);
+        mostrar();
+      }).catch(() => undefined);
+    }
     this.input.on('wheel', (_p: unknown, _o: unknown, _dx: number, dy: number) => rolar(dy * 0.5));
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => { if (p.isDown && p.worldY > 70 && p.worldY < 262) rolar((p.prevPosition.y - p.y) / this.cameras.main.zoom); });   // pixels do canvas → tela do jogo
     aoApertar(this, (c) => { if (c === 'ArrowDown') rolar(ALTURA); else if (c === 'ArrowUp') rolar(-ALTURA); else if (c === 'PageDown') rolar(ALTURA * 10); else if (c === 'PageUp') rolar(-ALTURA * 10); });

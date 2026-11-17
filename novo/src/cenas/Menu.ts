@@ -216,6 +216,7 @@ export class Menu extends Phaser.Scene {
   update(tempo: number, delta: number): void {
     const v = this.vitrine;
     if (!v) return;
+    if (v.faiscas && !enfeitesLigados()) { v.faiscas.destroy(); v.faiscas = undefined; }
     v.efeitos.desenhar(v.l, { x: v.sprite.x, y: v.sprite.y }, v.k, tempo / 1000, Math.min(0.1, delta / 1000));
   }
 

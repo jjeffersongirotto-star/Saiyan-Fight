@@ -6,7 +6,7 @@
 import Phaser from 'phaser';
 import { TELA_A, TELA_L } from '../logica/constantes';
 import { criarVigia, degrauAbaixo, DEGRAUS_ESCALA, escalaInicial, medirQuadro } from '../logica/desempenho';
-import { entrarNaCena } from './transicao';
+import { desligarEnfeites, entrarNaCena } from './transicao';
 
 /** resolução atual da tela (muda só para baixo, por mudarEscala) */
 export let ESCALA_RENDER = typeof window === 'undefined' ? 1 : escalaInicial(
@@ -48,6 +48,7 @@ export function aoFaltarDesempenho(f: () => boolean): () => void {
 
 /** Baixa um degrau (ou, muito lento, direto à resolução mínima): primeiro a resolução, depois os alívios. */
 export function baixarQualidade(jogo: Phaser.Game, minimo = false): void {
+  desligarEnfeites(); // v0.145: aparelho apertado: sem faixa de transição nem faíscas no menu
   const abaixo = degrauAbaixo(ESCALA_RENDER);
   if (abaixo !== null) { mudarEscala(jogo, minimo ? DEGRAUS_ESCALA[DEGRAUS_ESCALA.length - 1] : abaixo); return; }
   for (const f of alivios) if (f()) return;

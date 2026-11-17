@@ -28,6 +28,7 @@ const jogo = new Phaser.Game({
   roundPixels: true,
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, fullscreenTarget: 'jogo' },
   input: { activePointers: 4 },
+  audio: { noAudio: true }, // o som é nosso (audio/som.ts); o Phaser não abre outro AudioContext
   fps: { target: 60 },
   // as OPÇÕES vêm depois da Luta: abertas da pausa, ficam desenhadas por cima dela; o aviso de conquista por cima de tudo
   scene: [Boot, Preload, Menu, ...CENAS_TELAS, Mapa, Selecao, Arenas, Luta, Vitoria, FimHistoria, Trilhas, Atualizacoes, ...CENAS_OPCOES, AvisoConquista],
