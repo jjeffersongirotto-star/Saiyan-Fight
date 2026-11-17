@@ -355,7 +355,9 @@ export function botaoLamina(cena: Phaser.Scene, nav: Navegacao, r: Ret, texto: s
     desenhar();
     cena.tweens.add({ targets: c, x: xBase + (a ? -8 : 0), duration: 120, ease: 'Quad.easeOut' });
   };
-  c.setInteractive(new Phaser.Geom.Polygon(forma()), Phaser.Geom.Polygon.Contains);
+  // container com tamanho: a área de toque é medida a partir do canto (-w/2, -h/2) — por isso a forma vai deslocada
+  // (antes só a metade de cima/esquerda respondia e o toque parecia falhar na 1ª vez, v0.146)
+  c.setInteractive(new Phaser.Geom.Polygon(forma(r.w / 2, r.h / 2)), Phaser.Geom.Polygon.Contains);
   if (c.input) c.input.cursor = 'pointer';
   const b: BotaoTela = {
     container: c, rotulo: rot, r, ligado: true,
