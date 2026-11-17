@@ -121,7 +121,15 @@ export function botao(cena: Phaser.Scene, r: Ret, texto: string, aoClicar: () =>
   c.on('pointerover', (p: Phaser.Input.Pointer) => { if (!p.wasTouch) { hover = true; desenhar(); } });
   c.on('pointerout', () => { hover = false; apertado = false; desenhar(); });
   c.on('pointerdown', () => { apertado = true; desenhar(); });
-  c.on('pointerup', () => { const era = apertado; apertado = false; desenhar(); if (era) b.acionar(); });
+  c.on('pointerup', () => {
+    const era = apertado; apertado = false; desenhar();
+    if (!era) return;
+    // v0.144: clarão rápido no botão tocado
+    const f = cena.add.graphics().fillStyle(0xffffff, 0.45).fillRect(0, 0, r.w, r.h);
+    c.add(f);
+    cena.tweens.add({ targets: f, alpha: 0, duration: 160, onComplete: () => f.destroy() });
+    b.acionar();
+  });
   return b;
 }
 

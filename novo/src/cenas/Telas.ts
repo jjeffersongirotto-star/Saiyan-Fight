@@ -6,6 +6,7 @@ import { ajustarCamera, estiloTexto } from '../ui/resolucao';
 import { TELA_A, TELA_L } from '../logica/constantes';
 import { T, TF } from '../logica/idioma';
 import { som } from '../audio/som';
+import { PALETAS_AURA } from '../logica/efeitos';
 import { botao, botaoNav, montarTela, ret, texto, cor, Navegacao, type Ret } from '../ui/telas';
 import { ORDEM_PERSONAGENS, PERSONAGENS, chaveDoAtlas } from '../dados/personagens';
 import { mostrarBarraDeCarregamento } from '../ui/barra';
@@ -188,8 +189,11 @@ export class Personagens extends Phaser.Scene {
       const r = retCarta(i), p = PERSONAGENS[id];
       const sel = !!this.fase && cfgV?.personagem === id;
       const g = this.add.graphics().fillStyle(sel ? 0x174f78 : 0x061734, sel ? 1 : 0.9).fillRect(r.x, r.y, r.w, r.h).lineStyle(sel ? 3 : 1, sel ? 0xffd23f : 0xe85d04, 1).strokeRect(r.x, r.y, r.w, r.h);
-      const img = this.add.image(r.x + r.w / 2, r.y + 68, ...retratoDe(id)).setOrigin(0.5, 1);
-      img.setScale(Math.min((r.w - 12) / img.width, 64 / img.height));
+      // v0.144: lutador maior (antes ~50 px de corpo), com o brilho da cor da aura atrás
+      const pal = PALETAS_AURA[p.formas[0].aura];
+      g.fillStyle(pal[1], 0.16).fillEllipse(r.x + r.w / 2, r.y + 42, r.w * 0.62, r.h * 0.8);
+      const img = this.add.image(r.x + r.w / 2, r.y + 72, ...retratoDe(id)).setOrigin(0.5, 103 / 112);
+      img.setScale(88 / img.height);
       const nome = texto(this, r.x + r.w / 2, r.y + 82, p.nome, 10, '#ffffff').setOrigin(0.5, 0.75);
       const z = this.add.zone(r.x, r.y, r.w, r.h).setOrigin(0).setInteractive({ useHandCursor: true });
       const abrir = () => this.abrirFormas(id, !!this.fase);
@@ -523,7 +527,11 @@ export class Conquistas extends Phaser.Scene {
       texto(this, sx - 20, cardY + 18, T(rot), 11, CORES_TIER[k]).setOrigin(0, 0.75);
       texto(this, sx - 20, cardY + 35, `${cont[k].feitas}/${cont[k].total}`, 13, '#e8e8f0').setOrigin(0, 0.75);
     });
-    texto(this, TELA_L / 2, cardY + cardH + 12, TF('TOTAL: {0}/{1}', cont.total.feitas, cont.total.total), 9, '#9fb3d8', { fontStyle: 'normal' }).setOrigin(0.5, 0.75);
+    // v0.144: barra de progresso dourada com o total por cima
+    const fr = cont.total.total ? cont.total.feitas / cont.total.total : 0, by = cardY + cardH + 5;
+    this.add.graphics().fillStyle(0x0f0f18, 0.95).fillRect(cardX, by, cardW, 10).lineStyle(1, 0x4a4a5a, 1).strokeRect(cardX, by, cardW, 10)
+      .fillGradientStyle(0xffe27a, 0xffe27a, 0xd97706, 0xd97706, 1).fillRect(cardX + 1, by + 1, Math.max(0, (cardW - 2) * fr), 8);
+    texto(this, TELA_L / 2, by + 8.5, TF('TOTAL: {0}/{1}', cont.total.feitas, cont.total.total), 8, '#ffffff', { stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5, 0.75);
     // grade de 2 colunas, rolando
     const colunas = 2, gridTop = 92, gapX = 12, gapY = 8, cardWidth = Math.min(280, (TELA_L - 48 - gapX) / 2), cardHeight = 52;
     const gridLeft = Math.round((TELA_L - (cardWidth * colunas + gapX)) / 2), vista = TELA_A - gridTop - 34;
@@ -533,13 +541,14 @@ export class Conquistas extends Phaser.Scene {
     CONQUISTAS.forEach((a, i) => {
       const x = gridLeft + (i % colunas) * (cardWidth + gapX), y = gridTop + Math.floor(i / colunas) * (cardHeight + gapY);
       const ok = c.tem(a.id), tc = cor(CORES_TIER[a.medalha] ?? CORES_TIER.bronze);
-      const g = this.add.graphics().fillStyle(ok ? 0x143c23 : 0x1e1e26, ok ? 0.9 : 0.75).fillRect(x, y, cardWidth, cardHeight).lineStyle(ok ? 2 : 1, ok ? tc : 0x3a3a46, 1).strokeRect(x, y, cardWidth, cardHeight);
+      // v0.144: as que faltam com mais contraste (antes quase apagadas)
+      const g = this.add.graphics().fillStyle(ok ? 0x143c23 : 0x172036, ok ? 0.9 : 0.92).fillRect(x, y, cardWidth, cardHeight).lineStyle(ok ? 2 : 1, ok ? tc : 0x3c4a66, 1).strokeRect(x, y, cardWidth, cardHeight);
       const bx = x + 8, by = y + cardHeight / 2 - 9;
-      g.fillStyle(ok ? tc : 0x1a1a22, 1).fillRect(bx, by, 18, 18).lineStyle(1.5, ok ? 0xffffff : 0x555560, 1).strokeRect(bx, by, 18, 18);
+      g.fillStyle(ok ? tc : 0x0d1424, 1).fillRect(bx, by, 18, 18).lineStyle(1.5, ok ? 0xffffff : 0x6b7891, 1).strokeRect(bx, by, 18, 18);
       if (ok) g.lineStyle(2.4, 0x132018, 1).beginPath().moveTo(bx + 3.5, by + 9.5).lineTo(bx + 7.5, by + 13.5).lineTo(bx + 14.5, by + 4.5).strokePath();
       const med = this.add.image(x + cardWidth - 12, y + 12, medalha(this, a.medalha, !ok)).setDisplaySize(14, 16);
-      const t1 = texto(this, bx + 26, y + 18, T(a.nome), 10, ok ? '#eafff0' : '#aab0bd').setOrigin(0, 0.75).setAlpha(ok ? 1 : 0.45);
-      const t2 = texto(this, bx + 26, y + 32, T(a.desc), 8, ok ? '#bfe8cc' : '#8a8f9c', { fontStyle: 'normal' }).setOrigin(0, 0.75).setAlpha(ok ? 1 : 0.45);
+      const t1 = texto(this, bx + 26, y + 18, T(a.nome), 10, ok ? '#eafff0' : '#d5dbe6').setOrigin(0, 0.75).setAlpha(ok ? 1 : 0.85);
+      const t2 = texto(this, bx + 26, y + 32, T(a.desc), 8, ok ? '#bfe8cc' : '#a9b3c4', { fontStyle: 'normal' }).setOrigin(0, 0.75).setAlpha(ok ? 1 : 0.85);
       for (const t of [t1, t2]) if (t.width > cardWidth - 46) t.setScale((cardWidth - 46) / t.width, 1);
       lista.add([g, med, t1, t2]);
       nav.add({ x, y, w: cardWidth, h: cardHeight, acionar: () => undefined });
