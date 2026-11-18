@@ -69,8 +69,10 @@ export const ATINGIDO_QUADROS = 15;     // hitTimer: só a pose de "apanhou" (o 
 export const PARRY_ONDA_QUADROS = 10;
 /** combo de parry (getParryComboBonus): ~1,5 s sem rebater zera */
 export const COMBO_PARRY_QUADROS = 90;
-/** quem cai voa para fora da tela a esta velocidade (como o vilão da história) até passar QUEDA_FORA da borda (v0.148) */
-export const QUEDA_VEL = 12, QUEDA_FORA = 120;
+/** quem cai é arremessado para fora da tela (v0.149): velocidade do impacto (maior com o especial), atrito, mínima,
+ *  subida inicial e gravidade da curva; para de contar quando passa QUEDA_FORA da borda */
+export const QUEDA_VX = 13, QUEDA_VX_ESPECIAL = 17, QUEDA_ATRITO = 0.985, QUEDA_VX_MIN = 6;
+export const QUEDA_VY = -5, QUEDA_GRAVIDADE = 0.22, QUEDA_FORA = 120;
 export const FIM_RODADA_QUADROS = 150;  // pausa com o resultado antes da próxima rodada
 export const INVULNERAVEL_INICIO = 60;  // começo de cada rodada
 

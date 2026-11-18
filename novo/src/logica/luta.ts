@@ -60,7 +60,7 @@ export function criarLutador(id: IdJogador, ficha: FichaLuta | string): Lutador 
     olhando: id === 'p1' ? 1 : -1,
     vida: C.VIDA_VERSUS, vidaMax: C.VIDA_VERSUS, ki: 0, nivel: 0, poder: 0,
     acao: 'livre', acaoQuadros: 0, poseTiro: 0, poseParry: 0, esperaTiro: 0, esperaParry: 0,
-    invulneravel: C.INVULNERAVEL_INICIO, escudo: false, nuvem: 0, bastao: 0, poseAtingido: 0, ondaParry: 0, nivelAura: 0, emEspecial: false,
+    invulneravel: C.INVULNERAVEL_INICIO, escudo: false, nuvem: 0, bastao: 0, poseAtingido: 0, quedaVx: 0, quedaVy: 0, ondaParry: 0, nivelAura: 0, emEspecial: false,
     comboParry: 0, comboParryQuadros: 0, ultimoBonusParry: 0, zenkaiUsada: false, atacarAntes: false,
     pedidoEspecial: 0, pedidoParry: 0, pedidoTransformar: 0,
   };
@@ -162,6 +162,10 @@ export function aplicarDano(e: EstadoLuta, alvo: Lutador, dano: number, deEspeci
   if (alvo.vida <= 0) {
     alvo.acao = 'caido';
     alvo.acaoQuadros = 0;
+    // o impacto do último golpe arremessa para trás (sem direção, para o lado de fora de quem caiu)
+    const lado = Math.sign(direcao) || (alvo.id === 'p1' ? -1 : 1);
+    alvo.quedaVx = lado * (deEspecial ? C.QUEDA_VX_ESPECIAL : C.QUEDA_VX);
+    alvo.quedaVy = C.QUEDA_VY;
     e.raios = e.raios.filter((r) => r.dono !== alvo.id);
   }
 }
@@ -390,15 +394,20 @@ function andar(e: EstadoLuta, l: Lutador, ent: Entrada) {
   }
 }
 
-/** v0.148: quem cai sai voando para fora da tela, para o lado de trás (como o vilão da história; antes ficava
- *  translúcido parado). O vilão da história continua com o voo de historia.ts. A próxima rodada recria o lutador. */
+/** v0.149: quem cai é ARREMESSADO para trás pelo último golpe, numa curva (como o minion arremessado, mas sem
+ *  girar), até sair da tela; não atravessa o chão. O vilão da história continua com o voo de historia.ts. A próxima
+ *  rodada recria o lutador. */
 function voarParaFora(e: EstadoLuta, l: Lutador) {
   if (e.historia && l.id === 'p2') return;
   l.xAnt = l.x; l.yAnt = l.y;
-  const lado = l.id === 'p1' ? -1 : 1;
-  if (lado < 0 ? l.x < -C.QUEDA_FORA : l.x > C.TELA_L + C.QUEDA_FORA) return; // já saiu: fica lá
-  l.x += lado * C.QUEDA_VEL;
-  l.y += Math.sin(e.quadro * 0.25) * 3 - 0.6;
+  if (l.x < -C.QUEDA_FORA || l.x > C.TELA_L + C.QUEDA_FORA) return; // já saiu: fica lá
+  if (l.quedaVx === 0) { l.quedaVx = (l.id === 'p1' ? -1 : 1) * C.QUEDA_VX; l.quedaVy = C.QUEDA_VY; }
+  l.x += l.quedaVx;
+  l.quedaVx *= C.QUEDA_ATRITO;
+  // não para no meio da tela: mantém uma velocidade mínima até sair
+  if (Math.abs(l.quedaVx) < C.QUEDA_VX_MIN) l.quedaVx = Math.sign(l.quedaVx) * C.QUEDA_VX_MIN;
+  l.y = Math.min(l.y + l.quedaVy, C.CHAO_Y - l.a / 2);
+  l.quedaVy += C.QUEDA_GRAVIDADE;
 }
 
 function clampar(e: EstadoLuta, l: Lutador) {

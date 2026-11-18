@@ -295,7 +295,7 @@ function passoMinions(e: EstadoLuta, eventos: Evento[]) {
           const escudo = heroi.escudo, inv = heroi.invulneravel;
           heroi.escudo = false;
           heroi.invulneravel = 0;
-          aplicarDano(e, heroi, 1, false, 1, eventos);
+          aplicarDano(e, heroi, 1, false, -1, eventos); // a explosão joga o herói para trás (esquerda)
           heroi.escudo = escudo;
           if (heroi.vida > 0) heroi.invulneravel = Math.max(inv, C.INVULNERAVEL_QUADROS);
         }

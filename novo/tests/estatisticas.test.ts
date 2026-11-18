@@ -36,7 +36,7 @@ describe('opções de qualidade de vida (v0.147)', async () => {
   });
 });
 
-describe('quem cai sai voando da tela (v0.148)', async () => {
+describe('quem cai é arremessado para fora da tela (v0.148/0.149)', async () => {
   const { criarLuta, passoLuta } = await import('../src/logica/luta');
   const { fichaDoPersonagem } = await import('../src/logica/ficha');
   const { ENTRADA_VAZIA } = await import('../src/logica/tipos');
@@ -49,5 +49,23 @@ describe('quem cai sai voando da tela (v0.148)', async () => {
       if (id === 'p1') expect(e.p1.x).toBeLessThan(-C.QUEDA_FORA + 1);
       else expect(e.p2.x).toBeGreaterThan(C.TELA_L + C.QUEDA_FORA - 1);
     }
+  });
+  it('vai para o lado do último golpe, numa curva, sem passar do chão', async () => {
+    const { aplicarDano } = await import('../src/logica/luta');
+    const e = criarLuta(fichaDoPersonagem('goku'), fichaDoPersonagem('vegeta'), 1);
+    e.p2.vida = 1; e.p2.zenkaiUsada = true; e.p2.invulneravel = 0;
+    aplicarDano(e, e.p2, 1, false, 1, []);
+    expect(e.p2.acao).toBe('caido');
+    expect(e.p2.quedaVx).toBeGreaterThan(0);
+    const y0 = e.p2.y;
+    let subiu = false;
+    // (antes da próxima rodada, que recria o lutador: FIM_RODADA_QUADROS)
+    for (let i = 0; i < C.FIM_RODADA_QUADROS - 5; i++) {
+      passoLuta(e, { p1: ENTRADA_VAZIA, p2: ENTRADA_VAZIA });
+      if (e.p2.y < y0) subiu = true;
+      expect(e.p2.y).toBeLessThanOrEqual(C.CHAO_Y - e.p2.a / 2 + 0.001);
+    }
+    expect(subiu).toBe(true);
+    expect(e.p2.x).toBeGreaterThan(C.TELA_L + C.QUEDA_FORA - 1);
   });
 });

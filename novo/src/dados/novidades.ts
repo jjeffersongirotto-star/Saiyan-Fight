@@ -6,6 +6,13 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.149',
+    titulo: 'ARREMESSADO PELO ÚLTIMO GOLPE',
+    itens: [
+      'Quem é derrotado agora é arremessado para trás pelo impacto do último golpe, numa curva, e sai da tela (como os minions arremessados, mas sem girar). O especial joga mais forte.',
+    ],
+  },
+  {
     versao: '0.148',
     titulo: 'DERROTA SEM TRANSLÚCIDO',
     itens: [
