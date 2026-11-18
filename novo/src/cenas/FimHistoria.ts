@@ -16,10 +16,6 @@ import type { DadosDaLuta } from './Menu';
 import { aoApertar } from '../entrada/teclas';
 import { som } from '../audio/som';
 import { conquistas } from '../logica/conquistas';
-import { PERSONAGENS } from '../dados/personagens';
-
-/** atlas da pose de derrota (uma célula por personagem, forma base) */
-const CABISBAIXO = 'cabisbaixo';
 
 export interface DadosDoFimHistoria {
   luta: DadosDaLuta;
@@ -49,10 +45,6 @@ export class FimHistoria extends Phaser.Scene {
     super('FimHistoria');
   }
 
-  preload(): void {
-    if (!this.textures.exists(CABISBAIXO)) this.load.atlas(CABISBAIXO, `atlas/${CABISBAIXO}.webp`, `atlas/${CABISBAIXO}.json`);
-  }
-
   create(d: DadosDoFimHistoria): void {
     som.musica(null);
     ajustarCamera(this);
@@ -74,13 +66,7 @@ export class FimHistoria extends Phaser.Scene {
 
     this.add.rectangle(TELA_L / 2, TELA_A / 2, TELA_L, TELA_A, 0x0a0f1f, 1);
     this.add.rectangle(TELA_L / 2, TELA_A / 2, TELA_L, TELA_A, fase.cor, 0.12);
-    // v0.148: na derrota o herói aparece CABISBAIXO (pose da forma base, scripts/gerar-cabisbaixo.py), respirando devagar
-    const triste = !venceu && this.textures.exists(CABISBAIXO) && this.textures.get(CABISBAIXO).has(d.luta.p1) && !!PERSONAGENS[d.luta.p1];
-    if (triste) {
-      const k = Math.min(1.15, escalaDaAltura(PERSONAGENS[d.luta.p1].formas[0].altura)) / 1.5;
-      const s = this.add.image(150, 268, CABISBAIXO, d.luta.p1).setOrigin(0.5, 103 / 112).setScale(k);
-      this.tweens.add({ targets: s, scaleY: k * 0.985, y: 268.5, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    } else if (this.textures.exists(d.atlas)) {
+    if (this.textures.exists(d.atlas)) {
       const k = Math.min(1.15, escalaDaAltura(d.altura));
       const s = this.add.sprite(150, 268, d.atlas, 'idle/0').setOrigin(0.5, 103 / 112).setScale(k / metaDoAtlas(this, d.atlas).escala);
       const anim = `${d.atlas}:${venceu ? 'idle' : 'hit'}`;

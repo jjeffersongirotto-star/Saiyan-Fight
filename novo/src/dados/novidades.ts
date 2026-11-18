@@ -10,7 +10,6 @@ export const NOVIDADES: Novidade[] = [
     titulo: 'DERROTA SEM TRANSLÚCIDO',
     itens: [
       'Quem é derrotado não fica mais translúcido: é jogado para trás e sai voando da tela, como o vilão quando uma leva é derrotada.',
-      'No FIM DE JOGO o seu lutador aparece cabisbaixo (na forma base), respirando devagar.',
     ],
   },
   {
