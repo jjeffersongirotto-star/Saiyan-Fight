@@ -35,3 +35,19 @@ describe('opções de qualidade de vida (v0.147)', async () => {
     expect(FORCA_DA_CPU.facil < FORCA_DA_CPU.normal && FORCA_DA_CPU.normal < FORCA_DA_CPU.dificil).toBe(true);
   });
 });
+
+describe('quem cai sai voando da tela (v0.148)', async () => {
+  const { criarLuta, passoLuta } = await import('../src/logica/luta');
+  const { fichaDoPersonagem } = await import('../src/logica/ficha');
+  const { ENTRADA_VAZIA } = await import('../src/logica/tipos');
+  const C = await import('../src/logica/constantes');
+  it('o J1 caído vai para a esquerda até sair da tela e o J2 para a direita', () => {
+    for (const id of ['p1', 'p2'] as const) {
+      const e = criarLuta(fichaDoPersonagem('goku'), fichaDoPersonagem('vegeta'), 1);
+      e[id].vida = 0; e[id].acao = 'caido';
+      for (let i = 0; i < 120; i++) passoLuta(e, { p1: ENTRADA_VAZIA, p2: ENTRADA_VAZIA });
+      if (id === 'p1') expect(e.p1.x).toBeLessThan(-C.QUEDA_FORA + 1);
+      else expect(e.p2.x).toBeGreaterThan(C.TELA_L + C.QUEDA_FORA - 1);
+    }
+  });
+});

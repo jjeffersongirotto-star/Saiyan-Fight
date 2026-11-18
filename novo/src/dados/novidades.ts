@@ -6,6 +6,13 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.148',
+    titulo: 'DERROTA SEM TRANSLÚCIDO',
+    itens: [
+      'Quem é derrotado não fica mais translúcido: é jogado para trás e sai voando da tela, como o vilão quando uma leva é derrotada.',
+    ],
+  },
+  {
     versao: '0.147',
     titulo: 'QUALIDADE DE VIDA',
     itens: [
