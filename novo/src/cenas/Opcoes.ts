@@ -12,7 +12,7 @@ import { botao, botaoNav, chave, montarTela, painel, ret, texto, type BotaoTela,
 import {
   ACOES_CONTROLE, ACOES_TECLA, BOTOES_HUD, CONTROLE_PADRAO, HUD_ESCALA, HUD_OPACIDADE, HUD_PADRAO, NOMES_BOTOES, SENS_MAX, SENS_MIN,
   atribuirBotao, atribuirTecla, clonarBotoes, clonarHud, modoEfetivo, mudarOpcoes, nomeDaTecla, opcoes,
-  type AcaoControle, type AcaoTecla, type BotaoHud, type ModoControle,
+  DIFICULDADES_CPU, type AcaoControle, type AcaoTecla, type BotaoHud, type DificuldadeCpu, type ModoControle,
 } from '../logica/opcoes';
 import { padsConectados, ultimaEntrada, intencaoDe, vigiarControles } from '../entrada/controles';
 import { transmitindo, transmitirParaTV } from '../app/tv';
@@ -41,15 +41,38 @@ export class Opcoes extends Phaser.Scene {
   create(): void {
     ajustarCamera(this);
     const nav = montarTela(this, () => sairDasOpcoes(this));
-    painel(this, 180, 30, 440, 300, 'OPÇÕES DO JOGO', 'CONFIGURAÇÕES DA PARTIDA');
-    botaoNav(this, nav, ret(220, 110, 360, 42), 'CONTROLES', () => this.scene.start('OpcoesControles'), { cor: '#7dd3fc' });
-    botaoNav(this, nav, ret(220, 162, 360, 42), 'CONFIGURAÇÃO DE ÁUDIO', () => this.scene.start('OpcoesAudio'), { cor: '#c4b5fd' });
-    const tv = botaoNav(this, nav, ret(220, 214, 360, 42), '', () => transmitirParaTV(this.game.canvas, marcar));
+    painel(this, 180, 22, 440, 316, 'OPÇÕES DO JOGO', 'CONFIGURAÇÕES DA PARTIDA');
+    // v0.147: + JOGO (dificuldade da CPU, texto grande, tremor e clarões)
+    const y = (i: number) => ret(220, 96 + i * 46, 360, 38);
+    botaoNav(this, nav, y(0), 'CONTROLES', () => this.scene.start('OpcoesControles'), { cor: '#7dd3fc' });
+    botaoNav(this, nav, y(1), 'JOGO', () => this.scene.start('OpcoesJogo'), { cor: '#fdba74' });
+    botaoNav(this, nav, y(2), 'CONFIGURAÇÃO DE ÁUDIO', () => this.scene.start('OpcoesAudio'), { cor: '#c4b5fd' });
+    const tv = botaoNav(this, nav, y(3), '', () => transmitirParaTV(this.game.canvas, marcar));
     let pronto = false;
     const marcar = () => { if (pronto && !this.sys.isActive()) return; tv.texto(T(transmitindo() ? 'PARAR TRANSMISSÃO PARA A TV' : 'TRANSMITIR PARA A TV')); tv.corTexto(transmitindo() ? '#fca5a5' : '#86efac'); };
     marcar();
     pronto = true;
-    botaoNav(this, nav, ret(220, 266, 360, 42), 'IDIOMAS', () => this.scene.start('OpcoesIdiomas'), { cor: '#fde68a' });
+    botaoNav(this, nav, y(4), 'IDIOMAS', () => this.scene.start('OpcoesIdiomas'), { cor: '#fde68a' });
+  }
+}
+
+// ------------------------------------------------------------------------------------------------------------
+// JOGO (v0.147): dificuldade da CPU no 1 JOGADOR x CPU, tamanho do texto dos menus e tremor/clarões da luta
+const NOMES_DIFICULDADE: Record<DificuldadeCpu, string> = { facil: 'FÁCIL', normal: 'NORMAL', dificil: 'DIFÍCIL' };
+export class OpcoesJogo extends Phaser.Scene {
+  constructor() { super('OpcoesJogo'); }
+  create(): void {
+    ajustarCamera(this);
+    const nav = montarTela(this, () => this.scene.start('Opcoes'));
+    painel(this, 170, 36, 460, 270, 'JOGO', 'AJUSTES DA PARTIDA');
+    const o = opcoes();
+    const mudar = (f: (x: typeof o) => void) => () => { mudarOpcoes(f); this.scene.restart(); };
+    const prox = DIFICULDADES_CPU[(DIFICULDADES_CPU.indexOf(o.dificuldadeCpu) + 1) % DIFICULDADES_CPU.length];
+    const corDif = { facil: '#86efac', normal: '#fde68a', dificil: '#fca5a5' }[o.dificuldadeCpu];
+    botaoNav(this, nav, ret(210, 112, 380, 40), `${T('DIFICULDADE DA CPU')}: ${T(NOMES_DIFICULDADE[o.dificuldadeCpu])}`, mudar((x) => { x.dificuldadeCpu = prox; }), { cor: corDif });
+    botaoNav(this, nav, ret(210, 166, 380, 40), `${T('TAMANHO DO TEXTO')}: ${T(o.textoGrande ? 'GRANDE' : 'NORMAL')}`, mudar((x) => { x.textoGrande = !x.textoGrande; }), { cor: o.textoGrande ? '#7dd3fc' : '#e2e8f0' });
+    botaoNav(this, nav, ret(210, 220, 380, 40), `${T('TREMOR E CLARÕES')}: ${T(o.tremor ? 'LIGADO' : 'DESLIGADO')}`, mudar((x) => { x.tremor = !x.tremor; }), { cor: o.tremor ? '#86efac' : '#fca5a5' });
+    texto(this, TELA_L / 2, 280, T('A DIFICULDADE VALE NO 1 JOGADOR x CPU'), 10, '#8fd3ff', { fontStyle: 'normal' }).setOrigin(0.5, 0.75);
   }
 }
 
@@ -80,7 +103,15 @@ export class OpcoesAudio extends Phaser.Scene {
     const est = { fontFamily: "'Segoe UI', sans-serif", fontStyle: 'normal' };
     const tSfx = texto(this, 210, 125, '', 14, '#e2e8f0', est).setOrigin(0, 0.75);
     const tBgm = texto(this, 210, 180, '', 14, '#e2e8f0', est).setOrigin(0, 0.75);
+    // v0.147: barra de cada volume (10 pedaços), entre o nome e o − +
+    const barras = this.add.graphics();
+    const barra = (y: number, v: number) => {
+      for (let i = 0; i < 10; i++) barras.fillStyle(i < Math.round(v * 10) ? (som.mudo ? 0x64748b : 0x22c55e) : 0x1e293b, 1).fillRect(400 + i * 15, y, 12, 14);
+    };
     const atualizar = () => {
+      barras.clear();
+      barra(112, som.prefs.volEfeitos);
+      barra(167, som.prefs.volMusica);
       tSfx.setText(TF('VOLUME SFX: {0}%', Math.round(som.prefs.volEfeitos * 100)));
       tBgm.setText(TF('VOLUME BGM: {0}%', Math.round(som.prefs.volMusica * 100)));
       mudo.texto(T(som.mudo ? 'ÁUDIO: MUTADO' : 'ÁUDIO: ATIVADO'));
@@ -534,4 +565,4 @@ export class TesteControles extends Phaser.Scene {
   }
 }
 
-export const CENAS_OPCOES = [Opcoes, OpcoesIdiomas, OpcoesAudio, OpcoesControles, OpcoesPc, OpcoesToque, EditorHud, OpcoesJoystick, TesteControles];
+export const CENAS_OPCOES = [Opcoes, OpcoesJogo, OpcoesIdiomas, OpcoesAudio, OpcoesControles, OpcoesPc, OpcoesToque, EditorHud, OpcoesJoystick, TesteControles];

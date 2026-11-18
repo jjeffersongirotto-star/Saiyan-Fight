@@ -36,6 +36,8 @@ export interface DadosDaLuta {
   modoFase?: ModoFase;
   /** arena (id de FASES ou de uma arena criada no editor): no VERSUS/CPU escolhida na tela Arenas; na história é a da fase */
   arena?: string;
+  /** REINICIAR da pausa (v0.147): recomeça sem a tela de VERSUS */
+  reinicio?: boolean;
 }
 
 /** lâminas em diagonal (cada fileira um pouco à esquerda, seguindo a inclinação) */

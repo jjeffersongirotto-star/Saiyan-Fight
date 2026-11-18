@@ -7,6 +7,7 @@ import Phaser from 'phaser';
 import { TELA_A, TELA_L } from '../logica/constantes';
 import { criarVigia, degrauAbaixo, DEGRAUS_ESCALA, escalaInicial, medirQuadro } from '../logica/desempenho';
 import { desligarEnfeites, entrarNaCena } from './transicao';
+import { opcoes } from '../logica/opcoes';
 
 /** resolução atual da tela (muda só para baixo, por mudarEscala) */
 export let ESCALA_RENDER = typeof window === 'undefined' ? 1 : escalaInicial(
@@ -27,9 +28,14 @@ function zoomDaCamera(cena: Phaser.Scene): void {
   cena.cameras.main.setZoom(ESCALA_RENDER).centerOn(TELA_L / 2, TELA_A / 2);
 }
 
-/** Estilo de texto com a resolução certa para o zoom (senão o texto sai borrado). */
+/** OPÇÕES → JOGO → TAMANHO DO TEXTO (v0.147): GRANDE aumenta os textos em 12% (os botões encolhem o que não cabe) */
+export const fatorTexto = () => (opcoes().textoGrande ? 1.12 : 1);
+
+/** Estilo de texto com a resolução certa para o zoom (senão o texto sai borrado) e o tamanho escolhido nas opções. */
 export function estiloTexto(s: Phaser.Types.GameObjects.Text.TextStyle): Phaser.Types.GameObjects.Text.TextStyle {
-  return { resolution: Math.ceil(ESCALA_RENDER), ...s };
+  const px = typeof s.fontSize === 'string' ? parseFloat(s.fontSize) : NaN;
+  const f = fatorTexto();
+  return { resolution: Math.ceil(ESCALA_RENDER), ...s, ...(f !== 1 && Number.isFinite(px) ? { fontSize: `${Math.round(px * f * 10) / 10}px` } : {}) };
 }
 
 /** Troca a resolução do canvas e acerta a câmera de todas as cenas (as que vierem depois usam a nova). */

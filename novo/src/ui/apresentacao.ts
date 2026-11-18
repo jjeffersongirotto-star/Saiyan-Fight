@@ -6,6 +6,7 @@ import { TELA_A, TELA_L } from '../logica/constantes';
 import { chaveDoAtlas, PERSONAGENS } from '../dados/personagens';
 import { estiloTexto } from './resolucao';
 import { som } from '../audio/som';
+import { opcoes } from '../logica/opcoes';
 
 export const DURACAO_VERSUS = 1800;
 const PROF = 3000;
@@ -39,7 +40,7 @@ export function mostrarVersus(cena: Phaser.Scene, p1: { id: string; nivel: numbe
   const vs = cena.add.text(TELA_L / 2 - 14, 176, 'VS', estiloTexto({ fontFamily: "'Trebuchet MS', Arial, sans-serif", fontStyle: 'bold italic', fontSize: '64px', color: '#ffd23f' })).setOrigin(0.5);
   vs.setStroke('#7c2d12', 10).setShadow(3, 4, '#000000', 6, true, true).setScale(3).setAlpha(0);
   itens.push(vs);
-  cena.tweens.add({ targets: vs, scale: 1, alpha: 1, duration: 260, delay: 380, ease: 'Quad.easeIn', onComplete: () => { som.tocar('super'); cena.cameras.main.shake(180, 0.008); } });
+  cena.tweens.add({ targets: vs, scale: 1, alpha: 1, duration: 260, delay: 380, ease: 'Quad.easeIn', onComplete: () => { som.tocar('super'); if (opcoes().tremor) cena.cameras.main.shake(180, 0.008); } });
   const camada = cena.add.container(0, 0, itens).setDepth(PROF);
   const bloqueio = cena.add.zone(0, 0, TELA_L, TELA_A).setOrigin(0).setInteractive().setDepth(PROF + 1);
   let acabou = false;

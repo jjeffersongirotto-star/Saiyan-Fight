@@ -7,6 +7,7 @@ import { TELA_A, TELA_L } from '../logica/constantes';
 import { T, TF } from '../logica/idioma';
 import { som } from '../audio/som';
 import { PALETAS_AURA } from '../logica/efeitos';
+import { estatisticaDe, lerEstatisticas } from '../logica/estatisticas';
 import { botao, botaoNav, montarTela, ret, texto, cor, Navegacao, type Ret } from '../ui/telas';
 import { ORDEM_PERSONAGENS, PERSONAGENS, chaveDoAtlas } from '../dados/personagens';
 import { mostrarBarraDeCarregamento } from '../ui/barra';
@@ -262,8 +263,14 @@ export class Personagens extends Phaser.Scene {
     itens.push(bloqueio, fundo);
     itens.push(this.add.text(TELA_L / 2, py + 24, p.nome, estiloTexto({ fontFamily: "'Trebuchet MS', sans-serif", fontStyle: 'bold', fontSize: '16px', color: '#fff0a6' })).setOrigin(0.5, 0.75));
     // v0.141: subtítulo legível (antes cinza-azulado, fino e pequeno)
-    itens.push(this.add.text(TELA_L / 2, py + 42, escolher ? T('EM QUAL FORMA ELE APARECE NESTA FASE?') : `${T(p.alinhamento)}  ·  ${T('ESPECIAL')}: ${p.especial}`,
-      estiloTexto({ fontFamily: "'Trebuchet MS', sans-serif", fontStyle: 'bold', fontSize: '12px', color: '#e0f2fe', stroke: '#06122c', strokeThickness: 3 })).setOrigin(0.5, 0.75));
+    // v0.147: + lutas, vitórias e formas liberadas do personagem
+    const est = estatisticaDe(lerEstatisticas(), id), liberadas = p.criado ? p.formas.length : p.formas.filter((_, n) => formaLiberada(conquistas(), id, n)).length;
+    const sub = escolher ? T('EM QUAL FORMA ELE APARECE NESTA FASE?')
+      : `${T(p.alinhamento)}  ·  ${T('ESPECIAL')}: ${p.especial}  ·  ${TF('{0} LUTAS', est.lutas)}  ·  ${TF('{0} VITÓRIAS', est.vitorias)}  ·  ${T('FORMAS')}: ${liberadas}/${p.formas.length}`;
+    const tSub = this.add.text(TELA_L / 2, py + 42, sub,
+      estiloTexto({ fontFamily: "'Trebuchet MS', sans-serif", fontStyle: 'bold', fontSize: '12px', color: '#e0f2fe', stroke: '#06122c', strokeThickness: 3 })).setOrigin(0.5, 0.75);
+    if (tSub.width > pw - 24) tSub.setScale((pw - 24) / tSub.width, 1);
+    itens.push(tSub);
     const escalas = p.formas.map((f) => escalaDaAltura(f.altura));
     const maior = Math.max(1, ...escalas);
     const nq = (this.navQuadro ??= new Navegacao(this, () => this.fecharQuadro()));

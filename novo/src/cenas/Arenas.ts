@@ -1,6 +1,7 @@
 // Escolha da arena no VERSUS / contra a CPU: a arena focada aparece ao vivo no fundo (o mesmo desenho da luta),
 // e a luta toca a música dela. ALEATÓRIA sorteia uma das 11.
 import Phaser from 'phaser';
+import { mudarOpcoes, opcoes } from '../logica/opcoes';
 import { ajustarCamera, estiloTexto } from '../ui/resolucao';
 import { TELA_L } from '../logica/constantes';
 import { T } from '../logica/idioma';
@@ -16,8 +17,12 @@ import { som } from '../audio/som';
 const BL = 186, BA = 34, ESP_X = 8, ESP_Y = 6;
 const Y0 = 210;
 
-/** a última arena escolhida fica para a próxima vez (só nesta sessão) */
-let ultima = 0;
+/** a última arena escolhida fica para a próxima vez (v0.147: guardada nas opções, vale entre sessões; '*' = ALEATÓRIA) */
+function focoDaUltima(): number {
+  const u = opcoes().ultima.arena, fases = todasAsFases();
+  if (u === '*') return fases.length;
+  return Math.max(0, fases.findIndex((f) => f.id === u));
+}
 
 export class Arenas extends Phaser.Scene {
   private dados!: DadosDaLuta;
@@ -33,7 +38,7 @@ export class Arenas extends Phaser.Scene {
 
   init(d: DadosDaLuta): void {
     this.dados = d;
-    this.foco = ultima;
+    this.foco = focoDaUltima();
     this.botoes = [];
     this.arena = null;
   }
@@ -102,7 +107,8 @@ export class Arenas extends Phaser.Scene {
 
   private escolher(): void {
     const i = this.foco < todasAsFases().length ? this.foco : Math.floor(Math.random() * todasAsFases().length);
-    ultima = this.foco;
+    const foco = this.foco;
+    mudarOpcoes((o) => { o.ultima.arena = foco < todasAsFases().length ? todasAsFases()[foco].id : '*'; });
     this.scene.start('Luta', { ...this.dados, arena: todasAsFases()[i].id } satisfies DadosDaLuta);
   }
 

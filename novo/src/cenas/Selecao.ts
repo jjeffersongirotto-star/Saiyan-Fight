@@ -18,6 +18,7 @@ import { escalaDaAltura } from '../logica/luta';
 import type { DadosDaLuta } from './Menu';
 import { aoApertar } from '../entrada/teclas';
 import { som } from '../audio/som';
+import { mudarOpcoes, opcoes } from '../logica/opcoes';
 import { faseDe } from '../dados/fases';
 import { retratoDe } from '../ui/criados';
 import type { ModoFase } from '../logica/ondas';
@@ -37,6 +38,9 @@ function medir(n: number): void {
 }
 /** quadro do lutador em foco (esquerda) */
 const VITRINE = { x: 18, y: 52, w: 216, h: 250 };
+/** posição de um lutador na grade (o 1º se não existir mais) */
+const indiceDe = (id: string, senao = 0) => { const i = ORDEM_PERSONAGENS.indexOf(id); return i >= 0 ? i : senao; };
+const lembrar = (q: 'p1' | 'p2', id: string) => mudarOpcoes((o) => { o.ultima[q] = id; });
 const CORES_JOGADOR = { p1: 0x3fa9ff, p2: 0xff4a4a };
 /** altura da célula (144x168 do atlas) de um personagem de altura padrão no quadro da esquerda */
 const ALTURA_VITRINE = 200;
@@ -69,7 +73,8 @@ export class Selecao extends Phaser.Scene {
     this.modoFase = d.modoFase;
     this.escolhendo = 'p1';
     this.escolhaP1 = null;
-    this.foco = 0;
+    // v0.147: abre no último lutador usado
+    this.foco = indiceDe(opcoes().ultima.p1);
     this.molduras = [];
     this.quadroForma = null;
   }
@@ -115,6 +120,9 @@ export class Selecao extends Phaser.Scene {
     this.vitrine = { fundo, img, sprite: null, id: '' };
     this.info = this.add.text(VITRINE.x + VITRINE.w / 2 - 6, VITRINE.y + VITRINE.h - 22, '', estiloTexto({ fontFamily: "'Trebuchet MS', Arial, sans-serif", fontStyle: 'bold italic', fontSize: '19px', color: '#fff0a6' })).setOrigin(0.5).setDepth(3);
     this.info.setStroke('#020617', 5);
+    // v0.147: ESCOLHER confirma o lutador em foco (tocar no quadro grande também); antes era só tocar de novo no cartão
+    botao(this, ret(VITRINE.x + 10, 312, VITRINE.w - 20, 28), 'ESCOLHER', () => this.escolher(ORDEM_PERSONAGENS[this.foco]), { cor: '#86efac' });
+    this.add.zone(VITRINE.x, VITRINE.y, VITRINE.w, VITRINE.h).setOrigin(0).setInteractive({ useHandCursor: true }).on('pointerup', () => this.escolher(ORDEM_PERSONAGENS[this.foco]));
     botao(this, ret(GRADE.x + GRADE.w - 150, 312, 150, 28), 'ALEATÓRIO', () => this.escolher(ORDEM_PERSONAGENS[Math.floor(Math.random() * ORDEM_PERSONAGENS.length)]), { cor: '#fff0a6' });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => { this.esperaVitrine?.remove(); this.esperaVitrine = null; });
 
@@ -147,6 +155,7 @@ export class Selecao extends Phaser.Scene {
 
   private escolher(id: string): void {
     if (this.quadroForma) return;
+    if (this.escolhendo === 'p1') lembrar('p1', id);
     if (this.modo === 'tutorial' || this.modo === 'treino') {
       // só as formas já feitas em luta (v0.141): sem nenhuma transformação feita, começa direto na normal
       if (nivelLiberado(conquistas(), id) === 0) this.comecarTreino(id, 0);
@@ -161,9 +170,11 @@ export class Selecao extends Phaser.Scene {
     if (this.escolhendo === 'p1') {
       this.escolhaP1 = id;
       this.escolhendo = 'p2';
+      this.foco = indiceDe(opcoes().ultima.p2, this.foco);
       this.atualizar();
       return;
     }
+    lembrar('p2', id);
     this.scene.start('Arenas', { modo: this.modo, p1: this.escolhaP1!, p2: id } satisfies DadosDaLuta);
   }
 
