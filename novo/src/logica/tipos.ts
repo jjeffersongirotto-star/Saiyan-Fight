@@ -58,6 +58,9 @@ export interface Lutador {
   invulneravel: number;
   /** quadros da pose de "apanhou" (só o desenho: apanhar não trava, como o herói do jogo antigo) */
   poseAtingido: number;
+  /** v0.149: velocidade do arremesso de quem caiu (o último golpe o joga para trás e para fora da tela) */
+  quedaVx: number;
+  quedaVy: number;
   /** cápsula: segura o próximo golpe (só no modo história) */
   escudo: boolean;
   /** quadros restantes da nuvem voadora (velocidade x1,4) e do bastão mágico (+1 no tiro, especial x2) */
