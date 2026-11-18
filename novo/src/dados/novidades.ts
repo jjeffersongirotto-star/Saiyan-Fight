@@ -6,6 +6,14 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.150',
+    titulo: 'PICCOLO SEM CAPA ENCORPADO E QUADROS LIMPOS',
+    itens: [
+      'Piccolo sem capa: o desenho era bem mais magro que o da primeira forma e parecia esticado. Agora tronco, braços e pernas estão 20% mais largos em todos os quadros (a cabeça e a altura ficam iguais), e o especial sai da mão no lugar certo.',
+      'Quadros que atrapalhavam a animação foram tirados: Bardock SSJ (parado), Piccolo (carregar ki, uma pose de pulo no meio), Freeza final (carregar ki, quadros só com pedaços), Trunks Fúria (parry) e Kaioshin (voo).',
+    ],
+  },
+  {
     versao: '0.149',
     titulo: 'ARREMESSADO PELO ÚLTIMO GOLPE',
     itens: [
