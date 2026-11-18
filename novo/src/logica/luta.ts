@@ -245,7 +245,8 @@ function passoLutador(e: EstadoLuta, l: Lutador, ent: Entrada, eventos: Evento[]
   l.pedidoParry = ent.parry ? guarda : Math.max(0, l.pedidoParry - 1);
   l.pedidoTransformar = ent.transformar ? guarda : Math.max(0, l.pedidoTransformar - 1);
 
-  if (l.acao === 'caido' || l.acao === 'vitoria') return clampar(e, l);
+  if (l.acao === 'caido') return voarParaFora(e, l);
+  if (l.acao === 'vitoria') return clampar(e, l);
   if (e.fase !== 'luta') {
     if (l.acao !== 'livre') { l.acao = 'livre'; l.acaoQuadros = 0; }
     return clampar(e, l);
@@ -387,6 +388,17 @@ function andar(e: EstadoLuta, l: Lutador, ent: Entrada) {
     l.movX = Math.abs(ent.arrasto.x) >= 0.3 ? Math.sign(ent.arrasto.x) : 0;
     l.movY = Math.abs(ent.arrasto.y) >= 0.3 ? Math.sign(ent.arrasto.y) : 0;
   }
+}
+
+/** v0.148: quem cai sai voando para fora da tela, para o lado de trás (como o vilão da história; antes ficava
+ *  translúcido parado). O vilão da história continua com o voo de historia.ts. A próxima rodada recria o lutador. */
+function voarParaFora(e: EstadoLuta, l: Lutador) {
+  if (e.historia && l.id === 'p2') return;
+  l.xAnt = l.x; l.yAnt = l.y;
+  const lado = l.id === 'p1' ? -1 : 1;
+  if (lado < 0 ? l.x < -C.QUEDA_FORA : l.x > C.TELA_L + C.QUEDA_FORA) return; // já saiu: fica lá
+  l.x += lado * C.QUEDA_VEL;
+  l.y += Math.sin(e.quadro * 0.25) * 3 - 0.6;
 }
 
 function clampar(e: EstadoLuta, l: Lutador) {
