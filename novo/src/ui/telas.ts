@@ -6,7 +6,7 @@
 import Phaser from 'phaser';
 import { TELA_A, TELA_L } from '../logica/constantes';
 import { T } from '../logica/idioma';
-import { ESCALA_RENDER, estiloTexto } from './resolucao';
+import { ESCALA_RENDER, estiloTexto, fatorTexto } from './resolucao';
 import { som } from '../audio/som';
 import { vigiarControles } from '../entrada/controles';
 import { janelaAberta } from './janela';
@@ -81,7 +81,7 @@ export interface BotaoTela {
 /** drawBtn: azul escuro, borda laranja, laranja no mouse, afunda no toque; o texto encolhe até caber */
 export function botao(cena: Phaser.Scene, r: Ret, texto: string, aoClicar: () => void, opc: { cor?: string; fonte?: number; mono?: boolean; prof?: number; semSom?: boolean } = {}): BotaoTela {
   const g = cena.add.graphics();
-  const fonte = opc.fonte ?? 12;
+  const fonte = (opc.fonte ?? 12) * fatorTexto();
   const rot = cena.add.text(r.w / 2, r.h / 2 + 1, '', estiloTexto({ fontFamily: opc.mono === false ? "'Segoe UI', Arial, sans-serif" : "'Courier New', monospace", fontStyle: 'bold', fontSize: `${fonte}px`, color: opc.cor ?? '#00ffff', align: 'center' })).setOrigin(0.5);
   let hover = false, apertado = false;
   const desenhar = () => {
@@ -315,7 +315,7 @@ export { css };
 export function botaoLamina(cena: Phaser.Scene, nav: Navegacao, r: Ret, texto: string, aoClicar: () => void, opc: { destaque?: boolean; fonte?: number } = {}): BotaoTela {
   const s = r.h * 0.42;
   const g = cena.add.graphics();
-  const fonte = opc.fonte ?? (opc.destaque ? 20 : 13);
+  const fonte = (opc.fonte ?? (opc.destaque ? 20 : 13)) * fatorTexto();
   const rot = cena.add.text(s + 16, r.h / 2 + 1, '', estiloTexto({ fontFamily: "'Trebuchet MS', Arial, sans-serif", fontStyle: 'bold italic', fontSize: `${fonte}px`, color: '#fff0a6' })).setOrigin(0, 0.5);
   rot.setShadow(1, 1, '#000000', 2, false, true);
   let aceso = false, apertado = false;

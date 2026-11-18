@@ -9,6 +9,14 @@ import { T } from '../logica/idioma';
 import { conquistas } from '../logica/conquistas';
 
 const MAX = 180, H = 44, R = 16;
+/** largura e altura (da célula 144x168) do lutador na pílula de conquista de forma */
+const RETRATO_L = 40, RETRATO_A = 56;
+
+/** forma_<personagem>_<forma> → atlas "<personagem>-<forma>" (os ids dos 16 não têm "_"; algumas formas têm) */
+export function atlasDaConquista(id: string): string | null {
+  const m = /^forma_([^_]+)_(.+)$/.exec(id);
+  return m ? `${m[1]}-${m[2]}` : null;
+}
 
 /** posição da pílula (yOffset do antigo) no quadro `t` (quadros a 60 fps) */
 export function deslocamentoDoAviso(t: number): number {
@@ -25,6 +33,8 @@ export class AvisoConquista extends Phaser.Scene {
   private rotulo!: Phaser.GameObjects.Text;
   private titulo!: Phaser.GameObjects.Text;
   private w = 200;
+  /** v0.147: na conquista de uma forma, o lutador nela aparece à direita: silhueta preta que acende */
+  private retrato!: Phaser.GameObjects.Image;
   constructor() { super({ key: 'AvisoConquista', active: false }); }
   create(): void {
     ajustarCamera(this);
@@ -33,20 +43,27 @@ export class AvisoConquista extends Phaser.Scene {
     this.icone = this.add.image(0, 0, this.medalhaDourada());
     this.rotulo = this.add.text(0, 17, '', estiloTexto({ fontFamily: "'Segoe UI', sans-serif", fontStyle: 'bold', fontSize: '9px', color: '#fbbf24' })).setOrigin(0, 0.75);
     this.titulo = this.add.text(0, 34, '', estiloTexto({ fontFamily: "'Segoe UI', sans-serif", fontStyle: 'bold', fontSize: '13px', color: '#ffffff' })).setOrigin(0, 0.75);
-    this.caixa = this.add.container(0, 0, [this.fundo, this.anel, this.icone, this.rotulo, this.titulo]).setVisible(false);
-    const tirar = conquistas().aoDestravar((c) => this.mostrar(T(c.nome)));
+    this.retrato = this.add.image(0, H, '__DEFAULT').setOrigin(0.5, 103 / 112).setVisible(false);
+    this.caixa = this.add.container(0, 0, [this.fundo, this.anel, this.icone, this.rotulo, this.titulo, this.retrato]).setVisible(false);
+    const tirar = conquistas().aoDestravar((c) => this.mostrar(T(c.nome), atlasDaConquista(c.id)));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, tirar);
     this.scene.bringToTop();
   }
-  mostrar(titulo: string): void {
+  mostrar(titulo: string, atlas: string | null = null): void {
     this.t = 0;
+    const comRetrato = !!atlas && this.textures.exists(atlas);
     this.rotulo.setText(T('CONQUISTA DESBLOQUEADA'));
     this.titulo.setText(titulo).setScale(1);
-    this.w = Math.min(TELA_L - 40, Math.max(this.titulo.width, this.rotulo.width) + H + 34);
+    this.w = Math.min(TELA_L - 40, Math.max(this.titulo.width, this.rotulo.width) + H + 34 + (comRetrato ? RETRATO_L : 0));
     const tx = H + 8;
     this.rotulo.setX(tx);
     this.titulo.setX(tx);
-    if (this.titulo.width > this.w - H - 22) this.titulo.setScale((this.w - H - 22) / this.titulo.width, 1);
+    const livre = this.w - H - 22 - (comRetrato ? RETRATO_L : 0);
+    if (this.titulo.width > livre) this.titulo.setScale(livre / this.titulo.width, 1);
+    if (comRetrato) {
+      this.retrato.setTexture(this.copiaDoQuadro(atlas!)).setPosition(this.w - RETRATO_L / 2 - 8, H - 2).setVisible(true);
+      this.retrato.setScale(RETRATO_A / this.retrato.height).setTintFill(0x020617);
+    } else this.retrato.setVisible(false);
     this.fundo.clear().fillStyle(0x000000, 0.3).fillRoundedRect(2, 4, this.w, H, H / 2)
       .fillGradientStyle(0x1e1b4b, 0x1e1b4b, 0x0c0a28, 0x0c0a28, 0.96).fillRoundedRect(0, 0, this.w, H, H / 2)
       .lineStyle(1.5, 0xfbbf24, 0.9).strokeRoundedRect(0, 0, this.w, H, H / 2);
@@ -62,12 +79,26 @@ export class AvisoConquista extends Phaser.Scene {
     const p = Math.min(1, Math.max(0, (t - 6) / 16));
     const esc = p <= 0 ? 0 : 1 + 0.35 * Math.sin(p * Math.PI) * (1 - p * 0.4);
     this.icone.setScale(esc * (R + 8) * 2 / this.icone.frame.width).setVisible(esc > 0);
+    // a silhueta acende (vira o lutador colorido) um pouco depois de a pílula descer
+    if (this.retrato.visible && this.retrato.isTinted && t > 34) this.retrato.clearTint();
     this.anel.clear();
     if (t > 8 && t < 50) {
       const q = (t - 8) / 42;
       this.anel.lineStyle(3 * (1 - q) + 0.5, 0xfde68a, 1 - q).strokeCircle(H / 2 + 2, H / 2, R + q * 18);
     }
   }
+  /** cópia do 1º quadro parado num canvas próprio: o atlas da luta pode ser liberado enquanto a pílula está na tela */
+  private copiaDoQuadro(atlas: string): string {
+    const chave = 'aviso-retrato';
+    this.retrato.setTexture('__DEFAULT');
+    if (this.textures.exists(chave)) this.textures.remove(chave);
+    const fr = this.textures.getFrame(atlas, 'idle/0');
+    const tex = this.textures.createCanvas(chave, fr.cutWidth, fr.cutHeight)!;
+    tex.getContext().drawImage(fr.source.image as CanvasImageSource, fr.cutX, fr.cutY, fr.cutWidth, fr.cutHeight, 0, 0, fr.cutWidth, fr.cutHeight);
+    tex.refresh();
+    return chave;
+  }
+
   private medalhaDourada(): string {
     const chave = 'aviso-medalha';
     if (this.textures.exists(chave)) return chave;

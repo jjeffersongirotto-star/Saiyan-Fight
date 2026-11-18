@@ -6,6 +6,19 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.147',
+    titulo: 'QUALIDADE DE VIDA',
+    itens: [
+      'Pausa com REINICIAR (recomeça a luta ou a fase na hora) e LISTA DE GOLPES (cada ação com a tecla e o botão do controle de agora, e o que ela faz).',
+      'A escolha do lutador abre no último que você usou (o adversário também) e a tela de arenas na última arena. Botão ESCOLHER embaixo do lutador grande (tocar nele também escolhe).',
+      'Nova tela OPÇÕES → JOGO: DIFICULDADE DA CPU (FÁCIL, NORMAL, DIFÍCIL) no 1 JOGADOR x CPU, TAMANHO DO TEXTO (NORMAL ou GRANDE) e TREMOR E CLARÕES (para desligar o tremor da tela e os clarões da luta).',
+      'O volume de efeitos e de música agora mostra uma barra.',
+      'Se o controle desconectar no meio da luta, ela pausa sozinha.',
+      'Ao liberar uma transformação, o aviso de conquista mostra o lutador: primeiro a silhueta, depois colorido.',
+      'O quadro "i" de PERSONAGENS mostra quantas lutas e vitórias você tem com ele e quantas formas já liberou.',
+    ],
+  },
+  {
     versao: '0.146',
     titulo: 'CORREÇÕES DO MENU NOVO',
     itens: [

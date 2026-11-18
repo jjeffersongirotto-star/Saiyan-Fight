@@ -9,6 +9,9 @@ export interface OpcoesIA {
   dificuldade: number;
 }
 
+/** OPÇÕES → JOGO → DIFICULDADE DA CPU (v0.147): o NORMAL é o 0,6 de sempre */
+export const FORCA_DA_CPU = { facil: 0.3, normal: 0.6, dificil: 0.9 } as const;
+
 export function entradaDaIA(e: EstadoLuta, id: IdJogador, op: OpcoesIA = { dificuldade: 0.6 }): Entrada {
   const eu = e[id];
   const ele = e[outro(id)];

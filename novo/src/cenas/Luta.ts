@@ -7,7 +7,7 @@ import { poseDoLutador } from '../logica/animacao';
 import { juntarEntradas } from '../logica/entrada';
 import { fichaDoPersonagem } from '../logica/ficha';
 import { formaParaDesenhar, formasDaLuta, formasNecessarias } from '../logica/formas';
-import { entradaDaIA } from '../logica/ia';
+import { entradaDaIA, FORCA_DA_CPU } from '../logica/ia';
 import { T } from '../logica/idioma';
 import { criarLuta, escalaDaAltura, alturaDoNivel, maoDe, passoLuta, podeTransformar } from '../logica/luta';
 import { interpolar, RelogioFixo } from '../logica/relogio';
@@ -19,6 +19,7 @@ import { ControlesToque } from '../ui/controlesToque';
 import { criarAnimacoes, liberarFormas, metaDoAtlas, pedirFormas } from '../ui/formas';
 import { Hud } from '../ui/hud';
 import { mostrarVersus } from '../ui/apresentacao';
+import { registrarLuta } from '../logica/estatisticas';
 import { desenharFundo } from './fundo';
 import type { DadosDaLuta } from './Menu';
 import type { DadosDaVitoria } from './Vitoria';
@@ -41,6 +42,9 @@ import { conquistas, nivelLiberado, RastreioDaLuta } from '../logica/conquistas'
 import { criarTreino, limitarFormas, passoTreino, nivelAntesDeTransformar, criarTutorial, passoTutorial, marcarFeito, avancarPasso, passoAtual, instrucoesDoPasso, PASSOS_DO_TUTORIAL, type EstadoTutorial } from '../logica/tutorial';
 import { TF } from '../logica/idioma';
 import { nomeDaTecla, NOMES_BOTOES } from '../logica/opcoes';
+
+/** as setas do teclado na LISTA DE GOLPES (o nome comprido delas não cabe) */
+const SETAS: Record<string, string> = { ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→' };
 
 /** câmera lenta do golpe final: ~0,8 s a 30% da velocidade */
 const LENTO_MS = 800, VELOCIDADE_LENTA = 0.3;
@@ -162,6 +166,7 @@ export class Luta extends Phaser.Scene {
     if (this.fase) { /* história: começa direto */ }
     else if (this.tutorial) { this.hud.esconder(); this.sprites.p2.setVisible(false); }
     else if (this.treino) { this.hud.esconder(); this.sprites.p2.setVisible(false); this.criarDicaDoTreino(); }
+    else if (this.dados.reinicio) this.mostrarAviso(`${T('RODADA')} 1 — ${T('LUTEM!')}`, 1200);
     else {
       // v0.144: tela de VERSUS antes da 1ª rodada (a luta só começa depois dela)
       this.apresentando = true;
@@ -204,8 +209,12 @@ export class Luta extends Phaser.Scene {
     // celular: trocou de app / apagou a tela no meio da luta = pausa (na volta ninguém leva tiro sem ver)
     const aoEsconder = () => this.pausar(true);
     this.game.events.on(Phaser.Core.Events.HIDDEN, aoEsconder);
+    // v0.147: o controle desconectou (bateria, cabo) no meio da luta = pausa automática
+    const aoDesconectar = () => { if (!this.apresentando) this.pausar(true); };
+    window.addEventListener('gamepaddisconnected', aoDesconectar);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.game.events.off(Phaser.Core.Events.HIDDEN, aoEsconder);
+      window.removeEventListener('gamepaddisconnected', aoDesconectar);
       this.teclado.desligar();
       this.toque.destruir();
       this.efeitos.destruir();
@@ -259,7 +268,7 @@ export class Luta extends Phaser.Scene {
     if (o.modoPc === 'mouse' && this.ponteiro && modoEfetivo(o, ultimaEntrada(), this.toque.ativo) === 'pc' && p1.x === 0 && p1.y === 0) p1 = { ...p1, seguir: { ...this.ponteiro } };
     const tecladoP2 = this.teclado.ler('p2');
     const padP2 = pad('p2');
-    const p2 = this.dados.modo === 'cpu' ? entradaDaIA(this.estado, 'p2') : this.dados.modo === 'historia' ? ENTRADA_VAZIA : juntarEntradas(tecladoP2, padP2);
+    const p2 = this.dados.modo === 'cpu' ? entradaDaIA(this.estado, 'p2', { dificuldade: FORCA_DA_CPU[opcoes().dificuldadeCpu] }) : this.dados.modo === 'historia' ? ENTRADA_VAZIA : juntarEntradas(tecladoP2, padP2);
     return { p1, p2 };
   }
 
@@ -318,9 +327,58 @@ export class Luta extends Phaser.Scene {
       this.navPausa!.add({ ...r, acionar: x.acionar });
       itens.push(x.container);
     };
-    b(ret(300, 110, 200, 35), 'CONTINUAR', () => this.continuar());
-    b(ret(300, 160, 200, 35), 'OPÇÕES', () => this.abrirOpcoes());
-    b(ret(300, 210, 200, 35), 'SAIR PARA MENU', () => this.scene.start('Menu'));
+    const y0 = this.pausaAuto ? 104 : 84, passo = 44;
+    b(ret(300, y0, 200, 34), 'CONTINUAR', () => this.continuar());
+    b(ret(300, y0 + passo, 200, 34), 'REINICIAR', () => this.reiniciar());
+    b(ret(300, y0 + passo * 2, 200, 34), 'LISTA DE GOLPES', () => this.mostrarGolpes());
+    b(ret(300, y0 + passo * 3, 200, 34), 'OPÇÕES', () => this.abrirOpcoes());
+    b(ret(300, y0 + passo * 4, 200, 34), 'SAIR PARA MENU', () => this.scene.start('Menu'));
+    this.camadaPausa = this.add.container(0, 0, itens).setDepth(2000);
+  }
+
+  /** REINICIAR (v0.147): a mesma luta/fase do começo, sem passar por menu e seleção */
+  private reiniciar(): void {
+    if (this.contagem > 0) return;
+    this.time.paused = false;
+    this.tweens.resumeAll();
+    this.scene.restart({ ...this.dados, reinicio: true });
+  }
+
+  /** GOLPES (v0.147): o que cada botão faz, com a tecla e o botão do controle de agora */
+  private mostrarGolpes(): void {
+    if (this.contagem > 0) return;
+    this.camadaPausa?.destroy();
+    this.navPausa?.limpar();
+    const o = opcoes();
+    const fundo = this.add.rectangle(C.TELA_L / 2, C.TELA_A / 2, C.TELA_L, C.TELA_A, 0x000000, 0.8).setInteractive();
+    const caixa = this.add.graphics().fillStyle(0x030d23, 0.96).fillRect(70, 26, 660, 296).lineStyle(2, 0xf2a900, 1).strokeRect(70, 26, 660, 296)
+      .fillStyle(0xe85d04, 1).fillRect(70, 26, 7, 296);
+    const itens: Phaser.GameObjects.GameObject[] = [fundo, caixa];
+    itens.push(this.add.text(C.TELA_L / 2, 52, T('LISTA DE GOLPES'), estiloTexto({ fontFamily: "'Trebuchet MS', sans-serif", fontStyle: 'bold', fontSize: '20px', color: '#fff0a6' })).setOrigin(0.5));
+    const col = [96, 232, 352, 452];
+    ['AÇÃO', 'TECLADO', 'CONTROLE', 'O QUE FAZ'].forEach((t, i) => itens.push(texto(this, col[i], 82, T(t), 10, '#8fd3ff').setOrigin(0, 0.75)));
+    const linhas: [string, string, string, string][] = [
+      ['MOVER', [o.teclas.p1.up, o.teclas.p1.left, o.teclas.p1.down, o.teclas.p1.right].map((k) => SETAS[k] ?? nomeDaTecla(k)).join(' '), T('ANALÓGICO'), 'VOAR PARA QUALQUER LADO'],
+      ['ATAQUE', nomeDaTecla(o.teclas.p1.attack), NOMES_BOTOES[o.controle.attack[0]] ?? '—', 'TIRO DE KI (SEGURE PARA ATIRAR SEM PARAR)'],
+      ['CARREGAR', nomeDaTecla(o.teclas.p1.charge), NOMES_BOTOES[o.controle.charge[0]] ?? '—', 'SEGURE PARA ENCHER O KI'],
+      ['PARRY', nomeDaTecla(o.teclas.p1.parry), NOMES_BOTOES[o.controle.parry[0]] ?? '—', 'REBATE OS TIROS NA HORA CERTA'],
+      ['TRANSFORMAR', nomeDaTecla(o.teclas.p1.transform), NOMES_BOTOES[o.controle.transform[0]] ?? '—', 'PRÓXIMA FORMA: PRECISA DO KI CHEIO'],
+      ['ESPECIAL', nomeDaTecla(o.teclas.p1.special), NOMES_BOTOES[o.controle.special[0]] ?? '—', 'RAIO PODEROSO: PRECISA DO KI CHEIO'],
+    ];
+    linhas.forEach(([a, tec, ctl, desc], i) => {
+      const y = 106 + i * 30;
+      itens.push(this.add.graphics().fillStyle(0xffffff, i % 2 ? 0.03 : 0.07).fillRect(84, y - 13, 632, 26));
+      itens.push(texto(this, col[0], y + 4, T(a), 12, '#fff0a6').setOrigin(0, 0.75));
+      for (const [t, x, w] of [[tec, col[1], 112], [ctl, col[2], 92], [T(desc), col[3], 262]] as const) {
+        const tx = texto(this, x, y + 4, String(t), 10, '#e2e8f0', { fontStyle: 'normal' }).setOrigin(0, 0.75);
+        if (tx.width > w) tx.setScale(w / tx.width, 1);
+        itens.push(tx);
+      }
+    });
+    const nav = this.navPausa!;
+    const v = botao(this, ret(330, 282, 140, 30), 'VOLTAR', () => { this.camadaPausa?.destroy(); this.camadaPausa = null; this.mostrarPausa(); }, { prof: 2001 });
+    nav.add({ ...v.r, acionar: v.acionar });
+    itens.push(v.container);
     this.camadaPausa = this.add.container(0, 0, itens).setDepth(2000);
   }
 
@@ -528,7 +586,7 @@ export class Luta extends Phaser.Scene {
         const s = this.sprites[ev.alvo];
         s.setTintFill(0xffffff);
         this.time.delayedCall(70, () => s.clearTint());
-        this.cameras.main.shake(ev.deEspecial ? 260 : 80, ev.deEspecial ? 0.012 : 0.004);
+        this.tremer(ev.deEspecial ? 260 : 80, ev.deEspecial ? 0.012 : 0.004);
         const alvo = this.estado[ev.alvo];
         this.particulas(alvo.x, alvo.y - alvo.a * 0.1, ev.deEspecial ? 0xffd34d : 0xffff00, ev.deEspecial ? 20 : 12);
         break;
@@ -538,29 +596,29 @@ export class Luta extends Phaser.Scene {
         if (ev.refletidos > 0) {
           const c = this.estado[ev.dono];
           this.faisca(c.x + c.olhando * 20, c.y - c.a * 0.3, 0x7fe9ff, 4);
-          this.cameras.main.shake(100, 0.004);
+          this.tremer(100, 0.004);
         }
         break;
       case 'transformou': {
         this.piscarTela(0xfff3b0, 18);
-        this.cameras.main.shake(400, 0.01);
+        this.tremer(400, 0.01);
         break;
       }
       case 'zenkai':
         this.efeitos.lutador[ev.dono].escudoLigado = true;
         this.piscarTela(0xffe45a, 30);
-        this.cameras.main.shake(400, 0.014);
+        this.tremer(400, 0.014);
         break;
       case 'especial':
-        this.cameras.main.shake(500, 0.006);
+        this.tremer(500, 0.006);
         break;
       case 'choque':
         this.piscarTela(0xffffff, 18);
-        this.cameras.main.shake(300, 0.01);
+        this.tremer(300, 0.01);
         break;
       case 'fimChoque':
         this.piscarTela(0xffffff, 22);
-        this.cameras.main.shake(400, 0.016);
+        this.tremer(400, 0.016);
         break;
       case 'fimRodada': {
         const v = ev.vencedor;
@@ -575,6 +633,11 @@ export class Luta extends Phaser.Scene {
       case 'fimPartida': {
         const venc = this.estado[ev.vencedor];
         const h = this.estado.historia;
+        // v0.147: lutas/vitórias de cada personagem (o J1; no VERSUS também o J2)
+        if (!this.tutorial && !this.treino) {
+          registrarLuta(this.estado.p1.personagem, h ? h.resultado === 'vitoria' : ev.vencedor === 'p1');
+          if (this.dados.modo === 'versus') registrarLuta(this.estado.p2.personagem, ev.vencedor === 'p2');
+        }
         if (h) {
           const heroi = this.estado.p1;
           this.time.delayedCall(200, () =>
@@ -595,7 +658,7 @@ export class Luta extends Phaser.Scene {
       // ---- modo história ----
       case 'minionExplodiu':
         this.historia?.explodir(ev.x, ev.y);
-        this.cameras.main.shake(ev.machucou ? 220 : 120, ev.machucou ? 0.01 : 0.005);
+        this.tremer(ev.machucou ? 220 : 120, ev.machucou ? 0.01 : 0.005);
         break;
       case 'minionAcertado':
         this.particulas(ev.x, ev.y, 0x9dff6a, ev.morreu ? 14 : 6);
@@ -611,7 +674,7 @@ export class Luta extends Phaser.Scene {
         break;
       case 'vilaoCaiu':
         this.piscarTela(0xffffff, 16);
-        this.cameras.main.shake(350, 0.012);
+        this.tremer(350, 0.012);
         break;
       case 'novaOnda':
         break;
@@ -648,7 +711,13 @@ export class Luta extends Phaser.Scene {
     }
   }
 
+  /** tremor da tela (OPÇÕES → JOGO → TREMOR E CLARÕES pode desligar, v0.147) */
+  private tremer(ms: number, forca: number): void {
+    if (opcoes().tremor) this.cameras.main.shake(ms, forca);
+  }
+
   private piscarTela(cor: number, quadros: number): void {
+    if (!opcoes().tremor) return;
     this.flash = { cor, quadros, max: quadros };
   }
 

@@ -56,7 +56,18 @@ export interface Opcoes {
   tiroContinuo: boolean;
   dicaTiroVista: boolean;
   hud: LayoutHud;
+  /** v0.147: força da CPU no 1 JOGADOR x CPU */
+  dificuldadeCpu: DificuldadeCpu;
+  /** v0.147: textos dos menus um pouco maiores */
+  textoGrande: boolean;
+  /** v0.147: tremor da tela e clarões na luta (desligar para quem se incomoda) */
+  tremor: boolean;
+  /** v0.147: a seleção abre no último lutador usado e as arenas na última arena */
+  ultima: { p1: string; p2: string; arena: string };
 }
+
+export type DificuldadeCpu = 'facil' | 'normal' | 'dificil';
+export const DIFICULDADES_CPU: readonly DificuldadeCpu[] = ['facil', 'normal', 'dificil'];
 
 export function opcoesPadrao(): Opcoes {
   return {
@@ -65,6 +76,7 @@ export function opcoesPadrao(): Opcoes {
     controle: clonarBotoes(CONTROLE_PADRAO), sensibilidade: SENS_PADRAO,
     modoToque: 'analog', duploToqueParry: true, vibracao: true, tiroContinuo: true, dicaTiroVista: false,
     hud: clonarHud(HUD_PADRAO),
+    dificuldadeCpu: 'normal', textoGrande: false, tremor: true, ultima: { p1: '', p2: '', arena: '' },
   };
 }
 
@@ -205,7 +217,17 @@ export function normalizarOpcoes(x: Record<string, unknown>): Opcoes {
     tiroContinuo: x.tiroContinuo !== false,
     dicaTiroVista: x.dicaTiroVista === true,
     hud: normalizarHud(x.hud),
+    dificuldadeCpu: um(x.dificuldadeCpu, DIFICULDADES_CPU, p.dificuldadeCpu),
+    textoGrande: x.textoGrande === true,
+    tremor: x.tremor !== false,
+    ultima: normalizarUltima(x.ultima),
   };
+}
+
+function normalizarUltima(x: unknown): Opcoes['ultima'] {
+  const u = ehObj(x) ? x : {};
+  const t = (v: unknown) => (typeof v === 'string' ? v.slice(0, 64) : '');
+  return { p1: t(u.p1), p2: t(u.p2), arena: t(u.arena) };
 }
 
 export function salvarOpcoes(o: Opcoes, a = armazenamentoPadrao()): void {
