@@ -22,7 +22,7 @@ export interface Efeito {
 export const EFEITOS = {
   escudo_azul: { n: 25, w: 125, h: 128, ms: 160 },
   aura_verde: { n: 7, w: 133, h: 192, ms: 40 },
-  aura_verde_forte: { n: 6, w: 189, h: 192, ms: 50, escala: 0.75, largura: 0.85 }, // v0.154: centro preenchido de verde e só os 6 quadros cheios (os que se desfaziam piscavam)
+  aura_verde_forte: { n: 6, w: 189, h: 192, ms: 50, escala: 0.86, largura: 0.75 }, // v0.154: centro preenchido de verde e só os 6 quadros cheios (os que se desfaziam piscavam)
   aura_azul: { n: 3, w: 166, h: 192, ms: 50 },
   aura_amarela: { n: 7, w: 174, h: 192, ms: 40 },
   aura_amarela_forte: { n: 3, w: 155, h: 192, ms: 50 },
