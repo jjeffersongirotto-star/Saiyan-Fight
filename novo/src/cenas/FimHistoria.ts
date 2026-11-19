@@ -17,6 +17,9 @@ import { aoApertar } from '../entrada/teclas';
 import { som } from '../audio/som';
 import { conquistas } from '../logica/conquistas';
 
+/** lutador da esquerda: escala de um personagem de altura padrão, o teto (os muito altos) e a linha dos pés */
+const LUTADOR_K = 1.8, LUTADOR_MAX = 2.2, LUTADOR_PES_Y = 290;
+
 export interface DadosDoFimHistoria {
   luta: DadosDaLuta;
   resultado: 'vitoria' | 'derrota';
@@ -67,12 +70,12 @@ export class FimHistoria extends Phaser.Scene {
     this.add.rectangle(TELA_L / 2, TELA_A / 2, TELA_L, TELA_A, 0x0a0f1f, 1);
     this.add.rectangle(TELA_L / 2, TELA_A / 2, TELA_L, TELA_A, fase.cor, 0.12);
     if (this.textures.exists(d.atlas)) {
-      const k = Math.min(1.15, escalaDaAltura(d.altura));
-      const s = this.add.sprite(150, 268, d.atlas, 'idle/0').setOrigin(0.5, 103 / 112).setScale(k / metaDoAtlas(this, d.atlas).escala);
+      // v0.152: grande como no menu principal, no espaço da esquerda (pés logo acima dos botões); sem translúcido
+      const k = Math.min(LUTADOR_MAX, LUTADOR_K * escalaDaAltura(d.altura));
+      const s = this.add.sprite(150, LUTADOR_PES_Y, d.atlas, 'idle/0').setOrigin(0.5, 103 / 112).setScale(k / metaDoAtlas(this, d.atlas).escala);
       const anim = `${d.atlas}:${venceu ? 'idle' : 'hit'}`;
       if (this.anims.exists(anim)) s.play(anim);
       else if (this.anims.exists(`${d.atlas}:idle`)) s.play(`${d.atlas}:idle`);
-      if (!venceu) s.setAlpha(0.6);
     }
     const titulo = venceu ? T('FASE COMPLETA!') : T('FIM DE JOGO');
     this.add
