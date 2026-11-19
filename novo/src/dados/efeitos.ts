@@ -2,7 +2,9 @@
 // tabela EFEITOS do menu.js. scripts/gerar-efeitos.py lê ESTA tabela (uma linha por efeito, "nome: { n:, w:, h:")
 // e monta public/efeitos/ (multiatlas "efeitos", quadros "<nome>/<i>").
 //   cabeca = onde fica o centro do tiro na largura (0..1); tam = altura do desenho em raios do tiro;
-//   laco = depois da 1ª passada a animação repete a partir deste quadro; alfa = transparência da aura.
+//   laco = depois da 1ª passada a animação repete a partir deste quadro; alfa = transparência da aura;
+//   escala = tamanho da aura (os pés ficam no lugar); largura = fator só na largura (a verde forte preenchida
+//   é mais larga e mais alta que as outras).
 
 export interface Efeito {
   n: number;
@@ -13,12 +15,14 @@ export interface Efeito {
   tam?: number;
   laco?: number;
   alfa?: number;
+  escala?: number;
+  largura?: number;
 }
 
 export const EFEITOS = {
   escudo_azul: { n: 25, w: 125, h: 128, ms: 160 },
   aura_verde: { n: 7, w: 133, h: 192, ms: 40 },
-  aura_verde_forte: { n: 6, w: 189, h: 192, ms: 50 }, // v0.154: centro preenchido de verde e só os 6 quadros cheios (os que se desfaziam piscavam)
+  aura_verde_forte: { n: 6, w: 189, h: 192, ms: 50, escala: 0.75, largura: 0.85 }, // v0.154: centro preenchido de verde e só os 6 quadros cheios (os que se desfaziam piscavam)
   aura_azul: { n: 3, w: 166, h: 192, ms: 50 },
   aura_amarela: { n: 7, w: 174, h: 192, ms: 40 },
   aura_amarela_forte: { n: 3, w: 155, h: 192, ms: 50 },

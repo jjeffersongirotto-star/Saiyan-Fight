@@ -124,8 +124,8 @@ export class EfeitosDoLutador {
     // caixa da aura desenhada (o escudo fica em volta dela)
     let caixa: { cx: number; cy: number; rx: number; ry: number };
     if (nome) {
-      const e: { w: number; h: number; alfa?: number } = EFEITOS[nome];
-      const dh = h * 1.22, dw = (dh * e.w) / e.h;
+      const e: { w: number; h: number; alfa?: number; escala?: number; largura?: number } = EFEITOS[nome];
+      const dh = h * 1.22 * (e.escala ?? 1), dw = ((dh * e.w) / e.h) * (e.largura ?? 1);
       this.aura.setTexture(ATLAS_EFEITOS, quadro(nome, quadroDoEfeito(nome, relogio + this.semente)));
       this.aura.setOrigin(0.5, 1).setPosition(pes.x, pes.y + h * 0.08).setDisplaySize(dw, dh);
       this.aura.setAlpha((0.72 + 0.25 * k) * (e.alfa ?? 1));

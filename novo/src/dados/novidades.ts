@@ -11,7 +11,7 @@ export const NOVIDADES: Novidade[] = [
     itens: [
       'Aura azul agora só nas formas Blue. Os Saiyajins na forma normal (Vegeta, Gohan, Trunks, Gotenks, Bardock, Vegetto, Raditz) e a Androide 18 têm uma aura clara, cinza e translúcida.',
       'Goku normal com a aura vermelha do Kaioken e o corpo levemente avermelhado.',
-      'A aura verde forte (Piccolo, Cell, Broly, Androide 17) tinha só o contorno: agora o centro é preenchido de verde, e saíram os quadros em que ela se desfazia e piscava. A aura vermelha (Kaioken e Super Saiyajin God) ganhou o miolo preenchido e, ao carregar ki, usa o mesmo desenho suave, maior e mais forte (antes trocava por um desenho pixelado).',
+      'A aura verde forte (Piccolo, Cell, Broly, Androide 17) tinha só o contorno: agora o centro é preenchido de verde,, saíram os quadros em que ela se desfazia e piscava, e ela ficou menor, em volta do corpo. A aura vermelha (Kaioken e Super Saiyajin God) ganhou o miolo preenchido e, ao carregar ki, usa o mesmo desenho suave, maior e mais forte (antes trocava por um desenho pixelado).',
       'Quadros que ficavam fora do centro da aura foram centralizados: Piccolo sem capa (parado, carregar ki e parry), Piccolo Laranja, Bardock SSJ, Cell Perfeito, Freeza ciborgue e terceira forma, Gotenks SSJ3, Raditz e Trunks Fúria.',
       'A aura agora acompanha a altura real do desenho de cada movimento (cabelo, pose): não fica mais abaixo da cabeça, sempre em volta do corpo todo.',
       'O nome "Sem capa" do Piccolo não aparece mais na barra de vida.',
