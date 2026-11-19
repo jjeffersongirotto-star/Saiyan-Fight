@@ -17,8 +17,11 @@ import { aoApertar } from '../entrada/teclas';
 import { som } from '../audio/som';
 import { conquistas } from '../logica/conquistas';
 
-/** lutador da esquerda: escala de um personagem de altura padrão, o teto (os muito altos) e a linha dos pés */
-const LUTADOR_K = 1.8, LUTADOR_MAX = 2.2, LUTADOR_PES_Y = 290;
+/** v0.153: subtítulo uma linha mais abaixo, os números duas linhas abaixo dele (LINHA = altura de uma linha) */
+const SUB_Y = 82, NUMEROS_Y = 120, LINHA = 21, LINHAS = 7;
+/** lutador da esquerda: escala de um personagem de altura padrão, o teto (os muito altos) e a linha dos pés,
+ *  no fim da última linha dos números (MINIONS) */
+const LUTADOR_K = 1.8, LUTADOR_MAX = 2.2, LUTADOR_PES_Y = NUMEROS_Y + (LINHAS - 1) * LINHA + 17;
 
 export interface DadosDoFimHistoria {
   luta: DadosDaLuta;
@@ -82,7 +85,7 @@ export class FimHistoria extends Phaser.Scene {
       .text(TELA_L / 2, 34, titulo, estiloTexto({ fontFamily: 'Arial Black, Arial', fontSize: '30px', color: venceu ? '#ffd23a' : '#ff6b6b', stroke: '#2a0a00', strokeThickness: 6 }))
       .setOrigin(0.5);
     const modoTxt = modo === 'hard' ? T('DIFÍCIL') : modo === 'unlimited' ? T('SEM LIMITE') : T('NORMAL');
-    this.add.text(TELA_L / 2, 64, `${T(fase.nome)} · ${modoTxt}`, estiloTexto({ fontFamily: 'Arial', fontSize: '14px', color: '#ffffff' })).setOrigin(0.5);
+    this.add.text(TELA_L / 2, SUB_Y, `${T(fase.nome)} · ${modoTxt}`, estiloTexto({ fontFamily: 'Arial', fontSize: '14px', color: '#ffffff' })).setOrigin(0.5);
 
     // números da luta
     const st = d.stats;
@@ -99,20 +102,23 @@ export class FimHistoria extends Phaser.Scene {
     const estilo = estiloTexto({ fontFamily: 'Arial Black, Arial', fontSize: '13px', color: '#dfe7ff' });
     const estiloV = estiloTexto({ fontFamily: 'Arial Black, Arial', fontSize: '13px', color: '#ffd23a' });
     linhas.forEach(([k, v], i) => {
-      this.add.text(300, 90 + i * 22, k, estilo);
-      this.add.text(560, 90 + i * 22, v, estiloV).setOrigin(1, 0);
+      this.add.text(300, NUMEROS_Y + i * LINHA, k, estilo);
+      this.add.text(560, NUMEROS_Y + i * LINHA, v, estiloV).setOrigin(1, 0);
     });
     // itens pegos
     const g = this.add.graphics();
-    this.add.text(690, 90, T('ITENS'), estilo).setOrigin(0.5, 0);
+    this.add.text(690, NUMEROS_Y, T('ITENS'), estilo).setOrigin(0.5, 0);
     (['senzu', 'capsula', 'nuvem', 'bastao'] as const).forEach((tipo, i) => {
-      const x = 640 + (i % 2) * 80, y = 128 + Math.floor(i / 2) * 34;
+      const x = 640 + (i % 2) * 80, y = NUMEROS_Y + 38 + Math.floor(i / 2) * 34;
       desenharIcone(g, tipo, x, y, 0.9);
       this.add.text(x + 16, y - 8, `x${st.itens[tipo]}`, estiloV);
     });
-    novidades.forEach((n, i) => {
-      this.add.text(TELA_L / 2 + 80, 250 + i * 18, T(n), estiloTexto({ fontFamily: 'Arial Black, Arial', fontSize: '14px', color: '#7dff9a', stroke: '#000000', strokeThickness: 3 })).setOrigin(0.5);
-    });
+    // o que a vitória liberou: numa linha só, embaixo dos números (cabe antes dos botões)
+    if (novidades.length) {
+      const t = this.add.text(TELA_L / 2 + 80, NUMEROS_Y + LINHAS * LINHA + 12, novidades.map((n) => T(n)).join('   ·   '),
+        estiloTexto({ fontFamily: 'Arial Black, Arial', fontSize: '13px', color: '#7dff9a', stroke: '#000000', strokeThickness: 3 })).setOrigin(0.5);
+      if (t.width > 560) t.setScale(560 / t.width);
+    }
 
     const deNovo = () => this.scene.start('Luta', d.luta);
     const prox0 = ordem[ordem.indexOf(fase.id) + 1];
