@@ -6,6 +6,14 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.151',
+    titulo: 'FORMAS NA PROPORÇÃO CERTA',
+    itens: [
+      'Formas que vinham mais magras que as outras do mesmo personagem foram encorpadas (do pescoço para baixo; a cabeça e a altura ficam iguais): Trunks Fúria 20%, Vegeta Normal e Blue 15%, Bardock SSJ, Vegetto SSJ e Blue e Super 17 10%.',
+      'Vegeta Super Saiyajin God: a roupa vinha azul-escuro e apagada; agora tem o azul da forma normal, um pouco mais vivo.',
+    ],
+  },
+  {
     versao: '0.150',
     titulo: 'PICCOLO SEM CAPA ENCORPADO E QUADROS LIMPOS',
     itens: [

@@ -17,7 +17,16 @@ import sys
 from PIL import Image
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
-PULAR = {('piccolo', 'semcapa'): {'transform': {0, 1, 2}}}
+# quadros do TRANSFORMAR que ainda mostram a forma anterior (sem alargar) — ou, na forma base, os que já mostram a próxima
+PULAR = {
+    ('piccolo', 'semcapa'): {'transform': {0, 1, 2}},
+    ('trunks', 'furia'): {'transform': {0, 1, 2}},
+    ('bardock', 'ssj'): {'transform': {0, 1, 2}},
+    ('vegeta', 'normal'): {'transform': {3, 4, 5, 6, 7}},
+    ('vegeta', 'blue'): {'transform': {0, 1, 2}},
+    ('vegetto', 'ssj'): {'transform': {0, 1, 2}},
+    ('android17', 'super17'): {'transform': {0, 1, 2, 3}},
+}
 
 
 def pescoco(im: Image.Image) -> int:
