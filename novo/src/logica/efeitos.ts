@@ -22,7 +22,8 @@ export function quadroUnico(nome: NomeEfeito, prog: number): number | null {
  *  null, e a aura é a labareda desenhada (traceKiAuraFlame). */
 const AURA_EFEITOS: Partial<Record<Aura, [NomeEfeito, NomeEfeito]>> = {
   verde: ['aura_verde', 'aura_verde_forte'], azul: ['aura_azul', 'aura_azul'], amarelo: ['aura_amarela', 'aura_amarela_forte'],
-  vermelho: ['aura_vermelha', 'aura_vermelha_forte'], roxo: ['aura_roxa', 'aura_roxa'],
+  // v0.154: a vermelha forte (pixelada, de outro desenho) saiu: carregando, a mesma vermelha suave, maior e mais forte
+  vermelho: ['aura_vermelha', 'aura_vermelha'], roxo: ['aura_roxa', 'aura_roxa'],
   blue: ['aura_azul_chama', 'aura_azul_chama'], azul_escuro: ['aura_azul_escura', 'aura_azul_escura'],
 };
 export const efeitoDaAura = (aura: Aura, forte: boolean): NomeEfeito | null => AURA_EFEITOS[aura]?.[forte ? 1 : 0] ?? null;
