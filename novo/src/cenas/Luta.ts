@@ -12,7 +12,7 @@ import { T } from '../logica/idioma';
 import { criarLuta, escalaDaAltura, alturaDoNivel, maoDe, passoLuta, podeTransformar } from '../logica/luta';
 import { interpolar, RelogioFixo } from '../logica/relogio';
 import { ENTRADA_VAZIA, type Entrada, type EstadoLuta, type Evento, type IdJogador, type Lutador } from '../logica/tipos';
-import { PERSONAGENS } from '../dados/personagens';
+import { PERSONAGENS, formaDoNivel } from '../dados/personagens';
 import { Teclado } from '../entrada/teclado';
 import { mostrarBarraDeCarregamento } from '../ui/barra';
 import { ControlesToque } from '../ui/controlesToque';
@@ -771,7 +771,10 @@ export class Luta extends Phaser.Scene {
     else if (pose.movimento === 'attackKi' && !s.anims.isPlaying) s.play(animFinal);
     // pisca só quando foi atingido: a proteção do começo de cada rodada (INVULNERAVEL_INICIO) não pisca (v0.139)
     const pisca = l.invulneravel > 0 && this.estado.faseQuadros > C.INVULNERAVEL_INICIO && Math.floor(l.invulneravel / 4) % 2 === 0;
-    s.setAlpha(pisca && l.acao !== 'caido' ? 0.45 : 1); // v0.148: quem cai não fica mais translúcido (sai voando)
+    s.setAlpha(pisca && l.acao !== 'caido' ? 0.45 : 1);
+    // tom da forma (Goku normal levemente vermelho, Kaioken); o clarão branco do golpe tem prioridade
+    const tom = formaDoNivel(l.personagem, l.nivel)?.tom;
+    if (!s.tintFill) { if (tom) s.setTint(tom); else if (s.isTinted) s.clearTint(); } // v0.148: quem cai não fica mais translúcido (sai voando)
     this.efeitos.lutador[l.id].desenhar(l, { x: s.x, y: s.y }, k, this.estado.quadro / 60, this.dtSeg);
   }
 

@@ -8,7 +8,7 @@ import type { Aura } from '../dados/personagens';
 import * as C from '../logica/constantes';
 import {
   auraDoLutador, caminhoDoSol, corDoRaio, efeitoDaAura, efeitoDoEspecial, efeitoDoTiro, ESCUDO_FRACAO_VISIVEL, pontoDoChoque,
-  PALETAS_AURA, PARRY_ONDA_QUADROS, quadroDoEfeito, quadroUnico,
+  ALFA_AURA, PALETAS_AURA, PARRY_ONDA_QUADROS, quadroDoEfeito, quadroUnico,
 } from '../logica/efeitos';
 import { circuloDoParry } from '../logica/luta';
 import type { EstadoLuta, Lutador, Raio, Tiro } from '../logica/tipos';
@@ -135,7 +135,7 @@ export class EfeitosDoLutador {
       const sx = w / LAB_W, sy = h / LAB_H;
       this.aura.setTexture(chave, String(Math.floor(this.faseLabareda * LAB_QUADROS) % LAB_QUADROS));
       this.aura.setOrigin(0.5, 1).setPosition(pes.x, pes.y + LAB_H * 0.08 * sy).setDisplaySize(LAB_CEL_W * sx, LAB_CEL_H * sy);
-      this.aura.setAlpha(0.62 + 0.25 * k);
+      this.aura.setAlpha((0.62 + 0.25 * k) * (ALFA_AURA[aura] ?? 1));
       caixa = { cx: pes.x, cy: pes.y - h * 0.52, rx: w * 0.95, ry: h * 0.58 };
     }
     this.aura.setVisible(visivel);

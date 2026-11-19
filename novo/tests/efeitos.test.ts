@@ -77,7 +77,7 @@ describe('qual efeito cada um usa', () => {
     expect(efeitoDaAura('rosa', false)).toBeNull();
   });
   it('aura da forma só enquanto dura o poder da transformação (getTransformationAura)', () => {
-    expect(auraDoLutador('goku', 0, 0)).toBe('gelo');
+    expect(auraDoLutador('goku', 0, 0)).toBe('vermelho'); // v0.154: Kaioken
     expect(auraDoLutador('goku', 1, 100)).toBe('amarelo');
     expect(auraDoLutador('goku', 4, 100)).toBe('blue');
     expect(auraDoLutador('goku', 4, 0)).toBe('blue');   // v0.135: transformado, a aura é sempre a da forma
@@ -85,6 +85,10 @@ describe('qual efeito cada um usa', () => {
     // todo Super Saiyajin tem aura amarela
     for (const [p, f] of [['goku', 'ssj'], ['goku', 'ssj3'], ['vegeta', 'ssj'], ['gohan', 'ssj'], ['gohan', 'ssj2'], ['trunks', 'ssj'], ['gotenks', 'ssj'], ['gotenks', 'ssj3'], ['bardock', 'ssj'], ['vegetto', 'ssj']] as const)
       expect(auraDoLutador(p, PERSONAGENS[p].formas.findIndex((x) => x.forma === f), 0), `${p}-${f}`).toBe('amarelo');
+    // v0.154: azul só no Blue; os Saiyajins na forma normal têm a aura clara (o Goku, a vermelha do Kaioken)
+    for (const p of ['vegeta', 'gohan', 'trunks', 'gotenks', 'bardock', 'vegetto', 'raditz']) expect(auraDoLutador(p, 0, 0), p).toBe('branca');
+    for (const p of Object.values(PERSONAGENS)) for (const f of p.formas)
+      if (f.aura === 'azul' || f.aura === 'blue') expect(f.forma, `${p.id}-${f.forma}`).toMatch(/blue/);
   });
   it('aura forte: carregando, transformando ou com o poder', () => {
     expect(auraForte({ acao: 'livre', nivel: 0, poder: 0 })).toBe(false);
