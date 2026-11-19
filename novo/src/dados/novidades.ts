@@ -6,6 +6,14 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.153',
+    titulo: 'FIM DE FASE MAIS ARRUMADO',
+    itens: [
+      'Na tela de FIM DE JOGO / FASE COMPLETA o nome da fase desceu uma linha, os números começam duas linhas abaixo dele e o lutador fica com os pés na altura da última linha (MINIONS). O que a vitória libera aparece numa linha só, embaixo dos números.',
+      'Quem é derrotado agora é arremessado com o triplo da força e sai da tela bem mais rápido.',
+    ],
+  },
+  {
     versao: '0.152',
     titulo: 'LUTADOR GRANDE NO FIM DA FASE',
     itens: [
