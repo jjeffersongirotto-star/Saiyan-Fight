@@ -10,6 +10,7 @@ export const NOVIDADES: Novidade[] = [
     titulo: 'FIM DE FASE MAIS ARRUMADO',
     itens: [
       'Na tela de FIM DE JOGO / FASE COMPLETA o nome da fase desceu uma linha, os números começam duas linhas abaixo dele e o lutador fica com os pés na altura da última linha (MINIONS). O que a vitória libera aparece numa linha só, embaixo dos números.',
+      'Quem é derrotado agora é arremessado com o triplo da força e sai da tela bem mais rápido.',
     ],
   },
   {
