@@ -5,6 +5,7 @@ do centro, e só onde há desenho acima) ganha a cor da própria aura, mais clar
 por cima. Depois: scripts/gerar-efeitos.py.
 
     python3 scripts/preencher-aura.py aura_vermelha 4 184 192 "255,190,190"
+    (--manter 3 --de <png já preenchido>: copia esses quadros do png em vez de refazer)
 """
 import sys
 from collections import deque
@@ -15,6 +16,7 @@ from PIL import Image, ImageFilter
 
 TOPO = 0.18       # o miolo começa abaixo das pontas das labaredas (fração da altura)
 LARGURA = 0.30    # meia-largura do miolo na base, em fração da largura da aura
+BAIXO = 0.12      # v0.154b: perto da base o miolo fecha arredondado (não vaza entre as pontas que abrem para os lados)
 
 
 def _fora(m: np.ndarray) -> np.ndarray:
@@ -66,6 +68,10 @@ def preencher(fr: Image.Image, claro) -> Image.Image:
     t = np.clip((yy - topo) / max(1, alt), 0, 1)
     meia = (xs.max() - xs.min()) * LARGURA * np.sqrt(np.clip(t * (2.2 - t), 0, 1.21))
     miolo = (yy >= topo) & (np.abs(xx - cx) <= meia)
+    fundo = ys.max() - (ys.max() - ys.min()) * BAIXO
+    meia_base = (xs.max() - xs.min()) * LARGURA
+    curva = fundo + (ys.max() - fundo) * np.sqrt(np.clip(1 - ((xx - cx) / max(1, meia_base)) ** 2, 0, 1))
+    miolo &= yy <= curva
     vazio = dentro & miolo & acima & ~m
     vy, vx = np.nonzero(vazio)
     if len(vy):
@@ -83,8 +89,14 @@ def main() -> None:
     claro = [int(v) for v in sys.argv[5].split(',')]
     caminho = f'fontes/efeitos/{nome}.png'
     im = Image.open(caminho).convert('RGBA')
+    # quadros que já estão certos e ficam como estão (ex.: "--manter 3")
+    manter = {int(v) for v in sys.argv[sys.argv.index('--manter') + 1].split(',')} if '--manter' in sys.argv else set()
+    atual = Image.open(sys.argv[sys.argv.index('--de') + 1]).convert('RGBA') if '--de' in sys.argv else im
     out = Image.new('RGBA', im.size, (0, 0, 0, 0))
     for i in range(n):
+        if i in manter:
+            out.alpha_composite(atual.crop((i * w, 0, (i + 1) * w, h)), (i * w, 0))
+            continue
         out.alpha_composite(preencher(im.crop((i * w, 0, (i + 1) * w, h)), claro), (i * w, 0))
     out.save(caminho)
     print(f'{nome}: {n} quadros preenchidos')
