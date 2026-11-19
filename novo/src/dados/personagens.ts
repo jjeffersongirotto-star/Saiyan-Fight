@@ -4,7 +4,7 @@
 // Os nomes dos personagens, das formas e dos golpes não são traduzidos (regra do jogo).
 
 export type Alinhamento = 'HERÓI' | 'ANTI-HERÓI' | 'VILÃO';
-export type Aura = 'gelo' | 'amarelo' | 'verde' | 'roxo' | 'azul' | 'rosa' | 'vermelho' | 'blue' | 'azul_escuro';
+export type Aura = 'gelo' | 'amarelo' | 'verde' | 'roxo' | 'azul' | 'rosa' | 'vermelho' | 'blue' | 'azul_escuro' | 'branca';
 export type EfeitoEspecial = 'cor' | 'kamehameha' | 'raio_azul' | 'raio_verde' | 'raio_vermelho' | 'sol_freeza';
 
 export interface Forma {
@@ -14,6 +14,8 @@ export interface Forma {
   aura: Aura;
   /** cm (a luta usa escalaDaAltura) */
   altura: number;
+  /** tom multiplicado no desenho (v0.154: o Goku normal levemente vermelho, como no Kaioken) */
+  tom?: number;
 }
 
 export interface DadosPersonagem {
@@ -31,20 +33,22 @@ export interface DadosPersonagem {
   criado?: true;
 }
 
-const f = (forma: string, nome: string, aura: Aura, altura: number): Forma => ({ forma, nome, aura, altura });
+const f = (forma: string, nome: string, aura: Aura, altura: number, tom?: number): Forma => ({ forma, nome, aura, altura, ...(tom ? { tom } : {}) });
+/** v0.154: Kaioken (aura vermelha e o corpo levemente avermelhado) */
+export const TOM_KAIOKEN = 0xffc4b4;
 const hex = (s: string) => parseInt(s.slice(1), 16);
 
 const LISTA: DadosPersonagem[] = [
   {
     id: 'goku', chaveAntiga: 'goku_adult', nome: 'GOKU', alinhamento: 'HERÓI', especial: 'KAMEHAMEHA', corKi: hex('#5be3ff'),
     efeitoTiro: 'tiro_pixel', efeitoEspecial: 'kamehameha',
-    formas: [f('normal', 'Normal', 'gelo', 175), f('ssj', 'Super Saiyajin', 'amarelo', 175), f('ssj3', 'Super Saiyajin 3', 'amarelo', 175),
+    formas: [f('normal', 'Normal', 'vermelho', 175, TOM_KAIOKEN), f('ssj', 'Super Saiyajin', 'amarelo', 175), f('ssj3', 'Super Saiyajin 3', 'amarelo', 175),
       f('god', 'Super Saiyajin God', 'vermelho', 175), f('blue', 'Super Saiyajin Blue', 'blue', 175), f('instinto', 'Instinto Superior', 'gelo', 175)],
   },
   {
     id: 'vegeta', chaveAntiga: 'vegeta', nome: 'VEGETA', alinhamento: 'ANTI-HERÓI', especial: 'FINAL FLASH', corKi: hex('#ffe45a'),
     efeitoTiro: 'tiro_pixel', efeitoEspecial: 'cor',
-    formas: [f('normal', 'Normal', 'amarelo', 164), f('ssj', 'Super Saiyajin', 'amarelo', 164), f('god', 'Super Saiyajin God', 'vermelho', 164),
+    formas: [f('normal', 'Normal', 'branca', 164), f('ssj', 'Super Saiyajin', 'amarelo', 164), f('god', 'Super Saiyajin God', 'vermelho', 164),
       f('blue', 'Super Saiyajin Blue', 'blue', 164), f('blue_evo', 'Super Saiyajin Blue Evolução', 'azul_escuro', 164), f('ego', 'Ego Superior', 'roxo', 164)],
   },
   {
@@ -62,12 +66,12 @@ const LISTA: DadosPersonagem[] = [
   {
     id: 'trunks', chaveAntiga: 'trunks', nome: 'TRUNKS', alinhamento: 'HERÓI', especial: 'BURNING ATTACK', corKi: hex('#9fd0ff'),
     efeitoTiro: 'tiro_pixel', efeitoEspecial: 'raio_azul',
-    formas: [f('normal', 'Normal', 'azul', 170), f('ssj', 'Super Saiyajin', 'amarelo', 170), f('furia', 'Super Saiyajin Fúria', 'amarelo', 170)],
+    formas: [f('normal', 'Normal', 'branca', 170), f('ssj', 'Super Saiyajin', 'amarelo', 170), f('furia', 'Super Saiyajin Fúria', 'amarelo', 170)],
   },
   {
     id: 'gohan', chaveAntiga: 'gohan', nome: 'GOHAN', alinhamento: 'HERÓI', especial: 'MASENKO', corKi: hex('#ffd45b'),
     efeitoTiro: 'tiro_pixel', efeitoEspecial: 'kamehameha',
-    formas: [f('normal', 'Normal', 'gelo', 135), f('ssj', 'Super Saiyajin', 'amarelo', 135), f('ssj2', 'Super Saiyajin 2', 'amarelo', 135)],
+    formas: [f('normal', 'Normal', 'branca', 135), f('ssj', 'Super Saiyajin', 'amarelo', 135), f('ssj2', 'Super Saiyajin 2', 'amarelo', 135)],
   },
   {
     id: 'kaioshin', chaveAntiga: 'kaioshin', nome: 'SUPREMO SR. KAIO', alinhamento: 'HERÓI', especial: 'KIAI SAGRADO', corKi: hex('#c9a0ff'),
@@ -77,12 +81,12 @@ const LISTA: DadosPersonagem[] = [
   {
     id: 'vegetto', chaveAntiga: 'gogeta', nome: 'VEGETTO', alinhamento: 'HERÓI', especial: 'FINAL KAMEHAMEHA', corKi: hex('#7fd8ff'),
     efeitoTiro: 'tiro_pixel', efeitoEspecial: 'kamehameha',
-    formas: [f('normal', 'Normal', 'amarelo', 175), f('ssj', 'Super Saiyajin', 'amarelo', 175), f('blue', 'Super Saiyajin Blue', 'blue', 175)],
+    formas: [f('normal', 'Normal', 'branca', 175), f('ssj', 'Super Saiyajin', 'amarelo', 175), f('blue', 'Super Saiyajin Blue', 'blue', 175)],
   },
   {
     id: 'bardock', chaveAntiga: 'bardock', nome: 'BARDOCK', alinhamento: 'ANTI-HERÓI', especial: 'RIOT JAVELIN', corKi: hex('#ff9a5b'),
     efeitoTiro: 'tiro_pixel', efeitoEspecial: 'raio_vermelho',
-    formas: [f('normal', 'Normal', 'azul', 175), f('ssj', 'Super Saiyajin', 'amarelo', 175)],
+    formas: [f('normal', 'Normal', 'branca', 175), f('ssj', 'Super Saiyajin', 'amarelo', 175)],
   },
   {
     id: 'android17', chaveAntiga: 'android17', nome: 'ANDROIDE 17', alinhamento: 'ANTI-HERÓI', especial: 'POWER BLITZ', corKi: hex('#ffe07a'),
@@ -92,7 +96,7 @@ const LISTA: DadosPersonagem[] = [
   {
     id: 'android18', chaveAntiga: 'android18', nome: 'ANDROIDE 18', alinhamento: 'ANTI-HERÓI', especial: 'DESTRUCTO DISC', corKi: hex('#a9e3ff'),
     efeitoTiro: 'tiro_pixel', efeitoEspecial: 'cor',
-    formas: [f('normal', 'Normal', 'azul', 172)],
+    formas: [f('normal', 'Normal', 'branca', 172)],
   },
   {
     id: 'buu', chaveAntiga: 'majin_buu', nome: 'MAJIN BUU', alinhamento: 'VILÃO', especial: 'CHOCOLATE BEAM', corKi: hex('#ff9de0'),
@@ -102,7 +106,7 @@ const LISTA: DadosPersonagem[] = [
   {
     id: 'raditz', chaveAntiga: 'raditz', nome: 'RADITZ', alinhamento: 'VILÃO', especial: 'DOUBLE SUNDAY', corKi: hex('#ff7ad9'),
     efeitoTiro: 'tiro_pixel', efeitoEspecial: 'raio_vermelho',
-    formas: [f('normal', 'Normal', 'roxo', 198)],
+    formas: [f('normal', 'Normal', 'branca', 198)],
   },
   {
     id: 'broly', chaveAntiga: 'broly', nome: 'BROLY', alinhamento: 'VILÃO', especial: 'ERASER CANNON', corKi: hex('#7dff7a'),
@@ -112,7 +116,7 @@ const LISTA: DadosPersonagem[] = [
   {
     id: 'gotenks', chaveAntiga: 'gotenks', nome: 'GOTENKS', alinhamento: 'HERÓI', especial: 'SUPER GHOST KAMIKAZE', corKi: hex('#ffe45a'),
     efeitoTiro: 'tiro_pixel', efeitoEspecial: 'kamehameha',
-    formas: [f('normal', 'Normal', 'amarelo', 125), f('ssj', 'Super Saiyajin', 'amarelo', 125), f('ssj3', 'Super Saiyajin 3', 'amarelo', 125)],
+    formas: [f('normal', 'Normal', 'branca', 125), f('ssj', 'Super Saiyajin', 'amarelo', 125), f('ssj3', 'Super Saiyajin 3', 'amarelo', 125)],
   },
   {
     id: 'cell', chaveAntiga: 'cell', nome: 'CELL', alinhamento: 'VILÃO', especial: 'KAMEHAMEHA PERFEITO', corKi: hex('#7dff7a'),

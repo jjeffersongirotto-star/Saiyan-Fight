@@ -61,3 +61,21 @@ export function liberarFormas(cena: Phaser.Scene, manter: Set<string>): string[]
   }
   return soltas;
 }
+
+/** v0.154: altura do desenho na tela (dos pés ao alto da cabeça/cabelo) no movimento atual do sprite — a mediana dos
+ *  quadros do movimento, para a aura acompanhar o corpo sem ficar pulsando a cada quadro. Pés em 103/112 da célula. */
+const alturasDoMovimento = new Map<string, number>();
+export function alturaDoCorpo(s: Phaser.GameObjects.Sprite): number {
+  const tex = s.texture, mov = String(s.frame.name).split('/')[0], chave = `${tex.key}:${mov}`;
+  let celula = alturasDoMovimento.get(chave);
+  if (celula === undefined) {
+    const pes = (103 / 112) * s.frame.realHeight;
+    const hs = tex.getFrameNames().filter((n) => n.startsWith(`${mov}/`)).map((n) => {
+      const d = (tex.get(n) as unknown as { data?: { spriteSourceSize?: { y: number } } }).data?.spriteSourceSize;
+      return pes - (d?.y ?? 0);
+    }).sort((a, b) => a - b);
+    celula = hs.length ? hs[Math.floor(hs.length / 2)] : pes;
+    alturasDoMovimento.set(chave, celula);
+  }
+  return celula * Math.abs(s.scaleY);
+}

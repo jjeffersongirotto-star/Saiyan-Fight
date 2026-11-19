@@ -13,7 +13,7 @@ import { nivelLiberado } from '../logica/conquistas';
 import { escalaDaAltura } from '../logica/luta';
 import { PALETAS_AURA, auraDoLutador } from '../logica/efeitos';
 import type { Lutador } from '../logica/tipos';
-import { criarAnimacoes, liberarFormas, metaDoAtlas, pedirFormas } from '../ui/formas';
+import { alturaDoCorpo, criarAnimacoes, liberarFormas, metaDoAtlas, pedirFormas } from '../ui/formas';
 import { EfeitosDoLutador, pedirEfeitos } from '../ui/efeitos';
 import { enfeitesLigados } from '../ui/transicao';
 import { esferaDoDragao, fotoDoPerfil } from '../ui/esfera';
@@ -189,6 +189,8 @@ export class Menu extends Phaser.Scene {
       chao.fillStyle(cores[1], 0.18).fillEllipse(VITRINE.x, VITRINE.y + 2, 190, 26).fillStyle(cores[2], 0.25).fillEllipse(VITRINE.x, VITRINE.y + 2, 110, 12)
         .fillStyle(0x000000, 0.35).fillEllipse(VITRINE.x, VITRINE.y + 1, 70, 8);
       const sprite = this.add.sprite(VITRINE.x, VITRINE.y, chave, 'idle/0').setOrigin(0.5, 103 / 112).setDepth(10).setScale(k / meta.escala);
+      const tom = PERSONAGENS[esc.id].formas[esc.nivel].tom;
+      if (tom) sprite.setTint(tom); // v0.154: Goku normal levemente vermelho (Kaioken), como na luta
       sprite.play(`${chave}:idle`);
       sprite.setInteractive({ useHandCursor: true, pixelPerfect: false }).on('pointerup', () => this.golpe());
       sprite.on(Phaser.Animations.Events.ANIMATION_COMPLETE, () => sprite.play(`${chave}:idle`));
@@ -224,7 +226,7 @@ export class Menu extends Phaser.Scene {
     const v = this.vitrine;
     if (!v) return;
     if (v.faiscas && !enfeitesLigados()) { v.faiscas.destroy(); v.faiscas = undefined; }
-    v.efeitos.desenhar(v.l, { x: v.sprite.x, y: v.sprite.y }, v.k, tempo / 1000, Math.min(0.1, delta / 1000));
+    v.efeitos.desenhar(v.l, { x: v.sprite.x, y: v.sprite.y }, v.k, tempo / 1000, Math.min(0.1, delta / 1000), alturaDoCorpo(v.sprite));
   }
 
   private retPainelEsfera() {

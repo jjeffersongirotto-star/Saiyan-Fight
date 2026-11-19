@@ -22,7 +22,8 @@ export function quadroUnico(nome: NomeEfeito, prog: number): number | null {
  *  null, e a aura é a labareda desenhada (traceKiAuraFlame). */
 const AURA_EFEITOS: Partial<Record<Aura, [NomeEfeito, NomeEfeito]>> = {
   verde: ['aura_verde', 'aura_verde_forte'], azul: ['aura_azul', 'aura_azul'], amarelo: ['aura_amarela', 'aura_amarela_forte'],
-  vermelho: ['aura_vermelha', 'aura_vermelha_forte'], roxo: ['aura_roxa', 'aura_roxa'],
+  // v0.154: a vermelha forte (pixelada, de outro desenho) saiu: carregando, a mesma vermelha suave, maior e mais forte
+  vermelho: ['aura_vermelha', 'aura_vermelha'], roxo: ['aura_roxa', 'aura_roxa'],
   blue: ['aura_azul_chama', 'aura_azul_chama'], azul_escuro: ['aura_azul_escura', 'aura_azul_escura'],
 };
 export const efeitoDaAura = (aura: Aura, forte: boolean): NomeEfeito | null => AURA_EFEITOS[aura]?.[forte ? 1 : 0] ?? null;
@@ -32,7 +33,11 @@ export const PALETAS_AURA: Record<Aura, [number, number, number]> = {
   gelo: [0x5ec8ff, 0xc8f0ff, 0xffffff], amarelo: [0xff8a00, 0xffd23f, 0xfff8c8], vermelho: [0xc21a1a, 0xff6a3d, 0xffd6be],
   rosa: [0xd63c96, 0xff9ad6, 0xffe8f6], blue: [0x1c5fe0, 0x38a8ff, 0xe2f4ff], azul: [0x1c5fe0, 0x5cb8ff, 0xe2f4ff],
   verde: [0x1d9a2a, 0x6cff6a, 0xe8ffe2], azul_escuro: [0x0b1f8a, 0x2f6cff, 0xc4d8ff], roxo: [0x6a1fb0, 0xb878ff, 0xf2e4ff],
+  // v0.154: Saiyajins na forma normal (azul é só do Blue): labareda cinza-clara, meio transparente
+  branca: [0xa9b3bd, 0xdde3e9, 0xf4f7fa],
 };
+/** auras desenhadas mais transparentes que as outras */
+export const ALFA_AURA: Partial<Record<Aura, number>> = { branca: 0.6 };
 
 /** Aura que aparece agora: a da forma transformada enquanto dura o poder; senão a do personagem (drawKiAura). */
 /** Cor da aura = a da forma em que o lutador está (v0.135: antes voltava à da forma normal quando o poder da

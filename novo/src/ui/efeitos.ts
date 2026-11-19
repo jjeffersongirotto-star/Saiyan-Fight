@@ -8,7 +8,7 @@ import type { Aura } from '../dados/personagens';
 import * as C from '../logica/constantes';
 import {
   auraDoLutador, caminhoDoSol, corDoRaio, efeitoDaAura, efeitoDoEspecial, efeitoDoTiro, ESCUDO_FRACAO_VISIVEL, pontoDoChoque,
-  PALETAS_AURA, PARRY_ONDA_QUADROS, quadroDoEfeito, quadroUnico,
+  ALFA_AURA, PALETAS_AURA, PARRY_ONDA_QUADROS, quadroDoEfeito, quadroUnico,
 } from '../logica/efeitos';
 import { circuloDoParry } from '../logica/luta';
 import type { EstadoLuta, Lutador, Raio, Tiro } from '../logica/tipos';
@@ -112,18 +112,20 @@ export class EfeitosDoLutador {
   }
 
   /** `pes` = onde o sprite está (origem nos pés); `kAltura` = escala da altura da forma. */
-  desenhar(l: Lutador, pes: Ponto, kAltura: number, relogio: number, dtSeg: number): void {
+  /** `corpo` = altura do desenho na tela (alturaDoCorpo): a aura cresce para passar sempre da cabeça (v0.154) */
+  desenhar(l: Lutador, pes: Ponto, kAltura: number, relogio: number, dtSeg: number, corpo = 0): void {
     const visivel = l.acao !== 'caido';
     const k = l.nivelAura; // a lógica suaviza (o círculo do parry usa o mesmo nível)
     const corpoL = 96 * kAltura, corpoA = 112 * kAltura * 0.9;
     const aura = auraDoLutador(l.personagem, l.nivel, l.poder);
     const nome = efeitoDaAura(aura, k > 0.5);
-    const h = corpoA * (1.18 + 0.12 * k);
+    // a aura de imagem vai de pes.y + 0,08h até 1,14h acima: passa ~10% acima do alto do desenho
+    const h = Math.max(corpoA * (1.18 + 0.12 * k), corpo * (1.0 + 0.12 * k));
     // caixa da aura desenhada (o escudo fica em volta dela)
     let caixa: { cx: number; cy: number; rx: number; ry: number };
     if (nome) {
-      const e: { w: number; h: number; alfa?: number } = EFEITOS[nome];
-      const dh = h * 1.22, dw = (dh * e.w) / e.h;
+      const e: { w: number; h: number; alfa?: number; escala?: number; largura?: number } = EFEITOS[nome];
+      const dh = h * 1.22 * (e.escala ?? 1), dw = ((dh * e.w) / e.h) * (e.largura ?? 1);
       this.aura.setTexture(ATLAS_EFEITOS, quadro(nome, quadroDoEfeito(nome, relogio + this.semente)));
       this.aura.setOrigin(0.5, 1).setPosition(pes.x, pes.y + h * 0.08).setDisplaySize(dw, dh);
       this.aura.setAlpha((0.72 + 0.25 * k) * (e.alfa ?? 1));
@@ -135,7 +137,7 @@ export class EfeitosDoLutador {
       const sx = w / LAB_W, sy = h / LAB_H;
       this.aura.setTexture(chave, String(Math.floor(this.faseLabareda * LAB_QUADROS) % LAB_QUADROS));
       this.aura.setOrigin(0.5, 1).setPosition(pes.x, pes.y + LAB_H * 0.08 * sy).setDisplaySize(LAB_CEL_W * sx, LAB_CEL_H * sy);
-      this.aura.setAlpha(0.62 + 0.25 * k);
+      this.aura.setAlpha((0.62 + 0.25 * k) * (ALFA_AURA[aura] ?? 1));
       caixa = { cx: pes.x, cy: pes.y - h * 0.52, rx: w * 0.95, ry: h * 0.58 };
     }
     this.aura.setVisible(visivel);

@@ -6,6 +6,7 @@ import type { EstadoLuta, IdJogador } from '../logica/tipos';
 import { formaDoNivel, PERSONAGENS } from '../dados/personagens';
 
 const RASTRO_MS = 520;
+const FORMAS_SEM_NOME = new Set(['semcapa']);
 
 export class Hud {
   private g: Phaser.GameObjects.Graphics;
@@ -36,7 +37,9 @@ export class Hud {
     for (const id of ['p1', 'p2'] as const) {
       const l = e[id];
       const esq = id === 'p1';
-      const forma = l.nivel > 0 ? ` · ${formaDoNivel(l.personagem, l.nivel).nome}` : '';
+      // v0.154: a forma "Sem capa" do Piccolo não é transformação de verdade, fica só o nome dele
+      const fo = l.nivel > 0 ? formaDoNivel(l.personagem, l.nivel) : null;
+      const forma = fo && !FORMAS_SEM_NOME.has(fo.forma) ? ` · ${fo.nome}` : '';
       const texto = `${PERSONAGENS[l.personagem]?.nome ?? l.personagem}${forma}${id === 'p2' ? this.sufixoP2 : ''}`;
       if (texto !== this.textoAtual[id]) { this.nomes[id].setText(texto); this.textoAtual[id] = texto; }
       const larg = 250, x0 = esq ? 16 : TELA_L - 16 - larg, y = 22;
