@@ -6,6 +6,13 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.152',
+    titulo: 'LUTADOR GRANDE NO FIM DA FASE',
+    itens: [
+      'Na tela de FIM DE JOGO e de FASE COMPLETA o seu lutador aparece grande, como no menu principal, e não fica mais translúcido.',
+    ],
+  },
+  {
     versao: '0.151',
     titulo: 'FORMAS NA PROPORÇÃO CERTA',
     itens: [
