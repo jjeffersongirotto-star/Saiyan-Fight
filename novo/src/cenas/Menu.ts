@@ -13,7 +13,7 @@ import { nivelLiberado } from '../logica/conquistas';
 import { escalaDaAltura } from '../logica/luta';
 import { PALETAS_AURA, auraDoLutador } from '../logica/efeitos';
 import type { Lutador } from '../logica/tipos';
-import { criarAnimacoes, liberarFormas, metaDoAtlas, pedirFormas } from '../ui/formas';
+import { alturaDoCorpo, criarAnimacoes, liberarFormas, metaDoAtlas, pedirFormas } from '../ui/formas';
 import { EfeitosDoLutador, pedirEfeitos } from '../ui/efeitos';
 import { enfeitesLigados } from '../ui/transicao';
 import { esferaDoDragao, fotoDoPerfil } from '../ui/esfera';
@@ -224,7 +224,7 @@ export class Menu extends Phaser.Scene {
     const v = this.vitrine;
     if (!v) return;
     if (v.faiscas && !enfeitesLigados()) { v.faiscas.destroy(); v.faiscas = undefined; }
-    v.efeitos.desenhar(v.l, { x: v.sprite.x, y: v.sprite.y }, v.k, tempo / 1000, Math.min(0.1, delta / 1000));
+    v.efeitos.desenhar(v.l, { x: v.sprite.x, y: v.sprite.y }, v.k, tempo / 1000, Math.min(0.1, delta / 1000), alturaDoCorpo(v.sprite));
   }
 
   private retPainelEsfera() {

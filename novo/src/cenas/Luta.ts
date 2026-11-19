@@ -16,7 +16,7 @@ import { PERSONAGENS, formaDoNivel } from '../dados/personagens';
 import { Teclado } from '../entrada/teclado';
 import { mostrarBarraDeCarregamento } from '../ui/barra';
 import { ControlesToque } from '../ui/controlesToque';
-import { criarAnimacoes, liberarFormas, metaDoAtlas, pedirFormas } from '../ui/formas';
+import { alturaDoCorpo, criarAnimacoes, liberarFormas, metaDoAtlas, pedirFormas } from '../ui/formas';
 import { Hud } from '../ui/hud';
 import { mostrarVersus } from '../ui/apresentacao';
 import { registrarLuta } from '../logica/estatisticas';
@@ -775,7 +775,7 @@ export class Luta extends Phaser.Scene {
     // tom da forma (Goku normal levemente vermelho, Kaioken); o clarão branco do golpe tem prioridade
     const tom = formaDoNivel(l.personagem, l.nivel)?.tom;
     if (!s.tintFill) { if (tom) s.setTint(tom); else if (s.isTinted) s.clearTint(); } // v0.148: quem cai não fica mais translúcido (sai voando)
-    this.efeitos.lutador[l.id].desenhar(l, { x: s.x, y: s.y }, k, this.estado.quadro / 60, this.dtSeg);
+    this.efeitos.lutador[l.id].desenhar(l, { x: s.x, y: s.y }, k, this.estado.quadro / 60, this.dtSeg, alturaDoCorpo(s));
   }
 
   private dtSeg = 1 / 60;

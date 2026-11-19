@@ -112,13 +112,15 @@ export class EfeitosDoLutador {
   }
 
   /** `pes` = onde o sprite está (origem nos pés); `kAltura` = escala da altura da forma. */
-  desenhar(l: Lutador, pes: Ponto, kAltura: number, relogio: number, dtSeg: number): void {
+  /** `corpo` = altura do desenho na tela (alturaDoCorpo): a aura cresce para passar sempre da cabeça (v0.154) */
+  desenhar(l: Lutador, pes: Ponto, kAltura: number, relogio: number, dtSeg: number, corpo = 0): void {
     const visivel = l.acao !== 'caido';
     const k = l.nivelAura; // a lógica suaviza (o círculo do parry usa o mesmo nível)
     const corpoL = 96 * kAltura, corpoA = 112 * kAltura * 0.9;
     const aura = auraDoLutador(l.personagem, l.nivel, l.poder);
     const nome = efeitoDaAura(aura, k > 0.5);
-    const h = corpoA * (1.18 + 0.12 * k);
+    // a aura de imagem vai de pes.y + 0,08h até 1,14h acima: passa ~10% acima do alto do desenho
+    const h = Math.max(corpoA * (1.18 + 0.12 * k), corpo * (1.0 + 0.12 * k));
     // caixa da aura desenhada (o escudo fica em volta dela)
     let caixa: { cx: number; cy: number; rx: number; ry: number };
     if (nome) {
