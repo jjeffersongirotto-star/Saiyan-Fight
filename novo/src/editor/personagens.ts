@@ -9,17 +9,20 @@
 //  - TRANSFORMAÇÕES: adicionar, renomear, aura, altura, subir/descer, remover, copiar os quadros da anterior.
 // Salva no IndexedDB do novo (ui/armazemCriados.ts). Um personagem do antigo editado aqui vira uma cópia no novo.
 import { conquistas } from '../logica/conquistas';
+import { PERSONAGENS } from '../dados/personagens';
 import { T, TF } from '../logica/idioma';
 import { MOVIMENTOS, type Movimento } from '../logica/animacao';
 import {
   ALINHAMENTOS, AURAS_EDITOR, EFEITOS_ESPECIAL, EFEITOS_TIRO, FPS_PADRAO, NOMES_MOVIMENTOS, QUADROS_MAX, TRANSFORMACOES_MAX, ALTURA_MAX, ALTURA_MIN,
   adicionarTransformacao, apagarQuadro, clonarPersonagem, clonarQuadro, clonarQuadros, corDoCanto, deArquivo, gradeDaFolha, juntarQuadros, moverQuadro,
   moverTransformacao, nomeDoArquivo, novoPersonagem, paraArquivo, problemasDoPersonagem, removerFundo, removerTransformacao, totalDeQuadros,
-  type Celula, type ModoFundo, type PersonagemEditavel,
+  alcaNoPonto, alinharEspacamento, celulaNoPonto, celulasAjustadas, celulasNoRetangulo, moverRet, redimensionarRet,
+  type Alca, type Celula, type ModoFundo, type PersonagemEditavel, type Ret,
 } from '../logica/editorPersonagem';
 import { avisar, confirmar } from '../ui/janela';
 import { personagensParaEditar, type PersonagemDoEditor } from '../ui/criados';
 import { excluirPersonagemDoNovo, salvarPersonagemNoNovo } from '../ui/armazemCriados';
+import { personagemDoJogo, personagensDoJogo, retratosDoJogo } from './doJogo';
 import { baixar, btn, camadaDoEditor, campo, carregarImagem, deslizar, el, entradaCor, entradaNumero, entradaTexto, escolha, escolherArquivo, lerComoTexto, lerComoUrl } from './dom';
 
 type Aba = 'dados' | 'animacoes' | 'transformacoes';
@@ -51,7 +54,14 @@ export class EditorDePersonagens {
   private grade = { fw: 32, fh: 32, espaco: 0, total: 0, zoom: 2 };
   private fundo: { modo: ModoFundo; cor: string; tol: number } = { modo: 'auto', cor: '#ffffff', tol: 10 };
   private escolhidas: number[] = [];
+  /** v0.156: recortes que o jogador moveu/redimensionou (por índice da grade), o quadro com as alças e o TROCAR */
+  private ajustes: Record<number, Ret> = {};
+  private ativo: number | null = null;
+  private trocando = false;
+  private espacoSel = { x: 0, y: 0 };
   private relogioPrevia = 0;
+  /** v0.156: personagem do jogo aberto só para ver (não salva; DUPLICAR PARA EDITAR faz uma cópia) */
+  private soVer = false;
 
   constructor(private aoFechar: () => void) {
     this.raiz = camadaDoEditor('sf-editor-personagens');
@@ -84,11 +94,14 @@ export class EditorDePersonagens {
     this.corpo.append(el('div', { cls: 'sfe-dica', textContent: T('CARREGANDO') + '...' }));
     this.lista = await personagensParaEditar();
     this.corpo.replaceChildren();
+    this.listaDoJogo();
     if (!this.lista.length) {
-      this.corpo.append(el('p', { cls: 'sfe-dica', textContent: T('NENHUM PERSONAGEM CRIADO AINDA. TOQUE EM + NOVO PERSONAGEM PARA COMEÇAR.') }));
+      this.corpo.prepend(el('p', { cls: 'sfe-dica', textContent: T('NENHUM PERSONAGEM CRIADO AINDA. TOQUE EM + NOVO PERSONAGEM PARA COMEÇAR.') }));
       return;
     }
-    this.corpo.append(el('p', { cls: 'sfe-dica', textContent: T('OS PERSONAGENS DO JOGO ANTIGO APARECEM AQUI SÓ PARA LER: AO SALVAR, UMA CÓPIA FICA NO JOGO NOVO.') }));
+    const meus = el('div', {});
+    this.corpo.prepend(meus);
+    meus.append(el('p', { cls: 'sfe-dica', textContent: T('OS PERSONAGENS DO JOGO ANTIGO APARECEM AQUI SÓ PARA LER: AO SALVAR, UMA CÓPIA FICA NO JOGO NOVO.') }));
     const grade = el('div', { cls: 'sfe-grade' });
     for (const item of this.lista) {
       const p = item.p, foto = p.formas[0].quadros.idle?.[0];
@@ -111,7 +124,41 @@ export class EditorDePersonagens {
       c.addEventListener('click', () => this.editar(clonarPersonagem(p), false));
       grade.append(c);
     }
-    this.corpo.append(grade);
+    meus.append(grade);
+  }
+
+  /** v0.156: os personagens do jogo, para ver quadro a quadro (abre só para ver; dá para duplicar e editar a cópia) */
+  private listaDoJogo(): void {
+    const grade = el('div', { cls: 'sfe-grade' });
+    const fotos: Record<string, HTMLDivElement> = {};
+    for (const id of personagensDoJogo()) {
+      const p = PERSONAGENS[id];
+      fotos[id] = el('div', { cls: 'sfe-q', estilo: 'width:64px;height:72px' });
+      const c = el('div', { cls: 'sfe-cartao' }, [
+        fotos[id], el('b', { textContent: p.nome }),
+        el('span', { cls: 'sfe-dica', textContent: TF('{0} FORMA(S)', p.formas.length) }),
+        el('div', { cls: 'sfe-linha' }, [btn('VER QUADROS', () => void this.verDoJogo(id))]),
+      ]);
+      c.addEventListener('click', () => void this.verDoJogo(id));
+      grade.append(c);
+    }
+    this.corpo.append(
+      el('h3', { textContent: T('PERSONAGENS DO JOGO'), estilo: 'margin:14px 0 4px;color:#ffd23f' }),
+      el('p', { cls: 'sfe-dica', textContent: T('SÓ PARA VER QUADRO A QUADRO. PARA MEXER, ABRA E TOQUE EM DUPLICAR PARA EDITAR (A CÓPIA VIRA UM PERSONAGEM SEU).') }),
+      grade,
+    );
+    void retratosDoJogo().then((r) => { for (const [id, url] of Object.entries(r)) fotos[id]?.replaceChildren(el('img', { src: url })); });
+  }
+
+  private async verDoJogo(id: string): Promise<void> {
+    this.moldura(PERSONAGENS[id].nome, [el('span', { cls: 'sfe-esp' }), btn('VOLTAR', () => void this.mostrarLista())]);
+    this.corpo.append(el('div', { cls: 'sfe-dica', textContent: T('CARREGANDO') + '...' }));
+    const p = await personagemDoJogo(id);
+    if (!p) { avisar('EDITOR', 'NÃO DEU PARA ABRIR OS QUADROS DESTE PERSONAGEM.'); void this.mostrarLista(); return; }
+    this.editar(p, false);
+    this.soVer = true;
+    this.aba = 'animacoes';
+    this.desenharEdicao();
   }
 
   private duplicar(p: PersonagemEditavel): void {
@@ -140,6 +187,7 @@ export class EditorDePersonagens {
 
   // ---------------- edição ----------------
   private editar(p: PersonagemEditavel, novo: boolean): void {
+    this.soVer = false;
     this.p = p;
     this.mudou = novo;
     this.forma = 0;
@@ -158,14 +206,17 @@ export class EditorDePersonagens {
       if (a === this.aba) b.classList.add('sfe-ativo');
       return b;
     }));
-    this.moldura(p.nome || T('PERSONAGEM'), [abas, el('span', { cls: 'sfe-esp' }), btn('SALVAR', () => void this.salvar()), btn('EXPORTAR', () => baixar(JSON.stringify(paraArquivo(p)), nomeDoArquivo(p.nome))), btn('VOLTAR', () => this.sairDaEdicao())]);
+    const acoes = this.soVer
+      ? [el('span', { cls: 'sfe-selo', textContent: T('SÓ PARA VER') }), btn('DUPLICAR PARA EDITAR', () => { this.soVer = false; this.duplicar(p); })]
+      : [btn('SALVAR', () => void this.salvar()), btn('EXPORTAR', () => baixar(JSON.stringify(paraArquivo(p)), nomeDoArquivo(p.nome)))];
+    this.moldura(p.nome || T('PERSONAGEM'), [abas, el('span', { cls: 'sfe-esp' }), ...acoes, btn('VOLTAR', () => this.sairDaEdicao())]);
     if (this.aba === 'dados') this.abaDados();
     else if (this.aba === 'animacoes') this.abaAnimacoes();
     else this.abaTransformacoes();
   }
 
   private sairDaEdicao(): void {
-    if (!this.mudou) { void this.mostrarLista(); return; }
+    if (!this.mudou || this.soVer) { void this.mostrarLista(); return; }
     confirmar('SAIR SEM SALVAR?', 'AS MUDANÇAS DESTE PERSONAGEM VÃO SE PERDER.', () => void this.mostrarLista());
   }
 
@@ -302,7 +353,11 @@ export class EditorDePersonagens {
     const cv = el('canvas');
     const status = el('span', { cls: 'sfe-dica' });
     const caixa = el('div', { cls: 'sfe-caixa' });
-    const celulas = (): Celula[] => (this.folha ? gradeDaFolha(this.folha.naturalWidth, this.folha.naturalHeight, this.grade.fw, this.grade.fh, this.grade.total, this.grade.espaco) : []);
+    const grade = (): Celula[] => (this.folha ? gradeDaFolha(this.folha.naturalWidth, this.folha.naturalHeight, this.grade.fw, this.grade.fh, this.grade.total, this.grade.espaco) : []);
+    // v0.156: a grade com os ajustes de cada quadro (mover/redimensionar, como no editor do jogo antigo)
+    const celulas = (): Celula[] => celulasAjustadas(grade(), this.ajustes);
+    const retDe = (i: number): Ret | null => celulas().find((c) => c.i === i) ?? null;
+    let caixaSel: { x0: number; y0: number; x1: number; y1: number } | null = null;
     const desenhar = () => {
       const img = this.folha;
       if (!img) { cv.width = 1; cv.height = 1; status.textContent = T('NENHUMA SPRITE SHEET CARREGADA.'); return; }
@@ -315,28 +370,108 @@ export class EditorDePersonagens {
       g.font = `bold ${Math.max(9, Math.min(14, this.grade.fh * z / 4))}px Arial`;
       for (const c of celulas()) {
         const k = this.escolhidas.indexOf(c.i);
-        g.strokeStyle = k >= 0 ? '#ffd23f' : 'rgba(80,200,255,.75)';
+        g.strokeStyle = k >= 0 ? '#ffd23f' : this.ajustes[c.i] ? 'rgba(255,140,60,.9)' : 'rgba(80,200,255,.75)';
         g.lineWidth = k >= 0 ? 3 : 1;
         g.strokeRect(c.x * z + 0.5, c.y * z + 0.5, c.w * z - 1, c.h * z - 1);
         if (k >= 0) { g.fillStyle = 'rgba(255,210,63,.25)'; g.fillRect(c.x * z, c.y * z, c.w * z, c.h * z); g.fillStyle = '#ffd23f'; g.fillText(String(k + 1), c.x * z + 3, c.y * z + 13); }
       }
-      status.textContent = TF('{0} QUADROS NA GRADE · {1} ESCOLHIDOS', celulas().length, this.escolhidas.length);
+      // o quadro com as alças: borda ciano, quadradinho amarelo (mover) e as alças das bordas (redimensionar)
+      const a = this.ativo !== null ? retDe(this.ativo) : null;
+      if (a) {
+        g.strokeStyle = this.trocando ? '#ff5d8f' : '#22d3ee'; g.lineWidth = 3; g.setLineDash([]);
+        g.strokeRect(a.x * z + 1.5, a.y * z + 1.5, a.w * z - 3, a.h * z - 3);
+        g.fillStyle = '#22d3ee';
+        for (const [px, py] of [[a.x, a.y + a.h / 2], [a.x + a.w, a.y + a.h / 2], [a.x + a.w / 2, a.y], [a.x + a.w / 2, a.y + a.h]]) g.fillRect(px * z - 4, py * z - 4, 8, 8);
+        g.fillStyle = '#facc15'; g.fillRect((a.x + a.w) * z - 14, a.y * z + 2, 12, 12);
+        g.fillStyle = '#111827'; g.fillRect((a.x + a.w) * z - 10, a.y * z + 5, 4, 6);
+      }
+      if (caixaSel) {
+        g.setLineDash([6, 4]); g.strokeStyle = '#ffffff'; g.lineWidth = 1.5;
+        g.strokeRect(Math.min(caixaSel.x0, caixaSel.x1) * z, Math.min(caixaSel.y0, caixaSel.y1) * z, Math.abs(caixaSel.x1 - caixaSel.x0) * z, Math.abs(caixaSel.y1 - caixaSel.y0) * z);
+        g.setLineDash([]);
+      }
+      const ra = this.ativo !== null ? retDe(this.ativo) : null;
+      status.textContent = TF('{0} QUADROS NA GRADE · {1} ESCOLHIDOS', celulas().length, this.escolhidas.length)
+        + (ra ? ` · F${(this.ativo ?? 0) + 1}: ${ra.w} x ${ra.h} px` : '')
+        + (this.trocando ? ` · ${T('TOQUE NO QUADRO QUE VAI ENTRAR NO LUGAR')}` : '');
     };
-    cv.addEventListener('click', (e) => {
-      if (!this.folha) return;
+    // ponteiro: toque = escolher (e mostrar as alças); arrastar no vazio = escolher vários; alças = mover/redimensionar
+    const noPonto = (e: PointerEvent) => {
       const r = cv.getBoundingClientRect(), z = this.grade.zoom;
-      const x = (e.clientX - r.left) * (cv.width / r.width) / z, y = (e.clientY - r.top) * (cv.height / r.height) / z;
-      const c = celulas().find((q) => x >= q.x && x < q.x + q.w && y >= q.y && y < q.y + q.h);
-      if (!c) return;
-      const k = this.escolhidas.indexOf(c.i);
-      if (k >= 0) this.escolhidas.splice(k, 1); else this.escolhidas.push(c.i);
+      return { x: (e.clientX - r.left) * (cv.width / r.width) / z, y: (e.clientY - r.top) * (cv.height / r.height) / z };
+    };
+    const tolerancia = () => Math.max(2, 7 / this.grade.zoom);
+    let arrasto: { tipo: 'mover'; x0: number; y0: number; orig: Record<number, Ret> } | { tipo: Exclude<Alca, 'mover'>; x0: number; y0: number; orig: Ret } | { tipo: 'selecao'; x0: number; y0: number; moveu: boolean } | null = null;
+    cv.style.touchAction = 'none';
+    cv.addEventListener('pointerdown', (e) => {
+      if (!this.folha) return;
+      const { x, y } = noPonto(e);
+      const a = this.ativo !== null ? retDe(this.ativo) : null;
+      const alca = a ? alcaNoPonto(a, x, y, tolerancia()) : null;
+      if (alca === 'mover') {
+        // move o quadro com as alças; se ele está entre os escolhidos e há mais de um, move todos os escolhidos
+        const juntos = this.ativo !== null && this.escolhidas.includes(this.ativo) && this.escolhidas.length > 1 ? this.escolhidas : [this.ativo!];
+        const orig: Record<number, Ret> = {};
+        for (const i of juntos) { const r = retDe(i); if (r) orig[i] = { x: r.x, y: r.y, w: r.w, h: r.h }; }
+        arrasto = { tipo: 'mover', x0: x, y0: y, orig };
+      } else if (alca && a) arrasto = { tipo: alca, x0: x, y0: y, orig: { x: a.x, y: a.y, w: a.w, h: a.h } };
+      else arrasto = { tipo: 'selecao', x0: x, y0: y, moveu: false };
+      cv.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+    cv.addEventListener('pointermove', (e) => {
+      if (!this.folha) return;
+      const { x, y } = noPonto(e);
+      const W = this.folha.naturalWidth, H = this.folha.naturalHeight;
+      if (!arrasto) {
+        const a = this.ativo !== null ? retDe(this.ativo) : null;
+        const alca = a ? alcaNoPonto(a, x, y, tolerancia()) : null;
+        cv.style.cursor = alca === 'mover' ? 'move' : alca === 'e' || alca === 'w' ? 'ew-resize' : alca ? 'ns-resize' : 'crosshair';
+        return;
+      }
+      if (arrasto.tipo === 'selecao') {
+        if (!arrasto.moveu && Math.hypot(x - arrasto.x0, y - arrasto.y0) * this.grade.zoom < 6) return;
+        arrasto.moveu = true;
+        caixaSel = { x0: arrasto.x0, y0: arrasto.y0, x1: x, y1: y };
+      } else if (arrasto.tipo === 'mover') {
+        for (const [i, r] of Object.entries(arrasto.orig)) this.ajustes[Number(i)] = moverRet(r, x - arrasto.x0, y - arrasto.y0, W, H);
+      } else if (this.ativo !== null) this.ajustes[this.ativo] = redimensionarRet(arrasto.orig, arrasto.tipo, x - arrasto.x0, y - arrasto.y0, W, H);
       desenhar();
     });
+    const soltar = (e: PointerEvent) => {
+      if (!arrasto || !this.folha) { arrasto = null; return; }
+      if (cv.hasPointerCapture(e.pointerId)) cv.releasePointerCapture(e.pointerId);
+      const { x, y } = noPonto(e);
+      if (arrasto.tipo === 'selecao') {
+        if (arrasto.moveu) {
+          // arrastou no vazio: os quadros dentro do retângulo entram na fila, na ordem da grade
+          for (const i of celulasNoRetangulo(celulas(), arrasto.x0, arrasto.y0, x, y)) if (!this.escolhidas.includes(i)) this.escolhidas.push(i);
+        } else {
+          const c = celulaNoPonto(celulas(), x, y);
+          if (c) {
+            const pos = this.ativo !== null ? this.escolhidas.indexOf(this.ativo) : -1;
+            if (this.trocando && pos >= 0 && !this.escolhidas.includes(c.i)) this.escolhidas[pos] = c.i; // TROCAR: entra no lugar
+            else if (this.ativo === c.i || !this.escolhidas.includes(c.i)) {
+              const k = this.escolhidas.indexOf(c.i);
+              if (k >= 0 && this.ativo === c.i) this.escolhidas.splice(k, 1); else if (k < 0) this.escolhidas.push(c.i);
+            }
+            this.ativo = c.i;
+            this.trocando = false;
+          }
+        }
+      }
+      arrasto = null; caixaSel = null;
+      desenhar();
+    };
+    cv.addEventListener('pointerup', soltar);
+    cv.addEventListener('pointercancel', soltar);
+    /** mudou a grade: os ajustes e a escolha antigos não valem mais */
+    const gradeMudou = () => { this.escolhidas = []; this.ajustes = {}; this.ativo = null; this.trocando = false; desenhar(); };
     const abrirUrl = async (url: string) => {
       const img = await carregarImagem(url);
       if (!img) { avisar('SPRITE SHEET', 'NÃO DEU PARA ABRIR ESTA IMAGEM.'); return; }
       this.folha = img;
-      this.escolhidas = [];
+      this.escolhidas = []; this.ajustes = {}; this.ativo = null; this.trocando = false;
       if (this.grade.fw > img.naturalWidth || this.grade.fh > img.naturalHeight) { this.grade.fw = img.naturalWidth; this.grade.fh = img.naturalHeight; }
       this.grade.zoom = Math.max(1, Math.min(4, Math.floor(560 / Math.max(1, img.naturalWidth)) || 1));
       this.desenharEdicao();
@@ -375,10 +510,10 @@ export class EditorDePersonagens {
         })),
       ]),
       el('div', { cls: 'sfe-linha' }, [
-        campo('LARGURA QUADRO (PX)', entradaNumero(gr.fw, 1, 4096, 1, (v) => { gr.fw = v; this.escolhidas = []; desenhar(); })),
-        campo('ALTURA QUADRO (PX)', entradaNumero(gr.fh, 1, 4096, 1, (v) => { gr.fh = v; this.escolhidas = []; desenhar(); })),
-        campo('ESPAÇO ENTRE QUADROS', entradaNumero(gr.espaco, 0, 256, 1, (v) => { gr.espaco = v; this.escolhidas = []; desenhar(); })),
-        campo('TOTAL DE QUADROS (0 = TODOS)', entradaNumero(gr.total, 0, 999, 1, (v) => { gr.total = v; this.escolhidas = []; desenhar(); })),
+        campo('LARGURA QUADRO (PX)', entradaNumero(gr.fw, 1, 4096, 1, (v) => { gr.fw = v; gradeMudou(); })),
+        campo('ALTURA QUADRO (PX)', entradaNumero(gr.fh, 1, 4096, 1, (v) => { gr.fh = v; gradeMudou(); })),
+        campo('ESPAÇO ENTRE QUADROS', entradaNumero(gr.espaco, 0, 256, 1, (v) => { gr.espaco = v; gradeMudou(); })),
+        campo('TOTAL DE QUADROS (0 = TODOS)', entradaNumero(gr.total, 0, 999, 1, (v) => { gr.total = v; gradeMudou(); })),
         campo('ZOOM', deslizar(gr.zoom, 1, 6, 1, (v) => { gr.zoom = v; desenhar(); })),
       ]),
       el('div', { cls: 'sfe-linha' }, [
@@ -403,8 +538,25 @@ export class EditorDePersonagens {
           if (urls.length) { aoAdicionar(urls); this.escolhidas = []; desenhar(); }
         }),
       ]),
+      // v0.156: ajustar o recorte de cada quadro (do editor de sprite sheet do jogo antigo)
+      el('div', { cls: 'sfe-linha' }, [
+        btn('TROCAR QUADRO', () => {
+          if (this.ativo === null || !this.escolhidas.includes(this.ativo)) { avisar('SPRITE SHEET', 'TOQUE PRIMEIRO EM UM QUADRO ESCOLHIDO (AMARELO) E DEPOIS EM TROCAR QUADRO.'); return; }
+          this.trocando = !this.trocando; desenhar();
+        }),
+        campo('ESPAÇO X', entradaNumero(this.espacoSel.x, -512, 512, 1, (v) => { this.espacoSel.x = v; })),
+        campo('ESPAÇO Y', entradaNumero(this.espacoSel.y, -512, 512, 1, (v) => { this.espacoSel.y = v; })),
+        btn('ALINHAR ESCOLHIDOS', () => {
+          if (!this.folha || this.escolhidas.length < 2) { avisar('SPRITE SHEET', 'ESCOLHA PELO MENOS 2 QUADROS PARA ALINHAR.'); return; }
+          const rets: Record<number, Ret> = {};
+          for (const i of this.escolhidas) { const r = retDe(i); if (r) rets[i] = { x: r.x, y: r.y, w: r.w, h: r.h }; }
+          Object.assign(this.ajustes, alinharEspacamento(rets, this.espacoSel.x, this.espacoSel.y, this.folha.naturalWidth, this.folha.naturalHeight));
+          desenhar();
+        }),
+        btn('DESFAZER AJUSTES', () => { this.ajustes = {}; desenhar(); }),
+      ]),
       el('div', { cls: 'sfe-folha' }, [cv]),
-      el('p', { cls: 'sfe-dica', textContent: T('TOQUE NOS QUADROS DA GRADE NA ORDEM DA ANIMAÇÃO E DEPOIS EM ADICIONAR AO MOVIMENTO.') }),
+      el('p', { cls: 'sfe-dica', textContent: T('TOQUE NOS QUADROS NA ORDEM DA ANIMAÇÃO (OU ARRASTE NO VAZIO PARA ESCOLHER VÁRIOS) E DEPOIS EM ADICIONAR AO MOVIMENTO. NO QUADRO TOCADO: O QUADRADINHO AMARELO MOVE O RECORTE (E OS ESCOLHIDOS JUNTOS); AS ALÇAS DAS BORDAS MUDAM O TAMANHO. TOCAR DE NOVO NELE TIRA DA FILA.') }),
     );
     desenhar();
     return caixa;

@@ -6,7 +6,7 @@ import { MOVIMENTOS, type Movimento } from './animacao';
 import type { Alinhamento, Aura, DadosPersonagem, EfeitoEspecial } from '../dados/personagens';
 import { idDoCriado, type PersonagemCriado, type Quadros } from './criados';
 
-export const AURAS_EDITOR: [Aura, string][] = [['gelo', 'BRANCA'], ['amarelo', 'AMARELA'], ['vermelho', 'VERMELHA'], ['rosa', 'ROSA'], ['azul', 'AZUL'], ['verde', 'VERDE'], ['roxo', 'ROXA'], ['blue', 'AZUL BLUE (CHAMA)'], ['azul_escuro', 'AZUL ESCURA']];
+export const AURAS_EDITOR: [Aura, string][] = [['gelo', 'BRANCA'], ['amarelo', 'AMARELA'], ['vermelho', 'VERMELHA'], ['rosa', 'ROSA'], ['azul', 'AZUL'], ['verde', 'VERDE'], ['roxo', 'ROXA'], ['blue', 'AZUL BLUE (CHAMA)'], ['azul_escuro', 'AZUL ESCURA'], ['branca', 'CLARA (CINZA)']];
 export const ALINHAMENTOS: Alinhamento[] = ['HERÓI', 'ANTI-HERÓI', 'VILÃO'];
 export const EFEITOS_TIRO: [string, string][] = [['', 'PADRÃO'], ['cor', 'PELA COR DO TIRO'], ['tiro_pixel', 'TIRO PIXEL (AZUL E LARANJA)'], ['tiro_freeza', 'TIRO DO DEDO (ROSA)'], ['tiro_vermelho', 'BOLA VERMELHA'], ['tiro_laranja', 'TIRO LARANJA'], ['tiro_amarelo', 'TIRO AMARELO'], ['cometa_azul', 'COMETA AZUL'], ['bola_azul', 'BOLA AZUL-CLARA'], ['tiro_verde', 'TIRO VERDE E AZUL'], ['esfera_roxa', 'ESFERA ROXA'], ['esfera_rosa', 'ESFERA ROSA'], ['bola_eletrica', 'BOLA ELÉTRICA'], ['cometa_fogo', 'COMETINHA DE FOGO'], ['esfera_fogo', 'ESFERA DE FOGO']];
 export const EFEITOS_ESPECIAL: [EfeitoEspecial, string][] = [['cor', 'RAIO DESENHADO (PELA COR)'], ['kamehameha', 'KAMEHAMEHA (RAIO AZUL LARGO)'], ['raio_azul', 'RAIO AZUL COM CABEÇA'], ['raio_verde', 'RAIO VERDE'], ['raio_vermelho', 'RAIO VERMELHO'], ['sol_freeza', 'BOLA DE ENERGIA (SOL DO FREEZA)']];
@@ -241,3 +241,87 @@ export function deArquivo(dados: unknown, agora = Date.now()): { p: PersonagemEd
 /** quantos quadros tem no total (para mostrar no cartão da lista) */
 export const totalDeQuadros = (p: PersonagemEditavel) => p.formas.reduce((n, f) => n + Object.values(f.quadros).reduce((k, l) => k + (l?.length ?? 0), 0), 0);
 export { idDoCriado };
+
+// ---------------- v0.156: recorte ajustável (como o editor de sprite sheet do jogo antigo) ----------------
+export interface Ret { x: number; y: number; w: number; h: number }
+/** a grade com os quadros que o jogador moveu/redimensionou (`ajustes` por índice) */
+export function celulasAjustadas(grade: Celula[], ajustes: Record<number, Ret>): Celula[] {
+  return grade.map((c) => (ajustes[c.i] ? { ...ajustes[c.i], i: c.i } : c));
+}
+/** o quadro debaixo do ponto (o de cima ganha, como getFrameAtPoint) */
+export function celulaNoPonto(cels: Celula[], x: number, y: number): Celula | null {
+  for (let k = cels.length - 1; k >= 0; k--) { const c = cels[k]; if (x >= c.x && x < c.x + c.w && y >= c.y && y < c.y + c.h) return c; }
+  return null;
+}
+/** índices dos quadros que o retângulo arrastado encosta, na ordem da grade (getFramesInSelection) */
+export function celulasNoRetangulo(cels: Celula[], x0: number, y0: number, x1: number, y1: number): number[] {
+  const l = Math.min(x0, x1), r = Math.max(x0, x1), t = Math.min(y0, y1), b = Math.max(y0, y1);
+  return cels.filter((c) => c.x < r && c.x + c.w > l && c.y < b && c.y + c.h > t).map((c) => c.i);
+}
+const limitar = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+/** move o recorte sem sair da imagem */
+export function moverRet(r: Ret, dx: number, dy: number, largImg: number, altImg: number): Ret {
+  return { ...r, x: limitar(Math.round(r.x + dx), 0, Math.max(0, largImg - r.w)), y: limitar(Math.round(r.y + dy), 0, Math.max(0, altImg - r.h)) };
+}
+export type Alca = 'mover' | 'e' | 'w' | 'n' | 's';
+/** puxa um lado do recorte (alças laterais do antigo; aqui também em cima e embaixo), sem sair da imagem */
+export function redimensionarRet(r: Ret, lado: Exclude<Alca, 'mover'>, dx: number, dy: number, largImg: number, altImg: number): Ret {
+  let { x, y, w, h } = r;
+  dx = Math.round(dx); dy = Math.round(dy);
+  if (lado === 'e') w = limitar(w + dx, 1, largImg - x);
+  if (lado === 's') h = limitar(h + dy, 1, altImg - y);
+  if (lado === 'w') { const nx = limitar(x + dx, 0, x + w - 1); w += x - nx; x = nx; }
+  if (lado === 'n') { const ny = limitar(y + dy, 0, y + h - 1); h += y - ny; y = ny; }
+  return { x, y, w, h };
+}
+/** qual alça do recorte está no ponto: o quadradinho amarelo no canto de cima à direita move; as bordas redimensionam.
+ *  `tol` = tolerância em px da imagem (fica maior com pouco zoom, para o dedo acertar). */
+export function alcaNoPonto(r: Ret, x: number, y: number, tol: number): Alca | null {
+  const dentroX = x >= r.x - tol && x <= r.x + r.w + tol, dentroY = y >= r.y - tol && y <= r.y + r.h + tol;
+  if (!dentroX || !dentroY) return null;
+  const m = Math.max(tol * 2, 8);
+  if (x >= r.x + r.w - m && y <= r.y + m) return 'mover';
+  if (Math.abs(x - r.x) <= tol) return 'w';
+  if (Math.abs(x - (r.x + r.w)) <= tol) return 'e';
+  if (Math.abs(y - r.y) <= tol) return 'n';
+  if (Math.abs(y - (r.y + r.h)) <= tol) return 's';
+  return null;
+}
+/** coloca os recortes escolhidos lado a lado com o espaço pedido (applySelectedFrameSpacing): agrupa em linhas pela
+ *  altura, em cada linha cada um vem logo depois do anterior + espX; cada linha começa espY abaixo da anterior */
+export function alinharEspacamento(rets: Record<number, Ret>, espX: number, espY: number, largImg: number, altImg: number): Record<number, Ret> {
+  const itens = Object.entries(rets).map(([i, r]) => ({ i: Number(i), r: { ...r } })).sort((a, b) => a.r.y - b.r.y || a.r.x - b.r.x);
+  const linhas: { y: number; h: number; itens: typeof itens }[] = [];
+  for (const it of itens) {
+    const l = linhas.find((c) => Math.abs(c.y - it.r.y) <= Math.max(4, Math.min(c.h, it.r.h) * 0.25));
+    if (l) { l.itens.push(it); l.h = Math.max(l.h, it.r.h); } else linhas.push({ y: it.r.y, h: it.r.h, itens: [it] });
+  }
+  for (const l of linhas) {
+    l.itens.sort((a, b) => a.r.x - b.r.x);
+    for (let k = 1; k < l.itens.length; k++) l.itens[k].r.x = l.itens[k - 1].r.x + l.itens[k - 1].r.w + espX;
+  }
+  linhas.sort((a, b) => a.y - b.y);
+  for (let k = 1; k < linhas.length; k++) {
+    const fundo = Math.max(...linhas[k - 1].itens.map((it) => it.r.y + it.r.h)) + espY;
+    const d = fundo - linhas[k].itens[0].r.y;
+    for (const it of linhas[k].itens) it.r.y += d;
+  }
+  const r: Record<number, Ret> = {};
+  for (const it of itens) r[it.i] = moverRet(it.r, 0, 0, largImg, altImg);
+  return r;
+}
+
+// ---------------- v0.156: os 16 personagens do jogo no editor (só para ver, quadro a quadro) ----------------
+export interface QuadroDoAtlas { frame: Ret; sourceSize: { w: number; h: number }; spriteSourceSize: { x: number; y: number } }
+/** os quadros de cada movimento de um atlas do jogo (public/atlas/<id>-<forma>.json), na ordem 0, 1, 2... */
+export function quadrosDoAtlas(frames: Record<string, QuadroDoAtlas>): Partial<Record<Movimento, QuadroDoAtlas[]>> {
+  const r: Partial<Record<Movimento, { n: number; q: QuadroDoAtlas }[]>> = {};
+  for (const [nome, q] of Object.entries(frames)) {
+    const [mov, n] = nome.split('/');
+    if (!(MOVIMENTOS as readonly string[]).includes(mov) || !/^\d+$/.test(n ?? '')) continue;
+    (r[mov as Movimento] ??= []).push({ n: Number(n), q });
+  }
+  const s: Partial<Record<Movimento, QuadroDoAtlas[]>> = {};
+  for (const [m, l] of Object.entries(r) as [Movimento, { n: number; q: QuadroDoAtlas }[]][]) s[m] = l.sort((a, b) => a.n - b.n).map((x) => x.q);
+  return s;
+}
