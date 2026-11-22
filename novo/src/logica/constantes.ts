@@ -52,8 +52,16 @@ export const ESPECIAL_DANO = 3;
 export const ESPECIAL_DURACAO = 40;
 /** quadros até o raio chegar no adversário (o dano entra aí; antes disso ele ainda pode responder = choque) */
 export const ESPECIAL_CHEGA = 18;
-export const SOL_DURACAO = 72;        // sol do Freeza: cresce no dedo e voa devagar
-export const SOL_CHEGA = 62;
+/** v0.155: o raio só sai depois do preparo (a animação do especial chega no braço estendido nesse quadro) */
+export const ESPECIAL_PREPARO = 20;
+/** v0.155: o sol do Freeza cresce em cima da cabeça (22 quadros) e desce reto, na diagonal, até a altura do peito do
+ *  outro lado da tela em SOL_VIAGEM quadros; acertando alguém no caminho, explode ali (SOL_EXPLOSAO quadros) */
+export const SOL_VIAGEM = 80;
+export const SOL_EXPLOSAO = 20;
+export const SOL_CHEGA = 22 + SOL_VIAGEM;
+export const SOL_DURACAO = SOL_CHEGA;
+/** v0.155: meia altura da faixa do raio que acerta (o raio sai reto em frente ao peito; fora dela, escapou) */
+export const ESPECIAL_MEIA = 20;
 export const ESPECIAL_ALTURA = 26;    // espessura do raio (desenho)
 
 // choque de raios: disputa de apertar ATAQUE (getBeamClashPush / resolveClashDamage)

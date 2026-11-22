@@ -113,11 +113,20 @@ describe('CPU', () => {
     expect(entradaDaIA(e, 'p2').transformar).toBe(true);
     e.p2.nivel = e.p2.alturas.length - 1;
     expect(entradaDaIA(e, 'p2').especial).toBe(true);
+    // v0.155: o especial sai reto — desalinhada, primeiro vai para a altura do outro
+    e.p1.y = 100;
+    expect(entradaDaIA(e, 'p2')).toMatchObject({ especial: false, y: -1 });
+  });
+  it('v0.155: sai da linha do especial do outro quando não pode responder', () => {
+    const e = criarLuta('goku', 'vegeta');
+    e.p1.y = e.p2.y = 200;
+    e.raios.push({ dono: 'p1', idade: 3, duracao: 40, chega: 18, sol: false, acertou: false, lado: 1 });
+    expect(entradaDaIA(e, 'p2').y).not.toBe(0);
   });
   it('responde ao especial do outro com o próprio (choque) e aperta ATAQUE no choque', () => {
     const e = criarLuta('goku', 'vegeta');
     e.p2.ki = 100;
-    e.raios.push({ dono: 'p1', idade: 3, duracao: 40, chega: 18, sol: false, acertou: false });
+    e.raios.push({ dono: 'p1', idade: 3, duracao: 40, chega: 18, sol: false, acertou: false, lado: 1 });
     expect(entradaDaIA(e, 'p2').especial).toBe(true);
     e.raios.length = 0;
     e.choque = { idade: 0, apertos: { p1: 0, p2: 0 }, empurrao: 0 };

@@ -767,7 +767,12 @@ export class Luta extends Phaser.Scene {
     const golpe = `${chave}:attackKi`, atual = s.anims.currentAnim?.key;
     const solto = l.acao === 'livre' && l.poseAtingido <= 0 && !l.emEspecial && l.poseParry <= 0;
     if (solto && atual === golpe && s.anims.isPlaying && this.anims.exists(golpe)) animFinal = golpe;
-    if (atual !== animFinal) s.play(animFinal);
+    if (atual !== animFinal) {
+      // v0.155: o especial chega no último quadro (braço estendido) quando o raio sai (ESPECIAL_PREPARO); o sol não
+      const n = this.anims.get(animFinal)?.frames.length ?? 0;
+      if (pose.movimento === 'special' && !l.especialLento && n > 1 && this.estado.regras.danoDoEspecialNaChegada) s.play({ key: animFinal, frameRate: ((n - 1) * 60) / C.ESPECIAL_PREPARO });
+      else s.play(animFinal);
+    }
     else if (pose.movimento === 'attackKi' && !s.anims.isPlaying) s.play(animFinal);
     // pisca só quando foi atingido: a proteção do começo de cada rodada (INVULNERAVEL_INICIO) não pisca (v0.139)
     const pisca = l.invulneravel > 0 && this.estado.faseQuadros > C.INVULNERAVEL_INICIO && Math.floor(l.invulneravel / 4) % 2 === 0;
@@ -789,7 +794,7 @@ export class Luta extends Phaser.Scene {
     this.arena?.desenhar(e.quadro);
     const relogio = e.quadro / 60;
     this.efeitos.desenharTiros(e, relogio);
-    this.efeitos.desenharRaios(e, (l) => this.maoNaTela(l), (l) => ({ x: this.sprites[l.id].x, y: this.sprites[l.id].y - l.a / 2 }), relogio);
+    this.efeitos.desenharRaios(e, (l) => this.maoNaTela(l), relogio);
     this.desenharPlacarDoChoque();
 
     const tela = this.grafTela.clear();

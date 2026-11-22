@@ -141,9 +141,11 @@ export function entradaDoVilao(e: EstadoLuta): Entrada {
   // ki cheio na onda 3+: transforma (o antigo transformava sozinho)
   if (podeTransformar(v) && h.onda >= 3) { ent.transformar = true; return ent; }
   if (h.regras.vilaoUsaEspecial && v.ki >= C.KI_MAX) {
-    // responde o especial do herói (vira choque) ou solta quando o herói não está protegido
+    // responde o especial do herói (vira choque) ou solta quando o herói não está protegido — e, como o raio sai reto
+    // (v0.155), só com o herói na frente do peito
     const raioDoHeroi = e.raios.some((r) => r.dono === 'p1' && !r.acertou);
-    if (raioDoHeroi || (heroi.invulneravel <= 0 && heroi.acao !== 'transformando')) { ent.especial = true; return ent; }
+    const naLinha = Math.abs(heroi.y - v.y) < v.a / 2;
+    if (raioDoHeroi || (naLinha && heroi.invulneravel <= 0 && heroi.acao !== 'transformando')) { ent.especial = true; return ent; }
   }
   if (h.regras.vilaoUsaParry && v.esperaParry <= 0) {
     const ameaca = e.tiros.find((t) => t.dono === 'p1' && t.vx > 0 && dentroDoParry(t, v));

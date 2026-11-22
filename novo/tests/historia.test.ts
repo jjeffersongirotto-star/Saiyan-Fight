@@ -29,6 +29,12 @@ const calmo = (e: EstadoLuta) => {
   e.p1.invulneravel = 0;
   return e;
 };
+/** v0.155: o especial sai reto — roda n quadros mantendo o vilão na frente do peito do herói (a patrulha o tira) */
+const rodarNaLinha = (e: EstadoLuta, n: number) => {
+  const ev: Evento[] = [];
+  for (let i = 0; i < n; i++) { e.p2.y = e.p1.y; ev.push(...rodar(e, 1)); }
+  return ev;
+};
 const tiroNoVilao = (e: EstadoLuta, dano = 1) =>
   e.tiros.push({ id: e.proximoId++, dono: 'p1', x: e.p2.x, y: e.p2.y, vx: 0, vy: 0, raio: 8, dano, refletido: false, atirador: 'p1' });
 const tiroNoHeroi = (e: EstadoLuta) =>
@@ -132,7 +138,7 @@ describe('vilão cai, sai voando e volta mais forte', () => {
     const e = calmo(nova());
     e.p2.vida = 2;
     e.p1.ki = C.KI_MAX;
-    const ev = rodar(e, 1, { especial: true }).concat(rodar(e, C.ESPECIAL_CHEGA + 2));
+    const ev = rodar(e, 1, { especial: true }).concat(rodarNaLinha(e, C.ESPECIAL_PREPARO + C.ESPECIAL_CHEGA + 2));
     expect(ev.find((x) => x.tipo === 'vilaoCaiu')).toMatchObject({ pontos: 3 });
   });
   it('NORMAL: depois do 5º vilão, fase vencida', () => {
@@ -277,11 +283,11 @@ describe('regras novas do vilão (chaves em REGRAS_HISTORIA)', () => {
       e.historia!.onda = 6;
       e.p2.nivel = e.p2.alturas.length - 1; // já na última forma
       let ev: Evento[] = [];
-      for (let i = 0; i < 2000 && !ev.some((x) => x.tipo === 'especial'); i++) { e.p1.invulneravel = 0; e.tiros.length = 0; ev = ev.concat(rodar(e, 1)); }
+      for (let i = 0; i < 2000 && !ev.some((x) => x.tipo === 'especial'); i++) { e.p1.invulneravel = 0; e.tiros.length = 0; e.p1.y = e.p2.y; ev = ev.concat(rodar(e, 1)); }
       const solto = ev.some((x) => x.tipo === 'especial' && x.dono === 'p2');
       expect(solto).toBe(vilaoUsaEspecial);
       if (solto) {
-        const dano = rodar(e, C.ESPECIAL_CHEGA + 2).find((x) => x.tipo === 'acerto' && x.alvo === 'p1');
+        const dano = rodarNaLinha(e, C.ESPECIAL_PREPARO + C.ESPECIAL_CHEGA + 2).find((x) => x.tipo === 'acerto' && x.alvo === 'p1');
         expect(dano).toMatchObject({ dano: C.VILAO_ESPECIAL_DANO, deEspecial: true });
       }
     }
@@ -422,7 +428,7 @@ describe('itens', () => {
     e.p2.vida = 10;
     e.p1.bastao = 100;
     e.p1.ki = C.KI_MAX;
-    const ev = rodar(e, 1, { especial: true }).concat(rodar(e, C.ESPECIAL_CHEGA + 2));
+    const ev = rodar(e, 1, { especial: true }).concat(rodarNaLinha(e, C.ESPECIAL_PREPARO + C.ESPECIAL_CHEGA + 2));
     expect(ev.find((x) => x.tipo === 'acerto' && x.alvo === 'p2')).toMatchObject({ dano: C.ESPECIAL_DANO * 2 });
   });
   it('nuvem e bastão: 8 s por item, no máximo 20 s', () => {

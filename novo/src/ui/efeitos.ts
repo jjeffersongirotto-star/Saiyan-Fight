@@ -230,25 +230,27 @@ export class EfeitosDaLuta {
   }
 
   /**
-   * Raios dos especiais. `mao(l)` = de onde sai (mão/dedo do desenho), `centro(l)` = meio do corpo na tela.
-   * `cresce` = em quantos quadros o raio chega no adversário (a regra do dano decide: 18, ou 9 no antigo).
+   * Raios dos especiais. `mao(l)` = de onde sai (mão/dedo do desenho). O raio cresce reto até a borda da tela em
+   * `r.chega` quadros (9 na regra antiga do dano na hora).
    */
-  desenharRaios(e: EstadoLuta, mao: (l: Lutador) => Ponto, centro: (l: Lutador) => Ponto, relogio: number): void {
+  desenharRaios(e: EstadoLuta, mao: (l: Lutador) => Ponto, relogio: number): void {
     const g = this.grafRaios.clear();
     let usados = 0;
     this.explosao.setVisible(false);
     for (const r of e.raios) {
-      const dono = e[r.dono], alvo = e[r.dono === 'p1' ? 'p2' : 'p1'];
-      const de = mao(dono);
-      // sem adversário na tela (TUTORIAL / TUTORIAL LIVRE: o J2 fica estacionado fora da tela), o raio sai reto para
-      // a frente; antes mirava no J2 escondido e ia para trás (v0.135)
-      const naTela = alvo.x > -60 && alvo.x < C.TELA_L + 60;
-      const para = naTela ? centro(alvo) : { x: de.x + dono.olhando * C.TELA_L, y: de.y };
-      if (r.sol) { this.desenharSol(r, dono, de, para, relogio, usados++); continue; }
-      const crescer = e.regras.danoDoEspecialNaChegada ? r.chega : 9;
+      const dono = e[r.dono];
+      if (r.sol) { this.desenharSol(r, relogio, usados++); continue; }
+      // v0.155: reto em frente ao peito, para o lado do disparo, até a borda da tela (não mira mais no adversário);
+      // só sai com a mão já estendida (depois do preparo) e começa na frente dela
+      const preparo = e.regras.danoDoEspecialNaChegada ? C.ESPECIAL_PREPARO : 0;
+      if (r.idade < preparo) continue;
+      const m = mao(dono), de = { x: m.x + r.lado * 6, y: m.y };
+      const para = { x: de.x + r.lado * (C.TELA_L + 200), y: de.y };
+      const idade = r.idade - preparo;
+      const crescer = e.regras.danoDoEspecialNaChegada ? r.chega - preparo : 9;
       const nome = efeitoDoEspecial(dono.personagem);
-      if (nome) this.desenharRaioAnimado(nome, de, para, r.idade, crescer, usados++);
-      else this.desenharRaioDeCor(g, de, para, r.idade, crescer, corDoRaio(dono.personagem));
+      if (nome) this.desenharRaioAnimado(nome, de, para, idade, crescer, usados++);
+      else this.desenharRaioDeCor(g, de, para, idade, crescer, corDoRaio(dono.personagem));
     }
     for (let i = usados; i < this.raios.length; i++) this.raios[i].setVisible(false);
     this.desenharChoque(e, mao, relogio);
@@ -274,8 +276,8 @@ export class EfeitosDaLuta {
     // a cabeça do desenho (lado esquerdo da imagem) fica na mão; para a esquerda, espelhado
     img.setFrame(quadro(nome, quadroDoEfeito(nome, idade / 60)));
     img.setOrigin(esquerda ? 1 : 0, 0.5).setFlipX(esquerda);
-    img.setPosition(de.x - Math.cos(ang) * dh * 0.2, de.y - Math.sin(ang) * dh * 0.2);
-    img.setRotation(esquerda ? ang - Math.PI : ang).setDisplaySize(Math.max(dh * 0.5, len + dh * 0.2), dh).setVisible(true);
+    img.setPosition(de.x, de.y); // a cabeça do raio nasce na frente da mão (v0.155)
+    img.setRotation(esquerda ? ang - Math.PI : ang).setDisplaySize(Math.max(dh * 0.5, len), dh).setVisible(true);
   }
 
   /** raio desenhado na cor do golpe (sem imagem): faixa colorida, miolo branco e anéis correndo */
@@ -289,18 +291,17 @@ export class EfeitosDaLuta {
     for (let d = (idade * 5) % 40; d < len; d += 40) g.strokeCircle(de.x + Math.cos(ang) * d, de.y + Math.sin(ang) * d, 22);
   }
 
-  /** sol do Freeza: nasce no dedo, cresce, é empurrado e voa até o alvo, onde explode */
-  private desenharSol(r: Raio, dono: Lutador, dedo: Ponto, alvo: Ponto, relogio: number, i: number) {
-    const lado = dono.olhando;
-    const frente = { x: dono.x + lado * (dono.l / 2 + 12), y: dono.y - dono.a * 0.2 };
-    const s = caminhoDoSol(r.idade, dedo, frente, alvo, lado);
+  /** sol do Freeza: nasce em cima da cabeça, cresce e desce reto (v0.155); explode onde acertou */
+  private desenharSol(r: Raio, relogio: number, i: number) {
+    if (!r.origem || !r.destino) return;
+    const s = caminhoDoSol(r.idade, r.origem, r.destino, r.explodiu);
     const img = this.imagemDeRaio(i);
     const d = (s.r * 2 * 129) / 112; // a esfera ocupa ~87% do quadro
     img.setFrame(quadro('sol_freeza', quadroDoEfeito('sol_freeza', relogio))).setOrigin(0.5).setFlipX(false).setRotation(0);
     img.setPosition(s.x, s.y).setDisplaySize(d, d).setAlpha(s.explosao >= 0 ? Math.max(0, 1 - s.explosao * 2) : 1).setVisible(true);
     if (s.explosao >= 0) {
       const q = quadroUnico('explosao', Math.min(0.999, s.explosao * 0.7 + 0.05));
-      if (q !== null) this.explosao.setFrame(quadro('explosao', q)).setPosition(alvo.x, alvo.y - 1).setDisplaySize(140, 146).setVisible(true);
+      if (q !== null) this.explosao.setFrame(quadro('explosao', q)).setPosition(s.x, s.y - 1).setDisplaySize(140, 146).setVisible(true);
     }
   }
 

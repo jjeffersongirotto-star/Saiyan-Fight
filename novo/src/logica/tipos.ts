@@ -111,6 +111,13 @@ export interface Raio {
   chega: number;
   sol: boolean;
   acertou: boolean;
+  /** v0.155: o especial sai reto para este lado (o de quem soltou, na hora do disparo) */
+  lado: 1 | -1;
+  /** só no sol: centro da bola já crescida (em cima da cabeça), o ponto do outro lado da tela na altura do peito
+   *  para onde ela desce reto, e onde/quando explodiu (null = ainda voando) */
+  origem?: { x: number; y: number };
+  destino?: { x: number; y: number };
+  explodiu?: { quando: number; x: number; y: number } | null;
 }
 
 export interface Choque {

@@ -6,6 +6,16 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.155',
+    titulo: 'ESPECIAL EM LINHA RETA',
+    itens: [
+      'O especial não persegue mais o adversário: sai reto em frente ao peito, só depois que a mão estende, e começa na frente dela. Só acerta quem estiver na linha; dá para fugir subindo ou descendo. A CPU e os vilões se alinham antes de soltar.',
+      'O sol do Freeza nasce em cima da cabeça (sem tampar o rosto) e desce reto, na diagonal, até a altura do peito do outro lado da tela. Explode em quem encostar nele no caminho.',
+      'Piccolo: no ataque de ki as pernas estavam compridas demais; agora só as pernas foram encurtadas e a cintura fica na mesma altura da pose parada.',
+      'Quando der erro no jogo, aparece uma faixa vermelha pequena no canto com a mensagem: mande um print dela. No app do PC, o F12 abre a janela de erros (vale a partir do próximo instalador).',
+    ],
+  },
+  {
     versao: '0.154',
     titulo: 'AURAS NAS CORES CERTAS',
     itens: [

@@ -119,10 +119,9 @@ describe('parry (tryReflect)', () => {
 });
 
 describe('especial e choque de raios', () => {
-  it('só sai com o ki cheio, gasta o ki, limpa os tiros e acerta 3 quando chega (mesmo desalinhado)', () => {
+  it('só sai com o ki cheio, gasta o ki, limpa os tiros e acerta 3 quando chega', () => {
     const e = luta();
     alinhar(e);
-    e.p2.y = 120; // desalinhado: o especial acerta igual (como no jogo antigo)
     expect(rodar(e, 1, { especial: true }).some((x) => x.tipo === 'especial')).toBe(false);
     rodar(e, 12); // deixa o pedido antigo expirar (gatilho guardado por 8 quadros)
     rodar(e, 1, { atacar: true });
@@ -132,9 +131,30 @@ describe('especial e choque de raios', () => {
     expect(ev.some((x) => x.tipo === 'especial')).toBe(true);
     expect(e.p1.ki).toBe(0);
     expect(e.tiros.length).toBe(0);
-    const depois = rodar(e, C.ESPECIAL_CHEGA + 2);
+    const depois = rodar(e, C.ESPECIAL_PREPARO + C.ESPECIAL_CHEGA + 2);
     expect(depois.find((x) => x.tipo === 'acerto')).toMatchObject({ alvo: 'p2', dano: C.ESPECIAL_DANO, deEspecial: true });
     expect(e.p2.vida).toBe(C.VIDA_VERSUS - C.ESPECIAL_DANO);
+  });
+
+  it('v0.155: o raio sai reto em frente ao peito — fora da linha, escapou; entrando nela, leva', () => {
+    const e = luta();
+    alinhar(e);
+    e.p2.y = 120; // bem acima do peito do J1
+    e.p1.ki = C.KI_MAX;
+    rodar(e, 1, { especial: true });
+    expect(rodar(e, C.ESPECIAL_PREPARO + C.ESPECIAL_CHEGA + 2).some((x) => x.tipo === 'acerto')).toBe(false);
+    e.p2.y = e.p1.y; // entrou na frente do raio, que ainda está na tela
+    expect(rodar(e, 2).some((x) => x.tipo === 'acerto' && x.alvo === 'p2')).toBe(true);
+  });
+
+  it('v0.155: o sol do Freeza desce reto; quem sai do caminho escapa', () => {
+    const e = luta('freeza', 'goku');
+    alinhar(e);
+    e.p2.y = 90; // bem acima: o sol desce em direção ao peito, para longe dele
+    e.p1.ki = C.KI_MAX;
+    rodar(e, 1, { especial: true });
+    expect(rodar(e, C.SOL_DURACAO).some((x) => x.tipo === 'acerto')).toBe(false);
+    expect(e.raios.length).toBe(0);
   });
 
   it('o sol do Freeza demora mais para chegar', () => {
@@ -142,7 +162,7 @@ describe('especial e choque de raios', () => {
     alinhar(e);
     e.p1.ki = C.KI_MAX;
     rodar(e, 1, { especial: true });
-    expect(rodar(e, C.ESPECIAL_CHEGA + 2).some((x) => x.tipo === 'acerto')).toBe(false);
+    expect(rodar(e, C.ESPECIAL_PREPARO + C.ESPECIAL_CHEGA + 2).some((x) => x.tipo === 'acerto')).toBe(false);
     expect(rodar(e, C.SOL_CHEGA).some((x) => x.tipo === 'acerto' && x.alvo === 'p2')).toBe(true);
   });
 
@@ -350,7 +370,7 @@ describe('chaves das diferenças (REGRAS) — regra antiga quando desligada', ()
     e.p1.ki = e.p2.ki = C.KI_MAX;
     const ev = rodar(e, 1, { especial: true });
     expect(ev.find((x) => x.tipo === 'acerto')).toMatchObject({ alvo: 'p2', dano: C.ESPECIAL_DANO });
-    rodar(e, C.ESPECIAL_CHEGA + 5); // depois de onde a regra nova já não deixaria responder
+    rodar(e, C.ESPECIAL_PREPARO + C.ESPECIAL_CHEGA + 5); // depois de onde a regra nova já não deixaria responder
     e.p2.acao = 'livre';
     expect(rodar(e, 1, {}, { especial: true }).some((x) => x.tipo === 'choque')).toBe(true);
   });
@@ -406,15 +426,15 @@ describe('regra nova: invulnerável na pose de transformar', () => {
     const e = transformando();
     e.p1.ki = C.KI_MAX;
     rodar(e, 1, { especial: true });
-    const ev = rodar(e, C.ESPECIAL_CHEGA + 1);
+    const ev = rodar(e, C.ESPECIAL_PREPARO + C.ESPECIAL_CHEGA + 1);
     expect(e.p2.acao).toBe('transformando'); // 18 quadros < 45 da pose
     expect(ev.some((x) => x.tipo === 'acerto')).toBe(false);
     expect(e.p2.vida).toBe(C.VIDA_VERSUS);
-    rodar(e, C.TRANSFORMANDO_QUADROS + C.ESPECIAL_DURACAO);
+    rodar(e, C.TRANSFORMANDO_QUADROS + C.ESPECIAL_PREPARO + C.ESPECIAL_DURACAO);
     expect(e.p2.acao).toBe('livre');
     e.p1.ki = C.KI_MAX;
     rodar(e, 1, { especial: true });
-    expect(rodar(e, C.ESPECIAL_CHEGA + 1).some((x) => x.tipo === 'acerto' && x.alvo === 'p2')).toBe(true);
+    expect(rodar(e, C.ESPECIAL_PREPARO + C.ESPECIAL_CHEGA + 1).some((x) => x.tipo === 'acerto' && x.alvo === 'p2')).toBe(true);
   });
 
   it('também vale com o dano do especial na hora (regra antiga do dano)', () => {
@@ -487,7 +507,7 @@ describe('regras do herói da história valem para os dois (VERSUS)', () => {
     rodarSo(e, id, 5, { carregar: true });
     expect(l.acao).toBe('carregando');
     expect(l.ki).toBeCloseTo(5 * C.KI_CARREGAR_POR_QUADRO, 5);
-    rodarSo(e, id, C.ESPECIAL_DURACAO + 2);
+    rodarSo(e, id, C.ESPECIAL_PREPARO + C.ESPECIAL_DURACAO + 2);
     expect(e.raios.length).toBe(0);
     expect(poseDoLutador(l).movimento).not.toBe('special');
   });
