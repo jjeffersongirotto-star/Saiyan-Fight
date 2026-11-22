@@ -4,7 +4,7 @@
 // transformação com o ki cheio (sobe um nível, +velocidade por 15 s), Zenkai 1x por partida, choque de raios.
 import * as C from './constantes';
 import { arremessarAgarrados, destruirAgarrados, tiroNosMinions } from './minions';
-import { auraForte, suavizarAura } from './efeitos';
+import { auraForte, caminhoDoSol, SOL_CRESCE, SOL_RAIO, suavizarAura } from './efeitos';
 import type { Choque, Entrada, Evento, EstadoLuta, FichaLuta, IdJogador, Lutador, Raio, Tiro } from './tipos';
 
 /** Sorteio determinístico (mulberry32): o mesmo começo dá sempre a mesma luta — bom para testes e replays. */
@@ -193,7 +193,15 @@ function soltarEspecial(e: EstadoLuta, l: Lutador, eventos: Evento[]) {
   l.ki = 0;
   if (l.acao === 'carregando') { l.acao = 'livre'; l.acaoQuadros = 0; }
   const sol = l.especialLento;
-  e.raios.push({ dono: l.id, idade: 0, duracao: sol ? C.SOL_DURACAO : C.ESPECIAL_DURACAO, chega: sol ? C.SOL_CHEGA : C.ESPECIAL_CHEGA, sol, acertou: false });
+  const lado = l.olhando;
+  const raio: Raio = { dono: l.id, idade: 0, duracao: sol ? C.SOL_DURACAO : C.ESPECIAL_PREPARO + C.ESPECIAL_DURACAO, chega: sol ? C.SOL_CHEGA : C.ESPECIAL_PREPARO + C.ESPECIAL_CHEGA, sol, acertou: false, lado };
+  if (sol) {
+    // v0.155: a bola nasce em cima da cabeça e desce reto até a altura do peito, do outro lado da tela
+    raio.origem = { x: l.x + lado * 6, y: l.y - l.a / 2 - SOL_RAIO * 2 - 6 }; // por cima da cabeça, sem tampar
+    raio.destino = { x: lado === 1 ? C.TELA_L + SOL_RAIO * 2 : -SOL_RAIO * 2, y: maoDe(l).y };
+    raio.explodiu = null;
+  }
+  e.raios.push(raio);
   e.tiros.length = 0; // o especial varre os tiros da tela (world.obstacles = [])
   // o poder do especial destrói quem está agarrado nas pernas (destruirSaibamansAgarrados; gancho da fase 3)
   const agarradosDestruidos = destruirAgarrados(l, e.minions);
@@ -437,10 +445,33 @@ function passoTiros(e: EstadoLuta, eventos: Evento[]) {
   e.tiros = ficam;
 }
 
+/** v0.155: o especial sai reto em frente ao peito (e acompanha quem soltou); só acerta quem está na faixa dele, já
+ *  alcançado pela ponta do raio. O sol desce reto e acerta quem encostar nele no caminho (aí explode). */
+export function raioPegou(e: EstadoLuta, r: Raio): { x: number; y: number } | null {
+  const alvo = e[outro(r.dono)];
+  if (r.sol) {
+    if (r.idade < SOL_CRESCE || !r.origem || !r.destino) return null;
+    const s = caminhoDoSol(r.idade, r.origem, r.destino);
+    return tiroAcerta({ x: s.x, y: s.y, raio: s.r * 0.8 }, alvo) ? { x: s.x, y: s.y } : null;
+  }
+  const dono = e[r.dono];
+  const preparo = e.regras.danoDoEspecialNaChegada ? C.ESPECIAL_PREPARO : 0;
+  if (r.idade < preparo) return null; // a mão ainda não estendeu: o raio não saiu
+  const mx = dono.x + r.lado * (dono.l / 2 + 10), my = maoDe(dono).y;
+  const alcance = (C.TELA_L + 100) * Math.min(1, (r.idade - preparo) / Math.max(1, r.chega - preparo));
+  const frente = (alvo.x - mx) * r.lado;
+  const naFaixa = Math.abs(alvo.y - my) <= alvo.a / 2 + C.ESPECIAL_MEIA;
+  return naFaixa && frente >= -alvo.l / 2 && frente <= alcance + alvo.l / 2 ? { x: alvo.x, y: my } : null;
+}
+
 function passoRaios(e: EstadoLuta, eventos: Evento[]) {
   for (const r of e.raios) {
     r.idade++;
-    if (!r.acertou && r.idade >= r.chega) acertarRaio(e, r, eventos);
+    if (r.acertou || (r.sol && r.explodiu)) continue;
+    const onde = raioPegou(e, r);
+    if (!onde) continue;
+    acertarRaio(e, r, eventos);
+    if (r.sol) { r.explodiu = { quando: r.idade, x: onde.x, y: onde.y }; r.duracao = r.idade + C.SOL_EXPLOSAO; }
   }
   e.raios = e.raios.filter((r) => r.idade < r.duracao);
 }

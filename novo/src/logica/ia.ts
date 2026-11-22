@@ -38,10 +38,17 @@ export function entradaDaIA(e: EstadoLuta, id: IdJogador, op: OpcoesIA = { dific
     ent.parry = true;
     return ent;
   }
-  // ki cheio: transforma primeiro (enquanto houver forma), depois especial
+  // v0.155: o especial do outro sai reto: se estou na linha dele, saio de cima ou de baixo
+  const raio = e.raios.find((r) => r.dono !== id && !r.acertou && !r.sol);
+  if (raio && Math.abs(ele.y - eu.y) < eu.a / 2 + C.ESPECIAL_MEIA + 6) {
+    ent.y = eu.y > (C.TETO_Y + C.CHAO_Y) / 2 ? -1 : 1;
+    return ent;
+  }
+  // ki cheio: transforma primeiro (enquanto houver forma), depois especial — só alinhado (o raio sai reto)
   if (eu.ki >= C.KI_MAX) {
-    if (eu.nivel < nivelMaximo(eu) && eu.vida > 1) ent.transformar = true;
-    else ent.especial = true;
+    if (eu.nivel < nivelMaximo(eu) && eu.vida > 1) { ent.transformar = true; return ent; }
+    if (alinhado) { ent.especial = true; return ent; }
+    ent.y = Math.sign(dy);
     return ent;
   }
   const vindo = e.tiros.find((t) => t.dono !== id && Math.sign(t.vx) === -eu.olhando && Math.abs(t.x - eu.x) < 140 && Math.abs(t.y - eu.y) < eu.a / 2 + 10);

@@ -7,7 +7,7 @@ import { EFEITOS, type NomeEfeito } from '../src/dados/efeitos';
 import { PERSONAGENS } from '../src/dados/personagens';
 import {
   auraDoLutador, auraForte, caminhoDoSol, corDoRaio, efeitoDaAura, efeitoDoEspecial, efeitoDoTiro, meioDoChoqueX,
-  quadroDoEfeito, quadroUnico, SOL_CRESCE, SOL_EMPURRA, suavizarAura,
+  quadroDoEfeito, quadroUnico, SOL_CRESCE, suavizarAura,
 } from '../src/logica/efeitos';
 
 const PASTA = join(__dirname, '..', 'public', 'efeitos');
@@ -109,23 +109,31 @@ describe('qual efeito cada um usa', () => {
 });
 
 describe('sol do Freeza e choque', () => {
-  const dedo = { x: 100, y: 200 }, frente = { x: 140, y: 250 }, alvo = { x: 600, y: 260 };
-  it('nasce pequeno em cima do dedo e cresce até 34', () => {
-    const a = caminhoDoSol(0, dedo, frente, alvo, 1);
+  const origem = { x: 100, y: 120 }, destino = { x: 868, y: 240 };
+  it('nasce pequeno em cima da cabeça e cresce até 34, apoiado no mesmo ponto', () => {
+    const a = caminhoDoSol(0, origem, destino);
     expect(a.r).toBe(5);
-    expect(a.x).toBe(dedo.x);
-    expect(a.y).toBeLessThan(dedo.y);
-    expect(caminhoDoSol(SOL_CRESCE, dedo, frente, alvo, 1).r).toBe(34);
+    expect(a.x).toBe(origem.x);
+    expect(a.y + a.r).toBeCloseTo(origem.y + 34, 5);
+    expect(caminhoDoSol(SOL_CRESCE, origem, destino).r).toBe(34);
   });
-  it('é empurrado para a frente e chega no alvo em SOL_CHEGA, onde explode', () => {
-    const e = caminhoDoSol(SOL_EMPURRA, dedo, frente, alvo, 1);
-    expect(e.x).toBeCloseTo(frente.x + 40, 5);
-    expect(e.y).toBeCloseTo(frente.y, 5);
-    const quase = caminhoDoSol(C.SOL_CHEGA - 0.001, dedo, frente, alvo, 1);
-    expect(quase.x).toBeCloseTo(alvo.x, 0);
-    const exp = caminhoDoSol(C.SOL_CHEGA + 5, dedo, frente, alvo, 1);
-    expect(exp.explosao).toBeGreaterThan(0);
-    expect(caminhoDoSol(40, dedo, frente, alvo, 1).explosao).toBe(-1);
+  it('v0.155: desce reto (na diagonal, sem tranco) até a altura do peito do outro lado da tela', () => {
+    const meio = caminhoDoSol(SOL_CRESCE + C.SOL_VIAGEM / 2, origem, destino);
+    expect(meio.x).toBeCloseTo((origem.x + destino.x) / 2, 5);
+    expect(meio.y).toBeCloseTo((origem.y + destino.y) / 2, 5);
+    const fim = caminhoDoSol(SOL_CRESCE + C.SOL_VIAGEM, origem, destino);
+    expect(fim).toMatchObject({ x: destino.x, y: destino.y, explosao: -1 });
+    // passo a passo: anda sempre o mesmo tanto (sem tranco)
+    const p = [10, 11, 12].map((t) => caminhoDoSol(SOL_CRESCE + t, origem, destino));
+    expect(p[1].x - p[0].x).toBeCloseTo(p[2].x - p[1].x, 5);
+    expect(p[1].y - p[0].y).toBeCloseTo(p[2].y - p[1].y, 5);
+  });
+  it('explode onde acertou', () => {
+    const ex = { quando: 50, x: 400, y: 200 };
+    expect(caminhoDoSol(49, origem, destino, ex).explosao).toBe(-1);
+    const e = caminhoDoSol(55, origem, destino, ex);
+    expect(e).toMatchObject({ x: 400, y: 200 });
+    expect(e.explosao).toBeGreaterThan(0);
   });
   it('ponto do choque vai para o lado de quem aperta menos', () => {
     expect(meioDoChoqueX(0)).toBe(400);

@@ -75,33 +75,27 @@ export function corDoRaio(personagem: string): number {
   return 0x00ffff;
 }
 
-/** Fases do sol do Freeza (gameplay.js): nasce no dedo e cresce, é empurrado para a frente, voa até o alvo. */
+/** Fases do sol do Freeza: nasce em cima da cabeça e cresce; depois desce reto, na diagonal, até a altura do peito do
+ *  outro lado da tela (v0.155: não persegue mais o adversário, dá para fugir). */
 export const SOL_CRESCE = 22;
-export const SOL_EMPURRA = 32;
 export const SOL_RAIO = 34;
 
 type Ponto = { x: number; y: number };
-/** Onde a bola do sol está `passou` quadros depois do disparo (drawSolDoFreeza). `prog` > 0 = explodindo. */
-export function caminhoDoSol(passou: number, dedo: Ponto, frente: Ponto, alvo: Ponto, lado: 1 | -1) {
+/** Onde a bola do sol está `passou` quadros depois do disparo. `origem` = centro da bola já crescida; `destino` = o
+ *  fim da linha reta; `explodiu` = onde acertou. `explosao` >= 0 = explodindo (0..1). */
+export function caminhoDoSol(passou: number, origem: Ponto, destino: Ponto, explodiu?: { quando: number; x: number; y: number } | null) {
   const R = SOL_RAIO;
+  if (explodiu && passou >= explodiu.quando) {
+    const prog = Math.min(1, (passou - explodiu.quando) / C.SOL_EXPLOSAO);
+    return { x: explodiu.x, y: explodiu.y, r: R * (1 + prog), explosao: prog };
+  }
   if (passou < SOL_CRESCE) {
     const k = passou / SOL_CRESCE;
     const r = 5 + (R - 5) * (1 - (1 - k) * (1 - k));
-    return { x: dedo.x, y: dedo.y - r - 2, r, explosao: -1 };
+    return { x: origem.x, y: origem.y + R - r, r, explosao: -1 }; // cresce para cima, apoiada no mesmo ponto
   }
-  if (passou < SOL_EMPURRA) {
-    const k = (passou - SOL_CRESCE) / (SOL_EMPURRA - SOL_CRESCE);
-    const y0 = dedo.y - R - 2;
-    // vai para a frente primeiro e só depois desce (não passa por cima do corpo)
-    return { x: dedo.x + (frente.x + lado * (R + 6) - dedo.x) * Math.min(1, k * 1.6), y: y0 + (frente.y - y0) * k * k, r: R, explosao: -1 };
-  }
-  if (passou < C.SOL_CHEGA) {
-    const k = (passou - SOL_EMPURRA) / (C.SOL_CHEGA - SOL_EMPURRA), ke = k * k * (3 - 2 * k);
-    const x0 = frente.x + lado * (R + 6);
-    return { x: x0 + (alvo.x - x0) * ke, y: frente.y + (alvo.y - frente.y) * ke, r: R, explosao: -1 };
-  }
-  const prog = (passou - C.SOL_CHEGA) / Math.max(1, C.SOL_DURACAO - C.SOL_CHEGA);
-  return { x: alvo.x, y: alvo.y, r: R * (1 + prog), explosao: prog };
+  const k = Math.min(1, (passou - SOL_CRESCE) / C.SOL_VIAGEM);
+  return { x: origem.x + (destino.x - origem.x) * k, y: origem.y + (destino.y - origem.y) * k, r: R, explosao: -1 };
 }
 
 /** Ponto de encontro do choque na tela (drawSpecialBeams): meio da tela deslocado pelo empurrão. */

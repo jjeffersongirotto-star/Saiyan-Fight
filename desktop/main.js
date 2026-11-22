@@ -32,6 +32,8 @@ function criarJanela() {
   janela.setMenuBarVisibility(false);
   janela.webContents.on("before-input-event", (_e, i) => {
     if (i.type === "keyDown" && i.key === "F11") janela.setFullScreen(!janela.isFullScreen());
+    // F12: abre/fecha a janela de erros (console) para o jogador mandar print quando algo travar
+    if (i.type === "keyDown" && i.key === "F12") janela.webContents.toggleDevTools();
   });
   // links de fora (BAIXAR APP etc.) abrem no navegador
   janela.webContents.setWindowOpenHandler(({ url }) => { require("electron").shell.openExternal(url); return { action: "deny" }; });
