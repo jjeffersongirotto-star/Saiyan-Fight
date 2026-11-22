@@ -6,6 +6,16 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.156',
+    titulo: 'EDITOR DE PERSONAGENS COMO O ANTIGO',
+    itens: [
+      'SPRITE SHEET do editor de personagens com o recorte do jogo antigo: arraste no vazio para escolher vários quadros de uma vez; no quadro tocado, o quadradinho amarelo move o recorte (e os escolhidos juntos) e as alças das bordas mudam o tamanho; TROCAR QUADRO põe outro quadro no lugar de um escolhido; ALINHAR ESCOLHIDOS coloca os recortes lado a lado com o espaço pedido; DESFAZER AJUSTES volta à grade.',
+      'Os 16 personagens do jogo aparecem no editor (PERSONAGENS DO JOGO) para ver cada forma e movimento quadro a quadro, com a prévia animada. Para mexer, DUPLICAR PARA EDITAR faz uma cópia sua.',
+      'Nova cor de aura no editor: CLARA (CINZA), a dos Saiyajins na forma normal.',
+      'Correção: no começo da luta o lutador era criado com uma imagem que não existia quando ele já entrava transformado (o Freeza da NAVE); agora já nasce na forma certa.',
+    ],
+  },
+  {
     versao: '0.155',
     titulo: 'ESPECIAL EM LINHA RETA',
     itens: [

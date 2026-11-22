@@ -246,7 +246,9 @@ export class Luta extends Phaser.Scene {
 
   private criarSprite(id: IdJogador): Phaser.GameObjects.Sprite {
     const l = this.estado[id];
-    const chave = formaParaDesenhar(l.personagem, 0, (k) => this.textures.exists(k))!;
+    // a forma em que ele começa (o vilão da NAVE já entra na 3ª forma; a 1ª nem é carregada) — antes pedia a 0 e caía
+    // na textura __MISSING até o 1º desenho (v0.156)
+    const chave = formaParaDesenhar(l.personagem, l.nivel, (k) => this.textures.exists(k)) ?? '__DEFAULT';
     // desenho 96x112 com os pés na linha 103 (mesmo formato dos pacotes do jogo antigo)
     return this.add.sprite(0, 0, chave, 'idle/0').setOrigin(0.5, 103 / 112).setDepth(10);
   }
