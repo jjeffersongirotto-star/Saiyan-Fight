@@ -6,6 +6,14 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.157',
+    titulo: 'FIM DOS LUTADORES BRANCOS',
+    itens: [
+      'Corrigido o defeito em que, depois de transformar, os lutadores ficavam brancos, o jogo ficava lento e a luta não terminava: o jogo liberava da memória a imagem de uma forma que ainda estava sendo usada e o desenho travava (a faixa vermelha mostrou o erro). Agora ele nunca libera uma imagem em uso.',
+      'Proteção extra: se algum objeto ainda ficar com uma imagem apagada, ele é escondido em vez de travar o jogo (o lutador volta assim que a imagem é recarregada) e a faixa vermelha diz qual era.',
+    ],
+  },
+  {
     versao: '0.156',
     titulo: 'EDITOR DE PERSONAGENS COMO O ANTIGO',
     itens: [

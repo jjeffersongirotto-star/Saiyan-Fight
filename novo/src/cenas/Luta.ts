@@ -756,6 +756,8 @@ export class Luta extends Phaser.Scene {
     const s = this.sprites[l.id];
     const chave = formaParaDesenhar(l.personagem, l.nivel, (k) => this.textures.exists(k) && this.anims.exists(`${k}:idle`));
     if (!chave) return;
+    // v0.157: a rede de segurança (app/erros.ts) esconde o sprite que ficou com a imagem apagada; recarregada, ele volta
+    if (!s.visible) { s.setVisible(true); if (s.texture.key !== chave) s.play(`${chave}:idle`); }
     const meta = metaDoAtlas(this, chave);
     const k = escalaDaAltura(alturaDoNivel(l, l.nivel));
     s.setScale(k / meta.escala);
