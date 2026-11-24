@@ -17,7 +17,7 @@ import { CENAS_TELAS } from './cenas/Telas';
 import { Trilhas } from './cenas/Trilhas';
 import { Vitoria } from './cenas/Vitoria';
 import { ESCALA_RENDER, vigiarDesempenho } from './ui/resolucao';
-import { vigiarErros } from './app/erros';
+import { protegerTexturas, vigiarErros } from './app/erros';
 
 const jogo = new Phaser.Game({
   type: Phaser.AUTO,
@@ -37,6 +37,7 @@ const jogo = new Phaser.Game({
 
 vigiarDesempenho(jogo);
 vigiarErros(jogo.canvas); // v0.155: faixa vermelha com o erro (o app do PC não tem console à mão)
+protegerTexturas(jogo); // v0.157: objeto com a imagem apagada não trava mais o desenho
 
 // para testes no navegador (playwright) e depuração
 (window as unknown as { saiyan: Phaser.Game }).saiyan = jogo;

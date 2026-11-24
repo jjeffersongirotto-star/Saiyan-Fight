@@ -50,11 +50,32 @@ export function criarAnimacoes(cena: Phaser.Scene, chave: string): void {
   }
 }
 
-/** Libera da memória (textura + animações) as formas de lutadores que não estão em `manter`. */
+type ObjetoComTextura = Phaser.GameObjects.GameObject & { frame?: Phaser.Textures.Frame; texture?: Phaser.Textures.Texture; anims?: Phaser.Animations.AnimationState; list?: Phaser.GameObjects.GameObject[] };
+/** percorre todos os objetos de todas as cenas ativas (entrando em containers e camadas) */
+export function cadaObjeto(jogo: Phaser.Game, f: (o: ObjetoComTextura, cena: Phaser.Scene) => void): void {
+  const visitar = (lista: Phaser.GameObjects.GameObject[], cena: Phaser.Scene) => {
+    for (const o of lista as ObjetoComTextura[]) { f(o, cena); if (Array.isArray(o.list)) visitar(o.list, cena); }
+  };
+  for (const cena of jogo.scene.getScenes(false)) if (cena.sys.displayList) visitar(cena.sys.displayList.list, cena);
+}
+/** v0.157: texturas que algum objeto de alguma cena ainda usa (a imagem atual ou a animação que está tocando) */
+export function texturasEmUso(jogo: Phaser.Game): Set<string> {
+  const r = new Set<string>();
+  cadaObjeto(jogo, (o) => {
+    if (o.frame?.texture) r.add(o.frame.texture.key);
+    const anim = o.anims?.currentAnim;
+    if (anim) { const [k] = anim.key.split(':'); r.add(k); }
+  });
+  return r;
+}
+
+/** Libera da memória (textura + animações) as formas de lutadores que não estão em `manter`. v0.157: nunca as que
+ *  algum objeto ainda usa — apagar a textura de um objeto na tela trava o desenho (lutadores brancos, FPS caindo). */
 export function liberarFormas(cena: Phaser.Scene, manter: Set<string>): string[] {
   const soltas: string[] = [];
+  const emUso = texturasEmUso(cena.game);
   for (const k of cena.textures.getTextureKeys()) {
-    if (!ehAtlasDeForma(k) || manter.has(k)) continue;
+    if (!ehAtlasDeForma(k) || manter.has(k) || emUso.has(k)) continue;
     for (const mov of MOVIMENTOS) cena.anims.remove(`${k}:${mov}`);
     cena.textures.remove(k);
     soltas.push(k);

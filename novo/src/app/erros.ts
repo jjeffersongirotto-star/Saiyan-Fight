@@ -2,7 +2,9 @@
 // vermelha pequena no canto para o jogador mandar print, e os últimos erros ficam guardados (logica/erros.ts).
 // A faixa é HTML por cima do jogo e para os toques/cliques (o Phaser também escuta fora do canvas).
 import { CHAVE_ERROS, guardarErro, textoDoErro, type ErroGuardado } from '../logica/erros';
+import Phaser from 'phaser';
 import { T } from '../logica/idioma';
+import { cadaObjeto } from '../ui/formas';
 
 let faixa: HTMLElement | null = null;
 
@@ -10,7 +12,7 @@ function ler(): ErroGuardado[] {
   try { const v = JSON.parse(localStorage.getItem(CHAVE_ERROS) ?? '[]'); return Array.isArray(v) ? v : []; } catch { return []; }
 }
 
-function anotar(msg: string): void {
+export function anotar(msg: string): void {
   const versao = __VERSAO__;
   const lista = guardarErro(ler(), { quando: new Date().toISOString(), msg, versao });
   try { localStorage.setItem(CHAVE_ERROS, JSON.stringify(lista)); } catch { /* sem espaço: só mostra */ }
@@ -44,4 +46,22 @@ export function vigiarErros(canvas?: HTMLCanvasElement): void {
     anotar(textoDoErro(String(r?.message ?? r), undefined, r?.stack));
   });
   canvas?.addEventListener('webglcontextlost', () => anotar(T('A PLACA DE VÍDEO PERDEU O DESENHO DO JOGO (WEBGL)')));
+}
+
+/** v0.157: rede de segurança antes de cada desenho: um objeto que ficou com a imagem apagada (textura liberada da
+ *  memória) travava o desenho inteiro ("Cannot read properties of null (reading 'glTexture')"). Ele é escondido e
+ *  vai para a faixa, uma vez, dizendo qual era. */
+export function protegerTexturas(jogo: Phaser.Game): void {
+  const avisados = new Set<string>();
+  jogo.events.on(Phaser.Core.Events.PRE_RENDER, () => {
+    cadaObjeto(jogo, (o, cena) => {
+      if (!o.frame || o.frame.source) return;
+      const anim = o.anims?.currentAnim?.key ?? '-';
+      const nome = `${cena.scene.key}/${o.type}${o.name ? ' ' + o.name : ''} anim=${anim}`;
+      (o as unknown as { setTexture(k: string): void }).setTexture('__DEFAULT');
+      (o as unknown as { setVisible(v: boolean): void }).setVisible(false);
+      o.anims?.stop();
+      if (!avisados.has(nome)) { avisados.add(nome); anotar(`${T('IMAGEM APAGADA EM USO (CONSERTADO)')}: ${nome}`); }
+    });
+  });
 }
