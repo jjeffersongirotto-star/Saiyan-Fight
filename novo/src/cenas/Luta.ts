@@ -12,12 +12,13 @@ import { T } from '../logica/idioma';
 import { criarLuta, escalaDaAltura, alturaDoNivel, maoDe, passoLuta, podeTransformar } from '../logica/luta';
 import { interpolar, RelogioFixo } from '../logica/relogio';
 import { ENTRADA_VAZIA, type Entrada, type EstadoLuta, type Evento, type IdJogador, type Lutador } from '../logica/tipos';
-import { PERSONAGENS, formaDoNivel } from '../dados/personagens';
+import { PERSONAGENS, chaveDoAtlas, formaDoNivel } from '../dados/personagens';
 import { Teclado } from '../entrada/teclado';
 import { mostrarBarraDeCarregamento } from '../ui/barra';
 import { ControlesToque } from '../ui/controlesToque';
 import { alturaDoCorpo, criarAnimacoes, liberarFormas, metaDoAtlas, pedirFormas } from '../ui/formas';
 import { Hud } from '../ui/hud';
+import { anotar } from '../app/erros';
 import { mostrarVersus } from '../ui/apresentacao';
 import { registrarLuta } from '../logica/estatisticas';
 import { desenharFundo } from './fundo';
@@ -67,6 +68,10 @@ export class Luta extends Phaser.Scene {
   private aviso!: Phaser.GameObjects.Text;
   private textoChoque!: Phaser.GameObjects.Text;
   private flash = { cor: 0xffffff, quadros: 0, max: 1 };
+  /** v0.158: até quando (performance.now) dura o clarão branco do golpe em cada lutador */
+  private clarao: Record<IdJogador, number> = { p1: 0, p2: 0 };
+  /** v0.158: fim da luta: a próxima tela abre por este relógio de verdade (antes era um delayedCall da cena) */
+  private saida: { em: number; abrir: () => void; vigia: number } | null = null;
   private carregandoNoFundo = false;
   private pausado = false;
   private camadaPausa: Phaser.GameObjects.Container | null = null;
@@ -127,6 +132,8 @@ export class Luta extends Phaser.Scene {
     ajustarCamera(this);
     this.apresentando = false;
     this.lentoMs = 0;
+    this.saida = null;
+    this.clarao = { p1: 0, p2: 0 };
     this.arena = null;
     this.ligarArena();
     const semente = Date.now() | 0;
@@ -464,6 +471,16 @@ export class Luta extends Phaser.Scene {
   }
 
   update(_t: number, dt: number): void {
+    if (this.saida && performance.now() >= this.saida.em) {
+      const sai = this.saida;
+      if (performance.now() > sai.vigia) {
+        // v0.158: passou do tempo e a tela seguinte não abriu: avisa na faixa com o estado (para achar a causa)
+        sai.vigia = Infinity;
+        anotar(`fim da luta preso: fase=${this.estado.fase} pausado=${this.pausado} relogioCena=${this.time.paused ? 'parado' : 'andando'} cenas=${this.game.scene.getScenes(true).map((c) => c.scene.key).join(',')}`);
+      }
+      sai.em = performance.now() + 1000; // se por algum motivo não abrir, tenta de novo daqui a 1 s
+      try { sai.abrir(); } catch (e) { anotar(`fim da luta: ${(e as Error)?.message ?? e}`); }
+    }
     if (this.apresentando) { this.desenhar(this.relogio.alfa, dt / 1000); return; }
     this.vigiarPausa(dt);
     if (this.pausado) return;
@@ -587,7 +604,9 @@ export class Luta extends Phaser.Scene {
       case 'acerto': {
         const s = this.sprites[ev.alvo];
         s.setTintFill(0xffffff);
-        this.time.delayedCall(70, () => s.clearTint());
+        // v0.158: o clarão sai pelo relógio de verdade (desenharLutador), não pelo relógio da cena — se ele parasse, o
+        // lutador ficava branco para sempre
+        this.clarao[ev.alvo] = performance.now() + 70;
         this.tremer(ev.deEspecial ? 260 : 80, ev.deEspecial ? 0.012 : 0.004);
         const alvo = this.estado[ev.alvo];
         this.particulas(alvo.x, alvo.y - alvo.a * 0.1, ev.deEspecial ? 0xffd34d : 0xffff00, ev.deEspecial ? 20 : 12);
@@ -640,21 +659,22 @@ export class Luta extends Phaser.Scene {
           registrarLuta(this.estado.p1.personagem, h ? h.resultado === 'vitoria' : ev.vencedor === 'p1');
           if (this.dados.modo === 'versus') registrarLuta(this.estado.p2.personagem, ev.vencedor === 'p2');
         }
+        // v0.158: a tela seguinte abre pelo relógio de verdade (ver update); o atlas é o da forma, mesmo se a imagem sumiu
+        const atlasDe = (id: IdJogador) => this.sprites[id].texture?.key && this.sprites[id].texture.key !== '__DEFAULT' ? this.sprites[id].texture.key : chaveDoAtlas(this.estado[id].personagem, this.estado[id].nivel);
+        for (const id of ['p1', 'p2'] as const) { this.clarao[id] = 0; this.sprites[id].clearTint(); }
         if (h) {
           const heroi = this.estado.p1;
-          this.time.delayedCall(200, () =>
-            this.scene.start('FimHistoria', {
-              luta: this.dados, resultado: h.resultado ?? 'derrota', pontos: h.pontos, onda: h.onda, passo: h.passo, stats: h.stats,
-              segundos: Math.round(this.estado.quadro / 60), atlas: this.sprites.p1.texture.key, altura: alturaDoNivel(heroi, heroi.nivel),
-            } satisfies DadosDoFimHistoria),
-          );
+          const dados = {
+            luta: this.dados, resultado: h.resultado ?? 'derrota', pontos: h.pontos, onda: h.onda, passo: h.passo, stats: h.stats,
+            segundos: Math.round(this.estado.quadro / 60), atlas: atlasDe('p1'), altura: alturaDoNivel(heroi, heroi.nivel),
+          } satisfies DadosDoFimHistoria;
+          this.saida = { em: performance.now() + 200, abrir: () => this.scene.start('FimHistoria', dados), vigia: performance.now() + 4000 };
           break;
         }
-        this.time.delayedCall(200, () =>
-          this.scene.start('Vitoria', {
-            luta: this.dados, vencedor: ev.vencedor, placar: this.estado.placar, atlas: this.sprites[ev.vencedor].texture.key, altura: alturaDoNivel(venc, venc.nivel),
-          } satisfies DadosDaVitoria),
-        );
+        const dados = {
+          luta: this.dados, vencedor: ev.vencedor, placar: this.estado.placar, atlas: atlasDe(ev.vencedor), altura: alturaDoNivel(venc, venc.nivel),
+        } satisfies DadosDaVitoria;
+        this.saida = { em: performance.now() + 200, abrir: () => this.scene.start('Vitoria', dados), vigia: performance.now() + 4000 };
         break;
       }
       // ---- modo história ----
@@ -783,6 +803,7 @@ export class Luta extends Phaser.Scene {
     s.setAlpha(pisca && l.acao !== 'caido' ? 0.45 : 1);
     // tom da forma (Goku normal levemente vermelho, Kaioken); o clarão branco do golpe tem prioridade
     const tom = formaDoNivel(l.personagem, l.nivel)?.tom;
+    if (s.tintFill && performance.now() > this.clarao[l.id]) s.clearTint(); // v0.158: o clarão do golpe acabou
     if (!s.tintFill) { if (tom) s.setTint(tom); else if (s.isTinted) s.clearTint(); } // v0.148: quem cai não fica mais translúcido (sai voando)
     this.efeitos.lutador[l.id].desenhar(l, { x: s.x, y: s.y }, k, this.estado.quadro / 60, this.dtSeg, alturaDoCorpo(s));
   }
