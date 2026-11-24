@@ -6,6 +6,14 @@ export interface Novidade { versao: string; titulo: string; itens: string[] }
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.158',
+    titulo: 'FIM DA LUTA QUE NÃO TERMINAVA',
+    itens: [
+      'Corrigido: às vezes, ao perder (ou vencer), a luta não terminava — o cenário andava devagar, o vilão ficava repetindo o mesmo movimento e um lutador ficava branco. A tela de FIM DE JOGO / VITÓRIA e o fim do clarão branco do golpe agora usam o relógio de verdade, e não mais o relógio da cena (que podia parar).',
+      'Se a tela seguinte mesmo assim não abrir, a faixa vermelha mostra o estado do jogo naquele momento. A faixa agora também aparece em tela cheia.',
+    ],
+  },
+  {
     versao: '0.157',
     titulo: 'FIM DOS LUTADORES BRANCOS',
     itens: [

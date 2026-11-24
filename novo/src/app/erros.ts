@@ -28,6 +28,9 @@ function mostrar(msg: string, versao: string): void {
     for (const ev of ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'click']) faixa.addEventListener(ev, (e) => e.stopPropagation());
     document.body.appendChild(faixa);
   }
+  // v0.158: em tela cheia só o elemento da tela cheia aparece: a faixa vai para dentro dele
+  const pai = document.fullscreenElement ?? document.body;
+  if (faixa.parentElement !== pai) pai.appendChild(faixa);
   faixa.textContent = '';
   const titulo = document.createElement('b');
   titulo.textContent = `${T('ERRO NO JOGO — MANDE UM PRINT DESTA FAIXA')} (v${versao})`;
